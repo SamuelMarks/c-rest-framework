@@ -1,0 +1,262 @@
+cmake_minimum_required(VERSION 3.10)
+project(c-rest-framework C)
+
+# Set C standards
+set(CMAKE_C_STANDARD 90)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+option(C_REST_FRAMEWORK_STATIC_CRT "Use Static CRT (/MT, /MTd)" OFF)
+option(C_REST_FRAMEWORK_SHARED_CRT "Use Shared CRT (/MD, /MDd) (default)" ON)
+option(C_REST_FRAMEWORK_UNICODE "Use UNICODE" OFF)
+option(C_REST_FRAMEWORK_ANSI "Use ANSI (Multi-Byte)" OFF)
+option(C_REST_FRAMEWORK_USE_ASAN "Enable AddressSanitizer" OFF)
+option(C_REST_FRAMEWORK_USE_TSAN "Enable ThreadSanitizer" OFF)
+
+option(C_REST_FRAMEWORK_USE_MBEDTLS "Use mbedtls for cryptography" OFF)
+option(C_REST_FRAMEWORK_USE_OPENSSL "Use OpenSSL for cryptography" OFF)
+option(C_REST_FRAMEWORK_USE_LIBRESSL "Use LibreSSL for cryptography" OFF)
+option(C_REST_FRAMEWORK_USE_BORINGSSL "Use BoringSSL for cryptography" OFF)
+option(C_REST_FRAMEWORK_USE_WOLFSSL "Use wolfSSL for cryptography" OFF)
+option(C_REST_FRAMEWORK_USE_S2N "Use s2n-tls for cryptography" OFF)
+option(C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION "Integrate with c-multiplatform" OFF)
+option(C_REST_FRAMEWORK_FETCH_CAH "Fetch c-abstract-http from GitHub" OFF)
+option(C_REST_FRAMEWORK_FETCH_C_ORM "Fetch c-orm from GitHub" OFF)
+option(TRY_SYS_LIB "Fallback to system packages if vcpkg is not available" ON)
+
+macro(c_rest_framework_resolve_dependency PkgName FetchRepo FetchTag)
+    set(_VCPKG_APPLICABLE ON)
+    if(MINGW OR CYGWIN OR (MSVC AND MSVC_VERSION LESS 1500))
+        set(_VCPKG_APPLICABLE OFF)
+    endif()
+    
+    set(${PkgName}_RESOLVED OFF)
+
+    if(_VCPKG_APPLICABLE AND DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
+        find_package(${PkgName} CONFIG QUIET)
+        if(${PkgName}_FOUND)
+            message(STATUS "Found ${PkgName} via vcpkg")
+            set(${PkgName}_RESOLVED ON)
+        endif()
+    endif()
+
+    if(NOT ${PkgName}_RESOLVED AND TRY_SYS_LIB)
+        find_package(${PkgName} QUIET NO_CMAKE_BUILDS_PATH)
+        if(${PkgName}_FOUND)
+            message(STATUS "Found ${PkgName} via system packages")
+            set(${PkgName}_RESOLVED ON)
+        endif()
+    endif()
+
+    if(NOT ${PkgName}_RESOLVED)
+        message(STATUS "Fetching ${PkgName} via FetchContent")
+        FetchContent_Declare(${PkgName}
+            GIT_REPOSITORY ${FetchRepo}
+            GIT_TAG ${FetchTag}
+            GIT_CONFIG "core.autocrlf=false"
+            UPDATE_COMMAND ""
+        )
+        FetchContent_MakeAvailable(${PkgName})
+        set(${PkgName}_RESOLVED ON)
+    endif()
+endmacro()
+
+macro(c_rest_framework_apply_crypto tgt scope)
+    if(C_REST_FRAMEWORK_USE_MBEDTLS)
+        c_rest_framework_resolve_dependency(mbedtls https://github.com/Mbed-TLS/mbedtls.git v3.4.0)
+        target_link_libraries(${tgt} ${scope} mbedtls mbedcrypto mbedx509)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_MBEDTLS)
+    elseif(C_REST_FRAMEWORK_USE_OPENSSL)
+        c_rest_framework_resolve_dependency(OpenSSL https://github.com/openssl/openssl.git openssl-3.1.2)
+        target_link_libraries(${tgt} ${scope} OpenSSL::SSL OpenSSL::Crypto)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_OPENSSL)
+    elseif(C_REST_FRAMEWORK_USE_LIBRESSL)
+        c_rest_framework_resolve_dependency(LibreSSL https://github.com/libressl/portable.git v3.8.0)
+        target_link_libraries(${tgt} ${scope} LibreSSL::TLS LibreSSL::Crypto)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_LIBRESSL)
+    elseif(C_REST_FRAMEWORK_USE_BORINGSSL)
+        c_rest_framework_resolve_dependency(BoringSSL https://github.com/google/boringssl.git master)
+        target_link_libraries(${tgt} ${scope} crypto ssl)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_BORINGSSL)
+    elseif(C_REST_FRAMEWORK_USE_WOLFSSL)
+        set(WOLFSSL_EXAMPLES OFF CACHE BOOL "" FORCE)
+        set(WOLFSSL_CRYPT_TESTS OFF CACHE BOOL "" FORCE)
+        c_rest_framework_resolve_dependency(wolfssl https://github.com/wolfSSL/wolfssl.git v5.6.6-stable)
+        target_link_libraries(${tgt} ${scope} wolfssl)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_WOLFSSL)
+    elseif(C_REST_FRAMEWORK_USE_S2N)
+        set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+        c_rest_framework_resolve_dependency(s2n https://github.com/aws/s2n-tls.git main)
+        target_link_libraries(${tgt} ${scope} s2n::s2n)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_S2N)
+    endif()
+endmacro()
+
+include(FetchContent)
+if(C_REST_FRAMEWORK_FETCH_CAH)
+    FetchContent_Declare(
+      c_abstract_http
+      GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
+      GIT_TAG master
+    )
+    FetchContent_MakeAvailable(c_abstract_http)
+    add_definitions(-DC_REST_FRAMEWORK_USE_REAL_CAH)
+endif()
+
+if(C_REST_FRAMEWORK_FETCH_C_ORM)
+    FetchContent_Declare(
+      c_orm
+      GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
+      GIT_TAG master
+    )
+    FetchContent_MakeAvailable(c_orm)
+    add_definitions(-DC_REST_FRAMEWORK_USE_REAL_C_ORM)
+endif()
+
+if(C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION)
+    add_definitions(-DC_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION)
+endif()
+
+if(MSVC)
+    # Step 17: Define strict compilation flags for MSVC (/W4 /WX- /Za)
+    # We use /WX- to disable treating warnings as errors by default but use high warning level
+    # Note: /Za strictly enforces ANSI C but might cause issues with Windows headers.
+    add_compile_options(/W4 /WX-)
+
+    # We apply /Za only to specific source files since windows.h is not ANSI compliant
+    set_source_files_properties(
+        src/modality.c
+        src/modality_sync.c
+        src/modality_single_thread.c
+        src/modality_async.c
+        src/modality_multi_thread.c
+        src/modality_multi_process.c
+        src/modality_greenthread.c
+        src/modality_message_passing.c
+        src/parser.c
+        src/parser_cah.c
+        src/client.c
+        src/tls.c
+        src/multipart.c
+        src/router.c
+        src/middleware.c
+        src/request.c
+        src/response.c
+        src/c_orm_middleware.c
+        src/c_orm_crud.c
+        src/c_rest_string.c
+        src/c_rest_hashmap.c
+        src/c_rest_list.c
+        src/c_rest_pool.c
+        src/c_rest_ts_queue.c
+        src/c_rest_mem.c
+        src/c_rest_str_utils.c
+        src/c_rest_endian.c
+        src/c_rest_base64.c
+        src/c_rest_crypto.c
+        PROPERTIES COMPILE_OPTIONS "/Za"
+    )
+
+    if(NOT C_REST_FRAMEWORK_FETCH_CAH)
+        set_source_files_properties(src/c_abstract_http_mock.c PROPERTIES COMPILE_OPTIONS "/Za")
+    endif()
+
+    if(C_REST_FRAMEWORK_STATIC_CRT)
+        foreach(flag_var
+            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+            CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
+            if(${flag_var} MATCHES "/MD")
+                set(_tmp "${${flag_var}}")
+                string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${_tmp}")
+            endif()
+        endforeach()
+    endif()
+
+    if(C_REST_FRAMEWORK_UNICODE)
+        add_definitions(-DUNICODE -D_UNICODE)
+    elseif(C_REST_FRAMEWORK_ANSI)
+        add_definitions(-D_MBCS)
+    endif()
+elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    # Step 16: Define C89 strict compilation flags for GCC (-ansi -pedantic -Wall)
+    add_compile_options(-ansi -pedantic -Wall)
+    
+    if(C_REST_FRAMEWORK_USE_ASAN)
+        add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=address)
+    endif()
+
+    if(C_REST_FRAMEWORK_USE_TSAN)
+        add_compile_options(-fsanitize=thread)
+        add_link_options(-fsanitize=thread)
+    endif()
+endif()
+
+add_library(c-rest-framework STATIC 
+    src/modality.c
+    src/modality_sync.c
+    src/modality_single_thread.c
+    src/modality_async.c
+    src/modality_multi_thread.c
+    src/modality_multi_process.c
+    src/modality_greenthread.c
+    src/modality_message_passing.c
+    src/parser.c
+    src/parser_cah.c
+    src/client.c
+    src/tls.c
+    src/multipart.c
+    src/router.c
+    src/middleware.c
+    src/request.c
+    src/response.c
+    src/c_orm_middleware.c
+    src/c_orm_crud.c
+    src/c_rest_string.c
+    src/c_rest_hashmap.c
+    src/c_rest_list.c
+    src/c_rest_pool.c
+    src/c_rest_ts_queue.c
+    src/c_rest_mem.c
+    src/c_rest_str_utils.c
+    src/c_rest_endian.c
+    src/c_rest_base64.c
+    src/c_rest_crypto.c
+)
+
+c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
+
+if(C_REST_FRAMEWORK_FETCH_CAH)
+    target_link_libraries(c-rest-framework PUBLIC c-abstract-http)
+else()
+    target_sources(c-rest-framework PRIVATE src/c_abstract_http_mock.c)
+endif()
+
+if(C_REST_FRAMEWORK_FETCH_C_ORM)
+    target_link_libraries(c-rest-framework PUBLIC c-orm)
+else()
+    target_sources(c-rest-framework PRIVATE src/c_orm_mock.c)
+endif()
+
+if(WIN32)
+    target_sources(c-rest-framework PRIVATE src/platform_win32.c)
+    target_link_libraries(c-rest-framework PUBLIC ws2_32 advapi32)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "DOS")
+    target_sources(c-rest-framework PRIVATE src/platform_dos.c)
+else()
+    target_sources(c-rest-framework PRIVATE src/platform_posix.c)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_link_libraries(c-rest-framework PUBLIC pthread)
+    endif()
+endif()
+
+
+target_include_directories(c-rest-framework PUBLIC include)
+
+enable_testing()
+add_subdirectory(tests)
+add_subdirectory(examples)

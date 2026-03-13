@@ -1,0 +1,29 @@
+{
+   openssl_crypto_leak_false_positive
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   obj:*libcrypto.so*
+}
+{
+   openssl_ssl_leak_false_positive
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   obj:*libssl.so*
+}
+{
+   mbedtls_leak_false_positive
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   obj:*libmbedcrypto.so*
+}
+
+{
+   wolfssl_leak_false_positive
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   obj:*libwolfssl.so*
+}
