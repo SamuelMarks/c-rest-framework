@@ -13,8 +13,8 @@ struct c_rest_request;
 struct c_rest_response;
 
 /* Handler function signature */
-typedef void (*c_rest_handler_fn)(struct c_rest_request *req,
-                                  struct c_rest_response *res, void *user_data);
+typedef int (*c_rest_handler_fn)(struct c_rest_request *req,
+                                 struct c_rest_response *res, void *user_data);
 
 /* Middleware function signature */
 typedef int (*c_rest_middleware_fn)(struct c_rest_request *req,
@@ -24,7 +24,7 @@ typedef int (*c_rest_middleware_fn)(struct c_rest_request *req,
 typedef struct c_rest_router c_rest_router;
 
 int c_rest_router_init(c_rest_router **out_router);
-void c_rest_router_destroy(c_rest_router *router);
+int c_rest_router_destroy(c_rest_router *router);
 
 /* Route addition */
 int c_rest_router_add(c_rest_router *router, const char *method,

@@ -52,12 +52,13 @@ int c_rest_string_append_cstr(c_rest_string *str, const char *cstr) {
   return c_rest_string_append(str, cstr, strlen(cstr));
 }
 
-void c_rest_string_destroy(c_rest_string *str) {
+int c_rest_string_destroy(c_rest_string *str) {
   if (!str)
-    return;
+    return 1;
   if (str->data)
     free(str->data);
   str->data = NULL;
   str->length = 0;
   str->capacity = 0;
+  return 0;
 }

@@ -18,12 +18,13 @@ struct c_rest_orm_model note_model = {"notes", "id"};
  * @param res The HTTP response.
  * @param user_data Custom user data.
  */
-static void custom_404_handler(struct c_rest_request *req,
-                               struct c_rest_response *res, void *user_data) {
+static int custom_404_handler(struct c_rest_request *req,
+                              struct c_rest_response *res, void *user_data) {
   (void)req;
   (void)user_data;
   c_rest_response_set_status(res, 404);
   c_rest_response_json(res, "{\"error\": \"Not Found\"}");
+  return 0;
 }
 
 /**

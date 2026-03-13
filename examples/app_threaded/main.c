@@ -12,12 +12,13 @@ static void my_log_cb(const char *message) {
   printf("[THREADED] %s\n", message);
 }
 
-static void handle_db_query(struct c_rest_request *req,
-                            struct c_rest_response *res, void *user_data) {
+static int handle_db_query(struct c_rest_request *req,
+                           struct c_rest_response *res, void *user_data) {
   (void)req;
   (void)user_data;
   /* Simulate a blocking DB query */
   c_rest_response_json(res, "{\"status\": \"success\", \"rows\": 42}");
+  return 0;
 }
 
 int main(void) {

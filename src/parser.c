@@ -29,24 +29,31 @@ int c_rest_parser_init(c_rest_parser_context *ctx,
   return ctx->vtable->init(ctx, &ctx->callbacks, user_data);
 }
 
-size_t c_rest_parser_execute(c_rest_parser_context *ctx, const char *data,
-                             size_t len) {
+int c_rest_parser_execute(c_rest_parser_context *ctx, const char *data,
+                          size_t len, size_t *out_parsed) {
+  if (!out_parsed)
+    return 1;
+  *out_parsed = 0;
   if (!ctx || !ctx->vtable || !ctx->vtable->execute) {
-    return 0;
+    return 1;
   }
-  return ctx->vtable->execute(ctx, data, len);
+  return ctx->vtable->execute(ctx, data, len, out_parsed);
 }
 
-int c_rest_parser_should_keep_alive(c_rest_parser_context *ctx) {
+int c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
+                                    int *out_keep_alive) {
+  if (!out_keep_alive)
+    return 1;
   if (!ctx || !ctx->vtable || !ctx->vtable->should_keep_alive) {
+    *out_keep_alive = 0;
     return 0;
   }
-  return ctx->vtable->should_keep_alive(ctx);
+  return ctx->vtable->should_keep_alive(ctx, out_keep_alive);
 }
 
-void c_rest_parser_destroy(c_rest_parser_context *ctx) {
+int c_rest_parser_destroy(c_rest_parser_context *ctx) {
   if (!ctx || !ctx->vtable || !ctx->vtable->destroy) {
-    return;
+    return 1;
   }
-  ctx->vtable->destroy(ctx);
+  return ctx->vtable->destroy(ctx);
 }

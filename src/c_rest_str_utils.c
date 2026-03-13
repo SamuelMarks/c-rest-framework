@@ -38,16 +38,22 @@ int c_rest_strncasecmp(const char *s1, const char *s2, size_t n) {
   return tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
 }
 
-size_t c_rest_strlcpy(char *dst, const char *src, size_t dsize) {
+int c_rest_strlcpy(char *dst, const char *src, size_t dsize, size_t *out_len) {
   size_t src_len;
   size_t copy_len;
 
+  if (!out_len)
+    return 1;
+  *out_len = 0;
+
   if (!dst || !src)
-    return 0;
+    return 1;
 
   src_len = strlen(src);
-  if (dsize == 0)
-    return src_len;
+  if (dsize == 0) {
+    *out_len = src_len;
+    return 0;
+  }
 
   copy_len = src_len;
   if (copy_len >= dsize) {
@@ -57,23 +63,29 @@ size_t c_rest_strlcpy(char *dst, const char *src, size_t dsize) {
   memcpy(dst, src, copy_len);
   dst[copy_len] = '\0';
 
-  return src_len;
+  *out_len = src_len;
+  return 0;
 }
 
-size_t c_rest_strlcat(char *dst, const char *src, size_t dsize) {
+int c_rest_strlcat(char *dst, const char *src, size_t dsize, size_t *out_len) {
   size_t dst_len;
   size_t src_len;
   size_t space_left;
   size_t copy_len;
 
+  if (!out_len)
+    return 1;
+  *out_len = 0;
+
   if (!dst || !src)
-    return 0;
+    return 1;
 
   dst_len = strlen(dst);
   src_len = strlen(src);
 
   if (dsize <= dst_len) {
-    return dsize + src_len;
+    *out_len = dsize + src_len;
+    return 0;
   }
 
   space_left = dsize - dst_len - 1;
@@ -85,5 +97,6 @@ size_t c_rest_strlcat(char *dst, const char *src, size_t dsize) {
   memcpy(dst + dst_len, src, copy_len);
   dst[dst_len + copy_len] = '\0';
 
-  return dst_len + src_len;
+  *out_len = dst_len + src_len;
+  return 0;
 }

@@ -46,11 +46,15 @@ int c_rest_multipart_parser_init(
   return 0;
 }
 
-size_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
-                                       const char *data, size_t len) {
+int c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
+                                    const char *data, size_t len,
+                                    size_t *out_parsed) {
   /* Basic mock: just passes all data as one part */
+  if (!out_parsed)
+    return 1;
+  *out_parsed = 0;
   if (!parser || !data || len == 0)
-    return 0;
+    return 1;
 
   if (parser->callbacks.on_part_data) {
     parser->callbacks.on_part_data(parser, data, len);
@@ -60,13 +64,15 @@ size_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
     parser->callbacks.on_part_end(parser);
   }
 
-  return len;
+  *out_parsed = len;
+  return 0;
 }
 
-void c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser) {
+int c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser) {
   if (!parser)
-    return;
+    return 1;
   if (parser->boundary)
     free(parser->boundary);
   free(parser);
+  return 0;
 }

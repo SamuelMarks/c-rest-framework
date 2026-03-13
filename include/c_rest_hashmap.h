@@ -30,9 +30,9 @@ typedef struct c_rest_hashmap {
 
 int c_rest_hashmap_init(c_rest_hashmap *map, size_t capacity);
 int c_rest_hashmap_put(c_rest_hashmap *map, const char *key, void *value);
-void *c_rest_hashmap_get(c_rest_hashmap *map, const char *key);
+int c_rest_hashmap_get(c_rest_hashmap *map, const char *key, void **out_value);
 int c_rest_hashmap_remove(c_rest_hashmap *map, const char *key);
-void c_rest_hashmap_destroy(c_rest_hashmap *map, void (*free_value)(void *));
+int c_rest_hashmap_destroy(c_rest_hashmap *map, void (*free_value)(void *));
 
 #ifdef __cplusplus
 }

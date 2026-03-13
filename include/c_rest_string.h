@@ -21,7 +21,7 @@ typedef struct c_rest_string {
 int c_rest_string_init(c_rest_string *str, size_t initial_capacity);
 int c_rest_string_append(c_rest_string *str, const char *data, size_t len);
 int c_rest_string_append_cstr(c_rest_string *str, const char *cstr);
-void c_rest_string_destroy(c_rest_string *str);
+int c_rest_string_destroy(c_rest_string *str);
 
 #ifdef __cplusplus
 }

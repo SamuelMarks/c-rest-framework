@@ -11,8 +11,8 @@ extern "C" {
 int c_rest_strcasecmp(const char *s1, const char *s2);
 int c_rest_strncasecmp(const char *s1, const char *s2, size_t n);
 
-size_t c_rest_strlcpy(char *dst, const char *src, size_t dsize);
-size_t c_rest_strlcat(char *dst, const char *src, size_t dsize);
+int c_rest_strlcpy(char *dst, const char *src, size_t dsize, size_t *out_len);
+int c_rest_strlcat(char *dst, const char *src, size_t dsize, size_t *out_len);
 
 #ifdef __cplusplus
 }

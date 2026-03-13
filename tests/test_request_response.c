@@ -20,31 +20,36 @@ int test_request_response(void) {
   /* Test request query parsing */
   req.query = "id=123&name=test&empty=&no_val";
 
-  val = c_rest_request_get_query(&req, "id");
+  val = NULL;
+  c_rest_request_get_query(&req, "id", &val);
   if (!val || strcmp(val, "123") != 0) {
     printf("Expected query id=123, got %s\n", val ? val : "NULL");
     return 1;
   }
 
-  val = c_rest_request_get_query(&req, "name");
+  val = NULL;
+  c_rest_request_get_query(&req, "name", &val);
   if (!val || strcmp(val, "test") != 0) {
     printf("Expected query name=test\n");
     return 1;
   }
 
-  val = c_rest_request_get_query(&req, "empty");
+  val = NULL;
+  c_rest_request_get_query(&req, "empty", &val);
   if (!val || strcmp(val, "") != 0) {
     printf("Expected empty query param\n");
     return 1;
   }
 
-  val = c_rest_request_get_query(&req, "no_val");
+  val = NULL;
+  c_rest_request_get_query(&req, "no_val", &val);
   if (!val || strcmp(val, "") != 0) {
     printf("Expected no_val to have empty string\n");
     return 1;
   }
 
-  val = c_rest_request_get_query(&req, "missing");
+  val = NULL;
+  c_rest_request_get_query(&req, "missing", &val);
   if (val != NULL) {
     printf("Expected missing to be NULL\n");
     return 1;

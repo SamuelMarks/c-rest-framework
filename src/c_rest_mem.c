@@ -28,14 +28,14 @@ int c_rest_mem_tracker_init(void) {
   return 0;
 }
 
-static void add_node(void *ptr, size_t size, const char *file, int line) {
+static int add_node(void *ptr, size_t size, const char *file, int line) {
   c_rest_mem_node *node;
   if (!mem_initialized || !ptr)
-    return;
+    return 1;
 
   node = (c_rest_mem_node *)malloc(sizeof(c_rest_mem_node));
   if (!node)
-    return;
+    return 1;
 
   node->ptr = ptr;
   node->size = size;
@@ -46,14 +46,15 @@ static void add_node(void *ptr, size_t size, const char *file, int line) {
   node->next = mem_list;
   mem_list = node;
   c_rest_mutex_unlock(mem_mutex);
+  return 0;
 }
 
-static void remove_node(void *ptr) {
+static int remove_node(void *ptr) {
   c_rest_mem_node *curr;
   c_rest_mem_node *prev = NULL;
 
   if (!mem_initialized || !ptr)
-    return;
+    return 1;
 
   c_rest_mutex_lock(mem_mutex);
   curr = mem_list;
@@ -71,33 +72,51 @@ static void remove_node(void *ptr) {
     curr = curr->next;
   }
   c_rest_mutex_unlock(mem_mutex);
+  return 0;
 }
 
-void *c_rest_mem_malloc(size_t size, const char *file, int line) {
-  void *ptr = malloc(size);
+int c_rest_mem_malloc(size_t size, const char *file, int line, void **out_ptr) {
+  void *ptr;
+  if (!out_ptr)
+    return 1;
+  ptr = malloc(size);
   add_node(ptr, size, file, line);
-  return ptr;
+  *out_ptr = ptr;
+  return ptr ? 0 : 1;
 }
 
-void *c_rest_mem_calloc(size_t count, size_t size, const char *file, int line) {
-  void *ptr = calloc(count, size);
+int c_rest_mem_calloc(size_t count, size_t size, const char *file, int line,
+                      void **out_ptr) {
+  void *ptr;
+  if (!out_ptr)
+    return 1;
+  ptr = calloc(count, size);
   add_node(ptr, count * size, file, line);
-  return ptr;
+  *out_ptr = ptr;
+  return ptr ? 0 : 1;
 }
 
-void *c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line) {
+int c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line,
+                       void **out_ptr) {
   c_rest_mem_node *curr;
   void *new_ptr;
 
-  if (!mem_initialized)
-    return realloc(ptr, size);
+  if (!out_ptr)
+    return 1;
+
+  if (!mem_initialized) {
+    new_ptr = realloc(ptr, size);
+    *out_ptr = new_ptr;
+    return new_ptr ? 0 : 1;
+  }
 
   if (!ptr) {
-    return c_rest_mem_malloc(size, file, line);
+    return c_rest_mem_malloc(size, file, line, out_ptr);
   }
   if (size == 0) {
     c_rest_mem_free(ptr);
-    return NULL;
+    *out_ptr = NULL;
+    return 0;
   }
 
   c_rest_mutex_lock(mem_mutex);
@@ -119,13 +138,15 @@ void *c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line) {
     curr->line = line;
     c_rest_mutex_unlock(mem_mutex);
   }
-  return new_ptr;
+  *out_ptr = new_ptr;
+  return new_ptr ? 0 : 1;
 }
-void c_rest_mem_free(void *ptr) {
+int c_rest_mem_free(void *ptr) {
   if (ptr) {
     remove_node(ptr);
     free(ptr);
   }
+  return 0;
 }
 
 int c_rest_mem_tracker_print_leaks(void) {

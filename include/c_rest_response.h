@@ -61,7 +61,7 @@ int c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
 int c_rest_response_send_file(struct c_rest_response *res,
                               const char *filepath);
 
-void c_rest_response_cleanup(struct c_rest_response *res);
+int c_rest_response_cleanup(struct c_rest_response *res);
 
 #ifdef __cplusplus
 }

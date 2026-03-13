@@ -15,7 +15,7 @@ typedef struct c_rest_client_context c_rest_client_context;
  * Expose c-abstract-http client functionality.
  */
 int c_rest_client_init(c_rest_client_context **out_client);
-void c_rest_client_destroy(c_rest_client_context *client);
+int c_rest_client_destroy(c_rest_client_context *client);
 
 int c_rest_client_request_sync(c_rest_client_context *client, const char *url,
                                const char *method);

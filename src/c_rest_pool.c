@@ -15,32 +15,35 @@ int c_rest_pool_init(c_rest_pool *pool, size_t object_size) {
   return 0;
 }
 
-void *c_rest_pool_allocate(c_rest_pool *pool) {
-  if (!pool)
-    return NULL;
+int c_rest_pool_allocate(c_rest_pool *pool, void **out_ptr) {
+  if (!pool || !out_ptr)
+    return 1;
   if (pool->free_list) {
     c_rest_pool_block *block = pool->free_list;
     pool->free_list = block->next;
-    return (void *)block;
+    *out_ptr = (void *)block;
+    return 0;
   }
-  return malloc(pool->object_size);
+  *out_ptr = malloc(pool->object_size);
+  return *out_ptr ? 0 : 1;
 }
 
-void c_rest_pool_free(c_rest_pool *pool, void *ptr) {
+int c_rest_pool_free(c_rest_pool *pool, void *ptr) {
   c_rest_pool_block *block;
   if (!pool || !ptr)
-    return;
+    return 1;
   block = (c_rest_pool_block *)ptr;
   block->next = pool->free_list;
   pool->free_list = block;
+  return 0;
 }
 
-void c_rest_pool_destroy(c_rest_pool *pool) {
+int c_rest_pool_destroy(c_rest_pool *pool) {
   c_rest_pool_block *block;
   c_rest_pool_block *next;
 
   if (!pool)
-    return;
+    return 1;
 
   block = pool->free_list;
   while (block) {
@@ -49,4 +52,5 @@ void c_rest_pool_destroy(c_rest_pool *pool) {
     block = next;
   }
   pool->free_list = NULL;
+  return 0;
 }

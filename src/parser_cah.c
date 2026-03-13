@@ -105,7 +105,10 @@ static int cah_vtable_init(c_rest_parser_context *ctx,
   state->current_header_field = NULL;
   state->current_header_field_len = 0;
 
-  cah_parser_init(&state->parser);
+  if (cah_parser_init(&state->parser) != 0) {
+    free(state);
+    return 1;
+  }
   state->parser.data = state;
 
   state->settings.on_message_begin = on_message_begin;
@@ -120,29 +123,42 @@ static int cah_vtable_init(c_rest_parser_context *ctx,
   return 0;
 }
 
-static size_t cah_vtable_execute(c_rest_parser_context *ctx, const char *data,
-                                 size_t len) {
+static int cah_vtable_execute(c_rest_parser_context *ctx, const char *data,
+                              size_t len, size_t *out_parsed) {
   struct cah_parser_state *state;
+  if (!out_parsed)
+    return 1;
+  *out_parsed = 0;
   if (!ctx || !ctx->internal_state)
-    return 0;
+    return 1;
 
   state = (struct cah_parser_state *)ctx->internal_state;
-  return cah_parser_execute(&state->parser, &state->settings, data, len);
+  if (cah_parser_execute(&state->parser, &state->settings, data, len,
+                         out_parsed) != 0) {
+    return 1;
+  }
+  return 0;
 }
 
-static int cah_vtable_should_keep_alive(c_rest_parser_context *ctx) {
+static int cah_vtable_should_keep_alive(c_rest_parser_context *ctx,
+                                        int *out_keep_alive) {
   struct cah_parser_state *state;
-  if (!ctx || !ctx->internal_state)
+  if (!out_keep_alive)
+    return 1;
+  if (!ctx || !ctx->internal_state) {
+    *out_keep_alive = 0;
     return 0;
+  }
 
   state = (struct cah_parser_state *)ctx->internal_state;
-  return cah_should_keep_alive(&state->parser);
+  *out_keep_alive = cah_should_keep_alive(&state->parser);
+  return 0;
 }
 
-static void cah_vtable_destroy(c_rest_parser_context *ctx) {
+static int cah_vtable_destroy(c_rest_parser_context *ctx) {
   struct cah_parser_state *state;
   if (!ctx || !ctx->internal_state)
-    return;
+    return 1;
 
   state = (struct cah_parser_state *)ctx->internal_state;
   if (state->current_header_field) {
@@ -150,12 +166,17 @@ static void cah_vtable_destroy(c_rest_parser_context *ctx) {
   }
   free(state);
   ctx->internal_state = NULL;
+  return 0;
 }
 
 static const struct c_rest_parser_vtable cah_vtable = {
     cah_vtable_init, cah_vtable_execute, cah_vtable_should_keep_alive,
     cah_vtable_destroy};
 
-const struct c_rest_parser_vtable *c_rest_parser_get_cah_vtable(void) {
-  return &cah_vtable;
+int c_rest_parser_get_cah_vtable(
+    const struct c_rest_parser_vtable **out_vtable) {
+  if (!out_vtable)
+    return 1;
+  *out_vtable = &cah_vtable;
+  return 0;
 }

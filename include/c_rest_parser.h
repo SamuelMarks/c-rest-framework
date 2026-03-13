@@ -53,11 +53,12 @@ struct c_rest_parser_vtable {
   int (*init)(c_rest_parser_context *ctx,
               const struct c_rest_parser_callbacks *callbacks, void *user_data);
   /** @brief Execution function */
-  size_t (*execute)(c_rest_parser_context *ctx, const char *data, size_t len);
+  int (*execute)(c_rest_parser_context *ctx, const char *data, size_t len,
+                 size_t *out_parsed);
   /** @brief Check if connection should be kept alive */
-  int (*should_keep_alive)(c_rest_parser_context *ctx);
+  int (*should_keep_alive)(c_rest_parser_context *ctx, int *out_keep_alive);
   /** @brief Destruction function */
-  void (*destroy)(c_rest_parser_context *ctx);
+  int (*destroy)(c_rest_parser_context *ctx);
 };
 
 /** @brief Parser context */
@@ -77,13 +78,15 @@ int c_rest_parser_init(c_rest_parser_context *ctx,
                        const struct c_rest_parser_vtable *vtable,
                        const struct c_rest_parser_callbacks *callbacks,
                        void *user_data);
-size_t c_rest_parser_execute(c_rest_parser_context *ctx, const char *data,
-                             size_t len);
-int c_rest_parser_should_keep_alive(c_rest_parser_context *ctx);
-void c_rest_parser_destroy(c_rest_parser_context *ctx);
+int c_rest_parser_execute(c_rest_parser_context *ctx, const char *data,
+                          size_t len, size_t *out_parsed);
+int c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
+                                    int *out_keep_alive);
+int c_rest_parser_destroy(c_rest_parser_context *ctx);
 
 /* Specific parser backends */
-const struct c_rest_parser_vtable *c_rest_parser_get_cah_vtable(void);
+int c_rest_parser_get_cah_vtable(
+    const struct c_rest_parser_vtable **out_vtable);
 
 #ifdef __cplusplus
 }

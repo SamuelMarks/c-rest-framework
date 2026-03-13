@@ -32,7 +32,7 @@ int c_rest_orm_init(struct c_rest_db_config *config, struct c_orm_pool **pool);
 /*
  * Wrapper for c-orm cleanup.
  */
-void c_rest_orm_cleanup(struct c_orm_pool *pool);
+int c_rest_orm_cleanup(struct c_orm_pool *pool);
 
 #ifdef __cplusplus
 }

@@ -6,11 +6,12 @@
 #include <stdio.h>
 /* clang-format on */
 
-static void hello_handler(struct c_rest_request *req,
-                          struct c_rest_response *res, void *user_data) {
+static int hello_handler(struct c_rest_request *req,
+                         struct c_rest_response *res, void *user_data) {
   (void)req;
   (void)user_data;
   c_rest_response_html(res, "<h1>Hello Secure World!</h1>");
+  return 0;
 }
 
 int main(void) {

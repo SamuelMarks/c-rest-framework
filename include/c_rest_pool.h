@@ -23,9 +23,9 @@ typedef struct c_rest_pool {
 } c_rest_pool;
 
 int c_rest_pool_init(c_rest_pool *pool, size_t object_size);
-void *c_rest_pool_allocate(c_rest_pool *pool);
-void c_rest_pool_free(c_rest_pool *pool, void *ptr);
-void c_rest_pool_destroy(c_rest_pool *pool);
+int c_rest_pool_allocate(c_rest_pool *pool, void **out_ptr);
+int c_rest_pool_free(c_rest_pool *pool, void *ptr);
+int c_rest_pool_destroy(c_rest_pool *pool);
 
 #ifdef __cplusplus
 }

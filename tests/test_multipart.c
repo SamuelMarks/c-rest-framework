@@ -40,8 +40,8 @@ int test_multipart(void) {
     return 1;
   }
 
-  parsed = c_rest_multipart_parser_execute(parser, data, strlen(data));
-  if (parsed != strlen(data)) {
+  res = c_rest_multipart_parser_execute(parser, data, strlen(data), &parsed);
+  if (res != 0 || parsed != strlen(data)) {
     printf("Failed to parse multipart data\n");
     return 1;
   }

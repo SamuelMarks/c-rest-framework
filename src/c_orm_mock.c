@@ -16,6 +16,9 @@ int c_rest_orm_init(struct c_rest_db_config *config, struct c_orm_pool **pool) {
   return 0;
 }
 
-void c_rest_orm_cleanup(struct c_orm_pool *pool) { (void)pool; }
+int c_rest_orm_cleanup(struct c_orm_pool *pool) {
+  (void)pool;
+  return 0;
+}
 
 #endif /* C_REST_FRAMEWORK_USE_REAL_C_ORM */

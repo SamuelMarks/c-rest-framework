@@ -28,8 +28,8 @@ typedef struct c_rest_list {
 
 int c_rest_list_init(c_rest_list *list);
 int c_rest_list_push_back(c_rest_list *list, void *data);
-void *c_rest_list_pop_front(c_rest_list *list);
-void c_rest_list_destroy(c_rest_list *list, void (*free_data)(void *));
+int c_rest_list_pop_front(c_rest_list *list, void **out_data);
+int c_rest_list_destroy(c_rest_list *list, void (*free_data)(void *));
 
 #ifdef __cplusplus
 }

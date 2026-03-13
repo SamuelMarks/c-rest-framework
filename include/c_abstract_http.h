@@ -69,15 +69,15 @@ struct cah_parser {
   unsigned int method;
 };
 
-void cah_parser_init(cah_parser *parser);
-size_t cah_parser_execute(cah_parser *parser,
-                          const struct cah_parser_settings *settings,
-                          const char *data, size_t len);
+int cah_parser_init(cah_parser *parser);
+int cah_parser_execute(cah_parser *parser,
+                       const struct cah_parser_settings *settings,
+                       const char *data, size_t len, size_t *out_parsed);
 int cah_should_keep_alive(const cah_parser *parser);
 
 /* Client functionality */
-cah_client *cah_client_create(void);
-void cah_client_destroy(cah_client *client);
+int cah_client_create(cah_client **out_client);
+int cah_client_destroy(cah_client *client);
 int cah_client_request(cah_client *client, const char *url, const char *method);
 
 /* TLS capabilities */

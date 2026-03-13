@@ -37,6 +37,8 @@ int test_parser(void) {
   size_t parsed;
   int res;
 
+  const struct c_rest_parser_vtable *vtable = NULL;
+
   printf("Running parser tests...\n");
 
   callbacks.on_method = on_method;
@@ -46,15 +48,20 @@ int test_parser(void) {
   callbacks.on_complete = on_complete;
   callbacks.on_error = NULL;
 
-  res = c_rest_parser_init(&ctx, c_rest_parser_get_cah_vtable(), &callbacks,
-                           NULL);
+  res = c_rest_parser_get_cah_vtable(&vtable);
+  if (res != 0 || !vtable) {
+    printf("Failed to get vtable\n");
+    return 1;
+  }
+
+  res = c_rest_parser_init(&ctx, vtable, &callbacks, NULL);
   if (res != 0) {
     printf("Failed to init parser\n");
     return 1;
   }
 
-  parsed = c_rest_parser_execute(&ctx, valid_req, strlen(valid_req));
-  if (parsed != strlen(valid_req)) {
+  res = c_rest_parser_execute(&ctx, valid_req, strlen(valid_req), &parsed);
+  if (res != 0 || parsed != strlen(valid_req)) {
     printf("Failed to parse valid request: %u != %u\n", (unsigned int)parsed,
            (unsigned int)strlen(valid_req));
     return 1;
@@ -66,8 +73,9 @@ int test_parser(void) {
   }
 
   /* Test malformed request */
-  parsed = c_rest_parser_execute(&ctx, malformed_req, strlen(malformed_req));
-  if (parsed != 0) {
+  res = c_rest_parser_execute(&ctx, malformed_req, strlen(malformed_req),
+                              &parsed);
+  if (res != 0 || parsed != 0) {
     printf("Malformed request should have returned 0 parsed bytes\n");
     return 1;
   }

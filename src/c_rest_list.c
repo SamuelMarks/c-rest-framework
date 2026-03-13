@@ -36,12 +36,17 @@ int c_rest_list_push_back(c_rest_list *list, void *data) {
   return 0;
 }
 
-void *c_rest_list_pop_front(c_rest_list *list) {
+int c_rest_list_pop_front(c_rest_list *list, void **out_data) {
   c_rest_list_node *node;
   void *data;
 
-  if (!list || !list->head)
-    return NULL;
+  if (!list || !out_data)
+    return 1;
+
+  if (!list->head) {
+    *out_data = NULL;
+    return 1;
+  }
 
   node = list->head;
   data = node->data;
@@ -54,15 +59,16 @@ void *c_rest_list_pop_front(c_rest_list *list) {
   free(node);
   list->size--;
 
-  return data;
+  *out_data = data;
+  return 0;
 }
 
-void c_rest_list_destroy(c_rest_list *list, void (*free_data)(void *)) {
+int c_rest_list_destroy(c_rest_list *list, void (*free_data)(void *)) {
   c_rest_list_node *node;
   c_rest_list_node *next;
 
   if (!list)
-    return;
+    return 1;
 
   node = list->head;
   while (node) {
@@ -77,4 +83,5 @@ void c_rest_list_destroy(c_rest_list *list, void (*free_data)(void *)) {
   list->head = NULL;
   list->tail = NULL;
   list->size = 0;
+  return 0;
 }

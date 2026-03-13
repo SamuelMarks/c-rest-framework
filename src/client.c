@@ -23,18 +23,22 @@ int c_rest_client_init(c_rest_client_context **out_client) {
   if (!ctx)
     return 1;
 
-  ctx->internal_client = cah_client_create();
+  if (cah_client_create(&ctx->internal_client) != 0) {
+    free(ctx);
+    return 1;
+  }
   *out_client = ctx;
   return 0;
 }
 
-void c_rest_client_destroy(c_rest_client_context *client) {
+int c_rest_client_destroy(c_rest_client_context *client) {
   if (!client)
-    return;
+    return 1;
   if (client->internal_client) {
     cah_client_destroy(client->internal_client);
   }
   free(client);
+  return 0;
 }
 
 int c_rest_client_request_sync(c_rest_client_context *client, const char *url,

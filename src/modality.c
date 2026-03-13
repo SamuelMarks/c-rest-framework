@@ -36,27 +36,39 @@ static int dummy_run(struct c_rest_context *ctx) {
 static const struct c_rest_modality_vtable dummy_vtable = {
     dummy_init, dummy_destroy, dummy_run};
 
-static const struct c_rest_modality_vtable *
-get_vtable(enum c_rest_modality_type type) {
+static int get_vtable(enum c_rest_modality_type type,
+                      const struct c_rest_modality_vtable **out_vtable) {
+  if (!out_vtable)
+    return 1;
+
   switch (type) {
   case C_REST_MODALITY_SYNC:
-    return &sync_vtable;
+    *out_vtable = &sync_vtable;
+    return 0;
   case C_REST_MODALITY_SINGLE_THREAD:
-    return &single_thread_vtable;
+    *out_vtable = &single_thread_vtable;
+    return 0;
   case C_REST_MODALITY_ASYNC:
-    return &async_vtable;
+    *out_vtable = &async_vtable;
+    return 0;
   case C_REST_MODALITY_MULTI_THREAD:
-    return &multi_thread_vtable;
+    *out_vtable = &multi_thread_vtable;
+    return 0;
   case C_REST_MODALITY_MULTI_PROCESS:
-    return &multi_process_vtable;
+    *out_vtable = &multi_process_vtable;
+    return 0;
   case C_REST_MODALITY_GREENTHREAD:
-    return &greenthread_vtable;
+    *out_vtable = &greenthread_vtable;
+    return 0;
   case C_REST_MODALITY_MESSAGE_PASSING:
-    return &message_passing_vtable;
+    *out_vtable = &message_passing_vtable;
+    return 0;
   case C_REST_MODALITY_SINGLE_PROCESS:
-    return &dummy_vtable;
+    *out_vtable = &dummy_vtable;
+    return 0;
   default:
-    return NULL;
+    *out_vtable = NULL;
+    return 1;
   }
 }
 
@@ -72,8 +84,7 @@ int c_rest_init(enum c_rest_modality_type type,
 
   *out_ctx = NULL;
 
-  vtable = get_vtable(type);
-  if (!vtable) {
+  if (get_vtable(type, &vtable) != 0 || !vtable) {
     return 1; /* Unsupported modality or invalid enum */
   }
 

@@ -79,10 +79,11 @@ int c_rest_response_check_etag(struct c_rest_request *req,
 
   c_rest_response_set_header(res, "ETag", etag);
 
-  if_none_match = c_rest_request_get_header(req, "If-None-Match");
-  if (if_none_match && strcmp(if_none_match, etag) == 0) {
-    c_rest_response_set_status(res, 304); /* Not Modified */
-    return 1;                             /* Match found */
+  if (c_rest_request_get_header(req, "If-None-Match", &if_none_match) == 0) {
+    if (if_none_match && strcmp(if_none_match, etag) == 0) {
+      c_rest_response_set_status(res, 304); /* Not Modified */
+      return 1;                             /* Match found */
+    }
   }
 
   return 0;
@@ -265,12 +266,12 @@ int c_rest_response_send_file(struct c_rest_response *res,
   return 0;
 }
 
-void c_rest_response_cleanup(struct c_rest_response *res) {
+int c_rest_response_cleanup(struct c_rest_response *res) {
   struct c_rest_header *h;
   struct c_rest_header *next_h;
 
   if (!res) {
-    return;
+    return 1;
   }
 
   h = res->headers;
@@ -287,4 +288,5 @@ void c_rest_response_cleanup(struct c_rest_response *res) {
     free(res->body);
     res->body = NULL;
   }
+  return 0;
 }

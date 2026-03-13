@@ -58,8 +58,8 @@ int c_rest_https_redirect_middleware(struct c_rest_request *req,
   if (req->scheme) {
     if (strcmp(req->scheme, "https") != 0) {
       char url[1024];
-      const char *host = c_rest_request_get_header(req, "Host");
-      if (!host)
+      const char *host = NULL;
+      if (c_rest_request_get_header(req, "Host", &host) != 0 || !host)
         host = "localhost";
 #if defined(_MSC_VER)
       sprintf_s(url, sizeof(url), "https://%s%s", host,

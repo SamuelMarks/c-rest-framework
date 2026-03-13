@@ -155,9 +155,9 @@ int c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
   return 0;
 }
 
-void c_rest_tls_context_destroy(struct c_rest_tls_context *ctx) {
+int c_rest_tls_context_destroy(struct c_rest_tls_context *ctx) {
   if (!ctx)
-    return;
+    return 1;
 
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
@@ -178,6 +178,7 @@ void c_rest_tls_context_destroy(struct c_rest_tls_context *ctx) {
 #endif
 
   free(ctx);
+  return 0;
 }
 
 int c_rest_tls_load_cert(struct c_rest_tls_context *ctx,
@@ -277,7 +278,7 @@ int c_rest_tls_set_alpn(struct c_rest_tls_context *ctx, const char *protocols) {
 int c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock,
                       struct c_rest_tls_connection **out_conn) {
   struct c_rest_tls_connection *conn;
-  int ret;
+  int ret = 0;
   (void)ret;
 
   if (!ctx)

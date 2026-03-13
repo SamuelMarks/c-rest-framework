@@ -72,22 +72,23 @@ int c_rest_hashmap_put(c_rest_hashmap *map, const char *key, void *value) {
   return 0;
 }
 
-void *c_rest_hashmap_get(c_rest_hashmap *map, const char *key) {
+int c_rest_hashmap_get(c_rest_hashmap *map, const char *key, void **out_value) {
   size_t index;
   c_rest_hashmap_entry *entry;
 
-  if (!map || !key)
-    return NULL;
-  index = hash_string(key) % map->capacity;
+  if (!map || !key || !out_value)
+    return 1;
 
+  index = hash_string(key) % map->capacity;
   entry = map->buckets[index];
   while (entry) {
     if (strcmp(entry->key, key) == 0) {
-      return entry->value;
+      *out_value = entry->value;
+      return 0;
     }
     entry = entry->next;
   }
-  return NULL;
+  return 1;
 }
 
 int c_rest_hashmap_remove(c_rest_hashmap *map, const char *key) {
@@ -118,10 +119,10 @@ int c_rest_hashmap_remove(c_rest_hashmap *map, const char *key) {
   return 1;
 }
 
-void c_rest_hashmap_destroy(c_rest_hashmap *map, void (*free_value)(void *)) {
+int c_rest_hashmap_destroy(c_rest_hashmap *map, void (*free_value)(void *)) {
   size_t i;
   if (!map)
-    return;
+    return 1;
   if (map->buckets) {
     for (i = 0; i < map->capacity; ++i) {
       c_rest_hashmap_entry *entry = map->buckets[i];
@@ -140,4 +141,5 @@ void c_rest_hashmap_destroy(c_rest_hashmap *map, void (*free_value)(void *)) {
   map->buckets = NULL;
   map->capacity = 0;
   map->size = 0;
+  return 0;
 }

@@ -58,14 +58,14 @@ struct c_rest_request {
   struct c_orm_connection *db_conn; /* Scoped database connection */
 };
 
-const char *c_rest_request_get_header(struct c_rest_request *req,
-                                      const char *key);
+int c_rest_request_get_header(struct c_rest_request *req, const char *key,
+                              const char **out_value);
 
-const char *c_rest_request_get_cookie(struct c_rest_request *req,
-                                      const char *key);
+int c_rest_request_get_cookie(struct c_rest_request *req, const char *key,
+                              const char **out_value);
 
-const char *c_rest_request_get_query(struct c_rest_request *req,
-                                     const char *key);
+int c_rest_request_get_query(struct c_rest_request *req, const char *key,
+                             const char **out_value);
 
 int c_rest_request_read_body(struct c_rest_request *req, char **body,
                              size_t *body_len);
@@ -75,7 +75,7 @@ int c_rest_request_accepts_encoding(struct c_rest_request *req,
 
 int c_rest_request_parse_json(struct c_rest_request *req, void **json_obj);
 
-void c_rest_request_cleanup(struct c_rest_request *req);
+int c_rest_request_cleanup(struct c_rest_request *req);
 
 #ifdef __cplusplus
 }

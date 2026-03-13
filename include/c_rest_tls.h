@@ -33,7 +33,7 @@ int c_rest_tls_init(void);
  * @brief Get the currently active cryptographic provider.
  * @return The active c_rest_crypto_provider.
  */
-enum c_rest_crypto_provider c_rest_tls_get_provider(void);
+int c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider);
 
 /**
  * @brief Opaque structure representing the server's global TLS/SSL context.
@@ -56,7 +56,7 @@ int c_rest_tls_context_init(struct c_rest_tls_context **out_ctx);
  * @brief Destroy and clean up a TLS context.
  * @param ctx The context to destroy.
  */
-void c_rest_tls_context_destroy(struct c_rest_tls_context *ctx);
+int c_rest_tls_context_destroy(struct c_rest_tls_context *ctx);
 
 /**
  * @brief Load a server certificate into the context.

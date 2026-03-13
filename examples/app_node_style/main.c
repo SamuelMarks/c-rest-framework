@@ -11,15 +11,16 @@
 
 static void my_log_cb(const char *message) { printf("[APP] %s\n", message); }
 
-static void handle_hello_world(struct c_rest_request *req,
-                               struct c_rest_response *res, void *user_data) {
+static int handle_hello_world(struct c_rest_request *req,
+                              struct c_rest_response *res, void *user_data) {
   (void)req;
   (void)user_data;
   c_rest_response_json(res, "{\"message\": \"Hello from Async Node Style!\"}");
+  return 0;
 }
 
-static void handle_echo(struct c_rest_request *req, struct c_rest_response *res,
-                        void *user_data) {
+static int handle_echo(struct c_rest_request *req, struct c_rest_response *res,
+                       void *user_data) {
   char buf[512];
   const char *name = "Guest";
   (void)user_data;
@@ -38,6 +39,7 @@ static void handle_echo(struct c_rest_request *req, struct c_rest_response *res,
 #endif
 
   c_rest_response_json(res, buf);
+  return 0;
 }
 
 int main(void) {

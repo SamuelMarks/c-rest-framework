@@ -40,16 +40,21 @@ struct c_rest_router {
   struct c_rest_middleware_chain *post_middlewares;
 };
 
-static struct c_rest_route_node *create_node(const char *segment, size_t len) {
-  struct c_rest_route_node *node =
-      (struct c_rest_route_node *)malloc(sizeof(struct c_rest_route_node));
+static int create_node(const char *segment, size_t len,
+                       struct c_rest_route_node **out_node) {
+  struct c_rest_route_node *node;
+
+  if (!out_node)
+    return 1;
+
+  node = (struct c_rest_route_node *)malloc(sizeof(struct c_rest_route_node));
   if (!node)
-    return NULL;
+    return 1;
 
   node->segment = (char *)malloc(len + 1);
   if (!node->segment) {
     free(node);
-    return NULL;
+    return 1;
   }
   memcpy(node->segment, segment, len);
   node->segment[len] = '\0';
@@ -76,13 +81,14 @@ static struct c_rest_route_node *create_node(const char *segment, size_t len) {
   node->next = NULL;
   node->handlers = NULL;
 
-  return node;
+  *out_node = node;
+  return 0;
 }
 
-static void free_node(struct c_rest_route_node *node) {
+static int free_node(struct c_rest_route_node *node) {
   struct c_rest_route_handler *h;
   if (!node)
-    return;
+    return 1;
 
   if (node->segment)
     free(node->segment);
@@ -101,8 +107,8 @@ static void free_node(struct c_rest_route_node *node) {
   free_node(node->children);
   free_node(node->next);
   free(node);
+  return 0;
 }
-
 int c_rest_router_init(c_rest_router **out_router) {
   struct c_rest_router *router;
 
@@ -113,8 +119,7 @@ int c_rest_router_init(c_rest_router **out_router) {
   if (!router)
     return 1;
 
-  router->root = create_node("", 0);
-  if (!router->root) {
+  if (create_node("", 0, &router->root) != 0) {
     free(router);
     return 1;
   }
@@ -125,11 +130,11 @@ int c_rest_router_init(c_rest_router **out_router) {
   return 0;
 }
 
-void c_rest_router_destroy(c_rest_router *router) {
+int c_rest_router_destroy(c_rest_router *router) {
   struct c_rest_middleware_chain *m;
 
   if (!router)
-    return;
+    return 1;
 
   free_node(router->root);
 
@@ -152,31 +157,39 @@ void c_rest_router_destroy(c_rest_router *router) {
   }
 
   free(router);
+  return 0;
 }
 
-static struct c_rest_route_node *
-find_or_add_child(struct c_rest_route_node *parent, const char *segment,
-                  size_t len) {
-  struct c_rest_route_node *child = parent->children;
+static int find_or_add_child(struct c_rest_route_node *parent,
+                             const char *segment, size_t len,
+                             struct c_rest_route_node **out_child) {
+  struct c_rest_route_node *child;
   struct c_rest_route_node *new_node;
+
+  if (!parent || !out_child)
+    return 1;
+
+  child = parent->children;
 
   while (child) {
     if (strlen(child->segment) == len &&
         strncmp(child->segment, segment, len) == 0) {
-      return child;
+      *out_child = child;
+      return 0;
     }
     child = child->next;
   }
 
-  new_node = create_node(segment, len);
-  if (!new_node)
-    return NULL;
+  if (create_node(segment, len, &new_node) != 0)
+    return 1;
 
   new_node->next = parent->children;
   parent->children = new_node;
-  return new_node;
-}
+  new_node->parent = parent;
 
+  *out_child = new_node;
+  return 0;
+}
 int c_rest_router_add(c_rest_router *router, const char *method,
                       const char *path, c_rest_handler_fn handler,
                       void *user_data) {
@@ -205,8 +218,7 @@ int c_rest_router_add(c_rest_router *router, const char *method,
     }
 
     if (len > 0) {
-      child = find_or_add_child(curr, p, len);
-      if (!child)
+      if (find_or_add_child(curr, p, len, &child) != 0)
         return 1;
       curr = child;
     }
@@ -332,22 +344,24 @@ int c_rest_router_use_post(c_rest_router *router, const char *path_prefix,
   return 0;
 }
 
-static struct c_rest_route_node *match_route(struct c_rest_route_node *node,
-                                             const char *path,
-                                             struct c_rest_request *req) {
+static int match_route(struct c_rest_route_node *node, const char *path,
+                       struct c_rest_request *req,
+                       struct c_rest_route_node **out_node) {
   const char *next_slash;
   size_t len;
   struct c_rest_route_node *child;
-  struct c_rest_route_node *matched;
+  struct c_rest_route_node *matched = NULL;
+  int res;
 
-  if (!node)
-    return NULL;
+  if (!node || !out_node)
+    return 1;
 
   while (*path == '/')
     path++;
 
   if (*path == '\0') {
-    return node;
+    *out_node = node;
+    return 0;
   }
 
   next_slash = strchr(path, '/');
@@ -360,13 +374,14 @@ static struct c_rest_route_node *match_route(struct c_rest_route_node *node,
   child = node->children;
   while (child) {
     if (child->is_wildcard) {
-      return child;
+      *out_node = child;
+      return 0;
     }
 
     if (child->is_var || (strlen(child->segment) == len &&
                           strncmp(child->segment, path, len) == 0)) {
-      matched = match_route(child, next_slash ? next_slash + 1 : "", req);
-      if (matched) {
+      res = match_route(child, next_slash ? next_slash + 1 : "", req, &matched);
+      if (res == 0 && matched) {
         if (child->is_var && req) {
           struct c_rest_path_var *var =
               (struct c_rest_path_var *)malloc(sizeof(struct c_rest_path_var));
@@ -390,21 +405,24 @@ static struct c_rest_route_node *match_route(struct c_rest_route_node *node,
             req->path_vars = var;
           }
         }
-        return matched;
+        *out_node = matched;
+        return 0;
       }
     }
     child = child->next;
   }
 
-  return NULL;
+  *out_node = NULL;
+  return 1;
 }
 
 int c_rest_router_dispatch(c_rest_router *router, struct c_rest_request *req,
                            struct c_rest_response *res) {
   struct c_rest_middleware_chain *m;
-  struct c_rest_route_node *matched_node;
+  struct c_rest_route_node *matched_node = NULL;
   struct c_rest_route_handler *h;
   int middleware_res;
+  int match_res;
 
   if (!router || !req || !res)
     return 1;
@@ -426,8 +444,8 @@ int c_rest_router_dispatch(c_rest_router *router, struct c_rest_request *req,
   }
 
   /* 2. Resolve Route */
-  matched_node = match_route(router->root, req->path, req);
-  if (!matched_node) {
+  match_res = match_route(router->root, req->path, req, &matched_node);
+  if (match_res != 0 || !matched_node) {
     /* 404 Not Found */
     res->status_code = 404;
     return 0;

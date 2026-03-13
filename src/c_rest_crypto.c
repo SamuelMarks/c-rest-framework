@@ -21,22 +21,27 @@
 /* clang-format on */
 #endif
 
-enum c_rest_crypto_provider c_rest_tls_get_provider(void) {
+int c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) {
+  if (!out_provider)
+    return 1;
+
 #if defined(C_REST_USE_OPENSSL)
-  return C_REST_CRYPTO_OPENSSL;
+  *out_provider = C_REST_CRYPTO_OPENSSL;
 #elif defined(C_REST_USE_LIBRESSL)
-  return C_REST_CRYPTO_LIBRESSL;
+  *out_provider = C_REST_CRYPTO_LIBRESSL;
 #elif defined(C_REST_USE_BORINGSSL)
-  return C_REST_CRYPTO_BORINGSSL;
+  *out_provider = C_REST_CRYPTO_BORINGSSL;
 #elif defined(C_REST_USE_MBEDTLS)
-  return C_REST_CRYPTO_MBEDTLS;
+  *out_provider = C_REST_CRYPTO_MBEDTLS;
 #elif defined(C_REST_USE_WOLFSSL)
-  return C_REST_CRYPTO_WOLFSSL;
+  *out_provider = C_REST_CRYPTO_WOLFSSL;
 #elif defined(C_REST_USE_S2N)
-  return C_REST_CRYPTO_S2N;
+  *out_provider = C_REST_CRYPTO_S2N;
 #else
-  return C_REST_CRYPTO_NONE;
+  *out_provider = C_REST_CRYPTO_NONE;
 #endif
+
+  return 0;
 }
 
 #if !defined(C_REST_HAS_TLS)

@@ -9,29 +9,29 @@
 #define strcasecmp _stricmp
 #endif
 
-const char *c_rest_request_get_header(struct c_rest_request *req,
-                                      const char *key) {
+int c_rest_request_get_header(struct c_rest_request *req, const char *key,
+                              const char **out_value) {
   struct c_rest_header *h;
-  if (!req || !key) {
-    return NULL;
+  if (!req || !key || !out_value) {
+    return 1;
   }
   for (h = req->headers; h != NULL; h = h->next) {
     if (strcasecmp(h->key, key) == 0) {
-      return h->value;
+      *out_value = h->value;
+      return 0;
     }
   }
-  return NULL;
+  return 1;
 }
 
-static void parse_cookies_if_needed(struct c_rest_request *req) {
+static int parse_cookies_if_needed(struct c_rest_request *req) {
   const char *cookie_str;
   const char *p;
   if (!req || req->cookies) {
-    return;
+    return 0;
   }
-  cookie_str = c_rest_request_get_header(req, "Cookie");
-  if (!cookie_str) {
-    return;
+  if (c_rest_request_get_header(req, "Cookie", &cookie_str) != 0) {
+    return 1;
   }
 
   p = cookie_str;
@@ -89,27 +89,29 @@ static void parse_cookies_if_needed(struct c_rest_request *req) {
     if (*p == ';')
       p++;
   }
+  return 0;
 }
 
-const char *c_rest_request_get_cookie(struct c_rest_request *req,
-                                      const char *key) {
+int c_rest_request_get_cookie(struct c_rest_request *req, const char *key,
+                              const char **out_value) {
   struct c_rest_header *cp;
-  if (!req || !key) {
-    return NULL;
+  if (!req || !key || !out_value) {
+    return 1;
   }
   parse_cookies_if_needed(req);
   for (cp = req->cookies; cp != NULL; cp = cp->next) {
     if (strcmp(cp->key, key) == 0) {
-      return cp->value;
+      *out_value = cp->value;
+      return 0;
     }
   }
-  return NULL;
+  return 1;
 }
 
-static void parse_query_if_needed(struct c_rest_request *req) {
+static int parse_query_if_needed(struct c_rest_request *req) {
   const char *p;
   if (!req || !req->query || req->query_params) {
-    return; /* Already parsed or no query string */
+    return 0; /* Already parsed or no query string */
   }
 
   p = req->query;
@@ -173,25 +175,27 @@ static void parse_query_if_needed(struct c_rest_request *req) {
     }
     p = amp + 1;
   }
+  return 0;
 }
 
-const char *c_rest_request_get_query(struct c_rest_request *req,
-                                     const char *key) {
+int c_rest_request_get_query(struct c_rest_request *req, const char *key,
+                             const char **out_value) {
   struct c_rest_header *qp;
 
-  if (!req || !key) {
-    return NULL;
+  if (!req || !key || !out_value) {
+    return 1;
   }
 
   parse_query_if_needed(req);
 
   for (qp = req->query_params; qp != NULL; qp = qp->next) {
     if (strcmp(qp->key, key) == 0) {
-      return qp->value;
+      *out_value = qp->value;
+      return 0;
     }
   }
 
-  return NULL;
+  return 1;
 }
 
 int c_rest_request_read_body(struct c_rest_request *req, char **body,
@@ -210,8 +214,7 @@ int c_rest_request_accepts_encoding(struct c_rest_request *req,
   if (!req || !encoding) {
     return 0;
   }
-  accept_enc = c_rest_request_get_header(req, "Accept-Encoding");
-  if (!accept_enc) {
+  if (c_rest_request_get_header(req, "Accept-Encoding", &accept_enc) != 0) {
     return 0;
   }
   /* Simple substring search */
@@ -230,12 +233,12 @@ int c_rest_request_parse_json(struct c_rest_request *req, void **json_obj) {
   return 0;
 }
 
-void c_rest_request_cleanup(struct c_rest_request *req) {
+int c_rest_request_cleanup(struct c_rest_request *req) {
   struct c_rest_header *h;
   struct c_rest_header *next_h;
 
   if (!req) {
-    return;
+    return 1;
   }
 
   h = req->headers;
@@ -285,4 +288,5 @@ void c_rest_request_cleanup(struct c_rest_request *req) {
     free(req->body);
     req->body = NULL;
   }
+  return 0;
 }

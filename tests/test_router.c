@@ -10,8 +10,8 @@
 static int handler_called = 0;
 static int mw_called = 0;
 
-static void test_handler(struct c_rest_request *req,
-                         struct c_rest_response *res, void *user_data) {
+static int test_handler(struct c_rest_request *req, struct c_rest_response *res,
+                        void *user_data) {
   (void)res;
   (void)user_data;
   handler_called = 1;
@@ -29,6 +29,7 @@ static void test_handler(struct c_rest_request *req,
     printf("No path vars extracted\n");
     handler_called = 0;
   }
+  return 0;
 }
 
 static int test_middleware(struct c_rest_request *req,

@@ -27,9 +27,10 @@ struct c_rest_multipart_callbacks {
 int c_rest_multipart_parser_init(
     c_rest_multipart_parser **out_parser, const char *boundary,
     const struct c_rest_multipart_callbacks *callbacks, void *user_data);
-size_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
-                                       const char *data, size_t len);
-void c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser);
+int c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
+                                    const char *data, size_t len,
+                                    size_t *out_parsed);
+int c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser);
 
 #ifdef __cplusplus
 }

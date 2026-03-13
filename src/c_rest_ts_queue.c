@@ -58,12 +58,12 @@ int c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data) {
   return 0;
 }
 
-void *c_rest_ts_queue_pop(c_rest_ts_queue *queue) {
+int c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data) {
   c_rest_ts_queue_node *node;
   void *data;
 
-  if (!queue)
-    return NULL;
+  if (!queue || !out_data)
+    return 1;
 
   c_rest_mutex_lock(queue->mutex);
 
@@ -71,9 +71,10 @@ void *c_rest_ts_queue_pop(c_rest_ts_queue *queue) {
     c_rest_cond_wait(queue->cond, queue->mutex);
   }
 
-  if (queue->size == 0 && queue->is_closed) {
+  if (queue->size == 0) {
     c_rest_mutex_unlock(queue->mutex);
-    return NULL;
+    *out_data = NULL;
+    return 1;
   }
 
   node = queue->head;
@@ -86,30 +87,30 @@ void *c_rest_ts_queue_pop(c_rest_ts_queue *queue) {
   queue->size--;
 
   c_rest_mutex_unlock(queue->mutex);
-  free(node);
 
-  return data;
+  free(node);
+  *out_data = data;
+  return 0;
 }
 
 int c_rest_ts_queue_close(c_rest_ts_queue *queue) {
   if (!queue)
     return 1;
+
   c_rest_mutex_lock(queue->mutex);
   queue->is_closed = 1;
   c_rest_cond_signal(queue->cond);
   c_rest_mutex_unlock(queue->mutex);
+
   return 0;
 }
 
-void c_rest_ts_queue_destroy(c_rest_ts_queue *queue,
-                             void (*free_data)(void *)) {
+int c_rest_ts_queue_destroy(c_rest_ts_queue *queue, void (*free_data)(void *)) {
   c_rest_ts_queue_node *node;
   c_rest_ts_queue_node *next;
 
   if (!queue)
-    return;
-
-  c_rest_ts_queue_close(queue);
+    return 1;
 
   c_rest_mutex_lock(queue->mutex);
   node = queue->head;
@@ -128,4 +129,5 @@ void c_rest_ts_queue_destroy(c_rest_ts_queue *queue,
 
   c_rest_mutex_destroy(queue->mutex);
   c_rest_cond_destroy(queue->cond);
+  return 0;
 }
