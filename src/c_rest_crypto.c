@@ -443,3 +443,239 @@ int c_rest_rand_bytes(unsigned char *buf, size_t len) {
  * we'll just fall back to custom here if ONLY s2n is specified for TLS */
 /* ... same custom implementation as !defined(C_REST_HAS_TLS) block ... */
 #endif
+
+#include "c_rest_base64.h"
+
+int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
+                       const unsigned char *data, size_t data_len,
+                       unsigned char hash[32]) {
+  unsigned char k_ipad[64];
+  unsigned char k_opad[64];
+  unsigned char actual_key[64];
+  unsigned char inner_hash[32];
+  unsigned char *inner_buf;
+  unsigned char *outer_buf;
+  size_t i;
+
+  if (!key || !data || !hash)
+    return 1;
+
+  memset(actual_key, 0, sizeof(actual_key));
+  if (key_len > 64) {
+    if (c_rest_sha256(key, key_len, actual_key) != 0)
+      return 1;
+  } else {
+    memcpy(actual_key, key, key_len);
+  }
+
+  for (i = 0; i < 64; i++) {
+    k_ipad[i] = actual_key[i] ^ 0x36;
+    k_opad[i] = actual_key[i] ^ 0x5c;
+  }
+
+  inner_buf = (unsigned char *)malloc(64 + data_len);
+  if (!inner_buf)
+    return 1;
+
+  memcpy(inner_buf, k_ipad, 64);
+  memcpy(inner_buf + 64, data, data_len);
+
+  if (c_rest_sha256(inner_buf, 64 + data_len, inner_hash) != 0) {
+    free(inner_buf);
+    return 1;
+  }
+  free(inner_buf);
+
+  outer_buf = (unsigned char *)malloc(64 + 32);
+  if (!outer_buf)
+    return 1;
+
+  memcpy(outer_buf, k_opad, 64);
+  memcpy(outer_buf + 64, inner_hash, 32);
+
+  if (c_rest_sha256(outer_buf, 64 + 32, hash) != 0) {
+    free(outer_buf);
+    return 1;
+  }
+  free(outer_buf);
+
+  return 0;
+}
+
+int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
+                          size_t secret_len, char **out_token) {
+  const char *header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+  char *encoded_header = NULL;
+  size_t header_len = 0;
+  char *encoded_payload = NULL;
+  size_t payload_len = 0;
+  char *to_sign = NULL;
+  size_t to_sign_alloc = 0;
+  unsigned char sig[32];
+  char *encoded_sig = NULL;
+  size_t sig_len = 0;
+  char *token = NULL;
+  size_t token_alloc = 0;
+  size_t real_to_sign_len = 0;
+
+  if (!json_payload || !secret || !out_token)
+    return 1;
+
+  c_rest_base64url_encode((const unsigned char *)header, strlen(header), NULL,
+                          &header_len);
+  encoded_header = (char *)malloc(header_len + 1);
+  if (!encoded_header)
+    return 1;
+  c_rest_base64url_encode((const unsigned char *)header, strlen(header),
+                          encoded_header, &header_len);
+
+  c_rest_base64url_encode((const unsigned char *)json_payload,
+                          strlen(json_payload), NULL, &payload_len);
+  encoded_payload = (char *)malloc(payload_len + 1);
+  if (!encoded_payload) {
+    free(encoded_header);
+    return 1;
+  }
+  c_rest_base64url_encode((const unsigned char *)json_payload,
+                          strlen(json_payload), encoded_payload, &payload_len);
+
+  to_sign_alloc = strlen(encoded_header) + 1 + strlen(encoded_payload) + 1;
+  to_sign = (char *)malloc(to_sign_alloc);
+  if (!to_sign) {
+    free(encoded_header);
+    free(encoded_payload);
+    return 1;
+  }
+
+#if defined(_MSC_VER)
+  strcpy_s(to_sign, to_sign_alloc, encoded_header);
+  strcat_s(to_sign, to_sign_alloc, ".");
+  strcat_s(to_sign, to_sign_alloc, encoded_payload);
+#else
+  strcpy(to_sign, encoded_header);
+  strcat(to_sign, ".");
+  strcat(to_sign, encoded_payload);
+#endif
+
+  real_to_sign_len = strlen(to_sign);
+
+  if (c_rest_hmac_sha256(secret, secret_len, (const unsigned char *)to_sign,
+                         real_to_sign_len, sig) != 0) {
+    free(encoded_header);
+    free(encoded_payload);
+    free(to_sign);
+    return 1;
+  }
+
+  c_rest_base64url_encode(sig, 32, NULL, &sig_len);
+  encoded_sig = (char *)malloc(sig_len + 1);
+  if (!encoded_sig) {
+    free(encoded_header);
+    free(encoded_payload);
+    free(to_sign);
+    return 1;
+  }
+  c_rest_base64url_encode(sig, 32, encoded_sig, &sig_len);
+
+  token_alloc = strlen(to_sign) + 1 + strlen(encoded_sig) + 1;
+  token = (char *)malloc(token_alloc);
+  if (!token) {
+    free(encoded_header);
+    free(encoded_payload);
+    free(to_sign);
+    free(encoded_sig);
+    return 1;
+  }
+
+#if defined(_MSC_VER)
+  strcpy_s(token, token_alloc, to_sign);
+  strcat_s(token, token_alloc, ".");
+  strcat_s(token, token_alloc, encoded_sig);
+#else
+  strcpy(token, to_sign);
+  strcat(token, ".");
+  strcat(token, encoded_sig);
+#endif
+
+  free(encoded_header);
+  free(encoded_payload);
+  free(to_sign);
+  free(encoded_sig);
+
+  *out_token = token;
+  return 0;
+}
+
+int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
+                            size_t secret_len, char **out_payload) {
+  const char *dot1;
+  const char *dot2;
+  size_t to_sign_len;
+  char *to_sign;
+  unsigned char expected_sig[32];
+  char *encoded_expected_sig;
+  size_t encoded_expected_sig_len;
+  const char *provided_sig;
+  size_t payload_b64_len;
+  unsigned char *decoded_payload;
+  size_t decoded_payload_len;
+
+  if (!token || !secret || !out_payload)
+    return 1;
+
+  dot1 = strchr(token, '.');
+  if (!dot1)
+    return 1;
+  dot2 = strchr(dot1 + 1, '.');
+  if (!dot2)
+    return 1;
+
+  to_sign_len = (size_t)(dot2 - token);
+  to_sign = (char *)malloc(to_sign_len + 1);
+  if (!to_sign)
+    return 1;
+  memcpy(to_sign, token, to_sign_len);
+  to_sign[to_sign_len] = '\0';
+
+  provided_sig = dot2 + 1;
+
+  if (c_rest_hmac_sha256(secret, secret_len, (const unsigned char *)to_sign,
+                         to_sign_len, expected_sig) != 0) {
+    free(to_sign);
+    return 1;
+  }
+  free(to_sign);
+
+  c_rest_base64url_encode(expected_sig, 32, NULL, &encoded_expected_sig_len);
+  encoded_expected_sig = (char *)malloc(encoded_expected_sig_len + 1);
+  if (!encoded_expected_sig)
+    return 1;
+  c_rest_base64url_encode(expected_sig, 32, encoded_expected_sig,
+                          &encoded_expected_sig_len);
+
+  if (strcmp(provided_sig, encoded_expected_sig) != 0) {
+    free(encoded_expected_sig);
+    return 1;
+  }
+  free(encoded_expected_sig);
+
+  payload_b64_len = (size_t)(dot2 - (dot1 + 1));
+  if (c_rest_base64url_decode(dot1 + 1, payload_b64_len, NULL,
+                              &decoded_payload_len) != 0) {
+    return 1;
+  }
+
+  decoded_payload = (unsigned char *)malloc(decoded_payload_len + 1);
+  if (!decoded_payload)
+    return 1;
+
+  if (c_rest_base64url_decode(dot1 + 1, payload_b64_len, decoded_payload,
+                              &decoded_payload_len) != 0) {
+    free(decoded_payload);
+    return 1;
+  }
+  decoded_payload[decoded_payload_len] = '\0';
+
+  *out_payload = (char *)decoded_payload;
+  return 0;
+}

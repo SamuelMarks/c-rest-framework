@@ -36,6 +36,43 @@ int c_rest_sha256(const unsigned char *data, size_t len,
  */
 int c_rest_rand_bytes(unsigned char *buf, size_t len);
 
+/**
+ * @brief Computes the HMAC-SHA256 of the given data.
+ * @param key The secret key.
+ * @param key_len The length of the secret key.
+ * @param data The input data buffer.
+ * @param data_len The length of the input data.
+ * @param hash The 32-byte array to store the resulting HMAC.
+ * @return 0 on success, non-zero on failure.
+ */
+int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
+                       const unsigned char *data, size_t data_len,
+                       unsigned char hash[32]);
+
+/**
+ * @brief Simple JWT HS256 sign utility.
+ * @param json_payload The payload as a JSON string.
+ * @param secret The shared secret.
+ * @param secret_len Length of the shared secret.
+ * @param out_token Pointer to store the newly allocated JWT token string.
+ * @return 0 on success, non-zero on failure.
+ */
+int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
+                          size_t secret_len, char **out_token);
+
+/**
+ * @brief Simple JWT HS256 verify utility.
+ * @param token The JWT string.
+ * @param secret The shared secret.
+ * @param secret_len Length of the shared secret.
+ * @param out_payload Pointer to store the newly allocated JSON payload if
+ * valid.
+ * @return 0 on success (valid signature), non-zero on failure or invalid
+ * signature.
+ */
+int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
+                            size_t secret_len, char **out_payload);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -206,6 +206,43 @@ int test_request_response(void) {
     req.body = NULL; /* Prevent free of string literal */
   }
 
+  /* Test Auth Extraction */
+  {
+    struct c_rest_header auth_bearer;
+    struct c_rest_header auth_basic;
+    char *token = NULL;
+    char *user = NULL;
+    char *pass = NULL;
+
+    auth_bearer.key = "Authorization";
+    auth_bearer.value = "Bearer my-token-123";
+    auth_bearer.next = NULL;
+
+    req.headers = &auth_bearer;
+    if (c_rest_request_get_auth_bearer(&req, &token) != 0 ||
+        strcmp(token, "my-token-123") != 0) {
+      printf("Bearer token extraction failed\n");
+      return 1;
+    }
+    free(token);
+
+    auth_basic.key = "Authorization";
+    /* "admin:secret123" base64 encoded is "YWRtaW46c2VjcmV0MTIz" */
+    auth_basic.value = "Basic YWRtaW46c2VjcmV0MTIz";
+    auth_basic.next = NULL;
+
+    req.headers = &auth_basic;
+    if (c_rest_request_get_auth_basic(&req, &user, &pass) != 0 ||
+        strcmp(user, "admin") != 0 || strcmp(pass, "secret123") != 0) {
+      printf("Basic auth extraction failed\n");
+      return 1;
+    }
+    free(user);
+    free(pass);
+
+    req.headers = NULL; /* Clean stack pointer */
+  }
+
   c_rest_request_cleanup(&req);
   c_rest_response_cleanup(&res);
 

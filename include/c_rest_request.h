@@ -143,6 +143,25 @@ int c_rest_request_parse_json(struct c_rest_request *req, void **json_obj);
  */
 int c_rest_request_cleanup(struct c_rest_request *req);
 
+/**
+ * @brief Extract Bearer token from Authorization header.
+ * @param req Request
+ * @param out_token Output token
+ * @return 0 on success, 1 on failure
+ */
+int c_rest_request_get_auth_bearer(struct c_rest_request *req,
+                                   char **out_token);
+
+/**
+ * @brief Extract username and password from Basic Auth header.
+ * @param req Request
+ * @param out_username Output username
+ * @param out_password Output password
+ * @return 0 on success, 1 on failure
+ */
+int c_rest_request_get_auth_basic(struct c_rest_request *req,
+                                  char **out_username, char **out_password);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

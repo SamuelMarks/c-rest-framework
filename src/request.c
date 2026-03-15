@@ -423,3 +423,106 @@ int c_rest_request_cleanup(struct c_rest_request *req) {
   }
   return 0;
 }
+
+int c_rest_request_get_auth_bearer(struct c_rest_request *req,
+                                   char **out_token) {
+  const char *auth_val;
+  if (!req || !out_token)
+    return 1;
+
+  if (c_rest_request_get_header(req, "Authorization", &auth_val) != 0) {
+    return 1;
+  }
+
+  if (strncmp(auth_val, "Bearer ", 7) != 0) {
+    return 1;
+  }
+
+  *out_token = (char *)malloc(strlen(auth_val + 7) + 1);
+  if (!*out_token)
+    return 1;
+
+#if defined(_MSC_VER)
+  strcpy_s(*out_token, strlen(auth_val + 7) + 1, auth_val + 7);
+#else
+  strcpy(*out_token, auth_val + 7);
+#endif
+
+  return 0;
+}
+
+#include "c_rest_base64.h"
+
+int c_rest_request_get_auth_basic(struct c_rest_request *req,
+                                  char **out_username, char **out_password) {
+  const char *auth_val;
+  char *decoded;
+  size_t decoded_len;
+  char *colon;
+  size_t auth_len;
+
+  if (!req || !out_username || !out_password)
+    return 1;
+
+  if (c_rest_request_get_header(req, "Authorization", &auth_val) != 0) {
+    return 1;
+  }
+
+  if (strncmp(auth_val, "Basic ", 6) != 0) {
+    return 1;
+  }
+
+  auth_val += 6;
+  auth_len = strlen(auth_val);
+
+  if (c_rest_base64_decode(auth_val, auth_len, NULL, &decoded_len) != 0) {
+    return 1;
+  }
+
+  decoded = (char *)malloc(decoded_len + 1);
+  if (!decoded)
+    return 1;
+
+  if (c_rest_base64_decode(auth_val, auth_len, (unsigned char *)decoded,
+                           &decoded_len) != 0) {
+    free(decoded);
+    return 1;
+  }
+  decoded[decoded_len] = '\0';
+
+  colon = strchr(decoded, ':');
+  if (!colon) {
+    free(decoded);
+    return 1;
+  }
+
+  *colon = '\0';
+  *out_username = (char *)malloc(strlen(decoded) + 1);
+  if (*out_username) {
+#if defined(_MSC_VER)
+    strcpy_s(*out_username, strlen(decoded) + 1, decoded);
+#else
+    strcpy(*out_username, decoded);
+#endif
+  }
+
+  *out_password = (char *)malloc(strlen(colon + 1) + 1);
+  if (*out_password) {
+#if defined(_MSC_VER)
+    strcpy_s(*out_password, strlen(colon + 1) + 1, colon + 1);
+#else
+    strcpy(*out_password, colon + 1);
+#endif
+  }
+  free(decoded);
+
+  if (!*out_username || !*out_password) {
+    if (*out_username)
+      free(*out_username);
+    if (*out_password)
+      free(*out_password);
+    return 1;
+  }
+
+  return 0;
+}
