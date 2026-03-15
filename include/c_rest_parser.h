@@ -85,7 +85,7 @@ int c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
 int c_rest_parser_destroy(c_rest_parser_context *ctx);
 
 /* Specific parser backends */
-int c_rest_parser_get_cah_vtable(
+int c_rest_parser_get_basic_vtable(
     const struct c_rest_parser_vtable **out_vtable);
 
 #ifdef __cplusplus

@@ -29,7 +29,7 @@
 #endif
 
 int c_rest_tls_init(void) {
-  int res = cah_tls_init();
+  int res = 0;
   if (res != 0)
     return res;
 

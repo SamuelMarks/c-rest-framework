@@ -48,7 +48,7 @@ int test_parser(void) {
   callbacks.on_complete = on_complete;
   callbacks.on_error = NULL;
 
-  res = c_rest_parser_get_cah_vtable(&vtable);
+  res = c_rest_parser_get_basic_vtable(&vtable);
   if (res != 0 || !vtable) {
     printf("Failed to get vtable\n");
     return 1;

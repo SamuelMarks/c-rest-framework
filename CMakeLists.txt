@@ -23,9 +23,29 @@ option(C_REST_FRAMEWORK_USE_LIBRESSL "Use LibreSSL for cryptography" OFF)
 option(C_REST_FRAMEWORK_USE_BORINGSSL "Use BoringSSL for cryptography" OFF)
 option(C_REST_FRAMEWORK_USE_WOLFSSL "Use wolfSSL for cryptography" OFF)
 option(C_REST_FRAMEWORK_USE_S2N "Use s2n-tls for cryptography" OFF)
+
+option(C_REST_FRAMEWORK_USE_BEARSSL "Use BearSSL for cryptography" OFF)
+option(C_REST_FRAMEWORK_USE_SCHANNEL "Use Schannel for cryptography" OFF)
+option(C_REST_FRAMEWORK_USE_GNUTLS "Use GnuTLS for cryptography" OFF)
+option(C_REST_FRAMEWORK_USE_BOTAN "Use Botan for cryptography" OFF)
+option(C_REST_FRAMEWORK_USE_COMMONCRYPTO "Use CommonCrypto for cryptography" OFF)
+option(C_REST_FRAMEWORK_USE_WINCRYPT "Use WinCrypt for cryptography" OFF)
+
+option(C_REST_FRAMEWORK_USE_LSQUIC "Use lsquic" OFF)
+option(C_REST_FRAMEWORK_USE_PICOQUIC "Use picoquic" OFF)
+option(C_REST_FRAMEWORK_USE_NGHTTP3 "Use nghttp3" OFF)
+option(C_REST_FRAMEWORK_USE_MSH3 "Use msh3" OFF)
+option(C_REST_FRAMEWORK_USE_ARIA2 "Use aria2" OFF)
+option(C_REST_FRAMEWORK_USE_LIBSOUP3 "Use libsoup3" OFF)
+option(C_REST_FRAMEWORK_USE_LIBUV "Use libuv" OFF)
+option(C_REST_FRAMEWORK_USE_LIBEVENT "Use libevent" OFF)
+option(C_REST_FRAMEWORK_USE_LIBFETCH "Use libfetch" OFF)
+
+
 option(C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION "Integrate with c-multiplatform" OFF)
-option(C_REST_FRAMEWORK_FETCH_CAH "Fetch c-abstract-http from GitHub" OFF)
+option(C_REST_FRAMEWORK_FETCH_CAH "Fetch c-abstract-http from GitHub" ON)
 option(C_REST_FRAMEWORK_FETCH_C_ORM "Fetch c-orm from GitHub" OFF)
+option(C_REST_FRAMEWORK_FETCH_C_FS "Fetch c-fs from GitHub" ON)
 option(TRY_SYS_LIB "Fallback to system packages if vcpkg is not available" ON)
 
 macro(c_rest_framework_resolve_dependency PkgName FetchRepo FetchTag)
@@ -97,6 +117,28 @@ macro(c_rest_framework_apply_crypto tgt scope)
 endmacro()
 
 include(FetchContent)
+set(C_ABSTRACT_HTTP_USE_MBEDTLS ${C_REST_FRAMEWORK_USE_MBEDTLS} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_OPENSSL ${C_REST_FRAMEWORK_USE_OPENSSL} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_LIBRESSL ${C_REST_FRAMEWORK_USE_LIBRESSL} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_BORINGSSL ${C_REST_FRAMEWORK_USE_BORINGSSL} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_WOLFSSL ${C_REST_FRAMEWORK_USE_WOLFSSL} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_S2N ${C_REST_FRAMEWORK_USE_S2N} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_BEARSSL ${C_REST_FRAMEWORK_USE_BEARSSL} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_SCHANNEL ${C_REST_FRAMEWORK_USE_SCHANNEL} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_GNUTLS ${C_REST_FRAMEWORK_USE_GNUTLS} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_BOTAN ${C_REST_FRAMEWORK_USE_BOTAN} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_COMMONCRYPTO ${C_REST_FRAMEWORK_USE_COMMONCRYPTO} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_WINCRYPT ${C_REST_FRAMEWORK_USE_WINCRYPT} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_LSQUIC ${C_REST_FRAMEWORK_USE_LSQUIC} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_PICOQUIC ${C_REST_FRAMEWORK_USE_PICOQUIC} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_NGHTTP3 ${C_REST_FRAMEWORK_USE_NGHTTP3} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_MSH3 ${C_REST_FRAMEWORK_USE_MSH3} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_ARIA2 ${C_REST_FRAMEWORK_USE_ARIA2} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_LIBSOUP3 ${C_REST_FRAMEWORK_USE_LIBSOUP3} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_LIBUV ${C_REST_FRAMEWORK_USE_LIBUV} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_LIBEVENT ${C_REST_FRAMEWORK_USE_LIBEVENT} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_LIBFETCH ${C_REST_FRAMEWORK_USE_LIBFETCH} CACHE BOOL "" FORCE)
+
 if(C_REST_FRAMEWORK_FETCH_CAH)
     FetchContent_Declare(
       c_abstract_http
@@ -115,6 +157,15 @@ if(C_REST_FRAMEWORK_FETCH_C_ORM)
     )
     FetchContent_MakeAvailable(c_orm)
     add_definitions(-DC_REST_FRAMEWORK_USE_REAL_C_ORM)
+endif()
+
+if(C_REST_FRAMEWORK_FETCH_C_FS)
+    FetchContent_Declare(
+      cfs
+      GIT_REPOSITORY https://github.com/SamuelMarks/c-fs.git
+      GIT_TAG master
+    )
+    FetchContent_MakeAvailable(cfs)
 endif()
 
 if(C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION)
@@ -138,7 +189,6 @@ if(MSVC)
         src/modality_greenthread.c
         src/modality_message_passing.c
         src/parser.c
-        src/parser_cah.c
         src/client.c
         src/tls.c
         src/multipart.c
@@ -161,9 +211,7 @@ if(MSVC)
         PROPERTIES COMPILE_OPTIONS "/Za"
     )
 
-    if(NOT C_REST_FRAMEWORK_FETCH_CAH)
-        set_source_files_properties(src/c_abstract_http_mock.c PROPERTIES COMPILE_OPTIONS "/Za")
-    endif()
+    
 
     if(C_REST_FRAMEWORK_STATIC_CRT)
         foreach(flag_var
@@ -206,7 +254,6 @@ add_library(c-rest-framework STATIC
     src/modality_greenthread.c
     src/modality_message_passing.c
     src/parser.c
-    src/parser_cah.c
     src/client.c
     src/tls.c
     src/multipart.c
@@ -232,14 +279,17 @@ c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
 
 if(C_REST_FRAMEWORK_FETCH_CAH)
     target_link_libraries(c-rest-framework PUBLIC c-abstract-http)
-else()
-    target_sources(c-rest-framework PRIVATE src/c_abstract_http_mock.c)
+
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_C_ORM)
     target_link_libraries(c-rest-framework PUBLIC c-orm)
 else()
     target_sources(c-rest-framework PRIVATE src/c_orm_mock.c)
+endif()
+
+if(C_REST_FRAMEWORK_FETCH_C_FS)
+    target_link_libraries(c-rest-framework PUBLIC cfs)
 endif()
 
 if(WIN32)
@@ -260,3 +310,6 @@ target_include_directories(c-rest-framework PUBLIC include)
 enable_testing()
 add_subdirectory(tests)
 add_subdirectory(examples)
+
+
+

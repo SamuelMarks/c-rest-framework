@@ -43,80 +43,11 @@ int c_rest_socket_set_nonblocking(c_rest_socket_t sock, int nonblocking) {
   (void)nonblocking;
   return 1;
 }
-
 int c_rest_socket_close(c_rest_socket_t sock) {
+  /* Simple socket close mock */
   (void)sock;
-  return 1;
-}
-
-int c_rest_file_open(const char *path, int write_mode,
-                     c_rest_file_t *out_file) {
-  FILE *f = NULL;
-  if (!out_file)
-    return 1;
-
-  if (write_mode) {
-    f = fopen(path, "wb");
-  } else {
-    f = fopen(path, "rb");
-  }
-  if (!f)
-    return 1;
-
-  *out_file = (c_rest_file_t)f;
   return 0;
 }
-
-int c_rest_file_read(c_rest_file_t file, void *buffer, size_t size,
-                     size_t *out_read) {
-  FILE *f = (FILE *)file;
-  size_t r;
-
-  if (!f || !buffer)
-    return 1;
-
-  r = fread(buffer, 1, size, f);
-  if (out_read) {
-    *out_read = r;
-  }
-
-  if (r < size && ferror(f)) {
-    return 1;
-  }
-
-  return 0;
-}
-
-int c_rest_file_write(c_rest_file_t file, const void *buffer, size_t size,
-                      size_t *out_written) {
-  FILE *f = (FILE *)file;
-  size_t w;
-
-  if (!f || !buffer)
-    return 1;
-
-  w = fwrite(buffer, 1, size, f);
-  if (out_written) {
-    *out_written = w;
-  }
-
-  if (w < size) {
-    return 1;
-  }
-
-  return 0;
-}
-
-int c_rest_file_close(c_rest_file_t file) {
-  FILE *f = (FILE *)file;
-  if (!f)
-    return 1;
-  if (fclose(f) != 0) {
-    return 1;
-  }
-  return 0;
-}
-
 int c_rest_thread_create(c_rest_thread_t *out_thread, c_rest_thread_fn func,
                          void *arg) {
   (void)out_thread;

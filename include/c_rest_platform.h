@@ -17,10 +17,8 @@ typedef cm_thread_t c_rest_thread_t;
 typedef cm_mutex_t c_rest_mutex_t;
 typedef cm_cond_t c_rest_cond_t;
 typedef void *c_rest_process_t; /* c-multiplatform doesn't have processes */
-typedef cm_file_t c_rest_file_t;
 
 #define C_REST_INVALID_SOCKET ((c_rest_socket_t)0)
-#define C_REST_INVALID_FILE ((c_rest_file_t)0)
 
 #else
 
@@ -34,12 +32,12 @@ typedef ptrdiff_t c_rest_thread_t;
 typedef ptrdiff_t c_rest_mutex_t;
 typedef ptrdiff_t c_rest_cond_t;
 typedef ptrdiff_t c_rest_process_t;
-typedef ptrdiff_t c_rest_file_t;
 
 #define C_REST_INVALID_SOCKET ((c_rest_socket_t) - 1)
-#define C_REST_INVALID_FILE ((c_rest_file_t) - 1)
 
 #endif
+
+#include <cfs/cfs.h>
 
 /*
  * Initialization and cleanup.
@@ -58,16 +56,6 @@ int c_rest_socket_accept(c_rest_socket_t server_sock,
                          c_rest_socket_t *out_client_sock);
 int c_rest_socket_set_nonblocking(c_rest_socket_t sock, int nonblocking);
 int c_rest_socket_close(c_rest_socket_t sock);
-
-/*
- * File I/O
- */
-int c_rest_file_open(const char *path, int write_mode, c_rest_file_t *out_file);
-int c_rest_file_read(c_rest_file_t file, void *buffer, size_t size,
-                     size_t *out_read);
-int c_rest_file_write(c_rest_file_t file, const void *buffer, size_t size,
-                      size_t *out_written);
-int c_rest_file_close(c_rest_file_t file);
 
 /*
  * Threading
