@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_request.h"
+#include <parson.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +9,32 @@
 #if defined(_MSC_VER)
 #define strcasecmp _stricmp
 #endif
+
+static void url_decode(char *dst, const char *src, size_t len) {
+  size_t i;
+  char *p = dst;
+  for (i = 0; i < len; i++) {
+    if (src[i] == '%') {
+      if (i + 2 < len) {
+        int v;
+        char hex[3];
+        hex[0] = src[i + 1];
+        hex[1] = src[i + 2];
+        hex[2] = '\0';
+        v = (int)strtol(hex, NULL, 16);
+        *p++ = (char)v;
+        i += 2;
+      } else {
+        *p++ = src[i];
+      }
+    } else if (src[i] == '+') {
+      *p++ = ' ';
+    } else {
+      *p++ = src[i];
+    }
+  }
+  *p = '\0';
+}
 
 int c_rest_request_get_header(struct c_rest_request *req, const char *key,
                               const char **out_value) {
@@ -139,21 +166,18 @@ static int parse_query_if_needed(struct c_rest_request *req) {
 
       qp->key = (char *)malloc(key_len + 1);
       if (qp->key) {
-        memcpy(qp->key, p, key_len);
-        qp->key[key_len] = '\0';
+        url_decode(qp->key, p, key_len);
       }
 
       qp->value = (char *)malloc(val_len + 1);
       if (qp->value) {
-        memcpy(qp->value, eq + 1, val_len);
-        qp->value[val_len] = '\0';
+        url_decode(qp->value, eq + 1, val_len);
       }
     } else {
       key_len = (size_t)(amp - p);
       qp->key = (char *)malloc(key_len + 1);
       if (qp->key) {
-        memcpy(qp->key, p, key_len);
-        qp->key[key_len] = '\0';
+        url_decode(qp->key, p, key_len);
       }
       qp->value = (char *)malloc(1);
       if (qp->value) {
@@ -198,6 +222,97 @@ int c_rest_request_get_query(struct c_rest_request *req, const char *key,
   return 1;
 }
 
+int c_rest_request_parse_urlencoded(struct c_rest_request *req) {
+  const char *p;
+  if (!req || req->form_params) {
+    return 0; /* Already parsed or no body */
+  }
+
+  if (!req->body || req->body_len == 0) {
+    return 0;
+  }
+
+  p = req->body;
+  while (*p) {
+    const char *eq = strchr(p, '=');
+    const char *amp = strchr(p, '&');
+    size_t key_len, val_len;
+    struct c_rest_header *qp;
+
+    if (!amp) {
+      amp = p + strlen(p);
+    }
+
+    qp = (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
+    if (!qp) {
+      break; /* Out of memory */
+    }
+    qp->key = NULL;
+    qp->value = NULL;
+    qp->next = NULL;
+
+    if (eq && eq < amp) {
+      key_len = (size_t)(eq - p);
+      val_len = (size_t)(amp - eq - 1);
+
+      qp->key = (char *)malloc(key_len + 1);
+      if (qp->key) {
+        url_decode(qp->key, p, key_len);
+      }
+
+      qp->value = (char *)malloc(val_len + 1);
+      if (qp->value) {
+        url_decode(qp->value, eq + 1, val_len);
+      }
+    } else {
+      key_len = (size_t)(amp - p);
+      qp->key = (char *)malloc(key_len + 1);
+      if (qp->key) {
+        url_decode(qp->key, p, key_len);
+      }
+      qp->value = (char *)malloc(1);
+      if (qp->value) {
+        qp->value[0] = '\0';
+      }
+    }
+
+    if (!qp->key || !qp->value) {
+      free(qp->key);
+      free(qp->value);
+      free(qp);
+    } else {
+      qp->next = req->form_params;
+      req->form_params = qp;
+    }
+
+    if (*amp == '\0') {
+      break;
+    }
+    p = amp + 1;
+  }
+  return 0;
+}
+
+int c_rest_request_get_form_param(struct c_rest_request *req, const char *key,
+                                  const char **out_value) {
+  struct c_rest_header *qp;
+
+  if (!req || !key || !out_value) {
+    return 1;
+  }
+
+  c_rest_request_parse_urlencoded(req);
+
+  for (qp = req->form_params; qp != NULL; qp = qp->next) {
+    if (strcmp(qp->key, key) == 0) {
+      *out_value = qp->value;
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
 int c_rest_request_read_body(struct c_rest_request *req, char **body,
                              size_t *body_len) {
   if (!req || !body || !body_len) {
@@ -228,8 +343,16 @@ int c_rest_request_parse_json(struct c_rest_request *req, void **json_obj) {
   if (!req || !json_obj) {
     return 1;
   }
-  /* Stub: JSON parsing wrapper will be integrated here later. */
   *json_obj = NULL;
+  if (!req->body || req->body_len == 0) {
+    return 1;
+  }
+
+  *json_obj = (void *)json_parse_string(req->body);
+  if (!*json_obj) {
+    return 1;
+  }
+
   return 0;
 }
 
@@ -260,6 +383,16 @@ int c_rest_request_cleanup(struct c_rest_request *req) {
     h = next_h;
   }
   req->query_params = NULL;
+
+  h = req->form_params;
+  while (h) {
+    next_h = h->next;
+    free(h->key);
+    free(h->value);
+    free(h);
+    h = next_h;
+  }
+  req->form_params = NULL;
 
   h = req->cookies;
   while (h) {

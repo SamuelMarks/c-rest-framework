@@ -1,6 +1,7 @@
 /* clang-format off */
 #include "c_rest_request.h" /* For struct c_rest_header */
 #include "c_rest_response.h"
+#include <parson.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,18 +26,20 @@ int c_rest_response_set_header(struct c_rest_response *res, const char *key,
   }
 
   /* Check if it already exists, replace value if it does */
-  for (h = res->headers; h != NULL; h = h->next) {
-    if (strcasecmp(h->key, key) == 0) {
-      char *new_val;
-      val_len = strlen(value) + 1;
-      new_val = (char *)malloc(val_len);
-      if (!new_val) {
-        return 1;
+  if (strcasecmp(key, "Set-Cookie") != 0) {
+    for (h = res->headers; h != NULL; h = h->next) {
+      if (strcasecmp(h->key, key) == 0) {
+        char *new_val;
+        val_len = strlen(value) + 1;
+        new_val = (char *)malloc(val_len);
+        if (!new_val) {
+          return 1;
+        }
+        SAFE_STRCPY(new_val, val_len, value);
+        free(h->value);
+        h->value = new_val;
+        return 0;
       }
-      SAFE_STRCPY(new_val, val_len, value);
-      free(h->value);
-      h->value = new_val;
-      return 0;
     }
   }
 
@@ -143,6 +146,25 @@ int c_rest_response_json(struct c_rest_response *res, const char *json_str) {
   return c_rest_response_send(res);
 }
 
+int c_rest_response_json_obj(struct c_rest_response *res, void *json_obj) {
+  char *json_str;
+  int ret;
+
+  if (!res || !json_obj) {
+    return 1;
+  }
+
+  json_str = json_serialize_to_string((JSON_Value *)json_obj);
+  if (!json_str) {
+    return 1;
+  }
+
+  ret = c_rest_response_json(res, json_str);
+  json_free_serialized_string(json_str);
+
+  return ret;
+}
+
 int c_rest_response_html(struct c_rest_response *res, const char *html_str) {
   size_t len;
   if (!res || !html_str) {
@@ -199,6 +221,7 @@ int c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
                                const char *value, const char *attributes) {
   char *cookie_str;
   size_t len;
+  int ret;
 
   if (!res || !key || !value) {
     return 1;
@@ -228,33 +251,10 @@ int c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
   }
 #endif
 
-  /* NOTE: HTTP allows multiple Set-Cookie headers.
-     c_rest_response_set_header currently replaces existing keys.
-     To fix this properly, we need to allow multiple headers with the same key.
-     For now, we just call set_header (which replaces).
-     Phase 11 says "Write tests for setting multiple headers with same key".
-     We will adjust c_rest_response_set_header later if needed. */
+  ret = c_rest_response_set_header(res, "Set-Cookie", cookie_str);
+  free(cookie_str);
 
-  /* Workaround: we manually append it if we need to support multiple Set-Cookie
-   */
-  {
-    struct c_rest_header *new_h =
-        (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
-    if (new_h) {
-      new_h->key = (char *)malloc(11);
-      if (new_h->key) {
-        SAFE_STRCPY(new_h->key, 11, "Set-Cookie");
-      }
-      new_h->value = cookie_str; /* Take ownership */
-      new_h->next = res->headers;
-      res->headers = new_h;
-    } else {
-      free(cookie_str);
-      return 1;
-    }
-  }
-
-  return 0;
+  return ret;
 }
 
 int c_rest_response_send_file(struct c_rest_response *res,

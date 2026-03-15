@@ -163,6 +163,49 @@ int test_request_response(void) {
     return 1;
   }
 
+  /* Test JSON Request Parsing */
+  {
+    void *json_obj = NULL;
+    req.body = "{\"key\": \"value\"}";
+    req.body_len = strlen(req.body);
+    if (c_rest_request_parse_json(&req, &json_obj) != 0 || !json_obj) {
+      printf("JSON request parsing failed\n");
+      return 1;
+    }
+    /* Test JSON Response Generation */
+    res.headers_sent = 0; /* Reset state */
+    if (c_rest_response_json_obj(&res, json_obj) != 0) {
+      printf("JSON response generation failed\n");
+      return 1;
+    }
+    /* In parson, you'd typically free it here but we don't include parson.h in
+     * test. Assuming we just test it doesn't fail. */
+  }
+
+  /* Test URL Encoded Parsing */
+  {
+    const char *form_val = NULL;
+    req.body = "username=admin&password=123%20456&grant_type=password";
+    req.body_len = strlen(req.body);
+    /* Form params list starts empty since req was cleaned up/not initialized
+     * for this */
+    if (c_rest_request_parse_urlencoded(&req) != 0) {
+      printf("URL encoded parsing failed\n");
+      return 1;
+    }
+    if (c_rest_request_get_form_param(&req, "username", &form_val) != 0 ||
+        strcmp(form_val, "admin") != 0) {
+      printf("Failed to get username form param\n");
+      return 1;
+    }
+    if (c_rest_request_get_form_param(&req, "password", &form_val) != 0 ||
+        strcmp(form_val, "123 456") != 0) {
+      printf("Failed to get password form param (or decode failed)\n");
+      return 1;
+    }
+    req.body = NULL; /* Prevent free of string literal */
+  }
+
   c_rest_request_cleanup(&req);
   c_rest_response_cleanup(&res);
 

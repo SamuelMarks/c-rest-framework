@@ -168,6 +168,49 @@ if(C_REST_FRAMEWORK_FETCH_C_FS)
     FetchContent_MakeAvailable(cfs)
 endif()
 
+macro(c_rest_framework_resolve_parson)
+    set(_VCPKG_APPLICABLE ON)
+    if(MINGW OR CYGWIN OR (MSVC AND MSVC_VERSION LESS 1500))
+        set(_VCPKG_APPLICABLE OFF)
+    endif()
+
+    set(parson_RESOLVED OFF)
+
+    if(_VCPKG_APPLICABLE AND DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake") 
+        find_package(parson CONFIG QUIET)
+        if(parson_FOUND)
+            message(STATUS "Found parson via vcpkg")
+            set(parson_RESOLVED ON)
+            target_link_libraries(c-rest-framework PUBLIC parson::parson)
+        endif()
+    endif()
+
+    if(NOT parson_RESOLVED AND TRY_SYS_LIB)
+        find_package(parson QUIET NO_CMAKE_BUILDS_PATH)
+        if(parson_FOUND)
+            message(STATUS "Found parson via system packages")
+            set(parson_RESOLVED ON)
+            target_link_libraries(c-rest-framework PUBLIC parson)
+        endif()
+    endif()
+
+    if(NOT parson_RESOLVED)
+        message(STATUS "Fetching parson via FetchContent")
+        FetchContent_Declare(
+            parson
+            GIT_REPOSITORY https://github.com/kgabis/parson.git
+            GIT_TAG master
+        )
+        FetchContent_GetProperties(parson)
+        if(NOT parson_POPULATED)
+            FetchContent_Populate(parson)
+        endif()
+        target_sources(c-rest-framework PRIVATE ${parson_SOURCE_DIR}/parson.c)
+        target_include_directories(c-rest-framework PUBLIC ${parson_SOURCE_DIR})
+        set(parson_RESOLVED ON)
+    endif()
+endmacro()
+
 if(C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION)
     add_definitions(-DC_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION)
 endif()
@@ -276,6 +319,7 @@ add_library(c-rest-framework STATIC
 )
 
 c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
+c_rest_framework_resolve_parson()
 
 if(C_REST_FRAMEWORK_FETCH_CAH)
     target_link_libraries(c-rest-framework PUBLIC c-abstract-http)
