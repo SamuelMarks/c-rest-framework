@@ -10,4 +10,33 @@ if(BUILD_TESTING)
     add_executable(test_notes test_notes.c)
     target_link_libraries(test_notes PRIVATE c-rest-framework)
     add_test(NAME test_notes COMMAND test_notes)
+
+    if(WIN32 AND BUILD_SHARED_LIBS)
+        if(TARGET cfs)
+            add_custom_command(TARGET test_notes POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:cfs>" "$<TARGET_FILE_DIR:test_notes>"
+            )
+        endif()
+        if(TARGET c89stringutils)
+            add_custom_command(TARGET test_notes POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c89stringutils>" "$<TARGET_FILE_DIR:test_notes>"
+            )
+        endif()
+        if(TARGET c-abstract-http)
+            add_custom_command(TARGET test_notes POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c-abstract-http>" "$<TARGET_FILE_DIR:test_notes>"
+            )
+        endif()
+        if(TARGET c_orm)
+            add_custom_command(TARGET test_notes POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c_orm>" "$<TARGET_FILE_DIR:test_notes>"
+            )
+        endif()
+        if(TARGET c-rest-framework)
+            add_custom_command(TARGET test_notes POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c-rest-framework>" "$<TARGET_FILE_DIR:test_notes>"
+            )
+        endif()
+    endif()
 endif()
+

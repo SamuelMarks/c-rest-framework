@@ -292,7 +292,7 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     endif()
 endif()
 
-add_library(c-rest-framework STATIC 
+add_library(c-rest-framework
     src/modality.c
     src/modality_sync.c
     src/modality_single_thread.c
@@ -322,6 +322,10 @@ add_library(c-rest-framework STATIC
     src/c_rest_base64.c
     src/c_rest_crypto.c
 )
+
+if(WIN32)
+    set_target_properties(c-rest-framework PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
 
 c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
 c_rest_framework_resolve_parson()
