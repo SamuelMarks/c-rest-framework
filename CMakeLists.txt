@@ -82,6 +82,18 @@ macro(c_rest_framework_resolve_dependency PkgName FetchRepo FetchTag)
         )
         FetchContent_MakeAvailable(${PkgName})
         set(${PkgName}_RESOLVED ON)
+    elseif(C_REST_FRAMEWORK_USE_BEARSSL)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_BEARSSL)
+    elseif(C_REST_FRAMEWORK_USE_SCHANNEL)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_SCHANNEL)
+    elseif(C_REST_FRAMEWORK_USE_GNUTLS)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_GNUTLS)
+    elseif(C_REST_FRAMEWORK_USE_BOTAN)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_BOTAN)
+    elseif(C_REST_FRAMEWORK_USE_COMMONCRYPTO)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_COMMONCRYPTO)
+    elseif(C_REST_FRAMEWORK_USE_WINCRYPT)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_WINCRYPT)
     endif()
 endmacro()
 
@@ -113,6 +125,18 @@ macro(c_rest_framework_apply_crypto tgt scope)
         c_rest_framework_resolve_dependency(s2n https://github.com/aws/s2n-tls.git main)
         target_link_libraries(${tgt} ${scope} s2n::s2n)
         target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_S2N)
+    elseif(C_REST_FRAMEWORK_USE_BEARSSL)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_BEARSSL)
+    elseif(C_REST_FRAMEWORK_USE_SCHANNEL)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_SCHANNEL)
+    elseif(C_REST_FRAMEWORK_USE_GNUTLS)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_GNUTLS)
+    elseif(C_REST_FRAMEWORK_USE_BOTAN)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_BOTAN)
+    elseif(C_REST_FRAMEWORK_USE_COMMONCRYPTO)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_COMMONCRYPTO)
+    elseif(C_REST_FRAMEWORK_USE_WINCRYPT)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_WINCRYPT)
     endif()
 endmacro()
 
@@ -123,6 +147,13 @@ set(C_ABSTRACT_HTTP_USE_LIBRESSL ${C_REST_FRAMEWORK_USE_LIBRESSL} CACHE BOOL "" 
 set(C_ABSTRACT_HTTP_USE_BORINGSSL ${C_REST_FRAMEWORK_USE_BORINGSSL} CACHE BOOL "" FORCE)
 set(C_ABSTRACT_HTTP_USE_WOLFSSL ${C_REST_FRAMEWORK_USE_WOLFSSL} CACHE BOOL "" FORCE)
 set(C_ABSTRACT_HTTP_USE_S2N ${C_REST_FRAMEWORK_USE_S2N} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_BEARSSL ${C_REST_FRAMEWORK_USE_BEARSSL} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_SCHANNEL ${C_REST_FRAMEWORK_USE_SCHANNEL} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_GNUTLS ${C_REST_FRAMEWORK_USE_GNUTLS} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_BOTAN ${C_REST_FRAMEWORK_USE_BOTAN} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_COMMONCRYPTO ${C_REST_FRAMEWORK_USE_COMMONCRYPTO} CACHE BOOL "" FORCE)
+set(C_ABSTRACT_HTTP_USE_WINCRYPT ${C_REST_FRAMEWORK_USE_WINCRYPT} CACHE BOOL "" FORCE)
+
 set(C_ABSTRACT_HTTP_USE_BEARSSL ${C_REST_FRAMEWORK_USE_BEARSSL} CACHE BOOL "" FORCE)
 set(C_ABSTRACT_HTTP_USE_SCHANNEL ${C_REST_FRAMEWORK_USE_SCHANNEL} CACHE BOOL "" FORCE)
 set(C_ABSTRACT_HTTP_USE_GNUTLS ${C_REST_FRAMEWORK_USE_GNUTLS} CACHE BOOL "" FORCE)
@@ -213,6 +244,18 @@ macro(c_rest_framework_resolve_parson)
         target_sources(c-rest-framework PRIVATE ${parson_SOURCE_DIR}/parson.c)
         target_include_directories(c-rest-framework PUBLIC ${parson_SOURCE_DIR})
         set(parson_RESOLVED ON)
+    elseif(C_REST_FRAMEWORK_USE_BEARSSL)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_BEARSSL)
+    elseif(C_REST_FRAMEWORK_USE_SCHANNEL)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_SCHANNEL)
+    elseif(C_REST_FRAMEWORK_USE_GNUTLS)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_GNUTLS)
+    elseif(C_REST_FRAMEWORK_USE_BOTAN)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_BOTAN)
+    elseif(C_REST_FRAMEWORK_USE_COMMONCRYPTO)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_COMMONCRYPTO)
+    elseif(C_REST_FRAMEWORK_USE_WINCRYPT)
+        target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_WINCRYPT)
     endif()
 endmacro()
 
@@ -256,6 +299,7 @@ if(MSVC)
         src/c_rest_endian.c
         src/c_rest_base64.c
         src/c_rest_crypto.c
+        src/c_rest_time.c
         PROPERTIES COMPILE_OPTIONS "/Za"
     )
 
@@ -321,6 +365,7 @@ add_library(c-rest-framework
     src/c_rest_endian.c
     src/c_rest_base64.c
     src/c_rest_crypto.c
+        src/c_rest_time.c
 )
 
 if(WIN32)

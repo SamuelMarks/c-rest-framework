@@ -4,6 +4,7 @@
 #include "c_rest_request.h"
 #include "c_rest_response.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 /* clang-format on */
 
@@ -70,5 +71,45 @@ int c_rest_https_redirect_middleware(struct c_rest_request *req,
       return c_rest_response_redirect(res, url, 301);
     }
   }
+  return 0;
+}
+
+int c_rest_oauth2_middleware(struct c_rest_request *req,
+                             struct c_rest_response *res, void *user_data) {
+  char *token = NULL;
+  c_rest_oauth2_verify_fn verify_fn;
+  void *auth_ctx = NULL;
+
+  if (!req || !res) {
+    return 1;
+  }
+
+  if (!user_data) {
+    c_rest_response_set_status(res, 500);
+    c_rest_response_html(res, "Internal Server Error: Missing OAuth2 verifier");
+    return 1;
+  }
+
+  verify_fn = (c_rest_oauth2_verify_fn)user_data;
+
+  if (c_rest_request_get_auth_bearer(req, &token) != 0) {
+    c_rest_response_set_status(res, 401);
+    c_rest_response_set_header(res, "WWW-Authenticate", "Bearer realm=\"API\"");
+    c_rest_response_html(res, "Unauthorized: Missing or invalid Bearer token");
+    return 1;
+  }
+
+  if (verify_fn(token, &auth_ctx) != 0) {
+    free(token);
+    c_rest_response_set_status(res, 401);
+    c_rest_response_set_header(res, "WWW-Authenticate",
+                               "Bearer realm=\"API\", error=\"invalid_token\"");
+    c_rest_response_html(res, "Unauthorized: Invalid token");
+    return 1;
+  }
+
+  free(token);
+  req->auth_context = auth_ctx;
+
   return 0;
 }

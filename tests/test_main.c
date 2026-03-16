@@ -56,6 +56,7 @@ int test_router(void);
 int test_request_response(void);
 int test_orm_integration(void);
 int test_crypto(void);
+int test_time(void);
 int test_tls_context(void);
 int test_tls_integration(void);
 
@@ -109,6 +110,11 @@ int main(void) {
 
   printf("Running test_crypto...\n");
   res = test_crypto();
+  if (res != 0)
+    return res;
+
+  printf("Running test_time...\n");
+  res = test_time();
   if (res != 0)
     return res;
 

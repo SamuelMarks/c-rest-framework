@@ -11,6 +11,7 @@ add_executable(c-rest-framework-tests
     test_request_response.c
     test_orm_integration.c
     test_crypto.c
+    test_time.c
     test_tls_context.c
     test_tls_integration.c
 )

@@ -97,6 +97,28 @@ int test_crypto(void) {
   free(jwt_token);
   free(jwt_payload);
 
+  printf("Testing PBKDF2-HMAC-SHA256...\n");
+  {
+    const unsigned char pwd[] = "password";
+    const unsigned char salt[] = "salt";
+    unsigned char dk[32];
+    res = c_rest_pbkdf2_hmac_sha256(pwd, 8, salt, 4, 1, 32, dk);
+    if (res != 0) {
+      printf("PBKDF2 failed\n");
+      return 1;
+    }
+
+    {
+      char *rand_str = NULL;
+      res = c_rest_random_string_generate(32, &rand_str);
+      if (res != 0 || !rand_str) {
+        printf("c_rest_random_string_generate failed\n");
+        return 1;
+      }
+      free(rand_str);
+    }
+  }
+
   printf("test_crypto finished.\n");
 
   return 0;

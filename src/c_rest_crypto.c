@@ -8,16 +8,28 @@
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) || defined(C_REST_USE_BORINGSSL)
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+
+#include <openssl/hmac.h>
+#include <openssl/evp.h>
+
 #elif defined(C_REST_USE_MBEDTLS)
 #include <mbedtls/sha1.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
+
+#include <mbedtls/md.h>
+#include <mbedtls/pkcs5.h>
+
 #elif defined(C_REST_USE_WOLFSSL)
 #include <wolfssl/options.h>
 #include <wolfssl/wolfcrypt/sha.h>
 #include <wolfssl/wolfcrypt/sha256.h>
 #include <wolfssl/wolfcrypt/random.h>
+
+#include <wolfssl/wolfcrypt/hmac.h>
+#include <wolfssl/wolfcrypt/pwdbased.h>
+
 /* clang-format on */
 #endif
 
@@ -446,6 +458,93 @@ int c_rest_rand_bytes(unsigned char *buf, size_t len) {
 
 #include "c_rest_base64.h"
 
+#if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
+    defined(C_REST_USE_BORINGSSL)
+
+int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
+                       const unsigned char *data, size_t data_len,
+                       unsigned char hash[32]) {
+  unsigned int out_len = 32;
+  if (!HMAC(EVP_sha256(), key, (int)key_len, data, data_len, hash, &out_len)) {
+    return 1;
+  }
+  return 0;
+}
+
+int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
+                              size_t password_len, const unsigned char *salt,
+                              size_t salt_len, unsigned int iterations,
+                              size_t dk_len, unsigned char *out_key) {
+  if (PKCS5_PBKDF2_HMAC((const char *)password, (int)password_len, salt,
+                        (int)salt_len, (int)iterations, EVP_sha256(),
+                        (int)dk_len, out_key) != 1) {
+    return 1;
+  }
+  return 0;
+}
+
+#elif defined(C_REST_USE_MBEDTLS)
+
+int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
+                       const unsigned char *data, size_t data_len,
+                       unsigned char hash[32]) {
+  const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+  if (!info)
+    return 1;
+  if (mbedtls_md_hmac(info, key, key_len, data, data_len, hash) != 0)
+    return 1;
+  return 0;
+}
+
+int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
+                              size_t password_len, const unsigned char *salt,
+                              size_t salt_len, unsigned int iterations,
+                              size_t dk_len, unsigned char *out_key) {
+  mbedtls_md_context_t ctx;
+  const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+  int ret;
+
+  if (!info)
+    return 1;
+
+  mbedtls_md_init(&ctx);
+  if (mbedtls_md_setup(&ctx, info, 1) != 0) {
+    mbedtls_md_free(&ctx);
+    return 1;
+  }
+
+  ret = mbedtls_pkcs5_pbkdf2_hmac(&ctx, password, password_len, salt, salt_len,
+                                  iterations, (uint32_t)dk_len, out_key);
+  mbedtls_md_free(&ctx);
+  return ret == 0 ? 0 : 1;
+}
+
+#elif defined(C_REST_USE_WOLFSSL)
+
+int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
+                       const unsigned char *data, size_t data_len,
+                       unsigned char hash[32]) {
+  Hmac hmac;
+  if (wc_HmacSetKey(&hmac, WC_HASH_TYPE_SHA256, key, (word32)key_len) != 0)
+    return 1;
+  if (wc_HmacUpdate(&hmac, data, (word32)data_len) != 0)
+    return 1;
+  if (wc_HmacFinal(&hmac, hash) != 0)
+    return 1;
+  return 0;
+}
+
+int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
+                              size_t password_len, const unsigned char *salt,
+                              size_t salt_len, unsigned int iterations,
+                              size_t dk_len, unsigned char *out_key) {
+  int ret = wc_PBKDF2(out_key, password, (int)password_len, salt, (int)salt_len,
+                      (int)iterations, (int)dk_len, WC_HASH_TYPE_SHA256);
+  return ret == 0 ? 0 : 1;
+}
+
+#else
+
 int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
                        const unsigned char *data, size_t data_len,
                        unsigned char hash[32]) {
@@ -499,6 +598,102 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
   }
   free(outer_buf);
 
+  return 0;
+}
+
+int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
+                              size_t password_len, const unsigned char *salt,
+                              size_t salt_len, unsigned int iterations,
+                              size_t dk_len, unsigned char *out_key) {
+  unsigned int i, k;
+  unsigned char U[32];
+  unsigned char T[32];
+  unsigned int block_index = 1;
+  size_t generated_len = 0;
+
+  if (!password || !salt || !out_key || iterations == 0)
+    return 1;
+
+  while (generated_len < dk_len) {
+    size_t to_copy =
+        (dk_len - generated_len < 32) ? (dk_len - generated_len) : 32;
+    unsigned char block_idx_bytes[4];
+    unsigned char *salt_plus_idx;
+
+    block_idx_bytes[0] = (unsigned char)((block_index >> 24) & 0xFF);
+    block_idx_bytes[1] = (unsigned char)((block_index >> 16) & 0xFF);
+    block_idx_bytes[2] = (unsigned char)((block_index >> 8) & 0xFF);
+    block_idx_bytes[3] = (unsigned char)(block_index & 0xFF);
+
+    salt_plus_idx = (unsigned char *)malloc(salt_len + 4);
+    if (!salt_plus_idx)
+      return 1;
+    memcpy(salt_plus_idx, salt, salt_len);
+    memcpy(salt_plus_idx + salt_len, block_idx_bytes, 4);
+
+    if (c_rest_hmac_sha256(password, password_len, salt_plus_idx, salt_len + 4,
+                           U) != 0) {
+      free(salt_plus_idx);
+      return 1;
+    }
+    free(salt_plus_idx);
+
+    memcpy(T, U, 32);
+
+    for (i = 1; i < iterations; i++) {
+      if (c_rest_hmac_sha256(password, password_len, U, 32, U) != 0)
+        return 1;
+      for (k = 0; k < 32; k++) {
+        T[k] ^= U[k];
+      }
+    }
+
+    memcpy(out_key + generated_len, T, to_copy);
+    generated_len += to_copy;
+    block_index++;
+  }
+
+  return 0;
+}
+
+#endif
+
+int c_rest_random_string_generate(size_t entropy_bytes, char **out_str) {
+  unsigned char *rand_buf;
+  size_t out_len = 0;
+
+  if (!out_str || entropy_bytes == 0)
+    return 1;
+
+  rand_buf = (unsigned char *)malloc(entropy_bytes);
+  if (!rand_buf)
+    return 1;
+
+  if (c_rest_rand_bytes(rand_buf, entropy_bytes) != 0) {
+    free(rand_buf);
+    return 1;
+  }
+
+  if (c_rest_base64url_encode(rand_buf, entropy_bytes, NULL, &out_len) != 0) {
+    free(rand_buf);
+    return 1;
+  }
+
+  *out_str = (char *)malloc(out_len + 1);
+  if (!*out_str) {
+    free(rand_buf);
+    return 1;
+  }
+
+  if (c_rest_base64url_encode(rand_buf, entropy_bytes, *out_str, &out_len) !=
+      0) {
+    free(*out_str);
+    free(rand_buf);
+    return 1;
+  }
+  (*out_str)[out_len] = '\0';
+
+  free(rand_buf);
   return 0;
 }
 

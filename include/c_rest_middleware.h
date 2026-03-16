@@ -41,6 +41,26 @@ int c_rest_https_redirect_middleware(struct c_rest_request *req,
                                      struct c_rest_response *res,
                                      void *user_data);
 
+/**
+ * @brief OAuth2 Bearer Token Middleware verification callback.
+ * @param token The extracted bearer token.
+ * @param out_auth_context Pointer to store the resolved user context.
+ * @return 0 if token is valid, non-zero otherwise.
+ */
+typedef int (*c_rest_oauth2_verify_fn)(const char *token,
+                                       void **out_auth_context);
+
+/**
+ * @brief Built-in OAuth2 Middleware.
+ * user_data should be a pointer to a c_rest_oauth2_verify_fn.
+ * @param req The request.
+ * @param res The response.
+ * @param user_data Pointer to the verification function.
+ * @return 0 to continue, non-zero to stop (e.g., sending 401).
+ */
+int c_rest_oauth2_middleware(struct c_rest_request *req,
+                             struct c_rest_response *res, void *user_data);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
