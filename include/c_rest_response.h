@@ -93,6 +93,43 @@ int c_rest_response_json(struct c_rest_response *res, const char *json_str);
 int c_rest_response_json_obj(struct c_rest_response *res, void *json_obj);
 
 /**
+ * @brief JSON value types.
+ */
+enum c_rest_json_val_type {
+  C_REST_JSON_TYPE_STRING,
+  C_REST_JSON_TYPE_NUMBER,
+  C_REST_JSON_TYPE_BOOLEAN,
+  C_REST_JSON_TYPE_NULL
+};
+
+/**
+ * @brief Key-value pair for basic JSON object construction.
+ */
+struct c_rest_json_pair {
+  /** @brief Key */
+  const char *key;
+  /** @brief Value type */
+  enum c_rest_json_val_type type;
+  /** @brief String value */
+  const char *str_val;
+  /** @brief Number value */
+  double num_val;
+  /** @brief Boolean value (non-zero is true) */
+  int bool_val;
+};
+
+/**
+ * @brief Send a simple JSON dictionary constructed from an array of pairs.
+ * @param res Response
+ * @param pairs Array of key-value pairs
+ * @param count Number of pairs
+ * @return 0 on success, 1 on failure
+ */
+int c_rest_response_json_dict(struct c_rest_response *res,
+                              const struct c_rest_json_pair *pairs,
+                              size_t count);
+
+/**
  * @brief Send HTML string.
  * @param res Response
  * @param html_str HTML string

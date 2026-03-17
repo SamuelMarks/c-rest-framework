@@ -182,6 +182,25 @@ int test_request_response(void) {
      * test. Assuming we just test it doesn't fail. */
   }
 
+  /* Test JSON Dict Generation */
+  {
+    struct c_rest_json_pair pairs[] = {
+        {"access_token", C_REST_JSON_TYPE_STRING, "test_token_123", 0, 0},
+        {"expires_in", C_REST_JSON_TYPE_NUMBER, NULL, 3600.0, 0},
+        {"is_active", C_REST_JSON_TYPE_BOOLEAN, NULL, 0, 1},
+        {"refresh_token", C_REST_JSON_TYPE_NULL, NULL, 0, 0}};
+
+    res.headers_sent = 0; /* Reset state */
+    if (c_rest_response_json_dict(&res, pairs, 4) != 0) {
+      printf("JSON dict response generation failed\n");
+      return 1;
+    }
+    if (strstr(res.body, "\"access_token\":\"test_token_123\"") == NULL) {
+      printf("JSON dict did not contain access_token\n");
+      return 1;
+    }
+  }
+
   /* Test URL Encoded Parsing */
   {
     const char *form_val = NULL;

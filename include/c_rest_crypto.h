@@ -75,6 +75,14 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
 int c_rest_random_string_generate(size_t entropy_bytes, char **out_str);
 
 /**
+ * @brief Generates a guaranteed unique, URL-safe Base64 token natively aligned
+ * with RFC6749.
+ * @param out_token Pointer to store the newly allocated access token string.
+ * @return 0 on success, non-zero on failure.
+ */
+int c_rest_oauth2_generate_access_token(char **out_token);
+
+/**
  * @brief Simple JWT HS256 sign utility.
  * @param json_payload The payload as a JSON string.
  * @param secret The shared secret.

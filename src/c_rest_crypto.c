@@ -711,6 +711,12 @@ int c_rest_random_string_generate(size_t entropy_bytes, char **out_str) {
   return 0;
 }
 
+int c_rest_oauth2_generate_access_token(char **out_token) {
+  /* 32 bytes of entropy corresponds to 256 bits, standard for access tokens.
+     When base64url-encoded, it produces ~43 characters. */
+  return c_rest_random_string_generate(32, out_token);
+}
+
 int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
                           size_t secret_len, char **out_token) {
   const char *header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";

@@ -63,6 +63,27 @@ TEST test_random_string_generation(void) {
   PASS();
 }
 
+TEST test_oauth2_generate_access_token(void) {
+  char *token1 = NULL;
+  char *token2 = NULL;
+  int res;
+
+  res = c_rest_oauth2_generate_access_token(&token1);
+  ASSERT_EQ(0, res);
+  ASSERT_NEQ(NULL, token1);
+
+  res = c_rest_oauth2_generate_access_token(&token2);
+  ASSERT_EQ(0, res);
+  ASSERT_NEQ(NULL, token2);
+
+  ASSERT(strcmp(token1, token2) != 0);
+  ASSERT(strlen(token1) >= 42);
+
+  free(token1);
+  free(token2);
+  PASS();
+}
+
 TEST test_urlencoded_parser(void) {
   struct c_rest_request req;
   const char *val = NULL;
@@ -144,12 +165,129 @@ TEST test_bearer_token_parser(void) {
   PASS();
 }
 
+static int mock_verify_bearer(const char *token, void **out_auth_context) {
+  if (strcmp(token, "valid_token") == 0) {
+    *out_auth_context = (void *)0x1234;
+    return 0;
+  }
+  return 1;
+}
+
+static int mock_verify_basic(const char *username, const char *password,
+                             void **out_auth_context) {
+  if (strcmp(username, "admin") == 0 && strcmp(password, "secret") == 0) {
+    *out_auth_context = (void *)0x5678;
+    return 0;
+  }
+  return 1;
+}
+
+TEST test_auth_middleware(void) {
+  struct c_rest_request req;
+  struct c_rest_response res;
+  struct c_rest_auth_verifier verifier;
+  int ret;
+
+  memset(&req, 0, sizeof(req));
+  memset(&res, 0, sizeof(res));
+
+  verifier.verify_bearer = mock_verify_bearer;
+  verifier.verify_basic = mock_verify_basic;
+
+  /* Test Missing Auth */
+  ret = c_rest_auth_middleware(&req, &res, &verifier);
+  ASSERT_EQ(1, ret);
+  ASSERT_EQ(401, res.status_code);
+
+  c_rest_request_cleanup(&req);
+  c_rest_response_cleanup(&res);
+  memset(&req, 0, sizeof(req));
+  memset(&res, 0, sizeof(res));
+
+  /* Test Invalid Bearer */
+  {
+    struct c_rest_header auth_hdr;
+    auth_hdr.key = "Authorization";
+    auth_hdr.value = "Bearer invalid_token";
+    auth_hdr.next = NULL;
+    req.headers = &auth_hdr;
+
+    ret = c_rest_auth_middleware(&req, &res, &verifier);
+    ASSERT_EQ(1, ret);
+    ASSERT_EQ(401, res.status_code);
+
+    req.headers = NULL;
+    c_rest_request_cleanup(&req);
+    c_rest_response_cleanup(&res);
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+  }
+
+  /* Test Valid Bearer */
+  {
+    struct c_rest_header auth_hdr;
+    auth_hdr.key = "Authorization";
+    auth_hdr.value = "Bearer valid_token";
+    auth_hdr.next = NULL;
+    req.headers = &auth_hdr;
+
+    ret = c_rest_auth_middleware(&req, &res, &verifier);
+    ASSERT_EQ(0, ret);
+    ASSERT_EQ((void *)0x1234, req.auth_context);
+
+    req.headers = NULL;
+    c_rest_request_cleanup(&req);
+    c_rest_response_cleanup(&res);
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+  }
+
+  /* Test Invalid Basic */
+  {
+    struct c_rest_header auth_hdr;
+    auth_hdr.key = "Authorization";
+    auth_hdr.value = "Basic YWRtaW46d3Jvbmc="; /* admin:wrong */
+    auth_hdr.next = NULL;
+    req.headers = &auth_hdr;
+
+    ret = c_rest_auth_middleware(&req, &res, &verifier);
+    ASSERT_EQ(1, ret);
+    ASSERT_EQ(401, res.status_code);
+
+    req.headers = NULL;
+    c_rest_request_cleanup(&req);
+    c_rest_response_cleanup(&res);
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+  }
+
+  /* Test Valid Basic */
+  {
+    struct c_rest_header auth_hdr;
+    auth_hdr.key = "Authorization";
+    auth_hdr.value = "Basic YWRtaW46c2VjcmV0"; /* admin:secret */
+    auth_hdr.next = NULL;
+    req.headers = &auth_hdr;
+
+    ret = c_rest_auth_middleware(&req, &res, &verifier);
+    ASSERT_EQ(0, ret);
+    ASSERT_EQ((void *)0x5678, req.auth_context);
+
+    req.headers = NULL;
+    c_rest_request_cleanup(&req);
+    c_rest_response_cleanup(&res);
+  }
+  PASS();
+}
+
 SUITE(oauth2_suite) {
   RUN_TEST(test_password_hashing);
   RUN_TEST(test_random_string_generation);
+  RUN_TEST(test_oauth2_generate_access_token);
   RUN_TEST(test_urlencoded_parser);
   RUN_TEST(test_basic_auth_parser);
   RUN_TEST(test_bearer_token_parser);
+  RUN_TEST(test_auth_middleware);
 }
 
 int test_oauth2(void) {

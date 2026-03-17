@@ -179,6 +179,46 @@ int c_rest_response_json_obj(struct c_rest_response *res, void *json_obj) {
   return ret;
 }
 
+int c_rest_response_json_dict(struct c_rest_response *res,
+                              const struct c_rest_json_pair *pairs,
+                              size_t count) {
+  JSON_Value *root_val;
+  JSON_Object *root_obj;
+  size_t i;
+  int ret;
+
+  if (!res) {
+    return 1;
+  }
+
+  root_val = json_value_init_object();
+  if (!root_val) {
+    return 1;
+  }
+  root_obj = json_value_get_object(root_val);
+
+  for (i = 0; i < count; i++) {
+    switch (pairs[i].type) {
+    case C_REST_JSON_TYPE_STRING:
+      json_object_set_string(root_obj, pairs[i].key, pairs[i].str_val);
+      break;
+    case C_REST_JSON_TYPE_NUMBER:
+      json_object_set_number(root_obj, pairs[i].key, pairs[i].num_val);
+      break;
+    case C_REST_JSON_TYPE_BOOLEAN:
+      json_object_set_boolean(root_obj, pairs[i].key, pairs[i].bool_val);
+      break;
+    case C_REST_JSON_TYPE_NULL:
+      json_object_set_null(root_obj, pairs[i].key);
+      break;
+    }
+  }
+
+  ret = c_rest_response_json_obj(res, root_val);
+  json_value_free(root_val);
+  return ret;
+}
+
 int c_rest_response_html(struct c_rest_response *res, const char *html_str) {
   size_t len;
   if (!res || !html_str) {
