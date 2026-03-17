@@ -36,7 +36,7 @@ int test_client(void) {
 
   res = c_rest_client_init(&client);
   if (res != 0 || !client) {
-    printf("Failed to init client\n");
+    printf("Failed to init client %d\n", res);
     return 1;
   }
 

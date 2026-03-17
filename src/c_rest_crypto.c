@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) || defined(C_REST_USE_BORINGSSL)
 #include <openssl/evp.h>
@@ -886,4 +887,164 @@ int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
 
   *out_payload = (char *)decoded_payload;
   return 0;
+}
+
+#define C_REST_PBKDF2_ITERATIONS 100000
+#define C_REST_PBKDF2_SALT_LEN 16
+#define C_REST_PBKDF2_HASH_LEN 32
+
+int c_rest_hash_password(const char *password,
+                         enum c_rest_password_hash_alg alg, char **out_hash) {
+  unsigned char salt[C_REST_PBKDF2_SALT_LEN];
+  unsigned char hash[C_REST_PBKDF2_HASH_LEN];
+  char *salt_b64 = NULL;
+  size_t salt_b64_len = 0;
+  char *hash_b64 = NULL;
+  size_t hash_b64_len = 0;
+  size_t out_len = 0;
+  int res = 1;
+
+  if (!password || !out_hash) {
+    return 1;
+  }
+
+  if (alg != C_REST_HASH_ALG_PBKDF2_SHA256) {
+    /* Only PBKDF2 is implemented natively for now without external libs */
+    return 1;
+  }
+
+  if (c_rest_rand_bytes(salt, C_REST_PBKDF2_SALT_LEN) != 0) {
+    return 1;
+  }
+
+  if (c_rest_pbkdf2_hmac_sha256((const unsigned char *)password,
+                                strlen(password), salt, C_REST_PBKDF2_SALT_LEN,
+                                C_REST_PBKDF2_ITERATIONS,
+                                C_REST_PBKDF2_HASH_LEN, hash) != 0) {
+    return 1;
+  }
+
+  c_rest_base64_encode(salt, C_REST_PBKDF2_SALT_LEN, NULL, &salt_b64_len);
+  salt_b64 = (char *)malloc(salt_b64_len + 1);
+  if (!salt_b64) {
+    goto cleanup;
+  }
+  c_rest_base64_encode(salt, C_REST_PBKDF2_SALT_LEN, salt_b64, &salt_b64_len);
+  salt_b64[salt_b64_len] = '\0';
+
+  c_rest_base64_encode(hash, C_REST_PBKDF2_HASH_LEN, NULL, &hash_b64_len);
+  hash_b64 = (char *)malloc(hash_b64_len + 1);
+  if (!hash_b64) {
+    goto cleanup;
+  }
+  c_rest_base64_encode(hash, C_REST_PBKDF2_HASH_LEN, hash_b64, &hash_b64_len);
+  hash_b64[hash_b64_len] = '\0';
+
+  /* Format: $pbkdf2-sha256$i=100000$<salt_b64>$<hash_b64> */
+  out_len =
+      20 + 20 + salt_b64_len + 1 + hash_b64_len + 1; /* safe overestimate */
+  *out_hash = (char *)malloc(out_len);
+  if (!*out_hash) {
+    goto cleanup;
+  }
+
+#if defined(_MSC_VER)
+  sprintf_s(*out_hash, out_len, "$pbkdf2-sha256$i=%d$%s$%s",
+            C_REST_PBKDF2_ITERATIONS, salt_b64, hash_b64);
+#else
+  sprintf(*out_hash, "$pbkdf2-sha256$i=%d$%s$%s", C_REST_PBKDF2_ITERATIONS,
+          salt_b64, hash_b64);
+#endif
+
+  res = 0;
+
+cleanup:
+  if (salt_b64)
+    free(salt_b64);
+  if (hash_b64)
+    free(hash_b64);
+  return res;
+}
+
+int c_rest_verify_password(const char *password, const char *hash_str) {
+  int iters = 0;
+  char salt_b64[128];
+  char hash_b64[128];
+  unsigned char *salt = NULL;
+  size_t salt_len = 0;
+  unsigned char expected_hash[C_REST_PBKDF2_HASH_LEN];
+  unsigned char computed_hash[C_REST_PBKDF2_HASH_LEN];
+  size_t expected_hash_len = 0;
+  int res = 1;
+
+  if (!password || !hash_str) {
+    return 1;
+  }
+
+  /* We only support PBKDF2 currently */
+  if (strncmp(hash_str, "$pbkdf2-sha256$i=", 17) != 0) {
+    return 1;
+  }
+
+  memset(salt_b64, 0, sizeof(salt_b64));
+  memset(hash_b64, 0, sizeof(hash_b64));
+
+#if defined(_MSC_VER)
+  if (sscanf_s(hash_str + 17, "%d$%127[^$]$%127s", &iters, salt_b64,
+               (unsigned)sizeof(salt_b64), hash_b64,
+               (unsigned)sizeof(hash_b64)) != 3) {
+    return 1;
+  }
+#else
+  if (sscanf(hash_str + 17, "%d$%127[^$]$%127s", &iters, salt_b64, hash_b64) !=
+      3) {
+    return 1;
+  }
+#endif
+
+  if (c_rest_base64_decode(salt_b64, strlen(salt_b64), NULL, &salt_len) != 0) {
+    return 1;
+  }
+  salt = (unsigned char *)malloc(salt_len);
+  if (!salt) {
+    return 1;
+  }
+  if (c_rest_base64_decode(salt_b64, strlen(salt_b64), salt, &salt_len) != 0) {
+    goto cleanup;
+  }
+
+  if (c_rest_base64_decode(hash_b64, strlen(hash_b64), NULL,
+                           &expected_hash_len) != 0) {
+    goto cleanup;
+  }
+  if (expected_hash_len != C_REST_PBKDF2_HASH_LEN) {
+    goto cleanup;
+  }
+  if (c_rest_base64_decode(hash_b64, strlen(hash_b64), expected_hash,
+                           &expected_hash_len) != 0) {
+    goto cleanup;
+  }
+
+  if (c_rest_pbkdf2_hmac_sha256(
+          (const unsigned char *)password, strlen(password), salt, salt_len,
+          (unsigned int)iters, C_REST_PBKDF2_HASH_LEN, computed_hash) != 0) {
+    goto cleanup;
+  }
+
+  /* Constant time comparison */
+  {
+    size_t i;
+    unsigned char diff = 0;
+    for (i = 0; i < C_REST_PBKDF2_HASH_LEN; i++) {
+      diff |= (expected_hash[i] ^ computed_hash[i]);
+    }
+    if (diff == 0) {
+      res = 0;
+    }
+  }
+
+cleanup:
+  if (salt)
+    free(salt);
+  return res;
 }

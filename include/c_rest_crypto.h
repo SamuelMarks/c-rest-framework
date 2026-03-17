@@ -50,15 +50,6 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
                        unsigned char hash[32]);
 
 /**
- * @brief Simple JWT HS256 sign utility.
- * @param json_payload The payload as a JSON string.
- * @param secret The shared secret.
- * @param secret_len Length of the shared secret.
- * @param out_token Pointer to store the newly allocated JWT token string.
- * @return 0 on success, non-zero on failure.
- */
-
-/**
  * @brief Derives a key from a password using PBKDF2 with HMAC-SHA256.
  * @param password The password buffer.
  * @param password_len The length of the password.
@@ -83,6 +74,14 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
  */
 int c_rest_random_string_generate(size_t entropy_bytes, char **out_str);
 
+/**
+ * @brief Simple JWT HS256 sign utility.
+ * @param json_payload The payload as a JSON string.
+ * @param secret The shared secret.
+ * @param secret_len Length of the shared secret.
+ * @param out_token Pointer to store the newly allocated JWT token string.
+ * @return 0 on success, non-zero on failure.
+ */
 int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
                           size_t secret_len, char **out_token);
 
@@ -98,6 +97,35 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
  */
 int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
                             size_t secret_len, char **out_payload);
+
+/**
+ * @brief Password hashing algorithms.
+ */
+enum c_rest_password_hash_alg {
+  C_REST_HASH_ALG_PBKDF2_SHA256,
+  C_REST_HASH_ALG_BCRYPT,
+  C_REST_HASH_ALG_ARGON2,
+  C_REST_HASH_ALG_SCRYPT
+};
+
+/**
+ * @brief Hashes a password using the specified algorithm.
+ * @param password The plaintext password.
+ * @param alg The algorithm to use.
+ * @param out_hash Pointer to store the newly allocated hash string (MCF
+ * format).
+ * @return 0 on success, non-zero on failure.
+ */
+int c_rest_hash_password(const char *password,
+                         enum c_rest_password_hash_alg alg, char **out_hash);
+
+/**
+ * @brief Verifies a password against a hash string.
+ * @param password The plaintext password.
+ * @param hash The MCF format hash string to verify against.
+ * @return 0 on success (match), non-zero on failure (no match or error).
+ */
+int c_rest_verify_password(const char *password, const char *hash);
 
 #ifdef __cplusplus
 }

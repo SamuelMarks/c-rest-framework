@@ -2,7 +2,11 @@
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
 #include <c_abstract_http/c_abstract_http.h>
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__)
+#if defined(_MSC_VER) && _MSC_VER < 1600
+#include <c_abstract_http/http_wininet.h>
+#else
 #include <c_abstract_http/http_winhttp.h>
+#endif
 #else
 #include <c_abstract_http/http_curl.h>
 #endif
@@ -71,6 +75,15 @@ int c_rest_client_init(c_rest_client_context **out_client) {
 
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__)
+#if defined(_MSC_VER) && _MSC_VER < 1600
+  if (http_wininet_context_init(
+          (struct HttpTransportContext **)&ctx->client.transport) != 0) {
+    http_client_free(&ctx->client);
+    free(ctx);
+    return 1;
+  }
+  ctx->client.send = http_wininet_send;
+#else
   if (http_winhttp_context_init(
           (struct HttpTransportContext **)&ctx->client.transport) != 0) {
     http_client_free(&ctx->client);
@@ -78,6 +91,7 @@ int c_rest_client_init(c_rest_client_context **out_client) {
     return 1;
   }
   ctx->client.send = http_winhttp_send;
+#endif
 #else
   if (http_curl_context_init(
           (struct HttpTransportContext **)&ctx->client.transport) != 0) {
@@ -102,7 +116,11 @@ int c_rest_client_destroy(c_rest_client_context *client) {
 
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__)
+#if defined(_MSC_VER) && _MSC_VER < 1600
+  http_wininet_context_free(client->client.transport);
+#else
   http_winhttp_context_free(client->client.transport);
+#endif
 #else
   http_curl_context_free(client->client.transport);
 #endif

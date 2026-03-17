@@ -1,5 +1,16 @@
 cmake_minimum_required(VERSION 3.10)
 
+include(FetchContent)
+FetchContent_Declare(
+  greatest
+  URL https://raw.githubusercontent.com/SamuelMarks/greatest/cmake-and-msvc/greatest.h
+  DOWNLOAD_NO_EXTRACT TRUE
+)
+FetchContent_GetProperties(greatest)
+if(NOT greatest_POPULATED)
+  FetchContent_Populate(greatest)
+endif()
+
 add_executable(c-rest-framework-tests
     # we will add test files here
     test_main.c
@@ -14,9 +25,10 @@ add_executable(c-rest-framework-tests
     test_time.c
     test_tls_context.c
     test_tls_integration.c
+    test_oauth2.c
 )
 
-target_include_directories(c-rest-framework-tests PRIVATE ../include)
+target_include_directories(c-rest-framework-tests PRIVATE ../include ${CMAKE_CURRENT_SOURCE_DIR} ${greatest_SOURCE_DIR})
 target_link_libraries(c-rest-framework-tests PRIVATE c-rest-framework)
 
 add_test(NAME c-rest-framework-tests COMMAND c-rest-framework-tests)

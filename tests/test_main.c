@@ -59,6 +59,7 @@ int test_crypto(void);
 int test_time(void);
 int test_tls_context(void);
 int test_tls_integration(void);
+int test_oauth2(void);
 
 int main(void) {
   int res = 0;
@@ -125,6 +126,11 @@ int main(void) {
 
   printf("Running test_tls_integration...\n");
   res = test_tls_integration();
+  if (res != 0)
+    return res;
+
+  printf("Running test_oauth2...\n");
+  res = test_oauth2();
   if (res != 0)
     return res;
 
