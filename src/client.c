@@ -14,6 +14,8 @@
 #include "c_abstract_http.h"
 #endif
 #include "c_rest_client.h"
+#include "c_rest_base64.h"
+#include <parson.h>
 
 #include <ctype.h>
 #include <stdio.h>
@@ -458,4 +460,311 @@ int c_rest_proxy_request(const char *target_url, void *req, void *res) {
   c_rest_client_destroy(client);
 
   return ret;
+}
+
+int c_rest_client_parse_form_urlencoded(
+    const char *body, struct c_rest_client_form_field **out_fields,
+    size_t *out_num_fields) {
+  const char *p;
+  size_t count = 0;
+  struct c_rest_client_form_field *fields = NULL;
+  size_t i;
+
+  if (!body || !out_fields || !out_num_fields)
+    return 1;
+
+  p = body;
+  while (*p) {
+    if (*p == '&') {
+      count++;
+    }
+    p++;
+  }
+  count++;
+
+  fields = (struct c_rest_client_form_field *)calloc(
+      count, sizeof(struct c_rest_client_form_field));
+  if (!fields)
+    return 1;
+
+  p = body;
+  for (i = 0; i < count; ++i) {
+    const char *eq = strchr(p, '=');
+    const char *amp = strchr(p, '&');
+    size_t key_len, val_len;
+    char *ekey = NULL, *eval = NULL;
+
+    if (!amp) {
+      amp = p + strlen(p);
+    }
+
+    if (eq && eq < amp) {
+      key_len = (size_t)(eq - p);
+      val_len = (size_t)(amp - eq - 1);
+
+      ekey = (char *)malloc(key_len + 1);
+      if (ekey) {
+        memcpy(ekey, p, key_len);
+        ekey[key_len] = '\0';
+      }
+
+      eval = (char *)malloc(val_len + 1);
+      if (eval) {
+        memcpy(eval, eq + 1, val_len);
+        eval[val_len] = '\0';
+      }
+    } else {
+      key_len = (size_t)(amp - p);
+      ekey = (char *)malloc(key_len + 1);
+      if (ekey) {
+        memcpy(ekey, p, key_len);
+        ekey[key_len] = '\0';
+      }
+      eval = (char *)malloc(1);
+      if (eval) {
+        eval[0] = '\0';
+      }
+    }
+
+    if (ekey) {
+      c_rest_client_url_decode(ekey, (char **)&fields[i].key);
+      free(ekey);
+    }
+    if (eval) {
+      c_rest_client_url_decode(eval, (char **)&fields[i].value);
+      free(eval);
+    }
+
+    if (*amp == '\0') {
+      break;
+    }
+    p = amp + 1;
+  }
+
+  *out_fields = fields;
+  *out_num_fields = count;
+  return 0;
+}
+
+int c_rest_client_form_fields_free(struct c_rest_client_form_field *fields,
+                                   size_t num_fields) {
+  size_t i;
+  if (!fields)
+    return 1;
+  for (i = 0; i < num_fields; ++i) {
+    if (fields[i].key)
+      free((void *)fields[i].key);
+    if (fields[i].value)
+      free((void *)fields[i].value);
+  }
+  free(fields);
+  return 0;
+}
+
+int c_rest_client_header_set(struct c_rest_client_header **headers,
+                             size_t *headers_count, const char *key,
+                             const char *value) {
+  struct c_rest_client_header *new_headers;
+  size_t klen, vlen;
+  if (!headers || !headers_count || !key || !value)
+    return 1;
+
+  new_headers = (struct c_rest_client_header *)realloc(
+      *headers, sizeof(struct c_rest_client_header) * (*headers_count + 1));
+  if (!new_headers)
+    return 1;
+
+  *headers = new_headers;
+
+  klen = strlen(key) + 1;
+  vlen = strlen(value) + 1;
+
+  (*headers)[*headers_count].key = (char *)malloc(klen);
+  if (!(*headers)[*headers_count].key)
+    return 1;
+#if defined(_MSC_VER)
+  strcpy_s((char *)(*headers)[*headers_count].key, klen, key);
+#else
+  strcpy((char *)(*headers)[*headers_count].key, key);
+#endif
+
+  (*headers)[*headers_count].value = (char *)malloc(vlen);
+  if (!(*headers)[*headers_count].value) {
+    free((void *)(*headers)[*headers_count].key);
+    return 1;
+  }
+#if defined(_MSC_VER)
+  strcpy_s((char *)(*headers)[*headers_count].value, vlen, value);
+#else
+  strcpy((char *)(*headers)[*headers_count].value, value);
+#endif
+
+  (*headers_count)++;
+  return 0;
+}
+
+int c_rest_client_headers_free(struct c_rest_client_header *headers,
+                               size_t headers_count) {
+  size_t i;
+  if (!headers)
+    return 1;
+  for (i = 0; i < headers_count; ++i) {
+    if (headers[i].key)
+      free((void *)headers[i].key);
+    if (headers[i].value)
+      free((void *)headers[i].value);
+  }
+  free(headers);
+  return 0;
+}
+
+int c_rest_client_build_auth_basic(const char *username, const char *password,
+                                   char **out_header) {
+  char *concat;
+  size_t ulen, plen;
+  size_t clen;
+  char *b64;
+  size_t b64_len;
+  size_t hlen;
+
+  if (!username || !password || !out_header)
+    return 1;
+
+  ulen = strlen(username);
+  plen = strlen(password);
+  clen = ulen + plen + 1;
+
+  concat = (char *)malloc(clen + 1);
+  if (!concat)
+    return 1;
+
+#if defined(_MSC_VER)
+  sprintf_s(concat, clen + 1, "%s:%s", username, password);
+#else
+  sprintf(concat, "%s:%s", username, password);
+#endif
+
+  b64_len = 0;
+  if (c_rest_base64_encode((unsigned char *)concat, clen, NULL, &b64_len) !=
+      0) {
+    free(concat);
+    return 1;
+  }
+
+  b64 = (char *)malloc(b64_len + 1);
+  if (!b64) {
+    free(concat);
+    return 1;
+  }
+
+  if (c_rest_base64_encode((unsigned char *)concat, clen, b64, &b64_len) != 0) {
+    free(concat);
+    free(b64);
+    return 1;
+  }
+  b64[b64_len] = '\0';
+  free(concat);
+
+  hlen = 6 + b64_len + 1; /* "Basic " + b64 + null */
+  *out_header = (char *)malloc(hlen);
+  if (!*out_header) {
+    free(b64);
+    return 1;
+  }
+
+#if defined(_MSC_VER)
+  sprintf_s(*out_header, hlen, "Basic %s", b64);
+#else
+  sprintf(*out_header, "Basic %s", b64);
+#endif
+
+  free(b64);
+  return 0;
+}
+
+int c_rest_client_build_auth_bearer(const char *token, char **out_header) {
+  size_t hlen;
+
+  if (!token || !out_header)
+    return 1;
+
+  hlen = 7 + strlen(token) + 1; /* "Bearer " + token + null */
+  *out_header = (char *)malloc(hlen);
+  if (!*out_header)
+    return 1;
+
+#if defined(_MSC_VER)
+  sprintf_s(*out_header, hlen, "Bearer %s", token);
+#else
+  sprintf(*out_header, "Bearer %s", token);
+#endif
+
+  return 0;
+}
+
+int c_rest_client_post_form_sync(c_rest_client_context *client, const char *url,
+                                 const struct c_rest_client_header *headers,
+                                 size_t headers_count,
+                                 const struct c_rest_client_form_field *fields,
+                                 size_t num_fields,
+                                 struct c_rest_client_response **out_res) {
+  int ret;
+  char *body = NULL;
+  size_t body_len = 0;
+  struct c_rest_client_header *all_headers = NULL;
+  size_t all_headers_count = 0;
+  size_t i;
+
+  if (!client || !url)
+    return 1;
+
+  ret =
+      c_rest_client_build_form_urlencoded(fields, num_fields, &body, &body_len);
+  if (ret != 0)
+    return ret;
+
+  if (headers_count > 0 && headers) {
+    for (i = 0; i < headers_count; ++i) {
+      c_rest_client_header_set(&all_headers, &all_headers_count, headers[i].key,
+                               headers[i].value);
+    }
+  }
+
+  /* Add content type */
+  c_rest_client_header_set(&all_headers, &all_headers_count, "Content-Type",
+                           "application/x-www-form-urlencoded");
+
+  ret = c_rest_client_request_sync(client, url, "POST", all_headers,
+                                   all_headers_count, body, body_len, out_res);
+
+  c_rest_client_headers_free(all_headers, all_headers_count);
+  if (body)
+    free(body);
+
+  return ret;
+}
+
+int c_rest_client_response_parse_json(const struct c_rest_client_response *res,
+                                      void **out_json) {
+  if (!res || !out_json)
+    return 1;
+  *out_json = NULL;
+  if (!res->body || res->body_len == 0)
+    return 1;
+
+  {
+    char *str = (char *)malloc(res->body_len + 1);
+    if (!str)
+      return 1;
+    memcpy(str, res->body, res->body_len);
+    str[res->body_len] = '\0';
+
+    *out_json = (void *)json_parse_string(str);
+    free(str);
+
+    if (!*out_json)
+      return 1;
+  }
+
+  return 0;
 }

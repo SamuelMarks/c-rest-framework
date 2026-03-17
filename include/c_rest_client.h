@@ -127,6 +127,92 @@ int c_rest_client_url_encode(const char *in_str, char **out_str);
 int c_rest_client_url_decode(const char *in_str, char **out_str);
 
 /**
+ * @brief Parses a URL-encoded form string into an array of fields.
+ * @param body The URL-encoded string.
+ * @param out_fields Pointer to store the newly allocated array of fields.
+ * @param out_num_fields Pointer to store the number of fields.
+ * @return 0 on success, or an error code.
+ */
+int c_rest_client_parse_form_urlencoded(
+    const char *body, struct c_rest_client_form_field **out_fields,
+    size_t *out_num_fields);
+
+/**
+ * @brief Frees an array of form fields.
+ * @param fields The array of fields.
+ * @param num_fields The number of fields.
+ * @return 0 on success, or an error code.
+ */
+int c_rest_client_form_fields_free(struct c_rest_client_form_field *fields,
+                                   size_t num_fields);
+
+/**
+ * @brief Sets a custom header.
+ * @param headers Pointer to the array of headers.
+ * @param headers_count Pointer to the number of headers.
+ * @param key The header key.
+ * @param value The header value.
+ * @return 0 on success, or an error code.
+ */
+int c_rest_client_header_set(struct c_rest_client_header **headers,
+                             size_t *headers_count, const char *key,
+                             const char *value);
+
+/**
+ * @brief Frees an array of headers.
+ * @param headers The array of headers.
+ * @param headers_count The number of headers.
+ * @return 0 on success, or an error code.
+ */
+int c_rest_client_headers_free(struct c_rest_client_header *headers,
+                               size_t headers_count);
+
+/**
+ * @brief Builds a Basic Authorization header.
+ * @param username The username.
+ * @param password The password.
+ * @param out_header Pointer to store the newly allocated header string.
+ * @return 0 on success, or an error code.
+ */
+int c_rest_client_build_auth_basic(const char *username, const char *password,
+                                   char **out_header);
+
+/**
+ * @brief Builds a Bearer Authorization header.
+ * @param token The token.
+ * @param out_header Pointer to store the newly allocated header string.
+ * @return 0 on success, or an error code.
+ */
+int c_rest_client_build_auth_bearer(const char *token, char **out_header);
+
+/**
+ * @brief Executes a synchronous POST request with URL-encoded form data.
+ * @param client The client context.
+ * @param url The target URL.
+ * @param headers Array of request headers (can be NULL).
+ * @param headers_count Number of request headers.
+ * @param fields Array of form fields.
+ * @param num_fields Number of form fields.
+ * @param out_res Pointer to store the resulting response.
+ * @return 0 on success, or an error code.
+ */
+int c_rest_client_post_form_sync(c_rest_client_context *client, const char *url,
+                                 const struct c_rest_client_header *headers,
+                                 size_t headers_count,
+                                 const struct c_rest_client_form_field *fields,
+                                 size_t num_fields,
+                                 struct c_rest_client_response **out_res);
+
+/**
+ * @brief Parses the JSON body of a client response.
+ * @param res The client response.
+ * @param out_json Pointer to store the parsed JSON object (requires parson).
+ * @return 0 on success, or an error code.
+ */
+int c_rest_client_response_parse_json(const struct c_rest_client_response *res,
+                                      void **out_json);
+
+/**
  * @brief Basic reverse proxy stub utility.
  * @param target_url The URL to proxy to.
  * @param req The request.

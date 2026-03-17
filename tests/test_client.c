@@ -1,6 +1,7 @@
 /* clang-format off */
 #include "c_rest_client.h"
 #include "c_rest_tls.h"
+#include <parson.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +26,14 @@ int test_client(void) {
   struct c_rest_client_form_field fields[2];
   char *body = NULL;
   size_t body_len = 0;
+
+  struct c_rest_client_form_field *parsed_fields = NULL;
+  size_t parsed_count = 0;
+  struct c_rest_client_header *custom_headers = NULL;
+  size_t custom_headers_count = 0;
+  char *auth_basic = NULL;
+  char *auth_bearer = NULL;
+  void *json = NULL;
 
   printf("Running client tests...\n");
 
@@ -61,8 +70,6 @@ int test_client(void) {
 
   res = c_rest_proxy_request("http://localhost/proxy", NULL, NULL);
   (void)res;
-
-  c_rest_client_destroy(client);
 
   /* Test URL encoding/decoding */
   if (c_rest_client_url_encode("test + & = ?", &encoded) != 0) {
@@ -106,7 +113,86 @@ int test_client(void) {
     return 1;
   }
 
+  /* Test Form URL encoded parser */
+  if (c_rest_client_parse_form_urlencoded(body, &parsed_fields,
+                                          &parsed_count) != 0) {
+    printf("Failed to parse form urlencoded\n");
+    return 1;
+  }
+  if (parsed_count != 2) {
+    printf("Parsed count mismatch: %zu\n", parsed_count);
+    return 1;
+  }
+  if (strcmp(parsed_fields[0].key, "grant_type") != 0 ||
+      strcmp(parsed_fields[0].value, "password") != 0) {
+    printf("Parsed field 0 mismatch\n");
+    return 1;
+  }
+  if (strcmp(parsed_fields[1].key, "username") != 0 ||
+      strcmp(parsed_fields[1].value, "test user") != 0) {
+    printf("Parsed field 1 mismatch\n");
+    return 1;
+  }
+  c_rest_client_form_fields_free(parsed_fields, parsed_count);
   free(body);
 
+  /* Test Header Builders */
+  if (c_rest_client_header_set(&custom_headers, &custom_headers_count, "Accept",
+                               "application/json") != 0) {
+    printf("Failed to set header\n");
+    return 1;
+  }
+  if (c_rest_client_header_set(&custom_headers, &custom_headers_count,
+                               "Custom-Key", "Custom-Val") != 0) {
+    printf("Failed to set header\n");
+    return 1;
+  }
+  if (custom_headers_count != 2)
+    return 1;
+  if (strcmp(custom_headers[0].key, "Accept") != 0)
+    return 1;
+  c_rest_client_headers_free(custom_headers, custom_headers_count);
+
+  /* Test Auth basic/bearer */
+  if (c_rest_client_build_auth_basic("Aladdin", "open sesame", &auth_basic) !=
+      0) {
+    return 1;
+  }
+  if (strcmp(auth_basic, "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==") != 0) {
+    printf("Auth basic mismatch: %s\n", auth_basic);
+    return 1;
+  }
+  free(auth_basic);
+
+  if (c_rest_client_build_auth_bearer("some_token", &auth_bearer) != 0) {
+    return 1;
+  }
+  if (strcmp(auth_bearer, "Bearer some_token") != 0) {
+    return 1;
+  }
+  free(auth_bearer);
+
+  /* Test c_rest_client_post_form_sync */
+  res = c_rest_client_post_form_sync(client, "http://localhost", NULL, 0,
+                                     fields, 2, &sync_res);
+  if (sync_res) {
+    c_rest_client_response_free(sync_res);
+    sync_res = NULL;
+  }
+
+  /* Test JSON parsing on dummy response */
+  {
+    struct c_rest_client_response dummy_res;
+    dummy_res.body = (void *)"{\"key\":\"value\"}";
+    dummy_res.body_len = strlen((char *)dummy_res.body);
+    if (c_rest_client_response_parse_json(&dummy_res, &json) != 0) {
+      return 1;
+    }
+    if (!json)
+      return 1;
+    json_value_free((JSON_Value *)json);
+  }
+
+  c_rest_client_destroy(client);
   return 0;
 }
