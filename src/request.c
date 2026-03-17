@@ -6,9 +6,20 @@
 #include <string.h>
 /* clang-format on */
 
-#if defined(_MSC_VER)
-#define strcasecmp _stricmp
-#endif
+#include <ctype.h>
+
+static int c_rest_stricmp(const char *s1, const char *s2) {
+  while (*s1 && *s2) {
+    int c1 = tolower((unsigned char)*s1);
+    int c2 = tolower((unsigned char)*s2);
+    if (c1 != c2) {
+      return c1 - c2;
+    }
+    s1++;
+    s2++;
+  }
+  return tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
+}
 
 static void url_decode(char *dst, const char *src, size_t len) {
   size_t i;
@@ -43,7 +54,7 @@ int c_rest_request_get_header(struct c_rest_request *req, const char *key,
     return 1;
   }
   for (h = req->headers; h != NULL; h = h->next) {
-    if (strcasecmp(h->key, key) == 0) {
+    if (c_rest_stricmp(h->key, key) == 0) {
       *out_value = h->value;
       return 0;
     }

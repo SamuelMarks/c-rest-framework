@@ -80,7 +80,7 @@ int c_rest_client_init(c_rest_client_context **out_client) {
   ctx->client.send = http_winhttp_send;
 #else
   if (http_curl_context_init(
-          (struct HttpTransportContext **)&ctx->client.transport, NULL) != 0) {
+          (struct HttpTransportContext **)&ctx->client.transport) != 0) {
     http_client_free(&ctx->client);
     free(ctx);
     return 1;

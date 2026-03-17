@@ -79,6 +79,10 @@ int c_rest_oauth2_middleware(struct c_rest_request *req,
   char *token = NULL;
   c_rest_oauth2_verify_fn verify_fn;
   void *auth_ctx = NULL;
+  union {
+    void *ptr;
+    c_rest_oauth2_verify_fn func;
+  } u;
 
   if (!req || !res) {
     return 1;
@@ -90,7 +94,8 @@ int c_rest_oauth2_middleware(struct c_rest_request *req,
     return 1;
   }
 
-  verify_fn = (c_rest_oauth2_verify_fn)user_data;
+  u.ptr = user_data;
+  verify_fn = u.func;
 
   if (c_rest_request_get_auth_bearer(req, &token) != 0) {
     c_rest_response_set_status(res, 401);

@@ -58,24 +58,35 @@ int c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) {
 
 #if !defined(C_REST_HAS_TLS)
 
+#if defined(_MSC_VER) && _MSC_VER < 1600
+typedef unsigned __int32 c_rest_uint32_t;
+#elif defined(__WATCOMC__)
+typedef unsigned long c_rest_uint32_t;
+#else
+#include <stdint.h>
+typedef uint32_t c_rest_uint32_t;
+#endif
+
 /* Fallback to custom SHA1 if no crypto backend is available */
 #define SHA1_ROTL(bits, word) (((word) << (bits)) | ((word) >> (32 - (bits))))
 
-static void sha1_transform(unsigned long state[5],
+static void sha1_transform(c_rest_uint32_t state[5],
                            const unsigned char buffer[64]) {
-  unsigned long a, b, c, d, e;
+  c_rest_uint32_t a, b, c, d, e;
   typedef union {
     unsigned char c[64];
-    unsigned long l[16];
+    c_rest_uint32_t l[16];
   } CHAR64LONG16;
   CHAR64LONG16 block[1];
-  unsigned long w[80];
+  c_rest_uint32_t w[80];
   int i;
 
   memcpy(block, buffer, 64);
   for (i = 0; i < 16; i++) {
-    w[i] = (buffer[i * 4] << 24) | (buffer[i * 4 + 1] << 16) |
-           (buffer[i * 4 + 2] << 8) | buffer[i * 4 + 3];
+    w[i] = ((c_rest_uint32_t)buffer[i * 4] << 24) |
+           ((c_rest_uint32_t)buffer[i * 4 + 1] << 16) |
+           ((c_rest_uint32_t)buffer[i * 4 + 2] << 8) |
+           (c_rest_uint32_t)buffer[i * 4 + 3];
   }
   for (i = 16; i < 80; i++) {
     w[i] = SHA1_ROTL(1, w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]);
@@ -88,8 +99,8 @@ static void sha1_transform(unsigned long state[5],
   e = state[4];
 
   for (i = 0; i < 80; i++) {
-    unsigned long f, k;
-    unsigned long temp;
+    c_rest_uint32_t f, k;
+    c_rest_uint32_t temp;
     if (i < 20) {
       f = (b & c) | ((~b) & d);
       k = 0x5A827999;
@@ -120,8 +131,8 @@ static void sha1_transform(unsigned long state[5],
 }
 
 int c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
-  unsigned long state[5];
-  unsigned long count[2];
+  c_rest_uint32_t state[5];
+  c_rest_uint32_t count[2];
   unsigned char buffer[64];
   size_t i;
 
@@ -143,8 +154,8 @@ int c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
   {
     unsigned char pad[64] = {0x80};
     unsigned char len_bytes[8];
-    unsigned long bit_len_hi = (unsigned long)(len >> 29);
-    unsigned long bit_len_lo = (unsigned long)(len << 3);
+    c_rest_uint32_t bit_len_hi = (c_rest_uint32_t)(len >> 29);
+    c_rest_uint32_t bit_len_lo = (c_rest_uint32_t)(len << 3);
     int pad_len;
 
     len_bytes[0] = (unsigned char)((bit_len_hi >> 24) & 0xFF);
@@ -189,7 +200,7 @@ int c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
 #define SHA256_SIG0(x) (SHA256_ROTR(x, 7) ^ SHA256_ROTR(x, 18) ^ ((x) >> 3))
 #define SHA256_SIG1(x) (SHA256_ROTR(x, 17) ^ SHA256_ROTR(x, 19) ^ ((x) >> 10))
 
-static const unsigned long sha256_k[64] = {
+static const c_rest_uint32_t sha256_k[64] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
     0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
     0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
@@ -202,14 +213,16 @@ static const unsigned long sha256_k[64] = {
     0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
-static void sha256_transform(unsigned long state[8],
+static void sha256_transform(c_rest_uint32_t state[8],
                              const unsigned char buffer[64]) {
-  unsigned long a, b, c, d, e, f, g, h, t1, t2, m[64];
+  c_rest_uint32_t a, b, c, d, e, f, g, h, t1, t2, m[64];
   int i, j;
 
   for (i = 0, j = 0; i < 16; ++i, j += 4) {
-    m[i] = (buffer[j] << 24) | (buffer[j + 1] << 16) | (buffer[j + 2] << 8) |
-           (buffer[j + 3]);
+    m[i] = ((c_rest_uint32_t)buffer[j] << 24) |
+           ((c_rest_uint32_t)buffer[j + 1] << 16) |
+           ((c_rest_uint32_t)buffer[j + 2] << 8) |
+           ((c_rest_uint32_t)buffer[j + 3]);
   }
   for (i = 16; i < 64; ++i) {
     m[i] =
@@ -250,8 +263,8 @@ static void sha256_transform(unsigned long state[8],
 
 int c_rest_sha256(const unsigned char *data, size_t len,
                   unsigned char hash[32]) {
-  unsigned long state[8];
-  unsigned long count[2];
+  c_rest_uint32_t state[8];
+  c_rest_uint32_t count[2];
   unsigned char buffer[64];
   size_t i;
 
@@ -276,8 +289,8 @@ int c_rest_sha256(const unsigned char *data, size_t len,
   {
     unsigned char pad[64] = {0x80};
     unsigned char len_bytes[8];
-    unsigned long bit_len_hi = (unsigned long)(len >> 29);
-    unsigned long bit_len_lo = (unsigned long)(len << 3);
+    c_rest_uint32_t bit_len_hi = (c_rest_uint32_t)(len >> 29);
+    c_rest_uint32_t bit_len_lo = (c_rest_uint32_t)(len << 3);
     int pad_len;
 
     len_bytes[0] = (unsigned char)((bit_len_hi >> 24) & 0xFF);

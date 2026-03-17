@@ -8,12 +8,26 @@
 #include <string.h>
 /* clang-format on */
 
+#include <ctype.h>
+
 #if defined(_MSC_VER)
-#define strcasecmp _stricmp
 #define SAFE_STRCPY(dest, size, src) strcpy_s(dest, size, src)
 #else
 #define SAFE_STRCPY(dest, size, src) strcpy(dest, src)
 #endif
+
+static int c_rest_stricmp(const char *s1, const char *s2) {
+  while (*s1 && *s2) {
+    int c1 = tolower((unsigned char)*s1);
+    int c2 = tolower((unsigned char)*s2);
+    if (c1 != c2) {
+      return c1 - c2;
+    }
+    s1++;
+    s2++;
+  }
+  return tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
+}
 
 int c_rest_response_set_header(struct c_rest_response *res, const char *key,
                                const char *value) {
@@ -26,9 +40,9 @@ int c_rest_response_set_header(struct c_rest_response *res, const char *key,
   }
 
   /* Check if it already exists, replace value if it does */
-  if (strcasecmp(key, "Set-Cookie") != 0) {
+  if (c_rest_stricmp(key, "Set-Cookie") != 0) {
     for (h = res->headers; h != NULL; h = h->next) {
-      if (strcasecmp(h->key, key) == 0) {
+      if (c_rest_stricmp(h->key, key) == 0) {
         char *new_val;
         val_len = strlen(value) + 1;
         new_val = (char *)malloc(val_len);
