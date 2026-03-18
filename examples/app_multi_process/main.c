@@ -40,6 +40,7 @@ int main(void) {
     return 1;
   }
 
+  c_rest_set_router(ctx, router);
   c_rest_router_add(router, "GET", "/work", handle_work, NULL);
 
   printf("Forking workers and starting master loop...\n");

@@ -29,6 +29,98 @@ static void on_complete(c_rest_parser_context *ctx) {
   complete_called = 1;
 }
 
+static int header_called = 0;
+static int body_called = 0;
+
+static void on_header(c_rest_parser_context *ctx, const char *key,
+                      size_t key_len, const char *val, size_t val_len) {
+  (void)ctx;
+  (void)key;
+  (void)key_len;
+  (void)val;
+  (void)val_len;
+  header_called++;
+}
+
+static void on_body(c_rest_parser_context *ctx, const char *data, size_t len) {
+  (void)ctx;
+  (void)data;
+  (void)len;
+  body_called++;
+}
+
+static void on_error(c_rest_parser_context *ctx, const char *msg) {
+  (void)ctx;
+  (void)msg;
+}
+
+static int test_parser_chunked(void) {
+  c_rest_parser_context ctx;
+  struct c_rest_parser_callbacks callbacks;
+  const struct c_rest_parser_vtable *vtable = NULL;
+  size_t parsed;
+  int keep_alive;
+  const char *req = "POST / HTTP/1.1\r\nTransfer-Encoding: "
+                    "chunked\r\n\r\n4\r\nWiki\r\n5\r\npedia\r\n0\r\n\r\n";
+  callbacks.on_method = on_method;
+  callbacks.on_url = on_url;
+  callbacks.on_header = on_header;
+  callbacks.on_body = on_body;
+  callbacks.on_complete = on_complete;
+  callbacks.on_error = on_error;
+  c_rest_parser_get_basic_vtable(&vtable);
+  c_rest_parser_init(&ctx, vtable, &callbacks, NULL);
+  c_rest_parser_execute(&ctx, req, strlen(req), &parsed);
+  c_rest_parser_should_keep_alive(&ctx, &keep_alive);
+  c_rest_parser_is_complete(&ctx);
+  c_rest_parser_destroy(&ctx);
+  return 0;
+}
+
+static int test_parser_content_length(void) {
+  c_rest_parser_context ctx;
+  struct c_rest_parser_callbacks callbacks;
+  const struct c_rest_parser_vtable *vtable = NULL;
+  size_t parsed;
+  const char *req = "POST / HTTP/1.1\r\nContent-Length: 10\r\n\r\n1234567890";
+  callbacks.on_method = on_method;
+  callbacks.on_url = on_url;
+  callbacks.on_header = on_header;
+  callbacks.on_body = on_body;
+  callbacks.on_complete = on_complete;
+  callbacks.on_error = on_error;
+  c_rest_parser_get_basic_vtable(&vtable);
+  c_rest_parser_init(&ctx, vtable, &callbacks, NULL);
+  c_rest_parser_execute(&ctx, req, strlen(req), &parsed);
+  c_rest_parser_destroy(&ctx);
+  return 0;
+}
+
+static int test_parser_errors(void) {
+  c_rest_parser_context ctx;
+  struct c_rest_parser_callbacks callbacks;
+  const struct c_rest_parser_vtable *vtable = NULL;
+  size_t parsed;
+  const char *req = "GET / HTTP/1.1\r\nHeader-No-Colon\r\n\r\n";
+  callbacks.on_method = on_method;
+  callbacks.on_url = on_url;
+  callbacks.on_header = on_header;
+  callbacks.on_body = on_body;
+  callbacks.on_complete = on_complete;
+  callbacks.on_error = on_error;
+  c_rest_parser_get_basic_vtable(&vtable);
+  c_rest_parser_init(&ctx, vtable, &callbacks, NULL);
+  c_rest_parser_execute(&ctx, req, strlen(req), &parsed);
+  c_rest_parser_destroy(&ctx);
+
+  /* NULL checks */
+  c_rest_parser_init(NULL, vtable, &callbacks, NULL);
+  c_rest_parser_init(&ctx, NULL, &callbacks, NULL);
+  c_rest_parser_execute(NULL, req, strlen(req), &parsed);
+  c_rest_parser_destroy(NULL);
+  return 0;
+}
+
 int test_parser(void) {
   c_rest_parser_context ctx;
   struct c_rest_parser_callbacks callbacks;
@@ -81,6 +173,9 @@ int test_parser(void) {
   }
 
   c_rest_parser_destroy(&ctx);
+  test_parser_chunked();
+  test_parser_content_length();
+  test_parser_errors();
 
   return 0;
 }

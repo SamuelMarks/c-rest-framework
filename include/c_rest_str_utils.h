@@ -14,6 +14,15 @@ int c_rest_strncasecmp(const char *s1, const char *s2, size_t n);
 int c_rest_strlcpy(char *dst, const char *src, size_t dsize, size_t *out_len);
 int c_rest_strlcat(char *dst, const char *src, size_t dsize, size_t *out_len);
 
+/**
+ * @brief Decode URL encoded string.
+ * @param dst Destination buffer
+ * @param src Source string
+ * @param len Length of source
+ * @return 0 on success
+ */
+int c_rest_url_decode(char *dst, const char *src, size_t len);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

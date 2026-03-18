@@ -145,3 +145,21 @@ int c_rest_get_last_error(int *out_error) {
   *out_error = errno;
   return 0;
 }
+
+int c_rest_socket_recv(c_rest_socket_t sock, void *buf, size_t len,
+                       size_t *out_read) {
+  (void)sock;
+  (void)buf;
+  (void)len;
+  (void)out_read;
+  return 1;
+}
+
+int c_rest_socket_send(c_rest_socket_t sock, const void *buf, size_t len,
+                       size_t *out_written) {
+  (void)sock;
+  (void)buf;
+  (void)len;
+  (void)out_written;
+  return 1;
+}

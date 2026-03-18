@@ -1,3 +1,9 @@
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "" FORCE)
+set(FETCHCONTENT_SOURCE_DIR_CDD_C "${CMAKE_CURRENT_LIST_DIR}/../../cdd-c" CACHE PATH "" FORCE)
+set(FETCHCONTENT_SOURCE_DIR_C_ORM "${CMAKE_CURRENT_LIST_DIR}/../../c-orm" CACHE PATH "" FORCE)
+set(FETCHCONTENT_SOURCE_DIR_CFS "${CMAKE_CURRENT_LIST_DIR}/../../c-fs" CACHE PATH "" FORCE)
+set(FETCHCONTENT_SOURCE_DIR_C_FS "${CMAKE_CURRENT_LIST_DIR}/../../c-fs" CACHE PATH "" FORCE)
+
 cmake_minimum_required(VERSION 3.10)
 project(c-rest-framework C)
 
@@ -197,11 +203,11 @@ endif()
 
 if(C_REST_FRAMEWORK_FETCH_C_FS)
     FetchContent_Declare(
-      cfs
+      c_fs
       GIT_REPOSITORY https://github.com/SamuelMarks/c-fs.git
       GIT_TAG master
     )
-    FetchContent_MakeAvailable(cfs)
+    FetchContent_MakeAvailable(c_fs)
 endif()
 
 macro(c_rest_framework_resolve_parson)
@@ -239,7 +245,10 @@ macro(c_rest_framework_resolve_parson)
         )
         FetchContent_GetProperties(parson)
         if(NOT parson_POPULATED)
-            FetchContent_Populate(parson)
+            set(OLD_BSL ${BUILD_SHARED_LIBS})
+            set(BUILD_SHARED_LIBS OFF)
+            FetchContent_MakeAvailable(parson)
+            set(BUILD_SHARED_LIBS ${OLD_BSL})
         endif()
         target_sources(c-rest-framework PRIVATE ${parson_SOURCE_DIR}/parson.c)
         target_include_directories(c-rest-framework PUBLIC ${parson_SOURCE_DIR})
@@ -405,9 +414,11 @@ endif()
 
 target_include_directories(c-rest-framework PUBLIC include)
 
-enable_testing()
-add_subdirectory(tests)
-add_subdirectory(examples)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    enable_testing()
+    add_subdirectory(tests)
+    add_subdirectory(examples)
+endif()
 
 
 

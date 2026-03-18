@@ -66,6 +66,7 @@ int main(void) {
                          ctx);
 
   /* Auto-generate CRUD endpoints using the c_rest_orm_crud handlers */
+  c_rest_set_router(ctx, router);
   c_rest_router_add(router, "GET", "/api/notes", c_rest_orm_crud_get_list,
                     &note_model);
   c_rest_router_add(router, "POST", "/api/notes", c_rest_orm_crud_create,

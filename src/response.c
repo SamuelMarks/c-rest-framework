@@ -1,6 +1,7 @@
 /* clang-format off */
 #include "c_rest_request.h" /* For struct c_rest_header */
 #include "c_rest_response.h"
+#include "c_rest_modality.h"
 #include <parson.h>
 
 #include <stdio.h>
@@ -115,16 +116,29 @@ int c_rest_response_set_cache_control(struct c_rest_response *res,
 }
 
 int c_rest_response_send(struct c_rest_response *res) {
-  /* Implementation depends on the underlying transport (abstracted by
-   * c-abstract-http or multiplatform). For now, just mark it as sent. */
+  struct c_rest_connection_context *ctx;
+  char header_buf[4096];
+  size_t offset = 0;
+  size_t written = 0;
+  struct c_rest_header *h;
+  const char *status_text = "OK";
+
   if (!res) {
     return 1;
   }
   if (res->headers_sent) {
-    return 1; /* Prevent double-sending */
+    return 1;
   }
 
-  /* Auto-calculate content length if not chunked and not already set */
+  if (res->status_code == 400)
+    status_text = "Bad Request";
+  else if (res->status_code == 401)
+    status_text = "Unauthorized";
+  else if (res->status_code == 404)
+    status_text = "Not Found";
+  else if (res->status_code == 500)
+    status_text = "Internal Server Error";
+
   if (!res->is_chunked) {
     char cl_buf[32];
 #if defined(_MSC_VER)
@@ -133,6 +147,59 @@ int c_rest_response_send(struct c_rest_response *res) {
     sprintf(cl_buf, "%lu", (unsigned long)res->body_len);
 #endif
     c_rest_response_set_header(res, "Content-Length", cl_buf);
+  }
+
+#if defined(_MSC_VER)
+  offset += sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
+                      "HTTP/1.1 %d %s\r\n", res->status_code, status_text);
+#else
+  offset += sprintf(header_buf + offset, "HTTP/1.1 %d %s\r\n", res->status_code,
+                    status_text);
+#endif
+
+  for (h = res->headers; h != NULL; h = h->next) {
+#if defined(_MSC_VER)
+    offset += sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
+                        "%s: %s\r\n", h->key, h->value);
+#else
+    offset += sprintf(header_buf + offset, "%s: %s\r\n", h->key, h->value);
+#endif
+  }
+
+#if defined(_MSC_VER)
+  offset += sprintf_s(header_buf + offset, sizeof(header_buf) - offset, "\r\n");
+#else
+  offset += sprintf(header_buf + offset, "\r\n");
+#endif
+
+  ctx = (struct c_rest_connection_context *)res->context;
+  if (ctx) {
+    if (ctx->tls_conn) {
+      c_rest_tls_write(ctx->tls_conn, header_buf, offset, &written);
+      if (res->body && res->body_len > 0) {
+        c_rest_tls_write(ctx->tls_conn, res->body, res->body_len, &written);
+      }
+    } else {
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+      if (ctx->cm_env) {
+        cm_socket_send(ctx->cm_env, ctx->sock, header_buf, offset, &written);
+        if (res->body && res->body_len > 0) {
+          cm_socket_send(ctx->cm_env, ctx->sock, res->body, res->body_len,
+                         &written);
+        }
+      } else {
+        c_rest_socket_send(ctx->sock, header_buf, offset, &written);
+        if (res->body && res->body_len > 0) {
+          c_rest_socket_send(ctx->sock, res->body, res->body_len, &written);
+        }
+      }
+#else
+      c_rest_socket_send(ctx->sock, header_buf, offset, &written);
+      if (res->body && res->body_len > 0) {
+        c_rest_socket_send(ctx->sock, res->body, res->body_len, &written);
+      }
+#endif
+    }
   }
 
   res->headers_sent = 1;
@@ -343,4 +410,135 @@ int c_rest_response_cleanup(struct c_rest_response *res) {
     res->body = NULL;
   }
   return 0;
+}
+
+static const char *get_status_text(int status_code) {
+  switch (status_code) {
+  case 200:
+    return "OK";
+  case 201:
+    return "Created";
+  case 202:
+    return "Accepted";
+  case 204:
+    return "No Content";
+  case 301:
+    return "Moved Permanently";
+  case 302:
+    return "Found";
+  case 304:
+    return "Not Modified";
+  case 400:
+    return "Bad Request";
+  case 401:
+    return "Unauthorized";
+  case 403:
+    return "Forbidden";
+  case 404:
+    return "Not Found";
+  case 405:
+    return "Method Not Allowed";
+  case 500:
+    return "Internal Server Error";
+  case 501:
+    return "Not Implemented";
+  default:
+    return "Unknown";
+  }
+}
+
+int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
+                              size_t *out_len) {
+  size_t est_len = 128; /* initial estimate */
+  char *buf;
+  struct c_rest_header *h;
+  size_t offset = 0;
+  char cl_buf[32];
+
+  if (!res || !out_buf || !out_len)
+    return 1;
+
+  if (!res->is_chunked) {
+    int found_cl = 0;
+    for (h = res->headers; h != NULL; h = h->next) {
+      if (c_rest_stricmp(h->key, "Content-Length") == 0) {
+        found_cl = 1;
+        break;
+      }
+    }
+    if (!found_cl) {
+#if defined(_MSC_VER)
+      sprintf_s(cl_buf, sizeof(cl_buf), "%lu", (unsigned long)res->body_len);
+#else
+      sprintf(cl_buf, "%lu", (unsigned long)res->body_len);
+#endif
+      c_rest_response_set_header(res, "Content-Length", cl_buf);
+    }
+  }
+
+  for (h = res->headers; h != NULL; h = h->next) {
+    est_len += strlen(h->key) + strlen(h->value) + 4;
+  }
+  est_len += res->body_len;
+
+  buf = (char *)malloc(est_len);
+  if (!buf)
+    return 1;
+
+#if defined(_MSC_VER)
+  offset +=
+      sprintf_s(buf + offset, est_len - offset, "HTTP/1.1 %d %s\r\n",
+                res->status_code ? res->status_code : 200,
+                get_status_text(res->status_code ? res->status_code : 200));
+#else
+  offset += sprintf(buf + offset, "HTTP/1.1 %d %s\r\n",
+                    res->status_code ? res->status_code : 200,
+                    get_status_text(res->status_code ? res->status_code : 200));
+#endif
+
+  for (h = res->headers; h != NULL; h = h->next) {
+#if defined(_MSC_VER)
+    offset += sprintf_s(buf + offset, est_len - offset, "%s: %s\r\n", h->key,
+                        h->value);
+#else
+    offset += sprintf(buf + offset, "%s: %s\r\n", h->key, h->value);
+#endif
+  }
+
+#if defined(_MSC_VER)
+  offset += sprintf_s(buf + offset, est_len - offset, "\r\n");
+#else
+  offset += sprintf(buf + offset, "\r\n");
+#endif
+
+  if (res->body && res->body_len > 0) {
+    memcpy(buf + offset, res->body, res->body_len);
+    offset += res->body_len;
+  }
+
+  *out_buf = buf;
+  *out_len = offset;
+  return 0;
+}
+
+int c_rest_response_oauth2_error(struct c_rest_response *res, const char *error,
+                                 const char *error_description) {
+  struct c_rest_json_pair pairs[2];
+  if (!res || !error)
+    return 1;
+
+  pairs[0].key = "error";
+  pairs[0].type = C_REST_JSON_TYPE_STRING;
+  pairs[0].str_val = error;
+
+  if (error_description) {
+    pairs[1].key = "error_description";
+    pairs[1].type = C_REST_JSON_TYPE_STRING;
+    pairs[1].str_val = error_description;
+    c_rest_response_set_status(res, 400);
+    return c_rest_response_json_dict(res, pairs, 2);
+  } else {
+    c_rest_response_set_status(res, 400);
+    return c_rest_response_json_dict(res, pairs, 1);
+  }
 }

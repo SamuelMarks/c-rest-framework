@@ -414,3 +414,31 @@ int c_rest_get_last_error(int *out_error) {
   *out_error = (int)GetLastError();
   return 0;
 }
+
+int c_rest_socket_recv(c_rest_socket_t sock, void *buf, size_t len,
+                       size_t *out_read) {
+  int ret;
+  if (!buf || !out_read)
+    return 1;
+  *out_read = 0;
+  ret = recv((SOCKET)sock, (char *)buf, (int)len, 0);
+  if (ret > 0) {
+    *out_read = (size_t)ret;
+    return 0;
+  }
+  return 1;
+}
+
+int c_rest_socket_send(c_rest_socket_t sock, const void *buf, size_t len,
+                       size_t *out_written) {
+  int ret;
+  if (!buf || !out_written)
+    return 1;
+  *out_written = 0;
+  ret = send((SOCKET)sock, (const char *)buf, (int)len, 0);
+  if (ret > 0) {
+    *out_written = (size_t)ret;
+    return 0;
+  }
+  return 1;
+}

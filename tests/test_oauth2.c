@@ -3,6 +3,8 @@
 #include "c_rest_crypto.h"
 #include "c_rest_request.h"
 #include "c_rest_parser.h"
+#include "c_rest_response.h"
+#include "c_rest_middleware.h"
 
 #include <stdlib.h>
 #include <string.h>

@@ -100,3 +100,34 @@ int c_rest_strlcat(char *dst, const char *src, size_t dsize, size_t *out_len) {
   *out_len = dst_len + src_len;
   return 0;
 }
+
+#include <stdlib.h>
+
+int c_rest_url_decode(char *dst, const char *src, size_t len) {
+  size_t i;
+  char *p = dst;
+  if (!dst || !src)
+    return 1;
+  for (i = 0; i < len; i++) {
+    if (src[i] == '%') {
+      if (i + 2 < len) {
+        int v;
+        char hex[3];
+        hex[0] = src[i + 1];
+        hex[1] = src[i + 2];
+        hex[2] = '\0';
+        v = (int)strtol(hex, NULL, 16);
+        *p++ = (char)v;
+        i += 2;
+      } else {
+        *p++ = src[i];
+      }
+    } else if (src[i] == '+') {
+      *p++ = ' ';
+    } else {
+      *p++ = src[i];
+    }
+  }
+  *p = '\0';
+  return 0;
+}

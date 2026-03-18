@@ -262,6 +262,72 @@ int test_request_response(void) {
     req.headers = NULL; /* Clean stack pointer */
   }
 
+  /* Test response serialize */
+  {
+    struct c_rest_response ser_res;
+    char *out_buf = NULL;
+    size_t out_len = 0;
+
+    memset(&ser_res, 0, sizeof(ser_res));
+    c_rest_response_set_status(&ser_res, 200);
+    c_rest_response_set_header(&ser_res, "Content-Type", "text/plain");
+
+    ser_res.body = (char *)malloc(12);
+    strcpy(ser_res.body, "Hello World");
+    ser_res.body_len = 11;
+
+    if (c_rest_response_serialize(&ser_res, &out_buf, &out_len) != 0 ||
+        !out_buf) {
+      printf("Failed to serialize response\n");
+      return 1;
+    }
+
+    if (strstr(out_buf, "HTTP/1.1 200 OK\r\n") == NULL) {
+      printf("Serialized response missing status line\n");
+      return 1;
+    }
+    if (strstr(out_buf, "Content-Type: text/plain\r\n") == NULL) {
+      printf("Serialized response missing header\n");
+      return 1;
+    }
+    if (strstr(out_buf, "Content-Length: 11\r\n") == NULL) {
+      printf("Serialized response missing Content-Length\n");
+      return 1;
+    }
+    if (strstr(out_buf, "\r\n\r\nHello World") == NULL) {
+      printf("Serialized response missing body\n");
+      return 1;
+    }
+
+    free(out_buf);
+    c_rest_response_cleanup(&ser_res);
+  }
+
+  /* Test OAuth2 Error */
+  {
+    struct c_rest_response err_res;
+    memset(&err_res, 0, sizeof(err_res));
+    if (c_rest_response_oauth2_error(&err_res, "invalid_request",
+                                     "Missing parameter") != 0) {
+      printf("OAuth2 error helper failed\n");
+      return 1;
+    }
+    if (err_res.status_code != 400) {
+      printf("OAuth2 error did not set 400 status\n");
+      return 1;
+    }
+    if (strstr(err_res.body, "\"error\":\"invalid_request\"") == NULL) {
+      printf("OAuth2 error body missing error code\n");
+      return 1;
+    }
+    if (strstr(err_res.body, "\"error_description\":\"Missing parameter\"") ==
+        NULL) {
+      printf("OAuth2 error body missing error description\n");
+      return 1;
+    }
+    c_rest_response_cleanup(&err_res);
+  }
+
   c_rest_request_cleanup(&req);
   c_rest_response_cleanup(&res);
 

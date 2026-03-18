@@ -184,6 +184,26 @@ int c_rest_response_send_file(struct c_rest_response *res,
  */
 int c_rest_response_cleanup(struct c_rest_response *res);
 
+/**
+ * @brief Serialize a response to an allocated buffer.
+ * @param res Response
+ * @param out_buf Output buffer (must be free()d)
+ * @param out_len Output length
+ * @return 0 on success, 1 on failure
+ */
+int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
+                              size_t *out_len);
+
+/**
+ * @brief Emit an OAuth2 error schema.
+ * @param res Response
+ * @param error Error code
+ * @param error_description Optional description
+ * @return 0 on success, 1 on failure
+ */
+int c_rest_response_oauth2_error(struct c_rest_response *res, const char *error,
+                                 const char *error_description);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

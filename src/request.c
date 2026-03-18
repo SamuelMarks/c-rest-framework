@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_request.h"
+#include "c_rest_str_utils.h"
 #include <parson.h>
 
 #include <stdlib.h>
@@ -19,32 +20,6 @@ static int c_rest_stricmp(const char *s1, const char *s2) {
     s2++;
   }
   return tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
-}
-
-static void url_decode(char *dst, const char *src, size_t len) {
-  size_t i;
-  char *p = dst;
-  for (i = 0; i < len; i++) {
-    if (src[i] == '%') {
-      if (i + 2 < len) {
-        int v;
-        char hex[3];
-        hex[0] = src[i + 1];
-        hex[1] = src[i + 2];
-        hex[2] = '\0';
-        v = (int)strtol(hex, NULL, 16);
-        *p++ = (char)v;
-        i += 2;
-      } else {
-        *p++ = src[i];
-      }
-    } else if (src[i] == '+') {
-      *p++ = ' ';
-    } else {
-      *p++ = src[i];
-    }
-  }
-  *p = '\0';
 }
 
 int c_rest_request_get_header(struct c_rest_request *req, const char *key,
@@ -177,18 +152,18 @@ static int parse_query_if_needed(struct c_rest_request *req) {
 
       qp->key = (char *)malloc(key_len + 1);
       if (qp->key) {
-        url_decode(qp->key, p, key_len);
+        c_rest_url_decode(qp->key, p, key_len);
       }
 
       qp->value = (char *)malloc(val_len + 1);
       if (qp->value) {
-        url_decode(qp->value, eq + 1, val_len);
+        c_rest_url_decode(qp->value, eq + 1, val_len);
       }
     } else {
       key_len = (size_t)(amp - p);
       qp->key = (char *)malloc(key_len + 1);
       if (qp->key) {
-        url_decode(qp->key, p, key_len);
+        c_rest_url_decode(qp->key, p, key_len);
       }
       qp->value = (char *)malloc(1);
       if (qp->value) {
@@ -268,18 +243,18 @@ int c_rest_request_parse_urlencoded(struct c_rest_request *req) {
 
       qp->key = (char *)malloc(key_len + 1);
       if (qp->key) {
-        url_decode(qp->key, p, key_len);
+        c_rest_url_decode(qp->key, p, key_len);
       }
 
       qp->value = (char *)malloc(val_len + 1);
       if (qp->value) {
-        url_decode(qp->value, eq + 1, val_len);
+        c_rest_url_decode(qp->value, eq + 1, val_len);
       }
     } else {
       key_len = (size_t)(amp - p);
       qp->key = (char *)malloc(key_len + 1);
       if (qp->key) {
-        url_decode(qp->key, p, key_len);
+        c_rest_url_decode(qp->key, p, key_len);
       }
       qp->value = (char *)malloc(1);
       if (qp->value) {

@@ -100,6 +100,13 @@ struct c_rest_modality_vtable {
    * @return 0 on success, non-zero error code on failure.
    */
   int (*run)(struct c_rest_context *ctx);
+
+  /**
+   * @brief Signals the underlying modality engine to stop execution.
+   * @param ctx Pointer to the context struct.
+   * @return 0 on success, non-zero error code on failure.
+   */
+  int (*stop)(struct c_rest_context *ctx);
 };
 
 /**
@@ -118,7 +125,13 @@ struct c_rest_context {
       /** @brief Virtual table for parser */
       *vtable; /**< Pointer to implementation hooks */
   /** @brief Internal state pointer */
-  void *internal_state; /**< Opaque internal state pointer */
+  void *internal_state;         /**< Opaque internal state pointer */
+  struct c_rest_router *router; /**< Associated router instance */
+
+  /** @brief Listen address (e.g. "0.0.0.0") */
+  const char *listen_address;
+  /** @brief Listen port (e.g. 8080) */
+  unsigned short listen_port;
 
   /** @brief Db config */
   struct c_rest_db_config db_config; /**< Database configuration */
@@ -151,11 +164,26 @@ int c_rest_init(enum c_rest_modality_type type,
 int c_rest_run(struct c_rest_context *ctx);
 
 /**
+ * @brief Signals the framework engine to stop accepting connections and shutdown gracefully.
+ * @param ctx Pointer to the initialized context struct.
+ * @return 0 on success, non-zero error code on failure.
+ */
+int c_rest_stop(struct c_rest_context *ctx);
+
+/**
  * @brief Destroys and cleans up a framework context instance.
  * @param ctx Pointer to the context struct to destroy.
  * @return 0 on success, non-zero error code on failure.
  */
 int c_rest_destroy(struct c_rest_context *ctx);
+
+/**
+ * @brief Set router for framework instance.
+ * @param ctx Context
+ * @param router Router
+ * @return 0 on success
+ */
+int c_rest_set_router(struct c_rest_context *ctx, struct c_rest_router *router);
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
 /**
@@ -166,6 +194,28 @@ int c_rest_destroy(struct c_rest_context *ctx);
  */
 int c_rest_set_multiplatform_env(struct c_rest_context *ctx, cm_env_t env);
 #endif
+
+/**
+ * @brief Connection context state
+ */
+struct c_rest_connection_context {
+  /** @brief Platform socket */
+  c_rest_socket_t sock;
+  /** @brief Active TLS Connection */
+  struct c_rest_tls_connection *tls_conn;
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+  /** @brief Environment context */
+  cm_env_t cm_env;
+#endif
+};
+
+/**
+ * @brief Handle a single complete HTTP connection.
+ * @param ctx Context
+ * @param sock Socket
+ * @return 0 on success
+ */
+int c_rest_handle_connection(struct c_rest_context *ctx, c_rest_socket_t sock);
 
 #ifdef __cplusplus
 }

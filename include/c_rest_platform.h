@@ -56,6 +56,27 @@ int c_rest_socket_accept(c_rest_socket_t server_sock,
                          c_rest_socket_t *out_client_sock);
 int c_rest_socket_set_nonblocking(c_rest_socket_t sock, int nonblocking);
 int c_rest_socket_close(c_rest_socket_t sock);
+/**
+ * @brief Receive data from a socket.
+ * @param sock The socket.
+ * @param buf Buffer.
+ * @param len Max length.
+ * @param out_read Amount read.
+ * @return 0 on success.
+ */
+int c_rest_socket_recv(c_rest_socket_t sock, void *buf, size_t len,
+                       size_t *out_read);
+
+/**
+ * @brief Send data to a socket.
+ * @param sock The socket.
+ * @param buf Data buffer.
+ * @param len Length to send.
+ * @param out_written Amount written.
+ * @return 0 on success.
+ */
+int c_rest_socket_send(c_rest_socket_t sock, const void *buf, size_t len,
+                       size_t *out_written);
 
 /*
  * Threading

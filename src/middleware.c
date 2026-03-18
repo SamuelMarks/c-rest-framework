@@ -10,12 +10,22 @@
 
 int c_rest_cors_middleware(struct c_rest_request *req,
                            struct c_rest_response *res, void *user_data) {
-  (void)req;
   (void)user_data;
-  /* Set CORS headers here. For now just mock. */
-  /* res->headers["Access-Control-Allow-Origin"] = "*"; */
-  res->status_code = 200;
-  return 0;
+  if (!req || !res)
+    return 1;
+
+  c_rest_response_set_header(res, "Access-Control-Allow-Origin", "*");
+  c_rest_response_set_header(res, "Access-Control-Allow-Methods",
+                             "GET, POST, PUT, DELETE, OPTIONS");
+  c_rest_response_set_header(res, "Access-Control-Allow-Headers",
+                             "Content-Type, Authorization");
+
+  if (strcmp(req->method, "OPTIONS") == 0) {
+    res->status_code = 204;
+    return 1; /* Short-circuit */
+  }
+
+  return 0; /* Continue */
 }
 
 int c_rest_logger_middleware(struct c_rest_request *req,

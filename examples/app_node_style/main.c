@@ -64,6 +64,7 @@ int main(void) {
     return 1;
   }
 
+  c_rest_set_router(ctx, router);
   c_rest_router_add(router, "GET", "/api/hello", handle_hello_world, NULL);
   c_rest_router_add(router, "GET", "/api/echo", handle_echo, NULL);
 

@@ -84,6 +84,13 @@ int c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
                                     int *out_keep_alive);
 int c_rest_parser_destroy(c_rest_parser_context *ctx);
 
+/**
+ * @brief Check if parser reached complete state.
+ * @param ctx Context
+ * @return 1 if complete, 0 otherwise
+ */
+int c_rest_parser_is_complete(c_rest_parser_context *ctx);
+
 /* Specific parser backends */
 int c_rest_parser_get_basic_vtable(
     const struct c_rest_parser_vtable **out_vtable);

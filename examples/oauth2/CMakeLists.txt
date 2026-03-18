@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.10)
 project(oauth2_example C)
 
 set(CMAKE_C_STANDARD 90)
@@ -27,42 +27,50 @@ else()
     option(OAUTH2_LTO "Enable LTO" OFF)
 endif()
 
-# Fetch dependencies if not found
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMakeLists.txt")
-    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../.." c-rest-framework-build)
-else()
-    include(FetchContent)
-    FetchContent_Declare(
-        c-rest-framework
-        GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
-        GIT_TAG master
-        SOURCE_SUBDIR c-rest-framework
-    )
-    FetchContent_MakeAvailable(c-rest-framework)
+# Fetch c-rest-framework if not found
+if(NOT TARGET c-rest-framework)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMakeLists.txt")
+        # Ensure we are actually adding the framework, we could check project name but this is good enough
+        add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../.." c-rest-framework-build)
+    else()
+        include(FetchContent)
+        FetchContent_Declare(
+            c-rest-framework
+            GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
+            GIT_TAG master
+            SOURCE_SUBDIR c-rest-framework
+        )
+        FetchContent_MakeAvailable(c-rest-framework)
+    endif()
 endif()
 
 # Fetch c-orm if not found
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../../c-orm/CMakeLists.txt")
-    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../c-orm" c-orm-build)
-else()
-    include(FetchContent)
-    FetchContent_Declare(
-        c-orm
-        GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
-        GIT_TAG master
-    )
-    FetchContent_MakeAvailable(c-orm)
+if(NOT TARGET c-orm)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../../c-orm/CMakeLists.txt")
+        add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../c-orm" c-orm-build)
+    else()
+        include(FetchContent)
+        FetchContent_Declare(
+            c-orm
+            GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
+            GIT_TAG master
+        )
+        FetchContent_MakeAvailable(c-orm)
+    endif()
 endif()
 
-# Library versions
 add_library(oauth2_example_static STATIC src/oauth2_server.c src/oauth2_client.c)
 add_library(oauth2_example_shared SHARED src/oauth2_server.c src/oauth2_client.c)
 
+# Add "header-only" interface
+add_library(oauth2_example_header_only INTERFACE)
+
 target_include_directories(oauth2_example_static PUBLIC include)
 target_include_directories(oauth2_example_shared PUBLIC include)
+target_include_directories(oauth2_example_header_only INTERFACE include)
 
-target_link_libraries(oauth2_example_static PUBLIC c-rest-framework_static c-orm_static)
-target_link_libraries(oauth2_example_shared PUBLIC c-rest-framework_shared c-orm_shared)
+target_link_libraries(oauth2_example_static PUBLIC c-rest-framework c-orm)
+target_link_libraries(oauth2_example_shared PUBLIC c-rest-framework c-orm)
 
 if(OAUTH2_LTO AND lto_supported)
     set_property(TARGET oauth2_example_static PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -72,21 +80,31 @@ endif()
 # CLI Executable
 add_executable(oauth2_cli src/main.c)
 target_link_libraries(oauth2_cli PRIVATE oauth2_example_static)
+if(OAUTH2_MULTI_THREADED)
+    target_link_libraries(oauth2_cli PRIVATE Threads::Threads)
+endif()
 
 # Tests
 option(OAUTH2_BUILD_TESTS "Build tests" ON)
 if(OAUTH2_BUILD_TESTS)
     enable_testing()
     include(FetchContent)
+    
     FetchContent_Declare(
         greatest
         URL https://raw.githubusercontent.com/SamuelMarks/greatest/cmake-and-msvc/greatest.h
         DOWNLOAD_NO_EXTRACT TRUE
     )
-    FetchContent_Populate(greatest)
-    
+    FetchContent_GetProperties(greatest)
+    if(NOT greatest_POPULATED)
+        FetchContent_Populate(greatest)
+    endif()
+
     add_executable(oauth2_tests tests/test_oauth2.c)
     target_include_directories(oauth2_tests PRIVATE ${greatest_SOURCE_DIR})
     target_link_libraries(oauth2_tests PRIVATE oauth2_example_static)
+    if(OAUTH2_MULTI_THREADED)
+        target_link_libraries(oauth2_tests PRIVATE Threads::Threads)
+    endif()
     add_test(NAME oauth2_test COMMAND oauth2_tests)
 endif()
