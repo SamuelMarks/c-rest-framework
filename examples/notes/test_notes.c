@@ -41,22 +41,22 @@ int main(void) {
   if (ret != 0)
     return 1;
 
-  c_rest_router_use(router, "/api", c_rest_orm_transaction_start_middleware,
+  c_rest_router_use(router, "/api/v0", c_rest_orm_transaction_start_middleware,
                     ctx);
-  c_rest_router_use_post(router, "/api", c_rest_orm_transaction_end_middleware,
+  c_rest_router_use_post(router, "/api/v0", c_rest_orm_transaction_end_middleware,
                          ctx);
 
-  c_rest_router_add(router, "GET", "/api/notes", c_rest_orm_crud_get_list,
+  c_rest_router_add(router, "GET", "/api/v0/notes", c_rest_orm_crud_get_list,
                     &note_model);
-  c_rest_router_add(router, "POST", "/api/notes", c_rest_orm_crud_create,
+  c_rest_router_add(router, "POST", "/api/v0/notes", c_rest_orm_crud_create,
                     &note_model);
 
-  /* Simulate GET /api/notes */
+  /* Simulate GET /api/v0/notes */
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
 
   req.method = "GET";
-  req.path = "/api/notes";
+  req.path = "/api/v0/notes";
   res.status_code = 200;
 
   ret = c_rest_router_dispatch(router, &req, &res);
@@ -68,12 +68,12 @@ int main(void) {
   c_rest_request_cleanup(&req);
   c_rest_response_cleanup(&res);
 
-  /* Simulate POST /api/notes */
+  /* Simulate POST /api/v0/notes */
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
 
   req.method = "POST";
-  req.path = "/api/notes";
+  req.path = "/api/v0/notes";
   req.body = "{\"title\":\"My Note\",\"content\":\"Hello world\"}";
   req.body_len = strlen(req.body);
   res.status_code = 200;

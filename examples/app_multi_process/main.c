@@ -41,7 +41,7 @@ int main(void) {
   }
 
   c_rest_set_router(ctx, router);
-  c_rest_router_add(router, "GET", "/work", handle_work, NULL);
+  c_rest_router_add(router, "GET", "/api/v0/work", handle_work, NULL);
 
   printf("Forking workers and starting master loop...\n");
   rc = c_rest_run(ctx);

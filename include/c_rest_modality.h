@@ -164,7 +164,8 @@ int c_rest_init(enum c_rest_modality_type type,
 int c_rest_run(struct c_rest_context *ctx);
 
 /**
- * @brief Signals the framework engine to stop accepting connections and shutdown gracefully.
+ * @brief Signals the framework engine to stop accepting connections and
+ * shutdown gracefully.
  * @param ctx Pointer to the initialized context struct.
  * @return 0 on success, non-zero error code on failure.
  */

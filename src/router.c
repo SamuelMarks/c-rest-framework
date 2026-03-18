@@ -2,6 +2,7 @@
 #include "c_rest_request.h"
 #include "c_rest_response.h"
 #include "c_rest_router.h"
+#include "c_rest_openapi.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +39,7 @@ struct c_rest_router {
   struct c_rest_route_node *root;
   struct c_rest_middleware_chain *middlewares;
   struct c_rest_middleware_chain *post_middlewares;
+  struct c_rest_openapi_spec *openapi_spec;
 };
 
 static int create_node(const char *segment, size_t len,
@@ -125,6 +127,8 @@ int c_rest_router_init(c_rest_router **out_router) {
   }
   router->middlewares = NULL;
   router->post_middlewares = NULL;
+  router->openapi_spec = NULL;
+  c_rest_openapi_spec_init(&router->openapi_spec);
 
   *out_router = router;
   return 0;
@@ -154,6 +158,10 @@ int c_rest_router_destroy(c_rest_router *router) {
       free(m->path_prefix);
     free(m);
     m = next_m;
+  }
+
+  if (router->openapi_spec) {
+    c_rest_openapi_spec_destroy(router->openapi_spec);
   }
 
   free(router);
@@ -252,6 +260,24 @@ int c_rest_router_add(c_rest_router *router, const char *method,
   curr->handlers = h;
 
   return 0;
+}
+
+int c_rest_router_add_openapi(c_rest_router *router, const char *method,
+                              const char *path, c_rest_handler_fn handler,
+                              void *user_data,
+                              const struct c_rest_openapi_operation *op_meta) {
+  int res = c_rest_router_add(router, method, path, handler, user_data);
+  if (res == 0 && op_meta && router->openapi_spec) {
+    c_rest_openapi_spec_add_path(router->openapi_spec, path, method, op_meta);
+  }
+  return res;
+}
+
+struct c_rest_openapi_spec *
+c_rest_router_get_openapi_spec(c_rest_router *router) {
+  if (!router)
+    return NULL;
+  return router->openapi_spec;
 }
 
 int c_rest_router_use(c_rest_router *router, const char *path_prefix,

@@ -51,9 +51,11 @@ int oauth2_logout_handler(struct c_rest_request *req,
 int oauth2_secret_handler(struct c_rest_request *req,
                           struct c_rest_response *res, void *user_data);
 
-
-int oauth2_register_client_handler(struct c_rest_request *req, struct c_rest_response *res, void *user_data);
-int oauth2_register_user_handler(struct c_rest_request *req, struct c_rest_response *res, void *user_data);
+int oauth2_register_client_handler(struct c_rest_request *req,
+                                   struct c_rest_response *res,
+                                   void *user_data);
+int oauth2_register_user_handler(struct c_rest_request *req,
+                                 struct c_rest_response *res, void *user_data);
 
 #ifdef __cplusplus
 }

@@ -60,23 +60,23 @@ int main(void) {
    * These wrap requests in a database transaction,
    * committing on success, rolling back on error.
    */
-  c_rest_router_use(router, "/api", c_rest_orm_transaction_start_middleware,
+  c_rest_router_use(router, "/api/v0", c_rest_orm_transaction_start_middleware,
                     ctx);
-  c_rest_router_use_post(router, "/api", c_rest_orm_transaction_end_middleware,
+  c_rest_router_use_post(router, "/api/v0", c_rest_orm_transaction_end_middleware,
                          ctx);
 
   /* Auto-generate CRUD endpoints using the c_rest_orm_crud handlers */
   c_rest_set_router(ctx, router);
-  c_rest_router_add(router, "GET", "/api/notes", c_rest_orm_crud_get_list,
+  c_rest_router_add(router, "GET", "/api/v0/notes", c_rest_orm_crud_get_list,
                     &note_model);
-  c_rest_router_add(router, "POST", "/api/notes", c_rest_orm_crud_create,
+  c_rest_router_add(router, "POST", "/api/v0/notes", c_rest_orm_crud_create,
                     &note_model);
-  c_rest_router_add(router, "GET", "/api/notes/:id", c_rest_orm_crud_get_one,
+  c_rest_router_add(router, "GET", "/api/v0/notes/:id", c_rest_orm_crud_get_one,
                     &note_model);
-  c_rest_router_add(router, "PUT", "/api/notes/:id", c_rest_orm_crud_update,
+  c_rest_router_add(router, "PUT", "/api/v0/notes/:id", c_rest_orm_crud_update,
                     &note_model);
-  c_rest_router_add(router, "DELETE", "/api/notes/:id", c_rest_orm_crud_delete,
-                    &note_model);
+  c_rest_router_add(router, "DELETE", "/api/v0/notes/:id",
+                    c_rest_orm_crud_delete, &note_model);
 
   /* Fallback handler */
   c_rest_router_add(router, "GET", "/*", custom_404_handler, NULL);

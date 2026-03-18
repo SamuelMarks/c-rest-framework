@@ -44,7 +44,7 @@ int main(void) {
   }
 
   c_rest_set_router(ctx, router);
-  c_rest_router_add(router, "GET", "/db/query", handle_db_query, NULL);
+  c_rest_router_add(router, "GET", "/api/v0/db/query", handle_db_query, NULL);
 
   printf("Starting framework thread pool...\n");
   rc = c_rest_run(ctx);

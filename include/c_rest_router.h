@@ -31,6 +31,19 @@ int c_rest_router_add(c_rest_router *router, const char *method,
                       const char *path, c_rest_handler_fn handler,
                       void *user_data);
 
+struct c_rest_openapi_operation;
+struct c_rest_openapi_spec;
+
+/* Route addition with OpenAPI metadata */
+int c_rest_router_add_openapi(c_rest_router *router, const char *method,
+                              const char *path, c_rest_handler_fn handler,
+                              void *user_data,
+                              const struct c_rest_openapi_operation *op_meta);
+
+/* Get the underlying OpenAPI spec */
+struct c_rest_openapi_spec *
+c_rest_router_get_openapi_spec(c_rest_router *router);
+
 /* Middleware registration (Pre-handler) */
 int c_rest_router_use(c_rest_router *router, const char *path_prefix,
                       c_rest_middleware_fn middleware, void *user_data);

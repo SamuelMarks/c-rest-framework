@@ -47,7 +47,7 @@ int main(void) {
 
   c_rest_router_init(&router);
   c_rest_set_router(ctx, router);
-  c_rest_router_add(router, "GET", "/", hello_handler, NULL);
+  c_rest_router_add(router, "GET", "/api/v0/", hello_handler, NULL);
 
   /* In an actual implementation, a router should be bound to ctx.
    * e.g., ctx->router = router;

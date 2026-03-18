@@ -97,7 +97,7 @@ if(OAUTH2_BUILD_TESTS)
     )
     FetchContent_GetProperties(greatest)
     if(NOT greatest_POPULATED)
-        FetchContent_Populate(greatest)
+        FetchContent_MakeAvailable(greatest)
     endif()
 
     add_executable(oauth2_tests tests/test_oauth2.c)

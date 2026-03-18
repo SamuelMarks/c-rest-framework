@@ -5,6 +5,7 @@
 #include "c_orm_sqlite.h"
 #include "c_orm_oauth2.h"
 #include "oauth2_server.h"
+#include "c_rest_openapi.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,6 +37,7 @@ int main(int argc, char **argv) {
   const char *tls_key = NULL;
 
   int i;
+  int run_res;
 
   /* 1. Read environment variables first */
   const char *env_db_url = getenv("OAUTH2_DB_URL");
@@ -44,11 +46,16 @@ int main(int argc, char **argv) {
   const char *env_tls_cert = getenv("OAUTH2_TLS_CERT");
   const char *env_tls_key = getenv("OAUTH2_TLS_KEY");
 
-  if (env_db_url) db_url = env_db_url;
-  if (env_listen_addr) listen_addr = env_listen_addr;
-  if (env_listen_port) listen_port = (unsigned short)atoi(env_listen_port);
-  if (env_tls_cert) tls_cert = env_tls_cert;
-  if (env_tls_key) tls_key = env_tls_key;
+  if (env_db_url)
+    db_url = env_db_url;
+  if (env_listen_addr)
+    listen_addr = env_listen_addr;
+  if (env_listen_port)
+    listen_port = (unsigned short)atoi(env_listen_port);
+  if (env_tls_cert)
+    tls_cert = env_tls_cert;
+  if (env_tls_key)
+    tls_key = env_tls_key;
 
   /* 2. Parse command line arguments (override env vars) */
   for (i = 1; i < argc; i++) {
@@ -111,16 +118,19 @@ int main(int argc, char **argv) {
 
   if (c_rest_router_init(&router) != 0) {
     printf("Failed to init router\n");
-    if (tls_ctx) c_rest_tls_context_destroy(tls_ctx);
+    if (tls_ctx)
+      c_rest_tls_context_destroy(tls_ctx);
     c_rest_destroy(ctx);
     return 1;
   }
 
-  /* Notice we only support SQLite for this example currently, but we pass db_url */
+  /* Notice we only support SQLite for this example currently, but we pass
+   * db_url */
   if (c_orm_sqlite_connect(db_url, &db) != 0) {
     printf("Failed to connect to SQLite\n");
     c_rest_router_destroy(router);
-    if (tls_ctx) c_rest_tls_context_destroy(tls_ctx);
+    if (tls_ctx)
+      c_rest_tls_context_destroy(tls_ctx);
     c_rest_destroy(ctx);
     return 1;
   }
@@ -131,10 +141,14 @@ int main(int argc, char **argv) {
   if (oauth2_server_init(router, db) != 0) {
     printf("Failed to init oauth2 server\n");
     c_rest_router_destroy(router);
-    if (tls_ctx) c_rest_tls_context_destroy(tls_ctx);
+    if (tls_ctx)
+      c_rest_tls_context_destroy(tls_ctx);
     c_rest_destroy(ctx);
     return 1;
   }
+
+  c_rest_enable_openapi(router, "/api/v0/openapi.json");
+  c_rest_enable_swagger_ui(router, "/api/v0/docs", "/api/v0/openapi.json");
 
   c_rest_set_router(ctx, router);
 
@@ -142,9 +156,8 @@ int main(int argc, char **argv) {
   signal(SIGINT, handle_sigint);
   signal(SIGTERM, handle_sigint);
 
-  int run_res;
-
-  printf("Listening on %s:%d (HTTPS: %s)\n", listen_addr, listen_port, ctx->tls_ctx ? "yes" : "no");
+  printf("Listening on %s:%d (HTTPS: %s)\n", listen_addr, listen_port,
+         ctx->tls_ctx ? "yes" : "no");
   printf("Connecting to database: %s\n", db_url);
   printf("Starting server. Endpoint: POST /api/v0/oauth/token\n");
 

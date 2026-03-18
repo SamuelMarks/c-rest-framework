@@ -8,11 +8,10 @@ FetchContent_Declare(
 )
 FetchContent_GetProperties(greatest)
 if(NOT greatest_POPULATED)
-  FetchContent_Populate(greatest)
+  FetchContent_MakeAvailable(greatest)
 endif()
 
 add_executable(c-rest-framework-tests
-    # we will add test files here
     test_main.c
     test_multiplatform.c
     test_parser.c
@@ -26,6 +25,7 @@ add_executable(c-rest-framework-tests
     test_tls_context.c
     test_tls_integration.c
     test_oauth2.c
+    test_openapi.c
 )
 
 target_include_directories(c-rest-framework-tests PRIVATE ../include ${CMAKE_CURRENT_SOURCE_DIR} ${greatest_SOURCE_DIR})

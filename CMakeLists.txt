@@ -52,6 +52,7 @@ option(C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION "Integrate with c-multiplatfor
 option(C_REST_FRAMEWORK_FETCH_CAH "Fetch c-abstract-http from GitHub" ON)
 option(C_REST_FRAMEWORK_FETCH_C_ORM "Fetch c-orm from GitHub" OFF)
 option(C_REST_FRAMEWORK_FETCH_C_FS "Fetch c-fs from GitHub" ON)
+option(C_REST_FRAMEWORK_FETCH_CDD_C "Fetch cdd-c from GitHub" OFF)
 option(TRY_SYS_LIB "Fallback to system packages if vcpkg is not available" ON)
 
 macro(c_rest_framework_resolve_dependency PkgName FetchRepo FetchTag)
@@ -210,6 +211,15 @@ if(C_REST_FRAMEWORK_FETCH_C_FS)
     FetchContent_MakeAvailable(c_fs)
 endif()
 
+if(C_REST_FRAMEWORK_FETCH_CDD_C)
+    FetchContent_Declare(
+      cdd_c
+      GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
+      GIT_TAG master
+    )
+    FetchContent_MakeAvailable(cdd_c)
+endif()
+
 macro(c_rest_framework_resolve_parson)
     set(_VCPKG_APPLICABLE ON)
     if(MINGW OR CYGWIN OR (MSVC AND MSVC_VERSION LESS 1500))
@@ -251,6 +261,9 @@ macro(c_rest_framework_resolve_parson)
             set(BUILD_SHARED_LIBS ${OLD_BSL})
         endif()
         target_sources(c-rest-framework PRIVATE ${parson_SOURCE_DIR}/parson.c)
+        if(MSVC)
+            set_source_files_properties(${parson_SOURCE_DIR}/parson.c PROPERTIES COMPILE_FLAGS "/wd4232")
+        endif()
         target_include_directories(c-rest-framework PUBLIC ${parson_SOURCE_DIR})
         set(parson_RESOLVED ON)
     elseif(C_REST_FRAMEWORK_USE_BEARSSL)
@@ -374,7 +387,8 @@ add_library(c-rest-framework
     src/c_rest_endian.c
     src/c_rest_base64.c
     src/c_rest_crypto.c
-        src/c_rest_time.c
+    src/c_rest_time.c
+    src/c_rest_openapi.c
 )
 
 if(WIN32)
@@ -397,6 +411,11 @@ endif()
 
 if(C_REST_FRAMEWORK_FETCH_C_FS)
     target_link_libraries(c-rest-framework PUBLIC cfs)
+endif()
+
+if(C_REST_FRAMEWORK_FETCH_CDD_C)
+    target_link_libraries(c-rest-framework PUBLIC c_cdd)
+    add_definitions(-DC_REST_FRAMEWORK_USE_CDD_C)
 endif()
 
 if(WIN32)

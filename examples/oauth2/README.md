@@ -47,6 +47,8 @@ The server exposes the following routes for demonstration:
 | **POST** | `/api/v0/login` | A simplified login handler that accepts `username` and `password` and immediately returns a new access token pair. |
 | **POST** | `/api/v0/logout` | Revokes the current session token provided via the `Authorization: Bearer <token>` HTTP header. |
 | **GET** | `/api/v0/secret` | A protected resource that validates the `Authorization: Bearer` header before returning secure data. |
+| **GET** | `/api/v0/openapi.json` | Generated OpenAPI 3 specification of the endpoints. |
+| **GET** | `/api/v0/docs` | Swagger UI portal to browse and interact with the endpoints. |
 
 ## Quick Start: Password Grant Flow
 

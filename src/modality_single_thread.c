@@ -82,8 +82,10 @@ static int single_thread_run(struct c_rest_context *ctx) {
       return 1;
     }
 
-    if (c_rest_socket_bind(state->server_sock, ctx->listen_address, ctx->listen_port) != 0) {
-      fprintf(stderr, "SINGLE_THREAD: Failed to bind socket to %s:%d\n", ctx->listen_address, ctx->listen_port);
+    if (c_rest_socket_bind(state->server_sock, ctx->listen_address,
+                           ctx->listen_port) != 0) {
+      fprintf(stderr, "SINGLE_THREAD: Failed to bind socket to %s:%d\n",
+              ctx->listen_address, ctx->listen_port);
       c_rest_socket_close(state->server_sock);
       state->server_sock = C_REST_INVALID_SOCKET;
       return 1;
@@ -169,4 +171,5 @@ static int single_thread_stop(struct c_rest_context *ctx) {
 }
 
 const struct c_rest_modality_vtable single_thread_vtable = {
-    single_thread_init, single_thread_destroy, single_thread_run, single_thread_stop};
+    single_thread_init, single_thread_destroy, single_thread_run,
+    single_thread_stop};

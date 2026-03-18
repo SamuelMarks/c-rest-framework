@@ -60,12 +60,18 @@ int test_time(void);
 int test_tls_context(void);
 int test_tls_integration(void);
 int test_oauth2(void);
+int test_openapi(void);
 
 int main(void) {
   int res = 0;
 
   printf("Running test_init_destroy...\n");
   res = test_init_destroy();
+  if (res != 0)
+    return res;
+
+  printf("Running test_openapi...\n");
+  res = test_openapi();
   if (res != 0)
     return res;
 

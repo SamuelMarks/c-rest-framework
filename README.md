@@ -14,6 +14,7 @@ It integrates seamlessly with `c-abstract-http` (for parser/client abstractions)
 
 ### Key Features
 - **Strict C89 Compliance:** Zero dependencies on newer C standards. Highly portable.
+- **OpenAPI & Swagger UI:** Natively generates and serves OpenAPI JSON specs and Swagger UI documentation directly from registered routes (powered by `cdd-c`).
 - **8 Execution Modalities:** Choose how your server executes at runtime:
   - Synchronous (Blocking)
   - Asynchronous (Event loop)
@@ -65,16 +66,16 @@ int main(void) {
   /* 4. Create the Router */
   c_rest_router_init(&router);
 
-  /* 5. Add Transactional Middlewares to /api */
-  c_rest_router_use(router, "/api", c_rest_orm_transaction_start_middleware, ctx);
-  c_rest_router_use_post(router, "/api", c_rest_orm_transaction_end_middleware, ctx);
+  /* 5. Add Transactional Middlewares to /api/v0 */
+  c_rest_router_use(router, "/api/v0", c_rest_orm_transaction_start_middleware, ctx);
+  c_rest_router_use_post(router, "/api/v0", c_rest_orm_transaction_end_middleware, ctx);
 
   /* 6. Auto-generate CRUD Endpoints for the Note Model */
-  c_rest_router_add(router, "GET", "/api/notes", c_rest_orm_crud_get_list, &note_model);
-  c_rest_router_add(router, "POST", "/api/notes", c_rest_orm_crud_create, &note_model);
-  c_rest_router_add(router, "GET", "/api/notes/:id", c_rest_orm_crud_get_one, &note_model);
-  c_rest_router_add(router, "PUT", "/api/notes/:id", c_rest_orm_crud_update, &note_model);
-  c_rest_router_add(router, "DELETE", "/api/notes/:id", c_rest_orm_crud_delete, &note_model);
+  c_rest_router_add(router, "GET", "/api/v0/notes", c_rest_orm_crud_get_list, &note_model);
+  c_rest_router_add(router, "POST", "/api/v0/notes", c_rest_orm_crud_create, &note_model);
+  c_rest_router_add(router, "GET", "/api/v0/notes/:id", c_rest_orm_crud_get_one, &note_model);
+  c_rest_router_add(router, "PUT", "/api/v0/notes/:id", c_rest_orm_crud_update, &note_model);
+  c_rest_router_add(router, "DELETE", "/api/v0/notes/:id", c_rest_orm_crud_delete, &note_model);
 
   /* 7. Attach router and run server */
   ctx->internal_state = router;
@@ -91,14 +92,14 @@ Assuming the application is compiled and listening on `http://localhost:8080`:
 
 **Create a note:**
 ```sh
-curl -X POST http://localhost:8080/api/notes \
+curl -X POST http://localhost:8080/api/v0/notes \
      -H "Content-Type: application/json" \
      -d '{"title": "My first note", "content": "Hello world"}'
 ```
 
 **List all notes:**
 ```sh
-curl -X GET http://localhost:8080/api/notes
+curl -X GET http://localhost:8080/api/v0/notes
 ```
 
 ---

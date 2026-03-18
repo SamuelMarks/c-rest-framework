@@ -130,8 +130,10 @@ static int multi_thread_run(struct c_rest_context *ctx) {
       return 1;
     }
 
-    if (c_rest_socket_bind(state->server_sock, ctx->listen_address, ctx->listen_port) != 0) {
-      fprintf(stderr, "MULTI_THREAD: Failed to bind socket to %s:%d\n", ctx->listen_address, ctx->listen_port);
+    if (c_rest_socket_bind(state->server_sock, ctx->listen_address,
+                           ctx->listen_port) != 0) {
+      fprintf(stderr, "MULTI_THREAD: Failed to bind socket to %s:%d\n",
+              ctx->listen_address, ctx->listen_port);
       c_rest_socket_close(state->server_sock);
       state->server_sock = C_REST_INVALID_SOCKET;
       return 1;
@@ -162,8 +164,9 @@ static int multi_thread_run(struct c_rest_context *ctx) {
 
     if (res == 0 && client_sock != C_REST_INVALID_SOCKET) {
       c_rest_thread_t thread_handle;
-      struct connection_worker_args *wargs = (struct connection_worker_args *)
-          ctx->allocator.malloc_cb(sizeof(struct connection_worker_args));
+      struct connection_worker_args *wargs =
+          (struct connection_worker_args *)ctx->allocator.malloc_cb(
+              sizeof(struct connection_worker_args));
       if (wargs) {
         wargs->ctx = ctx;
         wargs->client_sock = client_sock;
@@ -241,4 +244,5 @@ static int multi_thread_stop(struct c_rest_context *ctx) {
 }
 
 const struct c_rest_modality_vtable multi_thread_vtable = {
-    multi_thread_init, multi_thread_destroy, multi_thread_run, multi_thread_stop};
+    multi_thread_init, multi_thread_destroy, multi_thread_run,
+    multi_thread_stop};
