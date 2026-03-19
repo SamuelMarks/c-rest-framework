@@ -18,6 +18,11 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
   struct c_rest_openapi_operation op_clients;
   struct c_rest_openapi_operation op_users;
   struct c_rest_openapi_spec *spec = NULL;
+  struct c_rest_openapi_security_scheme scheme;
+  const char *scope_keys[] = {"read", "write"};
+  const char *scope_vals[] = {"Read access", "Write access"};
+  struct c_rest_openapi_oauth_flow password_flow;
+
   const char *tags[] = {"OAuth2"};
   const char *schema_token =
       "{\"type\": \"object\", \"properties\": {\"access_token\": {\"type\": "
@@ -37,16 +42,61 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
       "Exchanges credentials for an access token (Password Grant).";
   op_token.tags = tags;
   op_token.n_tags = 1;
-  op_token.req_content_type = "application/x-www-form-urlencoded";
-  op_token.res_body_schema.ref_name = "c_orm_oauth2_token_t";
+  struct c_rest_openapi_request_body req_body_token;
+  struct c_rest_openapi_media_type req_mt_token;
+  const char *req_keys_token[] = {"application/x-www-form-urlencoded"};
+
+  struct c_rest_openapi_response res_token;
+  struct c_rest_openapi_media_type res_mt_token;
+  const char *res_keys_token[] = {"application/json"};
+
+  memset(&req_body_token, 0, sizeof(req_body_token));
+  memset(&req_mt_token, 0, sizeof(req_mt_token));
+  req_body_token.required = 1;
+  req_body_token.content_keys = req_keys_token;
+  req_body_token.content_values = &req_mt_token;
+  req_body_token.n_content = 1;
+  op_token.request_body = &req_body_token;
+
+  memset(&res_token, 0, sizeof(res_token));
+  memset(&res_mt_token, 0, sizeof(res_mt_token));
+  res_token.status_code = "200";
+  res_token.description = "Successful response";
+  res_mt_token.schema.ref_name = "c_orm_oauth2_token_t";
+  res_token.content_keys = res_keys_token;
+  res_token.content_values = &res_mt_token;
+  res_token.n_content = 1;
+  op_token.responses = &res_token;
+  op_token.n_responses = 1;
 
   memset(&op_login, 0, sizeof(op_login));
   op_login.summary = "Login Endpoint";
   op_login.description = "Creates a session token via username/password.";
   op_login.tags = tags;
   op_login.n_tags = 1;
-  op_login.req_content_type = "application/x-www-form-urlencoded";
-  op_login.res_body_schema.ref_name = "c_orm_oauth2_token_t";
+  struct c_rest_openapi_request_body req_body_login;
+  struct c_rest_openapi_media_type req_mt_login;
+  struct c_rest_openapi_response res_login;
+  struct c_rest_openapi_media_type res_mt_login;
+
+  memset(&req_body_login, 0, sizeof(req_body_login));
+  memset(&req_mt_login, 0, sizeof(req_mt_login));
+  req_body_login.required = 1;
+  req_body_login.content_keys = req_keys_token;
+  req_body_login.content_values = &req_mt_login;
+  req_body_login.n_content = 1;
+  op_login.request_body = &req_body_login;
+
+  memset(&res_login, 0, sizeof(res_login));
+  memset(&res_mt_login, 0, sizeof(res_mt_login));
+  res_login.status_code = "200";
+  res_login.description = "Successful response";
+  res_mt_login.schema.ref_name = "c_orm_oauth2_token_t";
+  res_login.content_keys = res_keys_token;
+  res_login.content_values = &res_mt_login;
+  res_login.n_content = 1;
+  op_login.responses = &res_login;
+  op_login.n_responses = 1;
 
   memset(&op_logout, 0, sizeof(op_logout));
   op_logout.summary = "Logout Endpoint";
@@ -66,14 +116,32 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
   op_clients.description = "Registers a new OAuth2 client.";
   op_clients.tags = tags;
   op_clients.n_tags = 1;
-  op_clients.req_content_type = "application/x-www-form-urlencoded";
+  struct c_rest_openapi_request_body req_body_clients;
+  struct c_rest_openapi_media_type req_mt_clients;
+
+  memset(&req_body_clients, 0, sizeof(req_body_clients));
+  memset(&req_mt_clients, 0, sizeof(req_mt_clients));
+  req_body_clients.required = 1;
+  req_body_clients.content_keys = req_keys_token;
+  req_body_clients.content_values = &req_mt_clients;
+  req_body_clients.n_content = 1;
+  op_clients.request_body = &req_body_clients;
 
   memset(&op_users, 0, sizeof(op_users));
   op_users.summary = "Register User";
   op_users.description = "Registers a new User.";
   op_users.tags = tags;
   op_users.n_tags = 1;
-  op_users.req_content_type = "application/x-www-form-urlencoded";
+  struct c_rest_openapi_request_body req_body_users;
+  struct c_rest_openapi_media_type req_mt_users;
+
+  memset(&req_body_users, 0, sizeof(req_body_users));
+  memset(&req_mt_users, 0, sizeof(req_mt_users));
+  req_body_users.required = 1;
+  req_body_users.content_keys = req_keys_token;
+  req_body_users.content_values = &req_mt_users;
+  req_body_users.n_content = 1;
+  op_users.request_body = &req_body_users;
 
   c_rest_router_add_openapi(router, "POST", "/api/v0/oauth/token",
                             oauth2_token_handler, (void *)db, &op_token);
@@ -92,8 +160,87 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
 
   spec = c_rest_router_get_openapi_spec(router);
   if (spec) {
+    spec->info.title = (char *)"OAuth2 Example API";
+    spec->info.version = (char *)"1.0.0";
+    spec->info.description =
+        (char *)"A simple OAuth2 API example using c-rest-framework.";
+
     c_rest_openapi_spec_add_component_schema(spec, "c_orm_oauth2_token_t",
                                              schema_token);
+
+    memset(&scheme, 0, sizeof(scheme));
+    scheme.name_key = "oauth2";
+    scheme.type = "oauth2";
+    scheme.description = "OAuth2 Password Grant";
+
+    memset(&password_flow, 0, sizeof(password_flow));
+    password_flow.token_url = "/api/v0/oauth/token";
+    password_flow.refresh_url = "/api/v0/oauth/token";
+    password_flow.scopes_keys = scope_keys;
+    password_flow.scopes_values = scope_vals;
+    password_flow.n_scopes = 2;
+    scheme.flows.password = &password_flow;
+
+    spec->security_schemes = (struct c_rest_openapi_security_scheme *)malloc(
+        sizeof(struct c_rest_openapi_security_scheme));
+    memset(spec->security_schemes, 0,
+           sizeof(struct c_rest_openapi_security_scheme));
+
+    /* Important to copy strings since c_rest_openapi.c uses free() on them when
+     * tearing down */
+    spec->security_schemes[0].name_key = (char *)malloc(strlen("oauth2") + 1);
+    strcpy((char *)spec->security_schemes[0].name_key, "oauth2");
+    spec->security_schemes[0].type = (char *)malloc(strlen("oauth2") + 1);
+    strcpy((char *)spec->security_schemes[0].type, "oauth2");
+    spec->security_schemes[0].description =
+        (char *)malloc(strlen("OAuth2 Password Grant") + 1);
+    strcpy((char *)spec->security_schemes[0].description,
+           "OAuth2 Password Grant");
+
+    spec->security_schemes[0].flows.password =
+        (struct c_rest_openapi_oauth_flow *)malloc(
+            sizeof(struct c_rest_openapi_oauth_flow));
+    memset(spec->security_schemes[0].flows.password, 0,
+           sizeof(struct c_rest_openapi_oauth_flow));
+    spec->security_schemes[0].flows.password->token_url =
+        (char *)malloc(strlen("/api/v0/oauth/token") + 1);
+    strcpy((char *)spec->security_schemes[0].flows.password->token_url,
+           "/api/v0/oauth/token");
+    spec->security_schemes[0].flows.password->refresh_url =
+        (char *)malloc(strlen("/api/v0/oauth/token") + 1);
+    strcpy((char *)spec->security_schemes[0].flows.password->refresh_url,
+           "/api/v0/oauth/token");
+
+    spec->security_schemes[0].flows.password->scopes_keys =
+        (const char **)malloc(sizeof(char *) * 2);
+    spec->security_schemes[0].flows.password->scopes_values =
+        (const char **)malloc(sizeof(char *) * 2);
+    spec->security_schemes[0].flows.password->scopes_keys[0] =
+        (char *)malloc(strlen(scope_keys[0]) + 1);
+    strcpy((char *)spec->security_schemes[0].flows.password->scopes_keys[0],
+           scope_keys[0]);
+    spec->security_schemes[0].flows.password->scopes_values[0] =
+        (char *)malloc(strlen(scope_vals[0]) + 1);
+    strcpy((char *)spec->security_schemes[0].flows.password->scopes_values[0],
+           scope_vals[0]);
+    spec->security_schemes[0].flows.password->scopes_keys[1] =
+        (char *)malloc(strlen(scope_keys[1]) + 1);
+    strcpy((char *)spec->security_schemes[0].flows.password->scopes_keys[1],
+           scope_keys[1]);
+    spec->security_schemes[0].flows.password->scopes_values[1] =
+        (char *)malloc(strlen(scope_vals[1]) + 1);
+    strcpy((char *)spec->security_schemes[0].flows.password->scopes_values[1],
+           scope_vals[1]);
+    spec->security_schemes[0].flows.password->n_scopes = 2;
+    spec->n_security_schemes = 1;
+
+    spec->security = (struct c_rest_openapi_security_requirement *)malloc(
+        sizeof(struct c_rest_openapi_security_requirement));
+    spec->security[0].name = (char *)malloc(strlen("oauth2") + 1);
+    strcpy((char *)spec->security[0].name, "oauth2");
+    spec->security[0].scopes = NULL;
+    spec->security[0].n_scopes = 0;
+    spec->n_security = 1;
   }
 
   return 0;

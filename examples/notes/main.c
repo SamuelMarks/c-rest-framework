@@ -62,8 +62,8 @@ int main(void) {
    */
   c_rest_router_use(router, "/api/v0", c_rest_orm_transaction_start_middleware,
                     ctx);
-  c_rest_router_use_post(router, "/api/v0", c_rest_orm_transaction_end_middleware,
-                         ctx);
+  c_rest_router_use_post(router, "/api/v0",
+                         c_rest_orm_transaction_end_middleware, ctx);
 
   /* Auto-generate CRUD endpoints using the c_rest_orm_crud handlers */
   c_rest_set_router(ctx, router);

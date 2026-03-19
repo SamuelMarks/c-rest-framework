@@ -21,43 +21,23 @@ static int handle_hello_world(struct c_rest_request *req,
 }
 
 int main(void) {
-  struct c_rest_context *ctx = NULL;
-  c_rest_router *router = NULL;
-  struct c_rest_openapi_spec *spec = NULL;
+  struct c_rest_router *router = NULL;
+  struct c_rest_openapi_spec *spec;
   struct c_rest_openapi_operation op;
+  struct c_rest_context *ctx = NULL;
   int rc;
-  const char *tags[] = {"Demo"};
+  const char *tags[] = {"greeting"};
 
-  printf("Initializing OpenAPI Example Application...\n");
+  struct c_rest_openapi_response res_hello;
+  struct c_rest_openapi_media_type res_mt_hello;
+  const char *res_keys_hello[] = {"application/json"};
 
-  rc = c_rest_init(C_REST_MODALITY_ASYNC, &ctx);
-  if (rc != 0) {
-    fprintf(stderr, "Failed to initialize framework.\n");
-    return 1;
-  }
-
-  ctx->logger.log_cb = my_log_cb;
-
-  rc = c_rest_router_init(&router);
-  if (rc != 0) {
-    fprintf(stderr, "Failed to initialize router.\n");
-    c_rest_destroy(ctx);
-    return 1;
-  }
-
-  c_rest_set_router(ctx, router);
-
-  memset(&op, 0, sizeof(op));
-  op.summary = "Hello World Endpoint";
-  op.description = "Returns a simple hello world JSON message.";
-  op.tags = tags;
-  op.n_tags = 1;
-  op.res_body_schema.ref_name = "HelloResponse";
-
-  c_rest_router_add_openapi(router, "GET", "/api/v0/hello", handle_hello_world,
-                            NULL, &op);
+  c_rest_router_init(&router);
+  c_rest_enable_openapi(router, "/openapi.json");
+  c_rest_enable_swagger_ui(router, "/docs", "/openapi.json");
 
   spec = c_rest_router_get_openapi_spec(router);
+
   if (spec) {
     c_rest_openapi_spec_add_component_schema(
         spec, "HelloResponse",
@@ -68,21 +48,38 @@ int main(void) {
   c_rest_enable_openapi(router, "/api/v0/openapi.json");
   c_rest_enable_swagger_ui(router, "/api/v0/docs", "/api/v0/openapi.json");
 
-  /* Skip actual blocking run for CI test safety */
-  printf("Configuration complete. To run the server, uncomment "
-         "c_rest_run(ctx).\n");
+  memset(&op, 0, sizeof(op));
+  op.operation_id = "helloWorld";
+  op.summary = "Greeting endpoint";
+  op.description = "Returns a friendly greeting message.";
+  op.tags = tags;
+  op.n_tags = 1;
 
-  /*
-  printf("Starting framework event loop...\n");
-  rc = c_rest_run(ctx);
-  if (rc != 0) {
-    fprintf(stderr, "Framework runtime error.\n");
+  memset(&res_hello, 0, sizeof(res_hello));
+  memset(&res_mt_hello, 0, sizeof(res_mt_hello));
+  res_hello.status_code = "200";
+  res_hello.description = "Successful response";
+  res_mt_hello.schema.ref_name = "HelloResponse";
+  res_hello.content_keys = res_keys_hello;
+  res_hello.content_values = &res_mt_hello;
+  res_hello.n_content = 1;
+  op.responses = &res_hello;
+  op.n_responses = 1;
+
+  c_rest_router_add_openapi(router, "GET", "/api/hello", handle_hello_world,
+                            NULL, &op);
+
+  /* Note: c_rest_init logic omitted to keep it small, but let's assume ctx is
+   * used */
+  rc = c_rest_init(&ctx);
+  if (rc == 0 && ctx) {
+    c_rest_set_router(ctx, router);
+    c_rest_set_log_callback(ctx, my_log_cb);
+
+    /* Normally we would c_rest_run(ctx) here but it blocks */
+    c_rest_destroy(ctx);
   }
-  */
 
-  printf("Shutting down...\n");
   c_rest_router_destroy(router);
-  c_rest_destroy(ctx);
-
   return 0;
 }

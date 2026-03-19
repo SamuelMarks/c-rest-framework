@@ -8,7 +8,9 @@
 #include <c_abstract_http/http_winhttp.h>
 #endif
 #else
+#ifndef CDD_DOS
 #include <c_abstract_http/http_curl.h>
+#endif
 #endif
 #else
 #include "c_abstract_http.h"
@@ -95,6 +97,7 @@ int c_rest_client_init(c_rest_client_context **out_client) {
   ctx->client.send = http_winhttp_send;
 #endif
 #else
+#ifndef CDD_DOS
   if (http_curl_context_init(
           (struct HttpTransportContext **)&ctx->client.transport) != 0) {
     http_client_free(&ctx->client);
@@ -102,6 +105,10 @@ int c_rest_client_init(c_rest_client_context **out_client) {
     return 1;
   }
   ctx->client.send = http_curl_send;
+#else
+  (void)ctx;
+  return 1;
+#endif
 #endif
 #else
   ctx->client.transport = (struct HttpTransportContext *)1;
@@ -124,7 +131,9 @@ int c_rest_client_destroy(c_rest_client_context *client) {
   http_winhttp_context_free(client->client.transport);
 #endif
 #else
+#ifndef CDD_DOS
   http_curl_context_free(client->client.transport);
+#endif
 #endif
 #endif
 

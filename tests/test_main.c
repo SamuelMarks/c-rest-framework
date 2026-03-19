@@ -50,19 +50,36 @@ static int test_all_enums(void) {
 
 int test_multiplatform_integration(void);
 int test_parser(void);
+#ifndef CDD_DOS
 int test_client(void);
+#endif
+#ifndef CDD_DOS
 int test_multipart(void);
+#endif
 int test_router(void);
 int test_request_response(void);
+#ifndef CDD_DOS
 int test_orm_integration(void);
+#endif
+#ifndef CDD_DOS
 int test_crypto(void);
+#endif
+#ifndef CDD_DOS
 int test_time(void);
+#endif
 int test_tls_context(void);
+#ifndef CDD_DOS
 int test_tls_integration(void);
+#endif
+#ifndef CDD_DOS
 int test_oauth2(void);
+#endif
+#ifndef CDD_DOS
 int test_openapi(void);
+#endif
 
 int main(void) {
+
   int res = 0;
 
   printf("Running test_init_destroy...\n");
@@ -70,10 +87,12 @@ int main(void) {
   if (res != 0)
     return res;
 
+#ifndef CDD_DOS
   printf("Running test_openapi...\n");
   res = test_openapi();
   if (res != 0)
     return res;
+#endif
 
   printf("Running test_all_enums...\n");
   res = test_all_enums();
@@ -90,15 +109,19 @@ int main(void) {
   if (res != 0)
     return res;
 
+#ifndef CDD_DOS
   printf("Running test_client...\n");
   res = test_client();
   if (res != 0)
     return res;
+#endif
 
+#ifndef CDD_DOS
   printf("Running test_multipart...\n");
   res = test_multipart();
   if (res != 0)
     return res;
+#endif
 
   printf("Running test_router...\n");
   res = test_router();
@@ -110,35 +133,45 @@ int main(void) {
   if (res != 0)
     return res;
 
+#ifndef CDD_DOS
   printf("Running test_orm_integration...\n");
   res = test_orm_integration();
   if (res != 0)
     return res;
+#endif
 
+#ifndef CDD_DOS
   printf("Running test_crypto...\n");
   res = test_crypto();
   if (res != 0)
     return res;
+#endif
 
+#ifndef CDD_DOS
   printf("Running test_time...\n");
   res = test_time();
   if (res != 0)
     return res;
+#endif
 
   printf("Running test_tls_context...\n");
   res = test_tls_context();
   if (res != 0)
     return res;
 
+#ifndef CDD_DOS
   printf("Running test_tls_integration...\n");
   res = test_tls_integration();
   if (res != 0)
     return res;
+#endif
 
+#ifndef CDD_DOS
   printf("Running test_oauth2...\n");
   res = test_oauth2();
   if (res != 0)
     return res;
+#endif
 
   printf("All tests passed.\n");
   return 0;

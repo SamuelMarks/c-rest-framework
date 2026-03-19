@@ -43,8 +43,8 @@ int main(void) {
 
   c_rest_router_use(router, "/api/v0", c_rest_orm_transaction_start_middleware,
                     ctx);
-  c_rest_router_use_post(router, "/api/v0", c_rest_orm_transaction_end_middleware,
-                         ctx);
+  c_rest_router_use_post(router, "/api/v0",
+                         c_rest_orm_transaction_end_middleware, ctx);
 
   c_rest_router_add(router, "GET", "/api/v0/notes", c_rest_orm_crud_get_list,
                     &note_model);

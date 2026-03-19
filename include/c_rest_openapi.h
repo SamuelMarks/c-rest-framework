@@ -9,46 +9,283 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/**
+ * @brief Reference to a schema struct
+ */
+
+/**
+ * @brief Reference to a schema struct
+ */
+/**
+ * @brief Reference to a schema struct
+ */
 struct c_rest_openapi_schema_ref {
-  const char *ref_name; /* Name of the C struct, e.g., "my_request_struct" */
+  const char *ref_name; /**< Name of the C struct, e.g., "my_request_struct" */
 };
 
+/**
+ * @brief OpenAPI Example Object
+ */
+struct c_rest_openapi_example {
+  const char *summary;        /**< Short summary */
+  const char *description;    /**< Description */
+  const char *value;          /**< Raw JSON or string value */
+  const char *external_value; /**< External value URL */
+};
+
+/**
+ * @brief OpenAPI Header Object
+ */
+struct c_rest_openapi_header {
+  const char *description;                 /**< Header description */
+  int required;                            /**< Required flag */
+  int deprecated;                          /**< Deprecated flag */
+  const char *style;                       /**< Header style */
+  int explode;                             /**< Explode array flag */
+  struct c_rest_openapi_schema_ref schema; /**< Schema reference */
+};
+
+/**
+ * @brief OpenAPI Media Type Object
+ */
+struct c_rest_openapi_media_type {
+  struct c_rest_openapi_schema_ref schema; /**< Media type schema */
+  const char *example;                     /**< Simple string example */
+};
+
+/**
+ * @brief OpenAPI Request Body Object
+ */
+struct c_rest_openapi_request_body {
+  const char *description; /**< Request body description */
+  struct c_rest_openapi_media_type *content_values; /**< Array of media types */
+  const char **content_keys; /**< Array of content keys */
+  size_t n_content;          /**< Number of content types */
+  int required;              /**< Required flag */
+};
+
+/**
+ * @brief OpenAPI Response Object
+ */
+struct c_rest_openapi_response {
+  const char *status_code;                          /**< Response status code */
+  const char *description;                          /**< Response description */
+  struct c_rest_openapi_media_type *content_values; /**< Array of media types */
+  const char **content_keys;                   /**< Array of content keys */
+  size_t n_content;                            /**< Number of content types */
+  struct c_rest_openapi_header *header_values; /**< Array of header values */
+  const char **header_keys;                    /**< Array of header keys */
+  size_t n_headers;                            /**< Number of headers */
+};
+
+/**
+ * @brief OpenAPI Parameter Object
+ */
+struct c_rest_openapi_parameter {
+  const char *name; /**< Parameter name */
+  const char
+      *in; /**< Parameter location ("query", "header", "path", "cookie") */
+  const char *description;                 /**< Parameter description */
+  int required;                            /**< Required flag */
+  int deprecated;                          /**< Deprecated flag */
+  int allow_empty_value;                   /**< Allow empty value flag */
+  const char *style;                       /**< Parameter style */
+  int explode;                             /**< Explode array flag */
+  int allow_reserved;                      /**< Allow reserved flag */
+  struct c_rest_openapi_schema_ref schema; /**< Schema reference */
+  const char *example;                     /**< Example value */
+};
+/**
+ * @brief OpenAPI Contact object
+ */
+struct c_rest_openapi_contact {
+  const char *name;  /**< Name of contact */
+  const char *url;   /**< URL of contact */
+  const char *email; /**< Email of contact */
+};
+
+/**
+ * @brief OpenAPI License object
+ */
+struct c_rest_openapi_license {
+  const char *name;       /**< License name */
+  const char *identifier; /**< SPDX identifier */
+  const char *url;        /**< License URL */
+};
+
+/**
+ * @brief OpenAPI External Documentation object
+ */
+struct c_rest_openapi_external_doc {
+  const char *description; /**< Short description */
+  const char *url;         /**< Doc URL */
+};
+
+/**
+ * @brief OpenAPI Server Variable object
+ */
+struct c_rest_openapi_server_variable {
+  const char *name;          /**< Variable name used in template */
+  const char **enum_values;  /**< Allowed enum values */
+  size_t n_enum_values;      /**< Number of enums */
+  const char *default_value; /**< Default string value */
+  const char *description;   /**< Description of variable */
+};
+
+/**
+ * @brief OpenAPI Server object
+ */
+struct c_rest_openapi_server {
+  const char *url;                                  /**< Server URL template */
+  const char *description;                          /**< Server description */
+  struct c_rest_openapi_server_variable *variables; /**< Variables mapped */
+  size_t n_variables;                               /**< Number of variables */
+};
+
+/**
+ * @brief OpenAPI Tag object
+ */
+struct c_rest_openapi_tag {
+  const char *name;                                 /**< Tag name */
+  const char *summary;                              /**< Tag summary */
+  const char *description;                          /**< Tag description */
+  struct c_rest_openapi_external_doc external_docs; /**< Additional docs */
+  const char *parent; /**< Nested hierarchy parent */
+  const char *kind;   /**< Tag kind logic */
+};
+
+/**
+ * @brief OpenAPI Operation object
+ */
+
+/**
+ * @brief OpenAPI OAuth Flow object
+ */
+struct c_rest_openapi_oauth_flow {
+  const char *authorization_url; /**< Authorization URL */
+  const char *token_url;         /**< Token URL */
+  const char *refresh_url;       /**< Refresh URL */
+  const char **scopes_keys;      /**< Scope keys */
+  const char **scopes_values;    /**< Scope descriptions */
+  size_t n_scopes;               /**< Number of scopes */
+};
+
+/**
+ * @brief OpenAPI OAuth Flows object
+ */
+struct c_rest_openapi_oauth_flows {
+  struct c_rest_openapi_oauth_flow *implicit; /**< Implicit flow */
+  struct c_rest_openapi_oauth_flow *password; /**< Password flow */
+  struct c_rest_openapi_oauth_flow
+      *client_credentials; /**< Client credentials flow */
+  struct c_rest_openapi_oauth_flow
+      *authorization_code; /**< Authorization code flow */
+};
+
+/**
+ * @brief OpenAPI Security Scheme object
+ */
+struct c_rest_openapi_security_scheme {
+  const char *name_key;      /**< Internal component key */
+  const char *type;          /**< "oauth2", "http", "apiKey", "openIdConnect" */
+  const char *description;   /**< Description */
+  const char *name;          /**< Header/query/cookie name for apiKey */
+  const char *in;            /**< "query", "header", "cookie" */
+  const char *scheme;        /**< "bearer", "basic", etc */
+  const char *bearer_format; /**< e.g., "JWT" */
+  struct c_rest_openapi_oauth_flows flows; /**< OAuth2 flows */
+  const char *open_id_connect_url;         /**< OpenID Connect URL */
+};
+
+/**
+ * @brief OpenAPI Security Requirement object
+ */
+struct c_rest_openapi_security_requirement {
+  const char *name;    /**< Security scheme key */
+  const char **scopes; /**< Required scopes */
+  size_t n_scopes;     /**< Number of scopes */
+};
+
+/**
+ * @brief OpenAPI Operation object
+ */
 struct c_rest_openapi_operation {
-  const char *summary;
-  const char *description;
-  const char **tags;
-  size_t n_tags;
-  struct c_rest_openapi_schema_ref req_body_schema;
-  const char *req_content_type;
-  struct c_rest_openapi_schema_ref res_body_schema;
-  const char *res_content_type;
+  const char *operation_id;                         /**< Unique ID */
+  const char *summary;                              /**< Short summary */
+  const char *description;                          /**< Verbose description */
+  const char **tags;                                /**< Tags bound */
+  size_t n_tags;                                    /**< Number of tags */
+  struct c_rest_openapi_parameter *parameters;      /**< Parameters */
+  size_t n_parameters;                              /**< Number of parameters */
+  struct c_rest_openapi_request_body *request_body; /**< Request body */
+  struct c_rest_openapi_response *responses;        /**< Responses array */
+  size_t n_responses;                               /**< Number of responses */
+  int deprecated;                                   /**< Is deprecated (1/0) */
+  struct c_rest_openapi_external_doc external_docs; /**< Additional docs */
+  struct c_rest_openapi_security_requirement
+      *security;     /**< Security requirements */
+  size_t n_security; /**< Number of security requirements */
 };
 
+/**
+ * @brief OpenAPI Path Item object
+ */
 struct c_rest_openapi_path {
-  const char *route;
-  struct c_rest_openapi_operation get;
-  struct c_rest_openapi_operation post;
-  struct c_rest_openapi_operation put;
-  struct c_rest_openapi_operation del;
-  struct c_rest_openapi_operation patch;
+  const char *route;                       /**< The path route template */
+  const char *summary;                     /**< Path summary */
+  const char *description;                 /**< Path description */
+  struct c_rest_openapi_server *servers;   /**< Path specific servers */
+  size_t n_servers;                        /**< Path server count */
+  struct c_rest_openapi_operation get;     /**< GET Operation */
+  struct c_rest_openapi_operation post;    /**< POST Operation */
+  struct c_rest_openapi_operation put;     /**< PUT Operation */
+  struct c_rest_openapi_operation del;     /**< DELETE Operation */
+  struct c_rest_openapi_operation patch;   /**< PATCH Operation */
+  struct c_rest_openapi_operation options; /**< OPTIONS Operation */
+  struct c_rest_openapi_operation head;    /**< HEAD Operation */
+  struct c_rest_openapi_operation trace;   /**< TRACE Operation */
+  struct c_rest_openapi_operation query;   /**< QUERY Operation */
 };
 
+/**
+ * @brief OpenAPI Info object
+ */
 struct c_rest_openapi_info {
-  const char *title;
-  const char *version;
-  const char *description;
+  const char *title;                     /**< Title of API */
+  const char *summary;                   /**< Summary */
+  const char *version;                   /**< Version */
+  const char *description;               /**< Description */
+  const char *terms_of_service;          /**< ToS URL */
+  struct c_rest_openapi_contact contact; /**< Contact */
+  struct c_rest_openapi_license license; /**< License */
 };
 
+/**
+ * @brief Main OpenAPI Spec state structure
+ */
 struct c_rest_openapi_spec {
-  struct c_rest_openapi_info info;
-  struct c_rest_openapi_path *paths;
-  size_t n_paths;
-  size_t capacity_paths;
-  char *swagger_openapi_url;
-  char **component_schemas_keys;
-  char **component_schemas_json;
-  size_t n_components;
-  size_t capacity_components;
+  const char *openapi_version;                      /**< Spec version string */
+  const char *json_schema_dialect;                  /**< JSON dialect */
+  struct c_rest_openapi_info info;                  /**< Info block */
+  struct c_rest_openapi_server *servers;            /**< Global servers */
+  size_t n_servers;                                 /**< Server count */
+  struct c_rest_openapi_path *paths;                /**< Paths map */
+  size_t n_paths;                                   /**< Path count */
+  size_t capacity_paths;                            /**< Allocator capacity */
+  char *swagger_openapi_url;                        /**< UI override path */
+  char **component_schemas_keys;                    /**< Component keys */
+  char **component_schemas_json;                    /**< Component jsons */
+  size_t n_components;                              /**< Count components */
+  size_t capacity_components;                       /**< Capacity components */
+  struct c_rest_openapi_tag *tags;                  /**< Tags */
+  size_t n_tags;                                    /**< Tag count */
+  struct c_rest_openapi_external_doc external_docs; /**< Docs */
+  struct c_rest_openapi_security_requirement
+      *security;     /**< Global security requirements */
+  size_t n_security; /**< Number of global security requirements */
+  struct c_rest_openapi_security_scheme
+      *security_schemes;     /**< Security schemes */
+  size_t n_security_schemes; /**< Number of security schemes */
 };
 
 int c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec);

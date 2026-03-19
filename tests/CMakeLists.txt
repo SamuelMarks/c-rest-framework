@@ -6,27 +6,24 @@ FetchContent_Declare(
   URL https://raw.githubusercontent.com/SamuelMarks/greatest/cmake-and-msvc/greatest.h
   DOWNLOAD_NO_EXTRACT TRUE
 )
-FetchContent_GetProperties(greatest)
-if(NOT greatest_POPULATED)
-  FetchContent_MakeAvailable(greatest)
-endif()
+FetchContent_MakeAvailable(greatest)
 
-add_executable(c-rest-framework-tests
+
+set(TEST_SRCS
     test_main.c
     test_multiplatform.c
     test_parser.c
-    test_client.c
-    test_multipart.c
     test_router.c
     test_request_response.c
-    test_orm_integration.c
-    test_crypto.c
-    test_time.c
     test_tls_context.c
-    test_tls_integration.c
-    test_oauth2.c
-    test_openapi.c
 )
+
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "DOS")
+    list(APPEND TEST_SRCS test_client.c test_tls_integration.c test_openapi.c test_orm_integration.c test_oauth2.c test_crypto.c test_time.c test_multipart.c)
+endif()
+
+add_executable(c-rest-framework-tests ${TEST_SRCS})
+
 
 target_include_directories(c-rest-framework-tests PRIVATE ../include ${CMAKE_CURRENT_SOURCE_DIR} ${greatest_SOURCE_DIR})
 target_link_libraries(c-rest-framework-tests PRIVATE c-rest-framework)

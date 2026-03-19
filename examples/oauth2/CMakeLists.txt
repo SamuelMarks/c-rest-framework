@@ -6,7 +6,11 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 # Threading support
-option(OAUTH2_MULTI_THREADED "Enable multi-threading" ON)
+if(CMAKE_SYSTEM_NAME STREQUAL "DOS")
+    option(OAUTH2_MULTI_THREADED "Enable multi-threading" OFF)
+else()
+    option(OAUTH2_MULTI_THREADED "Enable multi-threading" ON)
+endif()
 if(OAUTH2_MULTI_THREADED)
     add_compile_definitions(OAUTH2_MULTI_THREADED=1)
     find_package(Threads REQUIRED)
@@ -95,10 +99,7 @@ if(OAUTH2_BUILD_TESTS)
         URL https://raw.githubusercontent.com/SamuelMarks/greatest/cmake-and-msvc/greatest.h
         DOWNLOAD_NO_EXTRACT TRUE
     )
-    FetchContent_GetProperties(greatest)
-    if(NOT greatest_POPULATED)
-        FetchContent_MakeAvailable(greatest)
-    endif()
+    FetchContent_MakeAvailable(greatest)
 
     add_executable(oauth2_tests tests/test_oauth2.c)
     target_include_directories(oauth2_tests PRIVATE ${greatest_SOURCE_DIR})
