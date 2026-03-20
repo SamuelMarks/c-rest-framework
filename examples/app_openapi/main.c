@@ -10,8 +10,6 @@
 #include <string.h>
 /* clang-format on */
 
-static void my_log_cb(const char *message) { printf("[APP] %s\n", message); }
-
 static int handle_hello_world(struct c_rest_request *req,
                               struct c_rest_response *res, void *user_data) {
   (void)req;
@@ -71,10 +69,9 @@ int main(void) {
 
   /* Note: c_rest_init logic omitted to keep it small, but let's assume ctx is
    * used */
-  rc = c_rest_init(&ctx);
+  rc = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
   if (rc == 0 && ctx) {
     c_rest_set_router(ctx, router);
-    c_rest_set_log_callback(ctx, my_log_cb);
 
     /* Normally we would c_rest_run(ctx) here but it blocks */
     c_rest_destroy(ctx);

@@ -908,9 +908,9 @@ int c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
           json_object_set_value(s_obj, "flows", flows_val);
         }
 
-        json_object_set_value(components_obj, s->name_key, s_val);
+        json_object_set_value(sec_schemes_obj, s->name_key, s_val);
       }
-      json_object_set_value(components_val, "securitySchemes", sec_schemes_val);
+      json_object_set_value(components_obj, "securitySchemes", sec_schemes_val);
     }
 
     if (spec->n_components > 0) {
