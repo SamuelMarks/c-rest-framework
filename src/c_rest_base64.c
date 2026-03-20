@@ -39,12 +39,13 @@ static int encode_internal(const unsigned char *src, size_t src_len, char *dst,
     unsigned int octet_b = i < src_len ? (unsigned char)src[i++] : 0;
     unsigned int octet_c = i < src_len ? (unsigned char)src[i++] : 0;
 
-    unsigned int triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
+    unsigned long triple = ((unsigned long)octet_a << 16) +
+                           ((unsigned long)octet_b << 8) + octet_c;
 
-    dst[j++] = chars[(triple >> 3 * 6) & 0x3F];
-    dst[j++] = chars[(triple >> 2 * 6) & 0x3F];
-    dst[j++] = chars[(triple >> 1 * 6) & 0x3F];
-    dst[j++] = chars[(triple >> 0 * 6) & 0x3F];
+    dst[j++] = chars[(triple >> 18) & 0x3F];
+    dst[j++] = chars[(triple >> 12) & 0x3F];
+    dst[j++] = chars[(triple >> 6) & 0x3F];
+    dst[j++] = chars[triple & 0x3F];
   }
 
   val = src_len % 3;
@@ -127,15 +128,16 @@ static int decode_internal(const char *src, size_t src_len, unsigned char *dst,
     unsigned int sextet_d =
         i < in_len ? (src[i] == '=' ? 0 & i++ : get_val(src[i++], is_url)) : 0;
 
-    unsigned int triple = (sextet_a << 3 * 6) + (sextet_b << 2 * 6) +
-                          (sextet_c << 1 * 6) + (sextet_d << 0 * 6);
+    unsigned long triple = ((unsigned long)sextet_a << 18) +
+                           ((unsigned long)sextet_b << 12) +
+                           ((unsigned long)sextet_c << 6) + sextet_d;
 
     if (j < out_len)
-      dst[j++] = (unsigned char)((triple >> 2 * 8) & 0xFF);
+      dst[j++] = (unsigned char)((triple >> 16) & 0xFF);
     if (j < out_len)
-      dst[j++] = (unsigned char)((triple >> 1 * 8) & 0xFF);
+      dst[j++] = (unsigned char)((triple >> 8) & 0xFF);
     if (j < out_len)
-      dst[j++] = (unsigned char)((triple >> 0 * 8) & 0xFF);
+      dst[j++] = (unsigned char)(triple & 0xFF);
   }
   *dst_len = out_len;
   return 0;

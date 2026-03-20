@@ -7,9 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-/* clang-format on */
 
 #include <ctype.h>
+/* clang-format on */
 
 #if defined(_MSC_VER)
 #define SAFE_STRCPY(dest, size, src) strcpy_s(dest, size, src)

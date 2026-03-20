@@ -1,8 +1,4 @@
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "" FORCE)
-set(FETCHCONTENT_SOURCE_DIR_CDD_C "${CMAKE_CURRENT_LIST_DIR}/../../cdd-c" CACHE PATH "" FORCE)
-set(FETCHCONTENT_SOURCE_DIR_C_ORM "${CMAKE_CURRENT_LIST_DIR}/../../c-orm" CACHE PATH "" FORCE)
-set(FETCHCONTENT_SOURCE_DIR_CFS "${CMAKE_CURRENT_LIST_DIR}/../../c-fs" CACHE PATH "" FORCE)
-set(FETCHCONTENT_SOURCE_DIR_C_FS "${CMAKE_CURRENT_LIST_DIR}/../../c-fs" CACHE PATH "" FORCE)
 
 cmake_minimum_required(VERSION 3.10)
 project(c-rest-framework C)
@@ -183,40 +179,68 @@ if(C_REST_FRAMEWORK_FETCH_CAH)
     set(C_FS_BUILD_TESTING OFF CACHE BOOL "" FORCE)
     set(C_CDD_BUILD_TESTING OFF CACHE BOOL "" FORCE)
     
-    FetchContent_Declare(
-      c_abstract_http
-      GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
-      GIT_TAG master
-    )
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../c-abstract-http/CMakeLists.txt")
+        FetchContent_Declare(
+          c_abstract_http
+          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../c-abstract-http"
+        )
+    else()
+        FetchContent_Declare(
+          c_abstract_http
+          GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
+          GIT_TAG master
+        )
+    endif()
     FetchContent_MakeAvailable(c_abstract_http)
     add_definitions(-DC_REST_FRAMEWORK_USE_REAL_CAH)
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_C_ORM)
-    FetchContent_Declare(
-      c_orm
-      GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
-      GIT_TAG master
-    )
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../c-orm/CMakeLists.txt")
+        FetchContent_Declare(
+          c_orm
+          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../c-orm"
+        )
+    else()
+        FetchContent_Declare(
+          c_orm
+          GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
+          GIT_TAG master
+        )
+    endif()
     FetchContent_MakeAvailable(c_orm)
     add_definitions(-DC_REST_FRAMEWORK_USE_REAL_C_ORM)
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_C_FS)
-    FetchContent_Declare(
-      c_fs
-      GIT_REPOSITORY https://github.com/SamuelMarks/c-fs.git
-      GIT_TAG master
-    )
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../c-fs/CMakeLists.txt")
+        FetchContent_Declare(
+          c_fs
+          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../c-fs"
+        )
+    else()
+        FetchContent_Declare(
+          c_fs
+          GIT_REPOSITORY https://github.com/SamuelMarks/c-fs.git
+          GIT_TAG master
+        )
+    endif()
     FetchContent_MakeAvailable(c_fs)
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_CDD_C)
-    FetchContent_Declare(
-      cdd_c
-      GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
-      GIT_TAG master
-    )
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../cdd-c/CMakeLists.txt")
+        FetchContent_Declare(
+          cdd_c
+          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../cdd-c"
+        )
+    else()
+        FetchContent_Declare(
+          cdd_c
+          GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
+          GIT_TAG master
+        )
+    endif()
     FetchContent_MakeAvailable(cdd_c)
 endif()
 
@@ -248,18 +272,21 @@ macro(c_rest_framework_resolve_parson)
 
     if(NOT parson_RESOLVED)
         message(STATUS "Fetching parson via FetchContent")
-        FetchContent_Declare(
-            parson
-            GIT_REPOSITORY https://github.com/kgabis/parson.git
-            GIT_TAG master
-        )
-        FetchContent_GetProperties(parson)
-        if(NOT parson_POPULATED)
-            set(OLD_BSL ${BUILD_SHARED_LIBS})
-            set(BUILD_SHARED_LIBS OFF)
-            FetchContent_MakeAvailable(parson)
-            set(BUILD_SHARED_LIBS ${OLD_BSL})
+        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../parson/CMakeLists.txt")
+            message(STATUS "Using local parson")
+            FetchContent_Declare(parson SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../parson")
+        else()
+            FetchContent_Declare(
+                parson
+                GIT_REPOSITORY https://github.com/kgabis/parson.git
+                GIT_TAG master
+            )
         endif()
+        set(OLD_BSL ${BUILD_SHARED_LIBS})
+        set(BUILD_SHARED_LIBS OFF)
+        FetchContent_MakeAvailable(parson)
+        set(BUILD_SHARED_LIBS ${OLD_BSL})
+        FetchContent_GetProperties(parson)
         target_sources(c-rest-framework PRIVATE ${parson_SOURCE_DIR}/parson.c)
         if(MSVC)
             set_source_files_properties(${parson_SOURCE_DIR}/parson.c PROPERTIES COMPILE_FLAGS "/wd4232")
@@ -442,6 +469,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     add_subdirectory(tests)
     add_subdirectory(examples)
 endif()
+
 
 
 

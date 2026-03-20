@@ -521,22 +521,9 @@ static int serialize_operation(JSON_Object *methods_obj,
   JSON_Object *op_obj;
   JSON_Value *tags_val;
   JSON_Array *tags_arr;
-  JSON_Value *req_body_val;
-  JSON_Object *req_body_obj;
-  JSON_Value *content_val;
-  JSON_Object *content_obj;
-  JSON_Value *app_json_val;
-  JSON_Object *app_json_obj;
-  JSON_Value *schema_val;
-  JSON_Object *schema_obj;
-  JSON_Value *responses_val;
-  JSON_Object *responses_obj;
-  JSON_Value *res_200_val;
-  JSON_Object *res_200_obj;
   JSON_Value *ext_docs_val;
   JSON_Object *ext_docs_obj;
   size_t i;
-  char ref_buf[256];
 
   if (!op || (!op->summary && !op->description && op->n_tags == 0 &&
               !op->request_body && op->n_responses == 0 && !op->operation_id))

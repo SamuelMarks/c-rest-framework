@@ -23,6 +23,20 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
   const char *scope_vals[] = {"Read access", "Write access"};
   struct c_rest_openapi_oauth_flow password_flow;
 
+  struct c_rest_openapi_request_body req_body_token;
+  struct c_rest_openapi_media_type req_mt_token;
+  const char *req_keys_token[] = {"application/x-www-form-urlencoded"};
+  struct c_rest_openapi_response res_token;
+  struct c_rest_openapi_media_type res_mt_token;
+  const char *res_keys_token[] = {"application/json"};
+  struct c_rest_openapi_request_body req_body_login;
+  struct c_rest_openapi_media_type req_mt_login;
+  struct c_rest_openapi_response res_login;
+  struct c_rest_openapi_media_type res_mt_login;
+  struct c_rest_openapi_request_body req_body_clients;
+  struct c_rest_openapi_media_type req_mt_clients;
+  struct c_rest_openapi_request_body req_body_users;
+  struct c_rest_openapi_media_type req_mt_users;
   const char *tags[] = {"OAuth2"};
   const char *schema_token =
       "{\"type\": \"object\", \"properties\": {\"access_token\": {\"type\": "
@@ -42,13 +56,6 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
       "Exchanges credentials for an access token (Password Grant).";
   op_token.tags = tags;
   op_token.n_tags = 1;
-  struct c_rest_openapi_request_body req_body_token;
-  struct c_rest_openapi_media_type req_mt_token;
-  const char *req_keys_token[] = {"application/x-www-form-urlencoded"};
-
-  struct c_rest_openapi_response res_token;
-  struct c_rest_openapi_media_type res_mt_token;
-  const char *res_keys_token[] = {"application/json"};
 
   memset(&req_body_token, 0, sizeof(req_body_token));
   memset(&req_mt_token, 0, sizeof(req_mt_token));
@@ -74,10 +81,6 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
   op_login.description = "Creates a session token via username/password.";
   op_login.tags = tags;
   op_login.n_tags = 1;
-  struct c_rest_openapi_request_body req_body_login;
-  struct c_rest_openapi_media_type req_mt_login;
-  struct c_rest_openapi_response res_login;
-  struct c_rest_openapi_media_type res_mt_login;
 
   memset(&req_body_login, 0, sizeof(req_body_login));
   memset(&req_mt_login, 0, sizeof(req_mt_login));
@@ -116,8 +119,6 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
   op_clients.description = "Registers a new OAuth2 client.";
   op_clients.tags = tags;
   op_clients.n_tags = 1;
-  struct c_rest_openapi_request_body req_body_clients;
-  struct c_rest_openapi_media_type req_mt_clients;
 
   memset(&req_body_clients, 0, sizeof(req_body_clients));
   memset(&req_mt_clients, 0, sizeof(req_mt_clients));
@@ -132,8 +133,6 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
   op_users.description = "Registers a new User.";
   op_users.tags = tags;
   op_users.n_tags = 1;
-  struct c_rest_openapi_request_body req_body_users;
-  struct c_rest_openapi_media_type req_mt_users;
 
   memset(&req_body_users, 0, sizeof(req_body_users));
   memset(&req_mt_users, 0, sizeof(req_mt_users));

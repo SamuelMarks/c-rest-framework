@@ -1,8 +1,9 @@
-/* clang-format off */
 #ifndef C_REST_BASE64_H
 #define C_REST_BASE64_H
 
+/* clang-format off */
 #include <stddef.h>
+/* clang-format on */
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,4 +57,3 @@ int c_rest_base64url_decode(const char *src, size_t src_len, unsigned char *dst,
 }
 #endif /* __cplusplus */
 #endif /* C_REST_BASE64_H */
-/* clang-format on */

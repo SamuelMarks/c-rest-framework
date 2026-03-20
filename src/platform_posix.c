@@ -1,4 +1,3 @@
-/* clang-format off */
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif
@@ -6,6 +5,7 @@
 #define _GNU_SOURCE
 #endif
 
+/* clang-format off */
 #include "c_rest_platform.h"
 
 #include <stdlib.h>

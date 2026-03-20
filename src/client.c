@@ -1,5 +1,5 @@
-/* clang-format off */
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
+/* clang-format off */
 #include <c_abstract_http/c_abstract_http.h>
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__)
 #if defined(_MSC_VER) && _MSC_VER < 1600

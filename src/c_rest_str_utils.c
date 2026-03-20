@@ -3,7 +3,6 @@
 
 #include <ctype.h>
 #include <string.h>
-/* clang-format on */
 
 int c_rest_strcasecmp(const char *s1, const char *s2) {
   if (!s1 || !s2)
@@ -102,6 +101,7 @@ int c_rest_strlcat(char *dst, const char *src, size_t dsize, size_t *out_len) {
 }
 
 #include <stdlib.h>
+/* clang-format on */
 
 int c_rest_url_decode(char *dst, const char *src, size_t len) {
   size_t i;

@@ -31,7 +31,6 @@
 #include <wolfssl/wolfcrypt/hmac.h>
 #include <wolfssl/wolfcrypt/pwdbased.h>
 
-/* clang-format on */
 #endif
 
 int c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) {
@@ -155,8 +154,8 @@ int c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
   {
     unsigned char pad[64] = {0x80};
     unsigned char len_bytes[8];
-    c_rest_uint32_t bit_len_hi = (c_rest_uint32_t)(len >> 29);
-    c_rest_uint32_t bit_len_lo = (c_rest_uint32_t)(len << 3);
+    c_rest_uint32_t bit_len_hi = (c_rest_uint32_t)((unsigned long)len >> 29);
+    c_rest_uint32_t bit_len_lo = (c_rest_uint32_t)((unsigned long)len << 3);
     int pad_len;
 
     len_bytes[0] = (unsigned char)((bit_len_hi >> 24) & 0xFF);
@@ -290,8 +289,8 @@ int c_rest_sha256(const unsigned char *data, size_t len,
   {
     unsigned char pad[64] = {0x80};
     unsigned char len_bytes[8];
-    c_rest_uint32_t bit_len_hi = (c_rest_uint32_t)(len >> 29);
-    c_rest_uint32_t bit_len_lo = (c_rest_uint32_t)(len << 3);
+    c_rest_uint32_t bit_len_hi = (c_rest_uint32_t)((unsigned long)len >> 29);
+    c_rest_uint32_t bit_len_lo = (c_rest_uint32_t)((unsigned long)len << 3);
     int pad_len;
 
     len_bytes[0] = (unsigned char)((bit_len_hi >> 24) & 0xFF);
@@ -471,6 +470,7 @@ int c_rest_rand_bytes(unsigned char *buf, size_t len) {
 #endif
 
 #include "c_rest_base64.h"
+/* clang-format on */
 
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
@@ -622,7 +622,7 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
   unsigned int i, k;
   unsigned char U[32];
   unsigned char T[32];
-  unsigned int block_index = 1;
+  unsigned long block_index = 1;
   size_t generated_len = 0;
 
   if (!password || !salt || !out_key || iterations == 0)
@@ -895,7 +895,7 @@ int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
   return 0;
 }
 
-#define C_REST_PBKDF2_ITERATIONS 100000
+#define C_REST_PBKDF2_ITERATIONS 100000UL
 #define C_REST_PBKDF2_SALT_LEN 16
 #define C_REST_PBKDF2_HASH_LEN 32
 
@@ -955,10 +955,10 @@ int c_rest_hash_password(const char *password,
   }
 
 #if defined(_MSC_VER)
-  sprintf_s(*out_hash, out_len, "$pbkdf2-sha256$i=%d$%s$%s",
+  sprintf_s(*out_hash, out_len, "$pbkdf2-sha256$i=%lu$%s$%s",
             C_REST_PBKDF2_ITERATIONS, salt_b64, hash_b64);
 #else
-  sprintf(*out_hash, "$pbkdf2-sha256$i=%d$%s$%s", C_REST_PBKDF2_ITERATIONS,
+  sprintf(*out_hash, "$pbkdf2-sha256$i=%lu$%s$%s", C_REST_PBKDF2_ITERATIONS,
           salt_b64, hash_b64);
 #endif
 

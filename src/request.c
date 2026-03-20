@@ -5,7 +5,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-/* clang-format on */
 
 #include <ctype.h>
 
@@ -438,6 +437,7 @@ int c_rest_request_get_auth_bearer(struct c_rest_request *req,
 }
 
 #include "c_rest_base64.h"
+/* clang-format on */
 
 int c_rest_request_get_auth_basic(struct c_rest_request *req,
                                   char **out_username, char **out_password) {

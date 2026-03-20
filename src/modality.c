@@ -3,7 +3,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-/* clang-format on */
 
 extern const struct c_rest_modality_vtable sync_vtable;
 extern const struct c_rest_modality_vtable single_thread_vtable;
@@ -247,6 +246,7 @@ int c_rest_set_router(struct c_rest_context *ctx,
 #include "c_rest_router.h"
 #include "c_rest_str_utils.h"
 #include <string.h>
+/* clang-format on */
 
 struct connection_state {
   struct c_rest_request req;

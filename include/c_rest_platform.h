@@ -10,7 +10,6 @@ extern "C" {
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
 #include "c_multiplatform.h"
-/* clang-format on */
 
 typedef cm_socket_t c_rest_socket_t;
 typedef cm_thread_t c_rest_thread_t;
@@ -38,6 +37,7 @@ typedef ptrdiff_t c_rest_process_t;
 #endif
 
 #include <cfs/cfs.h>
+/* clang-format on */
 
 /*
  * Initialization and cleanup.
