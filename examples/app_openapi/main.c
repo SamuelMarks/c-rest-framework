@@ -34,7 +34,7 @@ int main(void) {
   c_rest_enable_openapi(router, "/openapi.json");
   c_rest_enable_swagger_ui(router, "/docs", "/openapi.json");
 
-  spec = c_rest_router_get_openapi_spec(router);
+  c_rest_router_get_openapi_spec(router, &spec);
 
   if (spec) {
     c_rest_openapi_spec_add_component_schema(

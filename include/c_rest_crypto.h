@@ -63,7 +63,7 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
  */
 int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
                               size_t password_len, const unsigned char *salt,
-                              size_t salt_len, unsigned int iterations,
+                              size_t salt_len, unsigned long iterations,
                               size_t dk_len, unsigned char *out_key);
 
 /**

@@ -938,8 +938,9 @@ int c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
 static int openapi_handler(struct c_rest_request *req,
                            struct c_rest_response *res, void *user_data) {
   struct c_rest_router *router = (struct c_rest_router *)user_data;
-  struct c_rest_openapi_spec *spec = c_rest_router_get_openapi_spec(router);
+  struct c_rest_openapi_spec *spec = NULL;
   char *json_str = NULL;
+  c_rest_router_get_openapi_spec(router, &spec);
 
   /* unused args */
   (void)req;
@@ -995,8 +996,9 @@ static const char *swagger_html_template_2 =
 static int swagger_ui_handler(struct c_rest_request *req,
                               struct c_rest_response *res, void *user_data) {
   struct c_rest_router *router = (struct c_rest_router *)user_data;
-  struct c_rest_openapi_spec *spec = c_rest_router_get_openapi_spec(router);
+  struct c_rest_openapi_spec *spec = NULL;
   char *html_buf;
+  c_rest_router_get_openapi_spec(router, &spec);
   size_t html_len;
   const char *openapi_url = "/openapi.json";
 
@@ -1038,7 +1040,7 @@ int c_rest_enable_swagger_ui(struct c_rest_router *router,
   if (!router || !docs_path || !openapi_url)
     return 1;
 
-  spec = c_rest_router_get_openapi_spec(router);
+  c_rest_router_get_openapi_spec(router, &spec);
   if (spec) {
     if (spec->swagger_openapi_url)
       free(spec->swagger_openapi_url);

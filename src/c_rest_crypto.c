@@ -487,7 +487,7 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
 
 int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
                               size_t password_len, const unsigned char *salt,
-                              size_t salt_len, unsigned int iterations,
+                              size_t salt_len, unsigned long iterations,
                               size_t dk_len, unsigned char *out_key) {
   if (PKCS5_PBKDF2_HMAC((const char *)password, (int)password_len, salt,
                         (int)salt_len, (int)iterations, EVP_sha256(),
@@ -512,7 +512,7 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
 
 int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
                               size_t password_len, const unsigned char *salt,
-                              size_t salt_len, unsigned int iterations,
+                              size_t salt_len, unsigned long iterations,
                               size_t dk_len, unsigned char *out_key) {
   mbedtls_md_context_t ctx;
   const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
@@ -550,7 +550,7 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
 
 int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
                               size_t password_len, const unsigned char *salt,
-                              size_t salt_len, unsigned int iterations,
+                              size_t salt_len, unsigned long iterations,
                               size_t dk_len, unsigned char *out_key) {
   int ret = wc_PBKDF2(out_key, password, (int)password_len, salt, (int)salt_len,
                       (int)iterations, (int)dk_len, WC_HASH_TYPE_SHA256);
@@ -617,7 +617,7 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
 
 int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
                               size_t password_len, const unsigned char *salt,
-                              size_t salt_len, unsigned int iterations,
+                              size_t salt_len, unsigned long iterations,
                               size_t dk_len, unsigned char *out_key) {
   unsigned int i, k;
   unsigned char U[32];
@@ -1033,7 +1033,7 @@ int c_rest_verify_password(const char *password, const char *hash_str) {
 
   if (c_rest_pbkdf2_hmac_sha256(
           (const unsigned char *)password, strlen(password), salt, salt_len,
-          (unsigned int)iters, C_REST_PBKDF2_HASH_LEN, computed_hash) != 0) {
+          (unsigned long)iters, C_REST_PBKDF2_HASH_LEN, computed_hash) != 0) {
     goto cleanup;
   }
 

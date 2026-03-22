@@ -1,5 +1,12 @@
 /* clang-format off */
 #include "oauth2_server.h"
+
+#if defined(_MSC_VER)
+#define C_REST_STRCPY(dest, size, src) strcpy_s(dest, size, src)
+#else
+#define C_REST_STRCPY(dest, size, src) strcpy(dest, src)
+#endif
+
 #include "c_orm_oauth2.h"
 #include "c_rest_string.h"
 #include "c_rest_mem.h"
@@ -157,7 +164,7 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
                             oauth2_register_user_handler, (void *)db,
                             &op_users);
 
-  spec = c_rest_router_get_openapi_spec(router);
+  c_rest_router_get_openapi_spec(router, &spec);
   if (spec) {
     spec->info.title = (char *)"OAuth2 Example API";
     spec->info.version = (char *)"1.0.0";
@@ -188,13 +195,12 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
     /* Important to copy strings since c_rest_openapi.c uses free() on them when
      * tearing down */
     spec->security_schemes[0].name_key = (char *)malloc(strlen("oauth2") + 1);
-    strcpy((char *)spec->security_schemes[0].name_key, "oauth2");
+    C_REST_STRCPY((char *)spec->security_schemes[0].name_key, strlen("oauth2") + 1, "oauth2");
     spec->security_schemes[0].type = (char *)malloc(strlen("oauth2") + 1);
-    strcpy((char *)spec->security_schemes[0].type, "oauth2");
+    C_REST_STRCPY((char *)spec->security_schemes[0].type, strlen("oauth2") + 1, "oauth2");
     spec->security_schemes[0].description =
         (char *)malloc(strlen("OAuth2 Password Grant") + 1);
-    strcpy((char *)spec->security_schemes[0].description,
-           "OAuth2 Password Grant");
+    C_REST_STRCPY((char *)spec->security_schemes[0].description, strlen("OAuth2 Password Grant") + 1, "OAuth2 Password Grant");
 
     spec->security_schemes[0].flows.password =
         (struct c_rest_openapi_oauth_flow *)malloc(
@@ -203,12 +209,10 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
            sizeof(struct c_rest_openapi_oauth_flow));
     spec->security_schemes[0].flows.password->token_url =
         (char *)malloc(strlen("/api/v0/oauth/token") + 1);
-    strcpy((char *)spec->security_schemes[0].flows.password->token_url,
-           "/api/v0/oauth/token");
+    C_REST_STRCPY((char *)spec->security_schemes[0].flows.password->token_url, strlen("/api/v0/oauth/token") + 1, "/api/v0/oauth/token");
     spec->security_schemes[0].flows.password->refresh_url =
         (char *)malloc(strlen("/api/v0/oauth/token") + 1);
-    strcpy((char *)spec->security_schemes[0].flows.password->refresh_url,
-           "/api/v0/oauth/token");
+    C_REST_STRCPY((char *)spec->security_schemes[0].flows.password->refresh_url, strlen("/api/v0/oauth/token") + 1, "/api/v0/oauth/token");
 
     spec->security_schemes[0].flows.password->scopes_keys =
         (const char **)malloc(sizeof(char *) * 2);
@@ -216,27 +220,23 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
         (const char **)malloc(sizeof(char *) * 2);
     spec->security_schemes[0].flows.password->scopes_keys[0] =
         (char *)malloc(strlen(scope_keys[0]) + 1);
-    strcpy((char *)spec->security_schemes[0].flows.password->scopes_keys[0],
-           scope_keys[0]);
+    C_REST_STRCPY((char *)spec->security_schemes[0].flows.password->scopes_keys[0], strlen(scope_keys[0]) + 1, scope_keys[0]);
     spec->security_schemes[0].flows.password->scopes_values[0] =
         (char *)malloc(strlen(scope_vals[0]) + 1);
-    strcpy((char *)spec->security_schemes[0].flows.password->scopes_values[0],
-           scope_vals[0]);
+    C_REST_STRCPY((char *)spec->security_schemes[0].flows.password->scopes_values[0], strlen(scope_vals[0]) + 1, scope_vals[0]);
     spec->security_schemes[0].flows.password->scopes_keys[1] =
         (char *)malloc(strlen(scope_keys[1]) + 1);
-    strcpy((char *)spec->security_schemes[0].flows.password->scopes_keys[1],
-           scope_keys[1]);
+    C_REST_STRCPY((char *)spec->security_schemes[0].flows.password->scopes_keys[1], strlen(scope_keys[1]) + 1, scope_keys[1]);
     spec->security_schemes[0].flows.password->scopes_values[1] =
         (char *)malloc(strlen(scope_vals[1]) + 1);
-    strcpy((char *)spec->security_schemes[0].flows.password->scopes_values[1],
-           scope_vals[1]);
+    C_REST_STRCPY((char *)spec->security_schemes[0].flows.password->scopes_values[1], strlen(scope_vals[1]) + 1, scope_vals[1]);
     spec->security_schemes[0].flows.password->n_scopes = 2;
     spec->n_security_schemes = 1;
 
     spec->security = (struct c_rest_openapi_security_requirement *)malloc(
         sizeof(struct c_rest_openapi_security_requirement));
     spec->security[0].name = (char *)malloc(strlen("oauth2") + 1);
-    strcpy((char *)spec->security[0].name, "oauth2");
+    C_REST_STRCPY((char *)spec->security[0].name, strlen("oauth2") + 1, "oauth2");
     spec->security[0].scopes = NULL;
     spec->security[0].n_scopes = 0;
     spec->n_security = 1;

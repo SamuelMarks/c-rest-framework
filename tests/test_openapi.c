@@ -136,7 +136,7 @@ int test_openapi(void) {
     return 1;
   }
 
-  spec = c_rest_router_get_openapi_spec(router);
+  c_rest_router_get_openapi_spec(router, &spec);
   if (!spec) {
     printf("OpenAPI spec is NULL\n");
     return 1;
