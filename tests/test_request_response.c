@@ -273,7 +273,11 @@ int test_request_response(void) {
     c_rest_response_set_header(&ser_res, "Content-Type", "text/plain");
 
     ser_res.body = (char *)malloc(12);
+#if defined(_MSC_VER)
+    strcpy_s(ser_res.body, 12, "Hello World");
+#else
     strcpy(ser_res.body, "Hello World");
+#endif
     ser_res.body_len = 11;
 
     if (c_rest_response_serialize(&ser_res, &out_buf, &out_len) != 0 ||

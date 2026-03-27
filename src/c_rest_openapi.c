@@ -901,7 +901,7 @@ int c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
     }
 
     if (spec->n_components > 0) {
-      JSON_Object *components_obj = json_value_get_object(components_val);
+      JSON_Object *comp_obj = json_value_get_object(components_val);
       JSON_Value *schemas_val = json_value_init_object();
       JSON_Object *schemas_obj = json_value_get_object(schemas_val);
 
@@ -912,7 +912,7 @@ int c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
                                 parsed);
         }
       }
-      json_object_set_value(components_obj, "schemas", schemas_val);
+      json_object_set_value(comp_obj, "schemas", schemas_val);
     }
   }
   json_object_set_value(root_obj, "components", components_val);

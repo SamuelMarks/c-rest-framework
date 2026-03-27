@@ -16,7 +16,11 @@ static char *portable_strdup(const char *s) {
   size_t len = strlen(s) + 1;
   char *m = (char *)malloc(len);
   if (m) {
+#if defined(_MSC_VER)
+    strcpy_s(m, len, s);
+#else
     strcpy(m, s);
+#endif
   }
   return m;
 }

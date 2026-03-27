@@ -1,4 +1,5 @@
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "" FORCE)
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "" FORCE)
 
 cmake_minimum_required(VERSION 3.10)
 project(c-rest-framework C)
@@ -48,7 +49,7 @@ option(C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION "Integrate with c-multiplatfor
 option(C_REST_FRAMEWORK_FETCH_CAH "Fetch c-abstract-http from GitHub" ON)
 option(C_REST_FRAMEWORK_FETCH_C_ORM "Fetch c-orm from GitHub" OFF)
 option(C_REST_FRAMEWORK_FETCH_C_FS "Fetch c-fs from GitHub" ON)
-option(C_REST_FRAMEWORK_FETCH_CDD_C "Fetch cdd-c from GitHub" OFF)
+option(C_REST_FRAMEWORK_FETCH_CDD_C "Fetch cdd-c from GitHub" ON)
 option(TRY_SYS_LIB "Fallback to system packages if vcpkg is not available" ON)
 
 macro(c_rest_framework_resolve_dependency PkgName FetchRepo FetchTag)
@@ -173,22 +174,57 @@ set(C_ABSTRACT_HTTP_USE_LIBUV ${C_REST_FRAMEWORK_USE_LIBUV} CACHE BOOL "" FORCE)
 set(C_ABSTRACT_HTTP_USE_LIBEVENT ${C_REST_FRAMEWORK_USE_LIBEVENT} CACHE BOOL "" FORCE)
 set(C_ABSTRACT_HTTP_USE_LIBFETCH ${C_REST_FRAMEWORK_USE_LIBFETCH} CACHE BOOL "" FORCE)
 
+if(C_REST_FRAMEWORK_FETCH_C_FS)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-fs/CMakeLists.txt")
+        FetchContent_Declare(
+          cfs
+          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-fs"
+        )
+    else()
+        FetchContent_Declare(
+          cfs
+          GIT_REPOSITORY https://github.com/SamuelMarks/c-fs.git
+          GIT_TAG master
+          GIT_CONFIG "core.autocrlf=false"
+        )
+    endif()
+    FetchContent_MakeAvailable(cfs)
+endif()
+
+if(C_REST_FRAMEWORK_FETCH_CDD_C)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../cdd-c/CMakeLists.txt")
+        FetchContent_Declare(
+          cdd_c
+          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../cdd-c"
+        )
+    else()
+        FetchContent_Declare(
+          cdd_c
+          GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
+          GIT_TAG master
+          GIT_CONFIG "core.autocrlf=false"
+        )
+    endif()
+    FetchContent_MakeAvailable(cdd_c)
+endif()
+
 if(C_REST_FRAMEWORK_FETCH_CAH)
     set(C_ABSTRACT_HTTP_BUILD_TESTING OFF CACHE BOOL "" FORCE)
     set(C_ORM_BUILD_TESTING OFF CACHE BOOL "" FORCE)
     set(C_FS_BUILD_TESTING OFF CACHE BOOL "" FORCE)
     set(C_CDD_BUILD_TESTING OFF CACHE BOOL "" FORCE)
     
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../c-abstract-http/CMakeLists.txt")
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http/CMakeLists.txt")
         FetchContent_Declare(
           c_abstract_http
-          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../c-abstract-http"
+          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http"
         )
     else()
         FetchContent_Declare(
           c_abstract_http
           GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
           GIT_TAG master
+          GIT_CONFIG "core.autocrlf=false"
         )
     endif()
     FetchContent_MakeAvailable(c_abstract_http)
@@ -196,52 +232,21 @@ if(C_REST_FRAMEWORK_FETCH_CAH)
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_C_ORM)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../c-orm/CMakeLists.txt")
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-orm/CMakeLists.txt")
         FetchContent_Declare(
           c_orm
-          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../c-orm"
+          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-orm"
         )
     else()
         FetchContent_Declare(
           c_orm
           GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
           GIT_TAG master
+          GIT_CONFIG "core.autocrlf=false"
         )
     endif()
     FetchContent_MakeAvailable(c_orm)
     add_definitions(-DC_REST_FRAMEWORK_USE_REAL_C_ORM)
-endif()
-
-if(C_REST_FRAMEWORK_FETCH_C_FS)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../c-fs/CMakeLists.txt")
-        FetchContent_Declare(
-          c_fs
-          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../c-fs"
-        )
-    else()
-        FetchContent_Declare(
-          c_fs
-          GIT_REPOSITORY https://github.com/SamuelMarks/c-fs.git
-          GIT_TAG master
-        )
-    endif()
-    FetchContent_MakeAvailable(c_fs)
-endif()
-
-if(C_REST_FRAMEWORK_FETCH_CDD_C)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../cdd-c/CMakeLists.txt")
-        FetchContent_Declare(
-          cdd_c
-          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../cdd-c"
-        )
-    else()
-        FetchContent_Declare(
-          cdd_c
-          GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
-          GIT_TAG master
-        )
-    endif()
-    FetchContent_MakeAvailable(cdd_c)
 endif()
 
 macro(c_rest_framework_resolve_parson)
@@ -280,6 +285,7 @@ macro(c_rest_framework_resolve_parson)
                 parson
                 GIT_REPOSITORY https://github.com/kgabis/parson.git
                 GIT_TAG master
+          GIT_CONFIG "core.autocrlf=false"
             )
         endif()
         set(OLD_BSL ${BUILD_SHARED_LIBS})
@@ -424,6 +430,7 @@ endif()
 
 c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
 c_rest_framework_resolve_parson()
+
 
 if(C_REST_FRAMEWORK_FETCH_CAH)
     target_link_libraries(c-rest-framework PUBLIC c-abstract-http)

@@ -273,7 +273,8 @@ int c_rest_router_add_openapi(c_rest_router *router, const char *method,
   return res;
 }
 
-int c_rest_router_get_openapi_spec(c_rest_router *router, struct c_rest_openapi_spec **out_spec) {
+int c_rest_router_get_openapi_spec(c_rest_router *router,
+                                   struct c_rest_openapi_spec **out_spec) {
   if (!router || !out_spec)
     return -1;
   *out_spec = router->openapi_spec;
