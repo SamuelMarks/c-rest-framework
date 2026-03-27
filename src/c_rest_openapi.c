@@ -1036,7 +1036,7 @@ static int swagger_ui_handler(struct c_rest_request *req,
 
 int c_rest_enable_swagger_ui(struct c_rest_router *router,
                              const char *docs_path, const char *openapi_url) {
-  struct c_rest_openapi_spec *spec;
+  struct c_rest_openapi_spec *spec = NULL;
   if (!router || !docs_path || !openapi_url)
     return 1;
 

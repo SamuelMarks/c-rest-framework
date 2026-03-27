@@ -57,7 +57,7 @@ int oauth2_register_client_handler(struct c_rest_request *req,
 int oauth2_register_user_handler(struct c_rest_request *req,
                                  struct c_rest_response *res, void *user_data);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 #endif /* OAUTH2_SERVER_H */

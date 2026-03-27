@@ -336,7 +336,7 @@ int c_rest_enable_openapi(struct c_rest_router *router, const char *path);
 int c_rest_enable_swagger_ui(struct c_rest_router *router,
                              const char *docs_path, const char *openapi_url);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 

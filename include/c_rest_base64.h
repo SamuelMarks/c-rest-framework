@@ -53,7 +53,7 @@ int c_rest_base64url_encode(const unsigned char *src, size_t src_len, char *dst,
 int c_rest_base64url_decode(const char *src, size_t src_len, unsigned char *dst,
                             size_t *dst_len);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 #endif /* C_REST_BASE64_H */

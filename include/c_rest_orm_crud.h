@@ -70,7 +70,7 @@ struct c_rest_context;
 int c_rest_orm_run_migrations(struct c_rest_context *ctx,
                               const char *migration_dir);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 

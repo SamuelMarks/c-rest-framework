@@ -38,7 +38,7 @@ int c_rest_mem_tracker_cleanup(void);
 #define C_REST_FREE(ptr) (free(ptr), 0)
 #endif
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 #endif /* C_REST_MEM_H */

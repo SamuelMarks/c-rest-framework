@@ -23,7 +23,7 @@ int c_rest_string_append(c_rest_string *str, const char *data, size_t len);
 int c_rest_string_append_cstr(c_rest_string *str, const char *cstr);
 int c_rest_string_destroy(c_rest_string *str);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 #endif /* C_REST_STRING_H */

@@ -139,7 +139,7 @@ int c_rest_tls_write(struct c_rest_tls_connection *conn, const void *buf,
  */
 int c_rest_tls_close(struct c_rest_tls_connection *conn);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 

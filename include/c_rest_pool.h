@@ -27,7 +27,7 @@ int c_rest_pool_allocate(c_rest_pool *pool, void **out_ptr);
 int c_rest_pool_free(c_rest_pool *pool, void *ptr);
 int c_rest_pool_destroy(c_rest_pool *pool);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 #endif /* C_REST_POOL_H */

@@ -13,7 +13,7 @@ unsigned long c_rest_htonl(unsigned long hostlong);
 unsigned short c_rest_ntohs(unsigned short netshort);
 unsigned long c_rest_ntohl(unsigned long netlong);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 #endif /* C_REST_ENDIAN_H */

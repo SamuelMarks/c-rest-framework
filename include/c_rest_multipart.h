@@ -32,7 +32,7 @@ int c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
                                     size_t *out_parsed);
 int c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 

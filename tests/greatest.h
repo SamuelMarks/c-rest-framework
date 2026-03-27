@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
  * Copyright (c) 2011-2021 Scott Vokes <vokes.s@gmail.com>
  *
@@ -1298,3 +1301,7 @@ typedef enum greatest_test_res {
 #endif
 
 #endif
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */

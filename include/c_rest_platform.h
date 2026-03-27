@@ -114,7 +114,7 @@ int c_rest_random_get(void *buffer, size_t size);
  */
 int c_rest_get_last_error(int *out_error);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 

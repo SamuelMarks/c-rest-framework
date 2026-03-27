@@ -23,7 +23,7 @@ int c_rest_strlcat(char *dst, const char *src, size_t dsize, size_t *out_len);
  */
 int c_rest_url_decode(char *dst, const char *src, size_t len);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 #endif /* C_REST_STR_UTILS_H */

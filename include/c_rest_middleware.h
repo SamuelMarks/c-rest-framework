@@ -85,7 +85,7 @@ typedef int (*c_rest_oauth2_verify_fn)(const char *token,
 int c_rest_oauth2_middleware(struct c_rest_request *req,
                              struct c_rest_response *res, void *user_data);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 

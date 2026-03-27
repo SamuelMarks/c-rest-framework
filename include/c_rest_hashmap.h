@@ -34,7 +34,7 @@ int c_rest_hashmap_get(c_rest_hashmap *map, const char *key, void **out_value);
 int c_rest_hashmap_remove(c_rest_hashmap *map, const char *key);
 int c_rest_hashmap_destroy(c_rest_hashmap *map, void (*free_value)(void *));
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 #endif /* C_REST_HASHMAP_H */

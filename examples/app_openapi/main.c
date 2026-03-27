@@ -20,7 +20,7 @@ static int handle_hello_world(struct c_rest_request *req,
 
 int main(void) {
   struct c_rest_router *router = NULL;
-  struct c_rest_openapi_spec *spec;
+  struct c_rest_openapi_spec *spec = NULL;
   struct c_rest_openapi_operation op;
   struct c_rest_context *ctx = NULL;
   int rc;

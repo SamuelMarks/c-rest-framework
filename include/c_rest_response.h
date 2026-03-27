@@ -204,7 +204,7 @@ int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
 int c_rest_response_oauth2_error(struct c_rest_response *res, const char *error,
                                  const char *error_description);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 

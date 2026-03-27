@@ -41,7 +41,7 @@ int oauth2_client_password_grant(const char *username, const char *password,
  */
 int oauth2_client_cleanup(void);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 #endif /* OAUTH2_CLIENT_H */

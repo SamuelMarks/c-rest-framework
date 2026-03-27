@@ -40,9 +40,8 @@ if(NOT TARGET c-rest-framework)
         include(FetchContent)
         FetchContent_Declare(
             c-rest-framework
-            GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
+            GIT_REPOSITORY https://github.com/SamuelMarks/c-rest-framework.git
             GIT_TAG master
-            SOURCE_SUBDIR c-rest-framework
         )
         FetchContent_MakeAvailable(c-rest-framework)
     endif()

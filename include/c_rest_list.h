@@ -31,7 +31,7 @@ int c_rest_list_push_back(c_rest_list *list, void *data);
 int c_rest_list_pop_front(c_rest_list *list, void **out_data);
 int c_rest_list_destroy(c_rest_list *list, void (*free_data)(void *));
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 #endif /* C_REST_LIST_H */

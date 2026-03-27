@@ -39,7 +39,7 @@ int c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data);
 int c_rest_ts_queue_close(c_rest_ts_queue *queue);
 int c_rest_ts_queue_destroy(c_rest_ts_queue *queue, void (*free_data)(void *));
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 #endif /* C_REST_TS_QUEUE_H */
