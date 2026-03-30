@@ -65,7 +65,7 @@ static void free_operation(struct c_rest_openapi_operation *op) {
           if (op->security[i].scopes[k])
             free((void *)op->security[i].scopes[k]);
         }
-        free(op->security[i].scopes);
+        free((void *)(char **)op->security[i].scopes);
       }
     }
     free(op->security);
@@ -125,7 +125,7 @@ int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
               if (spec->servers[i].variables[j].enum_values[k])
                 free((void *)spec->servers[i].variables[j].enum_values[k]);
             }
-            free(spec->servers[i].variables[j].enum_values);
+            free((void *)(char **)spec->servers[i].variables[j].enum_values);
           }
         }
         free(spec->servers[i].variables);
@@ -215,7 +215,7 @@ int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
           if (spec->security[i].scopes[k])
             free((void *)spec->security[i].scopes[k]);
         }
-        free(spec->security[i].scopes);
+        free((void *)(char **)spec->security[i].scopes);
       }
     }
     free(spec->security);
@@ -256,8 +256,8 @@ int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
             if (s->flows.implicit->scopes_values[k])
               free((void *)s->flows.implicit->scopes_values[k]);
           }
-          free(s->flows.implicit->scopes_keys);
-          free(s->flows.implicit->scopes_values);
+          free((void *)(char **)s->flows.implicit->scopes_keys);
+          free((void *)(char **)s->flows.implicit->scopes_values);
         }
         free(s->flows.implicit);
       }
@@ -276,8 +276,8 @@ int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
             if (s->flows.password->scopes_values[k])
               free((void *)s->flows.password->scopes_values[k]);
           }
-          free(s->flows.password->scopes_keys);
-          free(s->flows.password->scopes_values);
+          free((void *)(char **)s->flows.password->scopes_keys);
+          free((void *)(char **)s->flows.password->scopes_values);
         }
         free(s->flows.password);
       }
@@ -296,8 +296,8 @@ int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
             if (s->flows.client_credentials->scopes_values[k])
               free((void *)s->flows.client_credentials->scopes_values[k]);
           }
-          free(s->flows.client_credentials->scopes_keys);
-          free(s->flows.client_credentials->scopes_values);
+          free((void *)(char **)s->flows.client_credentials->scopes_keys);
+          free((void *)(char **)s->flows.client_credentials->scopes_values);
         }
         free(s->flows.client_credentials);
       }
@@ -316,8 +316,8 @@ int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
             if (s->flows.authorization_code->scopes_values[k])
               free((void *)s->flows.authorization_code->scopes_values[k]);
           }
-          free(s->flows.authorization_code->scopes_keys);
-          free(s->flows.authorization_code->scopes_values);
+          free((void *)(char **)s->flows.authorization_code->scopes_keys);
+          free((void *)(char **)s->flows.authorization_code->scopes_values);
         }
         free(s->flows.authorization_code);
       }
@@ -998,9 +998,10 @@ static int swagger_ui_handler(struct c_rest_request *req,
   struct c_rest_router *router = (struct c_rest_router *)user_data;
   struct c_rest_openapi_spec *spec = NULL;
   char *html_buf;
-  c_rest_router_get_openapi_spec(router, &spec);
   size_t html_len;
   const char *openapi_url = "/openapi.json";
+
+  c_rest_router_get_openapi_spec(router, &spec);
 
   /* unused args */
   (void)req;

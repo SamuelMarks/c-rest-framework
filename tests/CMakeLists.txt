@@ -26,8 +26,32 @@ set(TEST_SRCS
     test_tls_context.c
 )
 
+if(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
+    list(APPEND TEST_SRCS test_response_compression_gzip_brotli.c)
+endif()
+
+if(C_REST_FRAMEWORK_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING)
+    list(APPEND TEST_SRCS test_template.c)
+endif()
+
+if(C_REST_FRAMEWORK_ENABLE_GRAPHQL)
+    list(APPEND TEST_SRCS test_graphql.c)
+endif()
+
+if(C_REST_ENABLE_SERVER_SENT_EVENTS_SSE)
+    list(APPEND TEST_SRCS test_server_sent_events_sse.c)
+endif()
+
+if(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART)
+    list(APPEND TEST_SRCS test_hot_reload.c)
+endif()
+
+if(C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE)
+    list(APPEND TEST_SRCS test_jwt_json_web_tokens_authentication_middleware.c)
+endif()
+
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "DOS")
-    list(APPEND TEST_SRCS test_client.c test_tls_integration.c test_openapi.c test_orm_integration.c test_oauth2.c test_crypto.c test_time.c test_multipart.c)
+    list(APPEND TEST_SRCS test_client.c test_tls_integration.c test_openapi.c test_orm_integration.c test_oauth2.c test_crypto.c test_time.c test_multipart.c test_full_multipart_form_streaming.c test_websocket.c test_http23.c test_rate_limiting_throttling_middleware.c)
 endif()
 
 add_executable(c-rest-framework-tests ${TEST_SRCS})
@@ -35,6 +59,10 @@ add_executable(c-rest-framework-tests ${TEST_SRCS})
 
 target_include_directories(c-rest-framework-tests PRIVATE ../include ${CMAKE_CURRENT_SOURCE_DIR} ${greatest_SOURCE_DIR})
 target_link_libraries(c-rest-framework-tests PRIVATE c-rest-framework)
+
+if(C_REST_GNU_FLAGS)
+    target_compile_options(c-rest-framework-tests PRIVATE ${C_REST_GNU_FLAGS})
+endif()
 
 add_test(NAME c-rest-framework-tests COMMAND c-rest-framework-tests)
 
@@ -65,4 +93,5 @@ if(WIN32 AND BUILD_SHARED_LIBS)
         )
     endif()
 endif()
+
 

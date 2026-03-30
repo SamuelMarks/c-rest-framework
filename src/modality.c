@@ -126,6 +126,11 @@ int c_rest_init(enum c_rest_modality_type type,
   ctx->cm_env = NULL;
 #endif
 
+#ifdef C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART
+  ctx->hot_reload_ctx = NULL;
+  /* c_rest_hot_reload_init is left for the user to explicitly call if they want it. */
+#endif
+
   res = ctx->vtable->init(ctx);
   if (res != 0) {
     free(ctx);
@@ -350,6 +355,7 @@ int c_rest_handle_connection(struct c_rest_context *ctx, c_rest_socket_t sock) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     conn_ctx.cm_env = ctx->cm_env;
 #endif
+    conn_ctx.framework_ctx = ctx;
     res_obj.context = (void *)&conn_ctx;
 
     cbs.on_method = on_method;

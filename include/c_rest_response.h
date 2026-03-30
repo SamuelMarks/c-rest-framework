@@ -137,6 +137,26 @@ int c_rest_response_json_dict(struct c_rest_response *res,
  */
 int c_rest_response_html(struct c_rest_response *res, const char *html_str);
 
+#ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
+struct c_rest_template_context;
+/**
+ * @brief Render a template and send as HTML response.
+ * @param res
+ * Response
+ * @param ctx Template context
+ * @param keys Array of keys
+ *
+ * @param values Array of values
+ * @param count Number of key-value pairs
+ *
+ * @return 0 on success, 1 on failure
+ */
+int c_rest_response_template(struct c_rest_response *res,
+                             const struct c_rest_template_context *ctx,
+                             const char **keys, const char **values,
+                             size_t count);
+#endif /* C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING */
+
 /**
  * @brief Write a chunk of data.
  * @param res Response

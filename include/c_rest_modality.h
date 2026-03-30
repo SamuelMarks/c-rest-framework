@@ -145,6 +145,11 @@ struct c_rest_context {
   /** @brief Cm env */
   cm_env_t cm_env; /**< Optional multiplatform environment context */
 #endif
+
+#ifdef C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART
+  /** @brief Hot reload context */
+  struct c_rest_hot_reload_ctx *hot_reload_ctx;
+#endif
 };
 
 /**
@@ -208,6 +213,8 @@ struct c_rest_connection_context {
   /** @brief Environment context */
   cm_env_t cm_env;
 #endif
+  /** @brief Pointer to the global framework context */
+  struct c_rest_context *framework_ctx;
 };
 
 /**

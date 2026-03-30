@@ -27,8 +27,14 @@ It integrates seamlessly with `c-abstract-http` (for parser/client abstractions)
 - **HTTPS & TLS Integration:** Built-in secure context handling wrapping multiple backends (OpenSSL, mbedTLS, wolfSSL, LibreSSL, BoringSSL, s2n-tls).
 - **ORM & Database Support:** Native integration with `c-orm` for automatic connection pooling, transactional routing, and CRUD endpoint generation.
 - **Dynamic Routing & Path Variables:** E.g., `GET /api/users/:id`
+- **Response Compression:** Built-in dynamic Gzip and Brotli response compression support.
+- **Hot-Reloading & Auto-Restart:** Watch files and automatically trigger restarts or push live updates to clients via Server-Sent Events (SSE).
+- **GraphQL APIs:** Built-in GraphQL API Parsing and Resolving schema logic directly into the router via AST generation.
+- **Authentication:** Built-in OAuth2 support, Basic Auth, and JWT (JSON Web Tokens) Authentication Middlewares.
+- **Full Multipart Form Streaming:** Natively streams multipart/form-data uploads with state-machine parsing, avoiding loading large files into memory.
+- **WebSockets (RFC 6455):** Native upgrade support, frame parsing, masking/unmasking, and payload management.  
+- **Server-Sent Events (SSE):** Native streaming API for pushing continuous data to clients efficiently.
 - **Built-in Middlewares:** Static file serving, CORS, Request Logging, HSTS, HTTP-to-HTTPS redirect.
-
 ---
 
 ## Usage Example (c-orm + c-rest-framework)
@@ -139,3 +145,5 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
+
+

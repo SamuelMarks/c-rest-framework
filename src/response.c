@@ -1,6 +1,7 @@
 /* clang-format off */
 #include "c_rest_request.h" /* For struct c_rest_header */
 #include "c_rest_response.h"
+#include "c_rest_mem.h"
 #include "c_rest_modality.h"
 #include <parson.h>
 
@@ -286,6 +287,29 @@ int c_rest_response_json_dict(struct c_rest_response *res,
   return ret;
 }
 
+#ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
+#include "c_rest_template.h"
+
+int c_rest_response_template(struct c_rest_response *res,
+                             const struct c_rest_template_context *ctx,
+                             const char **keys, const char **values,
+                             size_t count) {
+  char *rendered = NULL;
+  int ret;
+  if (!res || !ctx) {
+    return 1;
+  }
+  if (c_rest_template_render(ctx, keys, values, count, &rendered) != 0) {
+    return 1;
+  }
+  ret = c_rest_response_html(res, rendered);
+  if (rendered) {
+    C_REST_FREE(rendered);
+  }
+  return ret;
+}
+#endif /* C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING */
+
 int c_rest_response_html(struct c_rest_response *res, const char *html_str) {
   size_t len;
   if (!res || !html_str) {
@@ -309,19 +333,84 @@ int c_rest_response_html(struct c_rest_response *res, const char *html_str) {
 
 int c_rest_response_write_chunk(struct c_rest_response *res, const char *chunk,
                                 size_t chunk_len) {
-  if (!res || !chunk) {
+  struct c_rest_connection_context *ctx;
+  size_t written = 0;
+  char hex_buf[32];
+  size_t hex_len;
+
+  if (!res || (!chunk && chunk_len > 0)) {
     return 1;
   }
 
   if (!res->headers_sent) {
     c_rest_response_set_header(res, "Transfer-Encoding", "chunked");
     res->is_chunked = 1;
-    res->headers_sent = 1;
-    /* Actually send headers down the socket here in real implementation */
+    if (c_rest_response_send(res) != 0) {
+      return 1;
+    }
   }
 
-  /* Stub: Write chunk formatted properly "HEX\r\nData\r\n" */
-  (void)chunk_len;
+  ctx = (struct c_rest_connection_context *)res->context;
+  if (!ctx) {
+    return 1;
+  }
+
+  if (res->is_chunked) {
+#if defined(_MSC_VER)
+    hex_len =
+        sprintf_s(hex_buf, sizeof(hex_buf), "%X\r\n", (unsigned int)chunk_len);
+#else
+    hex_len = sprintf(hex_buf, "%X\r\n", (unsigned int)chunk_len);
+#endif
+
+    if (ctx->tls_conn) {
+      c_rest_tls_write(ctx->tls_conn, hex_buf, hex_len, &written);
+      if (chunk_len > 0) {
+        c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written);
+      }
+      c_rest_tls_write(ctx->tls_conn, "\r\n", 2, &written);
+    } else {
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+      if (ctx->cm_env) {
+        cm_socket_send(ctx->cm_env, ctx->sock, hex_buf, hex_len, &written);
+        if (chunk_len > 0) {
+          cm_socket_send(ctx->cm_env, ctx->sock, chunk, chunk_len, &written);
+        }
+        cm_socket_send(ctx->cm_env, ctx->sock, "\r\n", 2, &written);
+      } else {
+        c_rest_socket_send(ctx->sock, hex_buf, hex_len, &written);
+        if (chunk_len > 0) {
+          c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+        }
+        c_rest_socket_send(ctx->sock, "\r\n", 2, &written);
+      }
+#else
+      c_rest_socket_send(ctx->sock, hex_buf, hex_len, &written);
+      if (chunk_len > 0) {
+        c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+      }
+      c_rest_socket_send(ctx->sock, "\r\n", 2, &written);
+#endif
+    }
+  } else {
+    /* Not chunked HTTP/1.1, just stream raw bytes (used heavily by SSE) */
+    if (chunk_len > 0) {
+      if (ctx->tls_conn) {
+        c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written);
+      } else {
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+        if (ctx->cm_env) {
+          cm_socket_send(ctx->cm_env, ctx->sock, chunk, chunk_len, &written);
+        } else {
+          c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+        }
+#else
+        c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+#endif
+      }
+    }
+  }
+
   return 0;
 }
 

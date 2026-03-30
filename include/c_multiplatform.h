@@ -54,6 +54,9 @@ int cm_thread_join(cm_env_t env, cm_thread_t thread);
 
 int cm_timer_get_ms(cm_env_t env, unsigned long *out_ms);
 
+int cm_thread_sleep_ms(cm_env_t env, unsigned long ms);
+int cm_file_get_mtime(cm_env_t env, const char *path, unsigned long *out_mtime);
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */

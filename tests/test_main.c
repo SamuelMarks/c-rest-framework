@@ -55,8 +55,21 @@ int test_client(void);
 #endif
 #ifndef CDD_DOS
 int test_multipart(void);
+int test_full_multipart_form_streaming(void);
 #endif
 int test_router(void);
+#ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
+int test_template(void);
+#endif
+#ifdef C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART
+int test_hot_reload(void);
+#endif
+#ifdef C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI
+int test_response_compression_gzip_brotli(void);
+#endif
+#ifdef C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE
+int test_jwt_json_web_tokens_authentication_middleware(void);
+#endif
 int test_request_response(void);
 #ifndef CDD_DOS
 int test_orm_integration(void);
@@ -76,6 +89,10 @@ int test_oauth2(void);
 #endif
 #ifndef CDD_DOS
 int test_openapi(void);
+int test_rate_limiting_throttling_middleware(void);
+#endif
+#ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
+int test_server_sent_events_sse(void);
 #endif
 
 int main(void) {
@@ -87,9 +104,21 @@ int main(void) {
   if (res != 0)
     return res;
 
+#ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
+  printf("Running test_server_sent_events_sse...\n");
+  res = test_server_sent_events_sse();
+  if (res != 0)
+    return res;
+#endif
+
 #ifndef CDD_DOS
   printf("Running test_openapi...\n");
   res = test_openapi();
+  if (res != 0)
+    return res;
+
+  printf("Running test_rate_limiting_throttling_middleware...\n");
+  res = test_rate_limiting_throttling_middleware();
   if (res != 0)
     return res;
 #endif
@@ -119,6 +148,10 @@ int main(void) {
 #ifndef CDD_DOS
   printf("Running test_multipart...\n");
   res = test_multipart();
+  if (res == 0) {
+    printf("Running test_full_multipart_form_streaming...\n");
+    res = test_full_multipart_form_streaming();
+  }
   if (res != 0)
     return res;
 #endif
@@ -173,6 +206,34 @@ int main(void) {
     return res;
 #endif
 
-  printf("All tests passed.\n");
+#ifdef C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE
+  printf("Running test_jwt_json_web_tokens_authentication_middleware...\n");
+  res = test_jwt_json_web_tokens_authentication_middleware();
+  if (res != 0)
+    return res;
+#endif
+
+#ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
+  printf("Running test_template...\n");
+  res = test_template();
+  if (res != 0)
+    return res;
+#endif
+
+#ifdef C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART
+  printf("Running test_hot_reload...\n");
+  res = test_hot_reload();
+  if (res != 0)
+    return res;
+#endif
+
+#ifdef C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI
+  printf("Running test_response_compression_gzip_brotli...\n");
+  res = test_response_compression_gzip_brotli();
+  if (res != 0)
+    return res;
+#endif
+
+  printf("All tests passed.\\n");
   return 0;
 }

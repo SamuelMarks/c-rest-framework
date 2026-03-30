@@ -85,6 +85,20 @@ int cm_thread_join(cm_env_t env, cm_thread_t thread) {
   return 0;
 }
 
+int cm_thread_sleep_ms(cm_env_t env, unsigned long ms) {
+  (void)env;
+  (void)ms;
+  return 0;
+}
+
+int cm_file_get_mtime(cm_env_t env, const char *path,
+                      unsigned long *out_mtime) {
+  (void)env;
+  (void)path;
+  *out_mtime = 123456789;
+  return 0;
+}
+
 int cm_timer_get_ms(cm_env_t env, unsigned long *out_ms) {
   (void)env;
   *out_ms = 1000;

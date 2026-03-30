@@ -49,8 +49,28 @@ option(C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION "Integrate with c-multiplatfor
 option(C_REST_FRAMEWORK_FETCH_CAH "Fetch c-abstract-http from GitHub" ON)
 option(C_REST_FRAMEWORK_FETCH_C_ORM "Fetch c-orm from GitHub" OFF)
 option(C_REST_FRAMEWORK_FETCH_C_FS "Fetch c-fs from GitHub" ON)
+option(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART "Enable Hot-Reloading / Auto-Restart" OFF)
 option(C_REST_FRAMEWORK_FETCH_CDD_C "Fetch cdd-c from GitHub" ON)
+option(C_REST_FRAMEWORK_ENABLE_GRAPHQL "Enable GraphQL API Parsing & Resolving module" ON)
+option(C_REST_FRAMEWORK_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING "Enable Server-Side Template Engine" ON)
+option(C_REST_ENABLE_RATE_LIMITING_THROTTLING_MIDDLEWARE "Enable Rate Limiting / Throttling Middleware" ON)
+option(C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE "Enable JWT Authentication Middleware" ON)
+option(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI "Enable response compression (gzip/brotli)" ON)
+if(C_REST_ENABLE_RATE_LIMITING_THROTTLING_MIDDLEWARE)
+    add_definitions(-DC_REST_ENABLE_RATE_LIMITING_THROTTLING_MIDDLEWARE)
+endif()
+if(C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE)
+    add_definitions(-DC_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE)
+endif()
 option(TRY_SYS_LIB "Fallback to system packages if vcpkg is not available" ON)
+option(C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING "Enable Full Multipart Form Streaming" ON)
+if(C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING)
+    add_definitions(-DC_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING)
+endif()
+option(C_REST_ENABLE_SERVER_SENT_EVENTS_SSE "Enable Server-Sent Events (SSE)" ON)
+if(C_REST_ENABLE_SERVER_SENT_EVENTS_SSE)
+    add_definitions(-DC_REST_ENABLE_SERVER_SENT_EVENTS_SSE)
+endif()
 
 macro(c_rest_framework_resolve_dependency PkgName FetchRepo FetchTag)
     set(_VCPKG_APPLICABLE ON)
@@ -175,6 +195,7 @@ set(C_ABSTRACT_HTTP_USE_LIBEVENT ${C_REST_FRAMEWORK_USE_LIBEVENT} CACHE BOOL "" 
 set(C_ABSTRACT_HTTP_USE_LIBFETCH ${C_REST_FRAMEWORK_USE_LIBFETCH} CACHE BOOL "" FORCE)
 
 if(C_REST_FRAMEWORK_FETCH_C_FS)
+    set(CDD_DEPS "FETCHCONTENT" CACHE STRING "" FORCE)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-fs/CMakeLists.txt")
         FetchContent_Declare(
           cfs
@@ -326,6 +347,7 @@ if(MSVC)
 
     # We apply /Za only to specific source files since windows.h is not ANSI compliant
     set_source_files_properties(
+        src/c_rest_hot_reload.c
         src/modality.c
         src/modality_sync.c
         src/modality_single_thread.c
@@ -355,6 +377,12 @@ if(MSVC)
         src/c_rest_base64.c
         src/c_rest_crypto.c
         src/c_rest_time.c
+        src/c_rest_graphql.c
+        src/c_rest_template.c
+        src/c_rest_http23.c
+        src/c_rest_rate_limit.c
+        src/c_rest_jwt_middleware.c
+        src/websocket.c
         PROPERTIES COMPILE_OPTIONS "/Za"
     )
 
@@ -371,6 +399,7 @@ if(MSVC)
         endforeach()
     endif()
 
+
     if(C_REST_FRAMEWORK_UNICODE)
         add_definitions(-DUNICODE -D_UNICODE)
     elseif(C_REST_FRAMEWORK_ANSI)
@@ -378,7 +407,7 @@ if(MSVC)
     endif()
 elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     # Step 16: Define C89 strict compilation flags for GCC (-ansi -pedantic -Wall)
-    add_compile_options(-ansi -pedantic -Wall)
+    set(C_REST_GNU_FLAGS -ansi -pedantic -Wall)
     
     if(C_REST_FRAMEWORK_USE_ASAN)
         add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
@@ -422,7 +451,100 @@ add_library(c-rest-framework
     src/c_rest_crypto.c
     src/c_rest_time.c
     src/c_rest_openapi.c
+    src/c_rest_graphql.c
+    src/c_rest_template.c
+    src/c_rest_http23.c
+    src/c_rest_rate_limit.c
+    src/c_rest_jwt_middleware.c
+    src/websocket.c
+    src/c_rest_compression.c
 )
+
+if(C_REST_GNU_FLAGS)
+    target_compile_options(c-rest-framework PRIVATE ${C_REST_GNU_FLAGS})
+endif()
+
+if(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART)
+    target_sources(c-rest-framework PRIVATE src/c_rest_hot_reload.c)
+    target_compile_definitions(c-rest-framework PUBLIC C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART)
+endif()
+
+if(C_REST_ENABLE_SERVER_SENT_EVENTS_SSE)
+    target_sources(c-rest-framework PRIVATE src/c_rest_sse.c)
+endif()
+
+if(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
+    target_compile_definitions(c-rest-framework PUBLIC C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP)
+    
+    set(_VCPKG_APPLICABLE ON)
+    if(MINGW OR CYGWIN OR (MSVC AND MSVC_VERSION LESS 1500))
+        set(_VCPKG_APPLICABLE OFF)
+    endif()
+    
+    set(ZLIB_RESOLVED OFF)
+    if(_VCPKG_APPLICABLE AND DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
+        find_package(ZLIB CONFIG QUIET)
+        if(ZLIB_FOUND)
+            set(ZLIB_RESOLVED ON)
+            target_link_libraries(c-rest-framework PUBLIC ZLIB::ZLIB)
+        endif()
+    endif()
+    if(NOT ZLIB_RESOLVED)
+        find_package(ZLIB QUIET)
+        if(ZLIB_FOUND)
+            set(ZLIB_RESOLVED ON)
+            target_link_libraries(c-rest-framework PUBLIC ZLIB::ZLIB)
+        else()
+            FetchContent_Declare(
+                zlib
+                GIT_REPOSITORY https://github.com/madler/zlib.git
+                GIT_TAG master
+                GIT_CONFIG "core.autocrlf=false"
+            )
+            FetchContent_MakeAvailable(zlib)
+            if(MSVC AND MSVC_VERSION LESS 1600)
+                if(TARGET zlib)
+                    target_compile_definitions(zlib PRIVATE EWOULDBLOCK=140)
+                endif()
+                if(TARGET zlibstatic)
+                    target_compile_definitions(zlibstatic PRIVATE EWOULDBLOCK=140)
+                endif()
+            endif()
+            target_link_libraries(c-rest-framework PUBLIC zlib)
+            target_include_directories(c-rest-framework PUBLIC ${zlib_SOURCE_DIR})
+        endif()
+    endif()
+
+    if(NOT MSVC OR MSVC_VERSION GREATER_EQUAL 1600)
+        target_compile_definitions(c-rest-framework PUBLIC C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI)
+        set(BROTLI_RESOLVED OFF)
+        if(_VCPKG_APPLICABLE AND DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
+            find_package(unofficial-brotli CONFIG QUIET)
+            if(unofficial-brotli_FOUND)
+                set(BROTLI_RESOLVED ON)
+                target_link_libraries(c-rest-framework PUBLIC unofficial::brotli::brotlienc)
+            endif()
+        endif()
+        if(NOT BROTLI_RESOLVED)
+            FetchContent_Declare(
+                brotli
+                GIT_REPOSITORY https://github.com/google/brotli.git
+                GIT_TAG master
+                GIT_CONFIG "core.autocrlf=false"
+                UPDATE_COMMAND ""
+            )
+            FetchContent_MakeAvailable(brotli)
+            
+            if(TARGET brotlienc-static)
+                target_link_libraries(c-rest-framework PUBLIC brotlienc-static brotlidec-static brotlicommon-static)
+            else()
+                target_link_libraries(c-rest-framework PUBLIC brotlienc brotlidec brotlicommon)
+            endif()
+            
+            target_include_directories(c-rest-framework PUBLIC ${brotli_SOURCE_DIR}/c/include)
+        endif()
+    endif()
+endif()
 
 if(WIN32)
     set_target_properties(c-rest-framework PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -471,11 +593,22 @@ endif()
 
 target_include_directories(c-rest-framework PUBLIC include)
 
+if(C_REST_FRAMEWORK_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING)
+    target_compile_definitions(c-rest-framework PUBLIC C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING)
+endif()
+
+if(C_REST_FRAMEWORK_ENABLE_GRAPHQL)
+    target_compile_definitions(c-rest-framework PUBLIC C_REST_FRAMEWORK_ENABLE_GRAPHQL)
+endif()
+
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     enable_testing()
     add_subdirectory(tests)
     add_subdirectory(examples)
 endif()
+
+
+
 
 
 
