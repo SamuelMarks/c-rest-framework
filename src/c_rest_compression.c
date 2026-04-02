@@ -7,8 +7,8 @@
 #endif
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI)
 #include <brotli/encode.h>
-#endif
 /* clang-format on */
+#endif
 
 struct c_rest_compression_ctx {
   c_rest_compression_type_t type;

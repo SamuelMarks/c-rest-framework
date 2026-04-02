@@ -7,7 +7,6 @@
 
 #include "c_rest_mem.h"
 #include "c_rest_string.h"
-/* clang-format on */
 
 struct c_rest_sse_context {
   char *buffer;
@@ -354,6 +353,7 @@ int c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data,
 }
 
 #include "c_rest_response.h"
+/* clang-format on */
 
 int c_rest_sse_init_response(struct c_rest_response *res) {
   if (!res) {

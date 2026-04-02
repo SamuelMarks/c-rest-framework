@@ -102,7 +102,7 @@ if(OAUTH2_BUILD_TESTS)
     else()
         FetchContent_Declare(
             greatest
-            URL https://raw.githubusercontent.com/SamuelMarks/greatest/cmake-and-msvc/greatest.h
+            URL https://raw.githubusercontent.com/SamuelMarks/greatest/master/greatest.h
             DOWNLOAD_NO_EXTRACT TRUE
         )
     endif()

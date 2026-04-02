@@ -10,7 +10,6 @@
 #include <string.h>
 
 #include <ctype.h>
-/* clang-format on */
 
 #if defined(_MSC_VER)
 #define SAFE_STRCPY(dest, size, src) strcpy_s(dest, size, src)
@@ -289,6 +288,7 @@ int c_rest_response_json_dict(struct c_rest_response *res,
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
 #include "c_rest_template.h"
+/* clang-format on */
 
 int c_rest_response_template(struct c_rest_response *res,
                              const struct c_rest_template_context *ctx,

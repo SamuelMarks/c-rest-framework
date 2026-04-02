@@ -1,11 +1,10 @@
-/* clang-format off */
 #ifndef C_REST_GRAPHQL_H
 #define C_REST_GRAPHQL_H
 
 #ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
 
+/* clang-format off */
 #include <stddef.h>
-
 /* clang-format on */
 
 #ifdef __cplusplus

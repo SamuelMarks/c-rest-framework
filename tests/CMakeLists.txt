@@ -10,7 +10,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../greatest/greatest.h")
 else()
     FetchContent_Declare(
       greatest
-      URL "https://raw.githubusercontent.com/SamuelMarks/greatest/refs/heads/cmake-and-msvc/greatest.h"
+      URL "https://raw.githubusercontent.com/SamuelMarks/greatest/refs/heads/master/greatest.h"
       DOWNLOAD_NO_EXTRACT TRUE
     )
 endif()
@@ -62,6 +62,11 @@ target_link_libraries(c-rest-framework-tests PRIVATE c-rest-framework)
 
 if(C_REST_GNU_FLAGS)
     target_compile_options(c-rest-framework-tests PRIVATE ${C_REST_GNU_FLAGS})
+endif()
+
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "MSVC" AND MSVC_VERSION LESS 1500)
+    target_compile_options(c-rest-framework-tests PRIVATE /Od /Ob0 /Zi)
+    target_link_options(c-rest-framework-tests PRIVATE /DEBUG /OPT:NOREF /OPT:NOICF)
 endif()
 
 add_test(NAME c-rest-framework-tests COMMAND c-rest-framework-tests)

@@ -9,7 +9,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-/* clang-format on */
 
 struct c_rest_route_handler {
   char *method;
@@ -443,6 +442,7 @@ int c_rest_router_add_graphql_openapi(
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
 #include "c_rest_template.h"
+/* clang-format on */
 
 struct c_rest_template_route_data {
   const struct c_rest_template_context *ctx;

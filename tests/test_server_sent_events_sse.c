@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-/* clang-format on */
 
 #define ASSERT_EQ(expected, actual)                                            \
   do {                                                                         \
@@ -168,6 +167,7 @@ static int test_sse_parse_fragmented(void) {
 }
 
 #include "c_rest_response.h"
+/* clang-format on */
 
 static int test_sse_wrappers(void) {
   struct c_rest_response res;

@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-/* clang-format on */
 
 static int test_graphql_basic_parse(void) {
   const char *query = "query getUser { user { id name } }";
@@ -169,6 +168,7 @@ static int test_graphql_malformed(void) {
 #include "c_rest_request.h"
 #include "c_rest_response.h"
 #include "c_rest_router.h"
+/* clang-format on */
 
 static int test_graphql_router(void) {
   struct c_rest_router *router = NULL;

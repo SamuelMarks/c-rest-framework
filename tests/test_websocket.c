@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-/* clang-format on */
 
 int test_websocket(void);
 
@@ -135,6 +134,7 @@ static int test_websocket_upgrade(void) {
 }
 
 #include "c_rest_router.h"
+/* clang-format on */
 
 static int my_ws_on_message(struct c_rest_request *req,
                             const unsigned char *payload, size_t payload_len,

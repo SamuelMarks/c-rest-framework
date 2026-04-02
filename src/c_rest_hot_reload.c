@@ -7,7 +7,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
-/* clang-format on */
 
 typedef enum c_rest_hot_reload_state {
   C_REST_HOT_RELOAD_STATE_INIT = 0,
@@ -355,12 +354,22 @@ static int hot_reload_sse_handler(struct c_rest_request *req,
     c_rest_sse_event_init(&ev);
     /* We must dup strings if we rely on c_rest_sse_event_destroy */
     C_REST_MALLOC(7, (void **)&ev.event);
-    if (ev.event)
+    if (ev.event) {
+#if defined(_MSC_VER)
+      strcpy_s(ev.event, 7, "reload");
+#else
       strcpy(ev.event, "reload");
+#endif
+    }
 
     C_REST_MALLOC(5, (void **)&ev.data);
-    if (ev.data)
+    if (ev.data) {
+#if defined(_MSC_VER)
+      strcpy_s(ev.data, 5, "true");
+#else
       strcpy(ev.data, "true");
+#endif
+    }
 
     c_rest_sse_send_event(res, &ev);
     c_rest_sse_event_destroy(&ev);
@@ -381,6 +390,7 @@ int c_rest_hot_reload_register_routes(struct c_rest_router *router,
 }
 #else
 #include "c_rest_router.h"
+/* clang-format on */
 int c_rest_hot_reload_register_routes(struct c_rest_router *router,
                                       const char *path) {
   (void)router;

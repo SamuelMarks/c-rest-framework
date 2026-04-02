@@ -6,8 +6,8 @@
 #include "c_rest_modality.h"
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
 #include "c_multiplatform.h"
-#endif
 /* clang-format on */
+#endif
 
 #ifdef __cplusplus
 extern "C" {

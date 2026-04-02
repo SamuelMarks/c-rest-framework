@@ -9,8 +9,8 @@
 #endif
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI)
 #include <brotli/decode.h>
-#endif
 /* clang-format on */
+#endif
 
 #define ASSERT(cond)                                                           \
   do {                                                                         \

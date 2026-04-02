@@ -1,3 +1,4 @@
+/* clang-format off */
 #include "c_rest_base64.h"
 #include "c_rest_crypto.h"
 #include "c_rest_endian.h"
@@ -6,7 +7,6 @@
 #include "c_rest_response.h"
 #include "c_rest_websocket.h"
 
-/* clang-format off */
 #include <string.h>
 /* clang-format on */
 

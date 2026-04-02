@@ -12,8 +12,8 @@
 #include <winsock2.h>
 #else
 #include <signal.h>
-#endif
 /* clang-format on */
+#endif
 
 static void logger_cb(const char *msg) { printf("LOG: %s\n", msg); }
 
