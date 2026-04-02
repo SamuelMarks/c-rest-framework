@@ -79,6 +79,5 @@ int c_rest_compress_buffer(c_rest_compression_type_t type,
 
 #ifdef __cplusplus
 }
-#endif
-
+#endif /* __cplusplus */
 #endif /* C_REST_COMPRESSION_H */

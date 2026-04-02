@@ -48,8 +48,9 @@ int c_rest_jwt_middleware(struct c_rest_request *req,
 
 #endif /* C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE */
 
+/* __cplusplus */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
 #endif /* C_REST_JWT_MIDDLEWARE_H */

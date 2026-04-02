@@ -1,9 +1,11 @@
+/* clang-format off */
 #include "c_rest_modality.h"
 #include "c_rest_multipart.h"
 #include "c_rest_request.h"
 #include "c_rest_response.h"
 #include "c_rest_router.h"
 #include <stdio.h>
+/* clang-format on */
 
 static int on_part_begin(c_rest_multipart_parser *parser) {
   (void)parser;

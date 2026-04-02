@@ -110,8 +110,9 @@ int c_rest_websocket_serialize_frame_header(
     const struct c_rest_websocket_frame_header *header, unsigned char *out_data,
     size_t out_data_max, size_t *out_written);
 
+/* __cplusplus */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
 #endif /* C_REST_WEBSOCKET_H */

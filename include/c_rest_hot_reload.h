@@ -11,7 +11,9 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
+
+/* __cplusplus */
 
 /**
  * \file c_rest_hot_reload.h
@@ -116,8 +118,9 @@ struct c_rest_router;
 int c_rest_hot_reload_register_routes(struct c_rest_router *router,
                                       const char *path);
 
+/* __cplusplus */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
 #endif /* C_REST_HOT_RELOAD_H */

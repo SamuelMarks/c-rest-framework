@@ -6,10 +6,11 @@
 
 #include <stddef.h>
 
+/* clang-format on */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-/* clang-format on */
 
 /**
  * @file c_rest_graphql.h
@@ -159,12 +160,11 @@ int c_rest_graphql_resolve(struct c_rest_graphql_node *doc,
                            struct c_rest_graphql_schema *schema,
                            char **out_json, size_t *out_len);
 
-/* clang-format off */
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+/* __cplusplus */
 
 #endif /* C_REST_FRAMEWORK_ENABLE_GRAPHQL */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 #endif /* C_REST_GRAPHQL_H */
-/* clang-format on */

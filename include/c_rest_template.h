@@ -3,13 +3,15 @@
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+/* __cplusplus */
 
 /* clang-format off */
 #include <stddef.h>
 /* clang-format on */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @file c_rest_template.h
@@ -57,10 +59,11 @@ int c_rest_template_render(const struct c_rest_template_context *ctx,
                            const char **keys, const char **values, size_t count,
                            char **out_result);
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+/* __cplusplus */
 
 #endif /* C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 #endif /* C_REST_TEMPLATE_H */

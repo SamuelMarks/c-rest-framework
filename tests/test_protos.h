@@ -2,6 +2,10 @@
 #ifndef C_REST_TEST_PROTOS_H
 #define C_REST_TEST_PROTOS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int test_multiplatform_integration(void);
 int test_parser(void);
 int test_client(void);
@@ -35,6 +39,10 @@ int test_response_compression_gzip_brotli(void);
 
 #ifdef C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE
 int test_jwt_json_web_tokens_authentication_middleware(void);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* C_REST_TEST_PROTOS_H */

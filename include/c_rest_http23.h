@@ -9,7 +9,9 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
+
+/* __cplusplus */
 
 /**
  * @file c_rest_http23.h
@@ -105,8 +107,9 @@ int c_rest_http23_format_response(c_rest_http23_ctx_t *ctx,
                                   struct c_rest_response *response,
                                   char **out_buffer, size_t *out_len);
 
+/* __cplusplus */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
 #endif /* C_REST_HTTP23_H */

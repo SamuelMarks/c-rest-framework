@@ -10,7 +10,7 @@
 #include <string.h>
 
 #if defined(_WIN32)
-#include <windows.h>
+void __stdcall Sleep(unsigned long dwMilliseconds);
 #else
 #include <unistd.h>
 #endif
@@ -18,7 +18,7 @@
 
 static void sleep_ms(int milliseconds) {
 #if defined(_WIN32)
-  Sleep((DWORD)milliseconds);
+  Sleep((unsigned long)milliseconds);
 #else
   usleep(milliseconds * 1000);
 #endif

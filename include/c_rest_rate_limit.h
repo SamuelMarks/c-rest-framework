@@ -78,8 +78,9 @@ int c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
  */
 int c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter);
 
+/* __cplusplus */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
 #endif /* C_REST_RATE_LIMIT_H */

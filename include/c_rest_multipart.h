@@ -72,8 +72,9 @@ void *c_rest_multipart_parser_get_user_data(c_rest_multipart_parser *parser);
 
 #endif /* C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING */
 
+/* __cplusplus */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
 #endif /* C_REST_MULTIPART_H */

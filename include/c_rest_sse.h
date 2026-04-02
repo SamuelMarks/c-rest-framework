@@ -118,8 +118,9 @@ int c_rest_sse_send_event(struct c_rest_response *res,
  */
 int c_rest_sse_send_keepalive(struct c_rest_response *res);
 
+/* __cplusplus */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
 #endif /* C_REST_SSE_H */
