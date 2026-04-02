@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "test_protos.h"
 #include "c_rest_http23.h"
 #include <stdio.h>
 #include <string.h>

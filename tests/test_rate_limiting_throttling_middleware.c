@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "test_protos.h"
 #include "c_rest_rate_limit.h"
 #include "c_rest_mem.h"
 #include <stdio.h>

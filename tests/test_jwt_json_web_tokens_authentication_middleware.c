@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "test_protos.h"
 #include "c_rest_jwt_middleware.h"
 #include "c_rest_crypto.h"
 #include "c_rest_request.h"

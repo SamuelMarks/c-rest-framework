@@ -135,4 +135,4 @@ static int sync_run(struct c_rest_context *ctx) {
 }
 
 const struct c_rest_modality_vtable sync_vtable = {sync_init, sync_destroy,
-                                                   sync_run};
+                                                   sync_run, NULL};

@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "test_protos.h"
 #include "c_rest_client.h"
 #include "c_rest_tls.h"
 #include <parson.h>

@@ -21,25 +21,14 @@ int test_oauth2(void);
 int test_openapi(void);
 int test_websocket(void);
 int test_rate_limiting_throttling_middleware(void);
-#ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
+int test_http23(void);
+int test_full_multipart_form_streaming(void);
+int test_server_sent_events_sse(void);
 int test_graphql(void);
-#endif
-
-#ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
 int test_template(void);
-#endif
-
-#ifdef C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART
 int test_hot_reload(void);
-#endif
-
-#ifdef C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI
 int test_response_compression_gzip_brotli(void);
-#endif
-
-#ifdef C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE
 int test_jwt_json_web_tokens_authentication_middleware(void);
-#endif
 
 #ifdef __cplusplus
 }

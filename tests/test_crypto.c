@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "test_protos.h"
 #include "c_rest_crypto.h"
 #include <stdio.h>
 #include <stdlib.h>

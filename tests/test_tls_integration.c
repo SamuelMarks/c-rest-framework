@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "test_protos.h"
 #include "c_rest_modality.h"
 #include "c_rest_platform.h"
 #include "c_rest_tls.h"

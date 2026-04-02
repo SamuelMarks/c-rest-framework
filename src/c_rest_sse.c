@@ -111,7 +111,7 @@ int c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
 #if defined(_MSC_VER)
     sprintf_s(retry_buf, sizeof(retry_buf), "retry: %d\n", ev->retry);
 #else
-    snprintf(retry_buf, sizeof(retry_buf), "retry: %d\n", ev->retry);
+    sprintf(retry_buf, "retry: %d\n", ev->retry);
 #endif
     c_rest_string_append_cstr(&s, retry_buf);
   }

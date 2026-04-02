@@ -129,8 +129,8 @@ int c_rest_http23_format_response(c_rest_http23_ctx_t *ctx,
   sprintf_s(buf, buf_size, "HTTP/%d FRAME: body_len=%u\n", (int)ctx->protocol,
             (unsigned int)body_len);
 #else
-  snprintf(buf, buf_size, "HTTP/%d FRAME: body_len=%u\n", (int)ctx->protocol,
-           (unsigned int)body_len);
+  sprintf(buf, "HTTP/%d FRAME: body_len=%u\n", (int)ctx->protocol,
+          (unsigned int)body_len);
 #endif
 
   if (body_len > 0) {

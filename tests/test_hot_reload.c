@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "test_protos.h"
+#include "test_protos.h"
 #include "c_rest_hot_reload.h"
 #include "greatest.h"
 

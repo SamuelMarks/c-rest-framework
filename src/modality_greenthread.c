@@ -92,4 +92,4 @@ static int greenthread_run(struct c_rest_context *ctx) {
 }
 
 const struct c_rest_modality_vtable greenthread_vtable = {
-    greenthread_init, greenthread_destroy, greenthread_run};
+    greenthread_init, greenthread_destroy, greenthread_run, NULL};

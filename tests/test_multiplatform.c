@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "test_protos.h"
 #include "c_rest_modality.h"
 #include <stdio.h>
 /* clang-format on */

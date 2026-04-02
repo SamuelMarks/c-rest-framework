@@ -100,4 +100,4 @@ static int multi_process_run(struct c_rest_context *ctx) {
 }
 
 const struct c_rest_modality_vtable multi_process_vtable = {
-    multi_process_init, multi_process_destroy, multi_process_run};
+    multi_process_init, multi_process_destroy, multi_process_run, NULL};

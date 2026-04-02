@@ -50,6 +50,15 @@ option(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART "Enable Hot-Reloading / Auto-Res
 option(C_REST_FRAMEWORK_FETCH_CDD_C "Fetch cdd-c from GitHub" ON)
 option(C_REST_FRAMEWORK_ENABLE_GRAPHQL "Enable GraphQL API Parsing & Resolving module" ON)
 option(C_REST_FRAMEWORK_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING "Enable Server-Side Template Engine" ON)
+
+option(C89STRINGUTILS_BUILD_TESTING "Build c89stringutils tests" OFF)
+option(C_ABSTRACT_HTTP_BUILD_TESTING "Build c-abstract-http tests" OFF)
+option(C_CDD_BUILD_TESTING "Build cdd tests" OFF)
+option(C_FS_BUILD_TESTING "Build cfs tests" OFF)
+option(C_ORM_BUILD_TESTING "Build c-orm tests" OFF)
+option(C_ORM_BUILD_TESTS "Build c-orm tests" OFF)
+option(C_STR_SPAN_BUILD_TESTING "Build c-str-span tests" OFF)
+
 option(C_REST_ENABLE_RATE_LIMITING_THROTTLING_MIDDLEWARE "Enable Rate Limiting / Throttling Middleware" ON)
 option(C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE "Enable JWT Authentication Middleware" ON)
 option(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI "Enable response compression (gzip/brotli)" ON)
@@ -227,13 +236,6 @@ if(C_REST_FRAMEWORK_FETCH_CDD_C)
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_CAH)
-    set(C_ABSTRACT_HTTP_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    set(C_ORM_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    set(C_FS_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    set(C_CDD_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    set(C89STRINGUTILS_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    set(C_STR_SPAN_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http/CMakeLists.txt")
         FetchContent_Declare(
           c_abstract_http

@@ -109,4 +109,4 @@ static int async_run(struct c_rest_context *ctx) {
 }
 
 const struct c_rest_modality_vtable async_vtable = {async_init, async_destroy,
-                                                    async_run};
+                                                    async_run, NULL};

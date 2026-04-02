@@ -85,4 +85,4 @@ static int message_passing_run(struct c_rest_context *ctx) {
 }
 
 const struct c_rest_modality_vtable message_passing_vtable = {
-    message_passing_init, message_passing_destroy, message_passing_run};
+    message_passing_init, message_passing_destroy, message_passing_run, NULL};

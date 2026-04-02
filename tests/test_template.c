@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "test_protos.h"
 #include "c_rest_template.h"
 #include "c_rest_mem.h"
 #include "c_rest_router.h"

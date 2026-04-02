@@ -978,20 +978,20 @@ static const char *swagger_html_template_1 =
     "src=\"https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js\"></"
     "script>\n";
 
-static const char *swagger_html_template_2 =
-    "  <script>\n"
-    "    window.onload = function() {\n"
-    "      SwaggerUIBundle({\n"
-    "        url: \"%s\",\n"
-    "        dom_id: '#swagger-ui',\n"
-    "        presets: [SwaggerUIBundle.presets.apis, "
-    "SwaggerUIBundle.SwaggerUIStandalonePreset],\n"
-    "        layout: \"BaseLayout\"\n"
-    "      });\n"
-    "    };\n"
-    "  </script>\n"
-    "</body>\n"
-    "</html>";
+#define swagger_html_template_2                                                \
+  "  <script>\n"                                                               \
+  "    window.onload = function() {\n"                                         \
+  "      SwaggerUIBundle({\n"                                                  \
+  "        url: \"%s\",\n"                                                     \
+  "        dom_id: '#swagger-ui',\n"                                           \
+  "        presets: [SwaggerUIBundle.presets.apis, "                           \
+  "SwaggerUIBundle.SwaggerUIStandalonePreset],\n"                              \
+  "        layout: \"BaseLayout\"\n"                                           \
+  "      });\n"                                                                \
+  "    };\n"                                                                   \
+  "  </script>\n"                                                              \
+  "</body>\n"                                                                  \
+  "</html>"
 
 static int swagger_ui_handler(struct c_rest_request *req,
                               struct c_rest_response *res, void *user_data) {

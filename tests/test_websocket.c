@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "test_protos.h"
+#include "test_protos.h"
 #include "c_rest_websocket.h"
 #include "c_rest_crypto.h"
 #include "c_rest_base64.h"
