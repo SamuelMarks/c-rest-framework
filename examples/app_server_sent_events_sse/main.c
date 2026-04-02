@@ -13,8 +13,8 @@
 void __stdcall Sleep(unsigned long dwMilliseconds);
 #else
 #include <unistd.h>
-/* clang-format on */
 #endif
+/* clang-format on */
 
 static void sleep_ms(int milliseconds) {
 #if defined(_WIN32)
@@ -46,8 +46,7 @@ static int my_sse_handler(struct c_rest_request *req,
     sprintf_s(data_buf, sizeof(data_buf),
               "Hello from SSE! This is message %d of 5.", i + 1);
 #else
-    snprintf(data_buf, sizeof(data_buf),
-             "Hello from SSE! This is message %d of 5.", i + 1);
+    sprintf(data_buf, "Hello from SSE! This is message %d of 5.", i + 1);
 #endif
     ev.data = data_buf;
 

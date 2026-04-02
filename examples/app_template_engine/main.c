@@ -65,7 +65,7 @@ int main(void) {
   /* Run Server */
   printf("Starting server at http://127.0.0.1:8080/\n");
   c_rest_set_router(ctx, router);
-  /* c_rest_run(ctx); // Uncomment to block and run server */
+  /* c_rest_run(ctx); Uncomment to block and run server */
 
   /* Cleanup */
   c_rest_template_destroy(&tpl_ctx);
