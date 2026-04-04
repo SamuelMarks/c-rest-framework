@@ -305,7 +305,7 @@ macro(c_rest_framework_resolve_parson)
         else()
             FetchContent_Declare(
                 parson
-                GIT_REPOSITORY https://github.com/kgabis/parson.git
+                GIT_REPOSITORY https://github.com/SamuelMarks/parson.git
                 GIT_TAG master
           GIT_CONFIG "core.autocrlf=false"
             )
