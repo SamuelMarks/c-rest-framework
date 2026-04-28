@@ -92,7 +92,10 @@ static int basic_init(c_rest_parser_context *ctx,
   (void)callbacks;
   (void)user_data;
 
-  if (C_REST_MALLOC(sizeof(struct basic_parser_state), (void **)&st) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); st = NULL; }
+  if (C_REST_MALLOC(sizeof(struct basic_parser_state), (void **)&st) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    st = NULL;
+  }
   if (!st)
     return 1;
 
@@ -131,7 +134,9 @@ static int append_buf(struct basic_parser_state *st, char c, int is_key) {
     if (st->key_len + 1 >= st->key_cap) {
       size_t new_cap = st->key_cap == 0 ? 64 : st->key_cap * 2;
       char *n = NULL;
-      if (C_REST_REALLOC(st->key_buf, new_cap, (void **)&n) != 0) { LOG_DEBUG("C_REST_REALLOC failed"); }
+      if (C_REST_REALLOC(st->key_buf, new_cap, (void **)&n) != 0) {
+        LOG_DEBUG("C_REST_REALLOC failed");
+      }
       if (!n)
         return 1;
       st->key_buf = n;
@@ -143,7 +148,9 @@ static int append_buf(struct basic_parser_state *st, char c, int is_key) {
     if (st->buf_len + 1 >= st->buf_cap) {
       size_t new_cap = st->buf_cap == 0 ? 256 : st->buf_cap * 2;
       char *n = NULL;
-      if (C_REST_REALLOC(st->buf, new_cap, (void **)&n) != 0) { LOG_DEBUG("C_REST_REALLOC failed"); }
+      if (C_REST_REALLOC(st->buf, new_cap, (void **)&n) != 0) {
+        LOG_DEBUG("C_REST_REALLOC failed");
+      }
       if (!n)
         return 1;
       st->buf = n;

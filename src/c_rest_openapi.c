@@ -408,8 +408,8 @@ int c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
     size_t new_cap =
         spec->capacity_components == 0 ? 8 : spec->capacity_components * 2;
     char **new_keys = NULL;
-    if (C_REST_MALLOC(sizeof(char *) * new_cap, (void **)&new_keys) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); }
     char **new_json = NULL;
+    if (C_REST_MALLOC(sizeof(char *) * new_cap, (void **)&new_keys) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); }
     if (C_REST_MALLOC(sizeof(char *) * new_cap, (void **)&new_json) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); }
     if (!new_keys || !new_json) {
       if (new_keys)
@@ -1011,7 +1011,10 @@ static int swagger_ui_handler(struct c_rest_request *req,
 
   html_len = strlen(swagger_html_template_1) + strlen(swagger_html_template_2) +
              strlen(openapi_url) + 1;
-  if (C_REST_MALLOC(html_len, (void **)&html_buf) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); html_buf = NULL; }
+  if (C_REST_MALLOC(html_len, (void **)&html_buf) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    html_buf = NULL;
+  }
   if (!html_buf) {
     res->status_code = 500;
     return c_rest_response_html(res, "Internal Server Error");
@@ -1044,7 +1047,11 @@ int c_rest_enable_swagger_ui(struct c_rest_router *router,
   if (spec) {
     if (spec->swagger_openapi_url)
       C_REST_FREE((void *)(spec->swagger_openapi_url));
-    if (C_REST_MALLOC(strlen(openapi_url) + 1, (void **)&spec->swagger_openapi_url) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); spec->swagger_openapi_url = NULL; }
+    if (C_REST_MALLOC(strlen(openapi_url) + 1,
+                      (void **)&spec->swagger_openapi_url) != 0) {
+      LOG_DEBUG("C_REST_MALLOC failed");
+      spec->swagger_openapi_url = NULL;
+    }
     if (spec->swagger_openapi_url) {
 #if defined(_MSC_VER)
       strcpy_s(spec->swagger_openapi_url, strlen(openapi_url) + 1, openapi_url);

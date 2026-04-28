@@ -26,7 +26,11 @@ int c_rest_hashmap_init(c_rest_hashmap *map, size_t capacity) {
   size_t i;
   if (!map || capacity == 0)
     return 1;
-  if (C_REST_MALLOC(capacity * sizeof(c_rest_hashmap_entry *), (void **)&(map->buckets)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); map->buckets = NULL; }
+  if (C_REST_MALLOC(capacity * sizeof(c_rest_hashmap_entry *),
+                    (void **)&(map->buckets)) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    map->buckets = NULL;
+  }
   if (!map->buckets)
     return 1;
   for (i = 0; i < capacity; ++i) {
@@ -55,11 +59,17 @@ int c_rest_hashmap_put(c_rest_hashmap *map, const char *key, void *value) {
     entry = entry->next;
   }
 
-  if (C_REST_MALLOC(sizeof(c_rest_hashmap_entry), (void **)&new_entry) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_entry = NULL; }
+  if (C_REST_MALLOC(sizeof(c_rest_hashmap_entry), (void **)&new_entry) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    new_entry = NULL;
+  }
   if (!new_entry)
     return 1;
 
-  if (C_REST_MALLOC(strlen(key) + 1, (void **)&new_entry->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_entry->key = NULL; }
+  if (C_REST_MALLOC(strlen(key) + 1, (void **)&new_entry->key) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    new_entry->key = NULL;
+  }
   if (!new_entry->key) {
     C_REST_FREE((void *)(new_entry));
     return 1;

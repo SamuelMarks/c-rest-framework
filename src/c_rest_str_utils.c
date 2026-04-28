@@ -129,12 +129,12 @@ int c_rest_strlcat(char *dst, const char *src, size_t dsize, size_t *out_len) {
 int c_rest_url_decode(char *dst, const char *src, size_t len) {
   size_t i;
   char *p;
-  
+
   if (!dst || !src) {
     LOG_DEBUG("c_rest_url_decode: invalid dst or src");
     return 1;
   }
-  
+
   p = dst;
   for (i = 0; i < len; i++) {
     if (src[i] == '%') {

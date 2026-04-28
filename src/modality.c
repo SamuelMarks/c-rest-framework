@@ -265,7 +265,10 @@ struct connection_state {
 static void on_method(c_rest_parser_context *pctx, const char *method,
                       size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
-  if (C_REST_MALLOC(len + 1, (void **)&st->method) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); st->method = NULL; }
+  if (C_REST_MALLOC(len + 1, (void **)&st->method) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    st->method = NULL;
+  }
   if (st->method) {
     memcpy(st->method, method, len);
     st->method[len] = '\0';
@@ -274,7 +277,10 @@ static void on_method(c_rest_parser_context *pctx, const char *method,
 
 static void on_url(c_rest_parser_context *pctx, const char *url, size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
-  if (C_REST_MALLOC(len + 1, (void **)&st->url) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); st->url = NULL; }
+  if (C_REST_MALLOC(len + 1, (void **)&st->url) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    st->url = NULL;
+  }
   if (st->url) {
     memcpy(st->url, url, len);
     st->url[len] = '\0';
@@ -284,10 +290,19 @@ static void on_url(c_rest_parser_context *pctx, const char *url, size_t len) {
 static void on_header(c_rest_parser_context *pctx, const char *key,
                       size_t key_len, const char *val, size_t val_len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
-  struct c_rest_header *h = NULL; if (C_REST_MALLOC(sizeof(struct c_rest_header), (void **)&h) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); }
+  struct c_rest_header *h = NULL;
+  if (C_REST_MALLOC(sizeof(struct c_rest_header), (void **)&h) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+  }
   if (h) {
-    if (C_REST_MALLOC(key_len + 1, (void **)&h->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); h->key = NULL; }
-    if (C_REST_MALLOC(val_len + 1, (void **)&h->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); h->value = NULL; }
+    if (C_REST_MALLOC(key_len + 1, (void **)&h->key) != 0) {
+      LOG_DEBUG("C_REST_MALLOC failed");
+      h->key = NULL;
+    }
+    if (C_REST_MALLOC(val_len + 1, (void **)&h->value) != 0) {
+      LOG_DEBUG("C_REST_MALLOC failed");
+      h->value = NULL;
+    }
     if (h->key && h->value) {
       memcpy(h->key, key, key_len);
       h->key[key_len] = '\0';
@@ -308,7 +323,10 @@ static void on_header(c_rest_parser_context *pctx, const char *key,
 static void on_body(c_rest_parser_context *pctx, const char *data, size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
   char *new_body = NULL;
-  if (C_REST_REALLOC(st->req.body, st->req.body_len + len + 1, (void **)&new_body) != 0) { LOG_DEBUG("C_REST_REALLOC failed"); }
+  if (C_REST_REALLOC(st->req.body, st->req.body_len + len + 1,
+                     (void **)&new_body) != 0) {
+    LOG_DEBUG("C_REST_REALLOC failed");
+  }
   if (new_body) {
     memcpy(new_body + st->req.body_len, data, len);
     st->req.body = new_body;

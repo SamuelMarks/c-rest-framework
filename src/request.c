@@ -467,7 +467,10 @@ int c_rest_request_get_auth_basic(struct c_rest_request *req,
     return 1;
   }
 
-  if (C_REST_MALLOC(decoded_len + 1, (void **)&decoded) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); decoded = NULL; }
+  if (C_REST_MALLOC(decoded_len + 1, (void **)&decoded) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    decoded = NULL;
+  }
   if (!decoded)
     return 1;
 
@@ -485,7 +488,10 @@ int c_rest_request_get_auth_basic(struct c_rest_request *req,
   }
 
   *colon = '\0';
-  if (C_REST_MALLOC(strlen(decoded) + 1, (void **)out_username) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *out_username = NULL; }
+  if (C_REST_MALLOC(strlen(decoded) + 1, (void **)out_username) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    *out_username = NULL;
+  }
   if (*out_username) {
 #if defined(_MSC_VER)
     strcpy_s(*out_username, strlen(decoded) + 1, decoded);
@@ -494,7 +500,10 @@ int c_rest_request_get_auth_basic(struct c_rest_request *req,
 #endif
   }
 
-  if (C_REST_MALLOC(strlen(colon + 1) + 1, (void **)out_password) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *out_password = NULL; }
+  if (C_REST_MALLOC(strlen(colon + 1) + 1, (void **)out_password) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    *out_password = NULL;
+  }
   if (*out_password) {
 #if defined(_MSC_VER)
     strcpy_s(*out_password, strlen(colon + 1) + 1, colon + 1);

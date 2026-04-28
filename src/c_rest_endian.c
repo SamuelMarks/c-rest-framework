@@ -16,7 +16,7 @@ int c_rest_htons(unsigned short hostshort, unsigned short *out_netshort) {
   }
   if (is_little_endian()) {
     *out_netshort = (unsigned short)(((hostshort >> 8) & 0x00FF) |
-                            ((hostshort << 8) & 0xFF00));
+                                     ((hostshort << 8) & 0xFF00));
   } else {
     *out_netshort = hostshort;
   }
@@ -29,8 +29,9 @@ int c_rest_htonl(unsigned long hostlong, unsigned long *out_netlong) {
     return 1;
   }
   if (is_little_endian()) {
-    *out_netlong = ((hostlong >> 24) & 0x000000FF) | ((hostlong >> 8) & 0x0000FF00) |
-           ((hostlong << 8) & 0x00FF0000) | ((hostlong << 24) & 0xFF000000);
+    *out_netlong =
+        ((hostlong >> 24) & 0x000000FF) | ((hostlong >> 8) & 0x0000FF00) |
+        ((hostlong << 8) & 0x00FF0000) | ((hostlong << 24) & 0xFF000000);
   } else {
     *out_netlong = hostlong;
   }

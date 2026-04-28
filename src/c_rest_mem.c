@@ -35,7 +35,10 @@ static int add_node(void *ptr, size_t size, const char *file, int line) {
   if (!mem_initialized || !ptr)
     return 1;
 
-  if (C_REST_MALLOC(sizeof(c_rest_mem_node), (void **)&node) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); node = NULL; }
+  if (C_REST_MALLOC(sizeof(c_rest_mem_node), (void **)&node) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    node = NULL;
+  }
   if (!node)
     return 1;
 
@@ -81,7 +84,10 @@ int c_rest_mem_malloc(size_t size, const char *file, int line, void **out_ptr) {
   void *ptr;
   if (!out_ptr)
     return 1;
-  if (C_REST_MALLOC(size, (void **)&ptr) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); ptr = NULL; }
+  if (C_REST_MALLOC(size, (void **)&ptr) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    ptr = NULL;
+  }
   add_node(ptr, size, file, line);
   *out_ptr = ptr;
   return ptr ? 0 : 1;
@@ -92,7 +98,10 @@ int c_rest_mem_calloc(size_t count, size_t size, const char *file, int line,
   void *ptr;
   if (!out_ptr)
     return 1;
-  if (C_REST_CALLOC(count, size, (void **)&ptr) != 0) { LOG_DEBUG("C_REST_CALLOC failed"); ptr = NULL; }
+  if (C_REST_CALLOC(count, size, (void **)&ptr) != 0) {
+    LOG_DEBUG("C_REST_CALLOC failed");
+    ptr = NULL;
+  }
   add_node(ptr, count * size, file, line);
   *out_ptr = ptr;
   return ptr ? 0 : 1;
@@ -107,7 +116,10 @@ int c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line,
     return 1;
 
   if (!mem_initialized) {
-    if (C_REST_REALLOC(ptr, size, (void **)&new_ptr) != 0) { LOG_DEBUG("C_REST_REALLOC failed"); new_ptr = NULL; }
+    if (C_REST_REALLOC(ptr, size, (void **)&new_ptr) != 0) {
+      LOG_DEBUG("C_REST_REALLOC failed");
+      new_ptr = NULL;
+    }
     *out_ptr = new_ptr;
     return new_ptr ? 0 : 1;
   }
@@ -131,7 +143,10 @@ int c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line,
   }
   c_rest_mutex_unlock(mem_mutex);
 
-  if (C_REST_REALLOC(ptr, size, (void **)&new_ptr) != 0) { LOG_DEBUG("C_REST_REALLOC failed"); new_ptr = NULL; }
+  if (C_REST_REALLOC(ptr, size, (void **)&new_ptr) != 0) {
+    LOG_DEBUG("C_REST_REALLOC failed");
+    new_ptr = NULL;
+  }
   if (new_ptr && curr) {
     c_rest_mutex_lock(mem_mutex);
     curr->ptr = new_ptr;

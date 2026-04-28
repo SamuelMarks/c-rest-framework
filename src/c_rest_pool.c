@@ -26,7 +26,10 @@ int c_rest_pool_allocate(c_rest_pool *pool, void **out_ptr) {
     *out_ptr = (void *)block;
     return 0;
   }
-  if (C_REST_MALLOC(pool->object_size, (void **)out_ptr) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *out_ptr = NULL; }
+  if (C_REST_MALLOC(pool->object_size, (void **)out_ptr) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    *out_ptr = NULL;
+  }
   return *out_ptr ? 0 : 1;
 }
 
