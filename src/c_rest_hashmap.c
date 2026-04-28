@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 /* clang-format on */
 
 #if defined(_MSC_VER)
@@ -24,8 +26,7 @@ int c_rest_hashmap_init(c_rest_hashmap *map, size_t capacity) {
   size_t i;
   if (!map || capacity == 0)
     return 1;
-  map->buckets = (c_rest_hashmap_entry **)malloc(
-      capacity * sizeof(c_rest_hashmap_entry *));
+  if (C_REST_MALLOC(capacity * sizeof(c_rest_hashmap_entry *), (void **)&(map->buckets)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); map->buckets = NULL; }
   if (!map->buckets)
     return 1;
   for (i = 0; i < capacity; ++i) {
@@ -54,13 +55,13 @@ int c_rest_hashmap_put(c_rest_hashmap *map, const char *key, void *value) {
     entry = entry->next;
   }
 
-  new_entry = (c_rest_hashmap_entry *)malloc(sizeof(c_rest_hashmap_entry));
+  if (C_REST_MALLOC(sizeof(c_rest_hashmap_entry), (void **)&new_entry) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_entry = NULL; }
   if (!new_entry)
     return 1;
 
-  new_entry->key = (char *)malloc(strlen(key) + 1);
+  if (C_REST_MALLOC(strlen(key) + 1, (void **)&new_entry->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_entry->key = NULL; }
   if (!new_entry->key) {
-    free(new_entry);
+    C_REST_FREE((void *)(new_entry));
     return 1;
   }
   SAFE_STRCPY(new_entry->key, strlen(key) + 1, key);
@@ -108,8 +109,8 @@ int c_rest_hashmap_remove(c_rest_hashmap *map, const char *key) {
       } else {
         map->buckets[index] = entry->next;
       }
-      free(entry->key);
-      free(entry);
+      C_REST_FREE((void *)(entry->key));
+      C_REST_FREE((void *)(entry));
       map->size--;
       return 0;
     }
@@ -128,15 +129,15 @@ int c_rest_hashmap_destroy(c_rest_hashmap *map, void (*free_value)(void *)) {
       c_rest_hashmap_entry *entry = map->buckets[i];
       while (entry) {
         c_rest_hashmap_entry *next = entry->next;
-        free(entry->key);
+        C_REST_FREE((void *)(entry->key));
         if (free_value && entry->value) {
           free_value(entry->value);
         }
-        free(entry);
+        C_REST_FREE((void *)(entry));
         entry = next;
       }
     }
-    free(map->buckets);
+    C_REST_FREE((void *)(map->buckets));
   }
   map->buckets = NULL;
   map->capacity = 0;

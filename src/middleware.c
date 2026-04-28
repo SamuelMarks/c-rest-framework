@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 /* clang-format on */
 
 int c_rest_cors_middleware(struct c_rest_request *req,
@@ -121,14 +123,14 @@ int c_rest_auth_middleware(struct c_rest_request *req,
 
   if (is_bearer) {
     if (!verifier->verify_bearer) {
-      free(token);
+      C_REST_FREE((void *)(token));
       c_rest_response_set_status(res, 500);
       c_rest_response_html(
           res, "Internal Server Error: Bearer auth not supported by verifier");
       return 1;
     }
     if (verifier->verify_bearer(token, &auth_ctx) != 0) {
-      free(token);
+      C_REST_FREE((void *)(token));
       c_rest_response_set_status(res, 401);
       c_rest_response_set_header(
           res, "WWW-Authenticate",
@@ -136,27 +138,27 @@ int c_rest_auth_middleware(struct c_rest_request *req,
       c_rest_response_html(res, "Unauthorized: Invalid token");
       return 1;
     }
-    free(token);
+    C_REST_FREE((void *)(token));
   } else if (is_basic) {
     if (!verifier->verify_basic) {
-      free(user);
-      free(pass);
+      C_REST_FREE((void *)(user));
+      C_REST_FREE((void *)(pass));
       c_rest_response_set_status(res, 500);
       c_rest_response_html(
           res, "Internal Server Error: Basic auth not supported by verifier");
       return 1;
     }
     if (verifier->verify_basic(user, pass, &auth_ctx) != 0) {
-      free(user);
-      free(pass);
+      C_REST_FREE((void *)(user));
+      C_REST_FREE((void *)(pass));
       c_rest_response_set_status(res, 401);
       c_rest_response_set_header(res, "WWW-Authenticate",
                                  "Basic realm=\"API\"");
       c_rest_response_html(res, "Unauthorized: Invalid credentials");
       return 1;
     }
-    free(user);
-    free(pass);
+    C_REST_FREE((void *)(user));
+    C_REST_FREE((void *)(pass));
   }
 
   req->auth_context = auth_ctx;
@@ -194,7 +196,7 @@ int c_rest_oauth2_middleware(struct c_rest_request *req,
   }
 
   if (verify_fn(token, &auth_ctx) != 0) {
-    free(token);
+    C_REST_FREE((void *)(token));
     c_rest_response_set_status(res, 401);
     c_rest_response_set_header(res, "WWW-Authenticate",
                                "Bearer realm=\"API\", error=\"invalid_token\"");
@@ -202,7 +204,7 @@ int c_rest_oauth2_middleware(struct c_rest_request *req,
     return 1;
   }
 
-  free(token);
+  C_REST_FREE((void *)(token));
   req->auth_context = auth_ctx;
 
   return 0;

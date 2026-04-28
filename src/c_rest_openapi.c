@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 
 #ifndef CDD_DOS
 int c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec) {
@@ -10,8 +12,7 @@ int c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec) {
   if (!out_spec)
     return 1;
 
-  spec =
-      (struct c_rest_openapi_spec *)malloc(sizeof(struct c_rest_openapi_spec));
+  if (C_REST_MALLOC(sizeof(struct c_rest_openapi_spec), (void **)&(spec)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); spec = NULL; }
   if (!spec)
     return 1;
 
@@ -34,41 +35,41 @@ static void free_operation(struct c_rest_openapi_operation *op) {
     return;
 
   if (op->operation_id)
-    free((void *)op->operation_id);
+    C_REST_FREE((void *)(op->operation_id));
   if (op->summary)
-    free((void *)op->summary);
+    C_REST_FREE((void *)(op->summary));
   if (op->description)
-    free((void *)op->description);
+    C_REST_FREE((void *)(op->description));
 
   if (op->tags) {
     for (i = 0; i < op->n_tags; i++) {
       if (op->tags[i])
-        free((void *)op->tags[i]);
+        C_REST_FREE((void *)(op->tags[i]));
     }
-    free((void *)op->tags);
+    C_REST_FREE((void *)(op->tags));
   }
 
 
 
   if (op->external_docs.description)
-    free((void *)op->external_docs.description);
+    C_REST_FREE((void *)(op->external_docs.description));
   if (op->external_docs.url)
-    free((void *)op->external_docs.url);
+    C_REST_FREE((void *)(op->external_docs.url));
 
   if (op->security) {
     for (i = 0; i < op->n_security; i++) {
       size_t k;
       if (op->security[i].name)
-        free((void *)op->security[i].name);
+        C_REST_FREE((void *)(op->security[i].name));
       if (op->security[i].scopes) {
         for (k = 0; k < op->security[i].n_scopes; k++) {
           if (op->security[i].scopes[k])
-            free((void *)op->security[i].scopes[k]);
+            C_REST_FREE((void *)(op->security[i].scopes[k]));
         }
-        free((void *)(char **)op->security[i].scopes);
+        C_REST_FREE((void *)(op->security[i].scopes));
       }
     }
-    free(op->security);
+    C_REST_FREE((void *)(op->security));
   }
 }
 
@@ -78,71 +79,71 @@ int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
     return 1;
 
   if (spec->openapi_version)
-    free((void *)spec->openapi_version);
+    C_REST_FREE((void *)(spec->openapi_version));
   if (spec->json_schema_dialect)
-    free((void *)spec->json_schema_dialect);
+    C_REST_FREE((void *)(spec->json_schema_dialect));
 
   if (spec->info.title)
-    free((void *)spec->info.title);
+    C_REST_FREE((void *)(spec->info.title));
   if (spec->info.summary)
-    free((void *)spec->info.summary);
+    C_REST_FREE((void *)(spec->info.summary));
   if (spec->info.version)
-    free((void *)spec->info.version);
+    C_REST_FREE((void *)(spec->info.version));
   if (spec->info.description)
-    free((void *)spec->info.description);
+    C_REST_FREE((void *)(spec->info.description));
   if (spec->info.terms_of_service)
-    free((void *)spec->info.terms_of_service);
+    C_REST_FREE((void *)(spec->info.terms_of_service));
   if (spec->info.contact.name)
-    free((void *)spec->info.contact.name);
+    C_REST_FREE((void *)(spec->info.contact.name));
   if (spec->info.contact.url)
-    free((void *)spec->info.contact.url);
+    C_REST_FREE((void *)(spec->info.contact.url));
   if (spec->info.contact.email)
-    free((void *)spec->info.contact.email);
+    C_REST_FREE((void *)(spec->info.contact.email));
   if (spec->info.license.name)
-    free((void *)spec->info.license.name);
+    C_REST_FREE((void *)(spec->info.license.name));
   if (spec->info.license.identifier)
-    free((void *)spec->info.license.identifier);
+    C_REST_FREE((void *)(spec->info.license.identifier));
   if (spec->info.license.url)
-    free((void *)spec->info.license.url);
+    C_REST_FREE((void *)(spec->info.license.url));
 
   if (spec->servers) {
     for (i = 0; i < spec->n_servers; i++) {
       if (spec->servers[i].url)
-        free((void *)spec->servers[i].url);
+        C_REST_FREE((void *)(spec->servers[i].url));
       if (spec->servers[i].description)
-        free((void *)spec->servers[i].description);
+        C_REST_FREE((void *)(spec->servers[i].description));
       if (spec->servers[i].variables) {
         for (j = 0; j < spec->servers[i].n_variables; j++) {
           size_t k;
           if (spec->servers[i].variables[j].name)
-            free((void *)spec->servers[i].variables[j].name);
+            C_REST_FREE((void *)(spec->servers[i].variables[j].name));
           if (spec->servers[i].variables[j].default_value)
-            free((void *)spec->servers[i].variables[j].default_value);
+            C_REST_FREE((void *)(spec->servers[i].variables[j].default_value));
           if (spec->servers[i].variables[j].description)
-            free((void *)spec->servers[i].variables[j].description);
+            C_REST_FREE((void *)(spec->servers[i].variables[j].description));
           if (spec->servers[i].variables[j].enum_values) {
             for (k = 0; k < spec->servers[i].variables[j].n_enum_values; k++) {
               if (spec->servers[i].variables[j].enum_values[k])
-                free((void *)spec->servers[i].variables[j].enum_values[k]);
+                C_REST_FREE((void *)(spec->servers[i].variables[j].enum_values[k]));
             }
-            free((void *)(char **)spec->servers[i].variables[j].enum_values);
+            C_REST_FREE((void *)(spec->servers[i].variables[j].enum_values));
           }
         }
-        free(spec->servers[i].variables);
+        C_REST_FREE((void *)(spec->servers[i].variables));
       }
     }
-    free(spec->servers);
+    C_REST_FREE((void *)(spec->servers));
   }
 
   if (spec->paths) {
     for (i = 0; i < spec->n_paths; i++) {
       struct c_rest_openapi_path *p = &spec->paths[i];
       if (p->route)
-        free((void *)p->route);
+        C_REST_FREE((void *)(p->route));
       if (p->summary)
-        free((void *)p->summary);
+        C_REST_FREE((void *)(p->summary));
       if (p->description)
-        free((void *)p->description);
+        C_REST_FREE((void *)(p->description));
 
       /* Server memory in path is identical structure, omit full deep free here
        * for brevity if it's copied */
@@ -158,179 +159,179 @@ int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
       free_operation(&p->trace);
       free_operation(&p->query);
     }
-    free(spec->paths);
+    C_REST_FREE((void *)(spec->paths));
   }
 
   if (spec->component_schemas_keys) {
     for (i = 0; i < spec->n_components; i++) {
       if (spec->component_schemas_keys[i])
-        free(spec->component_schemas_keys[i]);
+        C_REST_FREE((void *)(spec->component_schemas_keys[i]));
     }
-    free(spec->component_schemas_keys);
+    C_REST_FREE((void *)(spec->component_schemas_keys));
   }
 
   if (spec->component_schemas_json) {
     for (i = 0; i < spec->n_components; i++) {
       if (spec->component_schemas_json[i])
-        free(spec->component_schemas_json[i]);
+        C_REST_FREE((void *)(spec->component_schemas_json[i]));
     }
-    free(spec->component_schemas_json);
+    C_REST_FREE((void *)(spec->component_schemas_json));
   }
 
   if (spec->tags) {
     for (i = 0; i < spec->n_tags; i++) {
       if (spec->tags[i].name)
-        free((void *)spec->tags[i].name);
+        C_REST_FREE((void *)(spec->tags[i].name));
       if (spec->tags[i].summary)
-        free((void *)spec->tags[i].summary);
+        C_REST_FREE((void *)(spec->tags[i].summary));
       if (spec->tags[i].description)
-        free((void *)spec->tags[i].description);
+        C_REST_FREE((void *)(spec->tags[i].description));
       if (spec->tags[i].external_docs.description)
-        free((void *)spec->tags[i].external_docs.description);
+        C_REST_FREE((void *)(spec->tags[i].external_docs.description));
       if (spec->tags[i].external_docs.url)
-        free((void *)spec->tags[i].external_docs.url);
+        C_REST_FREE((void *)(spec->tags[i].external_docs.url));
       if (spec->tags[i].parent)
-        free((void *)spec->tags[i].parent);
+        C_REST_FREE((void *)(spec->tags[i].parent));
       if (spec->tags[i].kind)
-        free((void *)spec->tags[i].kind);
+        C_REST_FREE((void *)(spec->tags[i].kind));
     }
-    free(spec->tags);
+    C_REST_FREE((void *)(spec->tags));
   }
 
   if (spec->external_docs.description)
-    free((void *)spec->external_docs.description);
+    C_REST_FREE((void *)(spec->external_docs.description));
   if (spec->external_docs.url)
-    free((void *)spec->external_docs.url);
+    C_REST_FREE((void *)(spec->external_docs.url));
 
   if (spec->swagger_openapi_url)
-    free(spec->swagger_openapi_url);
+    C_REST_FREE((void *)(spec->swagger_openapi_url));
 
   if (spec->security) {
     for (i = 0; i < spec->n_security; i++) {
       size_t k;
       if (spec->security[i].name)
-        free((void *)spec->security[i].name);
+        C_REST_FREE((void *)(spec->security[i].name));
       if (spec->security[i].scopes) {
         for (k = 0; k < spec->security[i].n_scopes; k++) {
           if (spec->security[i].scopes[k])
-            free((void *)spec->security[i].scopes[k]);
+            C_REST_FREE((void *)(spec->security[i].scopes[k]));
         }
-        free((void *)(char **)spec->security[i].scopes);
+        C_REST_FREE((void *)(spec->security[i].scopes));
       }
     }
-    free(spec->security);
+    C_REST_FREE((void *)(spec->security));
   }
   if (spec->security_schemes) {
     for (i = 0; i < spec->n_security_schemes; i++) {
       struct c_rest_openapi_security_scheme *s = &spec->security_schemes[i];
       if (s->name_key)
-        free((void *)s->name_key);
+        C_REST_FREE((void *)(s->name_key));
       if (s->type)
-        free((void *)s->type);
+        C_REST_FREE((void *)(s->type));
       if (s->description)
-        free((void *)s->description);
+        C_REST_FREE((void *)(s->description));
       if (s->name)
-        free((void *)s->name);
+        C_REST_FREE((void *)(s->name));
       if (s->in)
-        free((void *)s->in);
+        C_REST_FREE((void *)(s->in));
       if (s->scheme)
-        free((void *)s->scheme);
+        C_REST_FREE((void *)(s->scheme));
       if (s->bearer_format)
-        free((void *)s->bearer_format);
+        C_REST_FREE((void *)(s->bearer_format));
       if (s->open_id_connect_url)
-        free((void *)s->open_id_connect_url);
+        C_REST_FREE((void *)(s->open_id_connect_url));
 
       /* Free flows */
       if (s->flows.implicit) {
         if (s->flows.implicit->authorization_url)
-          free((void *)s->flows.implicit->authorization_url);
+          C_REST_FREE((void *)(s->flows.implicit->authorization_url));
         if (s->flows.implicit->token_url)
-          free((void *)s->flows.implicit->token_url);
+          C_REST_FREE((void *)(s->flows.implicit->token_url));
         if (s->flows.implicit->refresh_url)
-          free((void *)s->flows.implicit->refresh_url);
+          C_REST_FREE((void *)(s->flows.implicit->refresh_url));
         if (s->flows.implicit->scopes_keys) {
           size_t k;
           for (k = 0; k < s->flows.implicit->n_scopes; k++) {
             if (s->flows.implicit->scopes_keys[k])
-              free((void *)s->flows.implicit->scopes_keys[k]);
+              C_REST_FREE((void *)(s->flows.implicit->scopes_keys[k]));
             if (s->flows.implicit->scopes_values[k])
-              free((void *)s->flows.implicit->scopes_values[k]);
+              C_REST_FREE((void *)(s->flows.implicit->scopes_values[k]));
           }
-          free((void *)(char **)s->flows.implicit->scopes_keys);
-          free((void *)(char **)s->flows.implicit->scopes_values);
+          C_REST_FREE((void *)(s->flows.implicit->scopes_keys));
+          C_REST_FREE((void *)(s->flows.implicit->scopes_values));
         }
-        free(s->flows.implicit);
+        C_REST_FREE((void *)(s->flows.implicit));
       }
       if (s->flows.password) {
         if (s->flows.password->authorization_url)
-          free((void *)s->flows.password->authorization_url);
+          C_REST_FREE((void *)(s->flows.password->authorization_url));
         if (s->flows.password->token_url)
-          free((void *)s->flows.password->token_url);
+          C_REST_FREE((void *)(s->flows.password->token_url));
         if (s->flows.password->refresh_url)
-          free((void *)s->flows.password->refresh_url);
+          C_REST_FREE((void *)(s->flows.password->refresh_url));
         if (s->flows.password->scopes_keys) {
           size_t k;
           for (k = 0; k < s->flows.password->n_scopes; k++) {
             if (s->flows.password->scopes_keys[k])
-              free((void *)s->flows.password->scopes_keys[k]);
+              C_REST_FREE((void *)(s->flows.password->scopes_keys[k]));
             if (s->flows.password->scopes_values[k])
-              free((void *)s->flows.password->scopes_values[k]);
+              C_REST_FREE((void *)(s->flows.password->scopes_values[k]));
           }
-          free((void *)(char **)s->flows.password->scopes_keys);
-          free((void *)(char **)s->flows.password->scopes_values);
+          C_REST_FREE((void *)(s->flows.password->scopes_keys));
+          C_REST_FREE((void *)(s->flows.password->scopes_values));
         }
-        free(s->flows.password);
+        C_REST_FREE((void *)(s->flows.password));
       }
       if (s->flows.client_credentials) {
         if (s->flows.client_credentials->authorization_url)
-          free((void *)s->flows.client_credentials->authorization_url);
+          C_REST_FREE((void *)(s->flows.client_credentials->authorization_url));
         if (s->flows.client_credentials->token_url)
-          free((void *)s->flows.client_credentials->token_url);
+          C_REST_FREE((void *)(s->flows.client_credentials->token_url));
         if (s->flows.client_credentials->refresh_url)
-          free((void *)s->flows.client_credentials->refresh_url);
+          C_REST_FREE((void *)(s->flows.client_credentials->refresh_url));
         if (s->flows.client_credentials->scopes_keys) {
           size_t k;
           for (k = 0; k < s->flows.client_credentials->n_scopes; k++) {
             if (s->flows.client_credentials->scopes_keys[k])
-              free((void *)s->flows.client_credentials->scopes_keys[k]);
+              C_REST_FREE((void *)(s->flows.client_credentials->scopes_keys[k]));
             if (s->flows.client_credentials->scopes_values[k])
-              free((void *)s->flows.client_credentials->scopes_values[k]);
+              C_REST_FREE((void *)(s->flows.client_credentials->scopes_values[k]));
           }
-          free((void *)(char **)s->flows.client_credentials->scopes_keys);
-          free((void *)(char **)s->flows.client_credentials->scopes_values);
+          C_REST_FREE((void *)(s->flows.client_credentials->scopes_keys));
+          C_REST_FREE((void *)(s->flows.client_credentials->scopes_values));
         }
-        free(s->flows.client_credentials);
+        C_REST_FREE((void *)(s->flows.client_credentials));
       }
       if (s->flows.authorization_code) {
         if (s->flows.authorization_code->authorization_url)
-          free((void *)s->flows.authorization_code->authorization_url);
+          C_REST_FREE((void *)(s->flows.authorization_code->authorization_url));
         if (s->flows.authorization_code->token_url)
-          free((void *)s->flows.authorization_code->token_url);
+          C_REST_FREE((void *)(s->flows.authorization_code->token_url));
         if (s->flows.authorization_code->refresh_url)
-          free((void *)s->flows.authorization_code->refresh_url);
+          C_REST_FREE((void *)(s->flows.authorization_code->refresh_url));
         if (s->flows.authorization_code->scopes_keys) {
           size_t k;
           for (k = 0; k < s->flows.authorization_code->n_scopes; k++) {
             if (s->flows.authorization_code->scopes_keys[k])
-              free((void *)s->flows.authorization_code->scopes_keys[k]);
+              C_REST_FREE((void *)(s->flows.authorization_code->scopes_keys[k]));
             if (s->flows.authorization_code->scopes_values[k])
-              free((void *)s->flows.authorization_code->scopes_values[k]);
+              C_REST_FREE((void *)(s->flows.authorization_code->scopes_values[k]));
           }
-          free((void *)(char **)s->flows.authorization_code->scopes_keys);
-          free((void *)(char **)s->flows.authorization_code->scopes_values);
+          C_REST_FREE((void *)(s->flows.authorization_code->scopes_keys));
+          C_REST_FREE((void *)(s->flows.authorization_code->scopes_values));
         }
-        free(s->flows.authorization_code);
+        C_REST_FREE((void *)(s->flows.authorization_code));
       }
     }
-    free(spec->security_schemes);
+    C_REST_FREE((void *)(spec->security_schemes));
   }
-  free(spec);
+  C_REST_FREE((void *)(spec));
   return 0;
 }
 
 static int copy_string(const char **dst, const char *src) {
   if (src) {
-    *dst = (char *)malloc(strlen(src) + 1);
+    if (C_REST_MALLOC(strlen(src) + 1, (void **)dst) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *dst = NULL; }
     if (*dst) {
 #if defined(_MSC_VER)
       strcpy_s((char *)*dst, strlen(src) + 1, src);
@@ -351,7 +352,7 @@ static int copy_operation(struct c_rest_openapi_operation *dst,
   copy_string(&dst->description, src->description);
 
   if (src->n_tags > 0 && src->tags) {
-    dst->tags = (const char **)malloc(sizeof(char *) * src->n_tags);
+    if (C_REST_MALLOC(sizeof(char *) * src->n_tags, (void **)&dst->tags) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->tags = NULL; }
     if (dst->tags) {
       dst->n_tags = src->n_tags;
       for (i = 0; i < src->n_tags; i++) {
@@ -371,8 +372,7 @@ static int copy_operation(struct c_rest_openapi_operation *dst,
   copy_string(&dst->external_docs.url, src->external_docs.url);
 
   if (src->n_security > 0 && src->security) {
-    dst->security = (struct c_rest_openapi_security_requirement *)malloc(
-        sizeof(struct c_rest_openapi_security_requirement) * src->n_security);
+    if (C_REST_MALLOC(sizeof(struct c_rest_openapi_security_requirement) * src->n_security, (void **)&(dst->security)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->security = NULL; }
     if (dst->security) {
       dst->n_security = src->n_security;
       for (i = 0; i < src->n_security; i++) {
@@ -381,8 +381,7 @@ static int copy_operation(struct c_rest_openapi_operation *dst,
         copy_string(&dst->security[i].name, src->security[i].name);
         dst->security[i].n_scopes = src->security[i].n_scopes;
         if (src->security[i].n_scopes > 0 && src->security[i].scopes) {
-          dst->security[i].scopes =
-              (const char **)malloc(sizeof(char *) * src->security[i].n_scopes);
+          if (C_REST_MALLOC(sizeof(char *) * src->security[i].n_scopes, (void **)&(dst->security[i].scopes)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->security[i].scopes = NULL; }
           if (dst->security[i].scopes) {
             for (k = 0; k < src->security[i].n_scopes; k++) {
               dst->security[i].scopes[k] = NULL;
@@ -408,24 +407,26 @@ int c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
   if (spec->n_components >= spec->capacity_components) {
     size_t new_cap =
         spec->capacity_components == 0 ? 8 : spec->capacity_components * 2;
-    char **new_keys = (char **)malloc(sizeof(char *) * new_cap);
-    char **new_json = (char **)malloc(sizeof(char *) * new_cap);
+    char **new_keys = NULL;
+    if (C_REST_MALLOC(sizeof(char *) * new_cap, (void **)&new_keys) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); }
+    char **new_json = NULL;
+    if (C_REST_MALLOC(sizeof(char *) * new_cap, (void **)&new_json) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); }
     if (!new_keys || !new_json) {
       if (new_keys)
-        free(new_keys);
+        C_REST_FREE((void *)(new_keys));
       if (new_json)
-        free(new_json);
+        C_REST_FREE((void *)(new_json));
       return 1;
     }
     if (spec->component_schemas_keys) {
       memcpy(new_keys, spec->component_schemas_keys,
              sizeof(char *) * spec->n_components);
-      free(spec->component_schemas_keys);
+      C_REST_FREE((void *)(spec->component_schemas_keys));
     }
     if (spec->component_schemas_json) {
       memcpy(new_json, spec->component_schemas_json,
              sizeof(char *) * spec->n_components);
-      free(spec->component_schemas_json);
+      C_REST_FREE((void *)(spec->component_schemas_json));
     }
     spec->component_schemas_keys = new_keys;
     spec->component_schemas_json = new_json;
@@ -463,16 +464,14 @@ int c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
   if (!path) {
     if (spec->n_paths >= spec->capacity_paths) {
       size_t new_cap = spec->capacity_paths == 0 ? 4 : spec->capacity_paths * 2;
-      struct c_rest_openapi_path *new_paths =
-          (struct c_rest_openapi_path *)malloc(
-              sizeof(struct c_rest_openapi_path) * new_cap);
+      struct c_rest_openapi_path *new_paths = NULL; if (C_REST_MALLOC(sizeof(struct c_rest_openapi_path) * new_cap, (void **)&(new_paths)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_paths = NULL; }
       if (!new_paths)
         return 1;
 
       if (spec->paths) {
         memcpy(new_paths, spec->paths,
                sizeof(struct c_rest_openapi_path) * spec->n_paths);
-        free(spec->paths);
+        C_REST_FREE((void *)(spec->paths));
       }
       spec->paths = new_paths;
       spec->capacity_paths = new_cap;
@@ -1012,7 +1011,7 @@ static int swagger_ui_handler(struct c_rest_request *req,
 
   html_len = strlen(swagger_html_template_1) + strlen(swagger_html_template_2) +
              strlen(openapi_url) + 1;
-  html_buf = (char *)malloc(html_len);
+  if (C_REST_MALLOC(html_len, (void **)&html_buf) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); html_buf = NULL; }
   if (!html_buf) {
     res->status_code = 500;
     return c_rest_response_html(res, "Internal Server Error");
@@ -1031,7 +1030,7 @@ static int swagger_ui_handler(struct c_rest_request *req,
 
   res->status_code = 200;
   c_rest_response_html(res, html_buf);
-  free(html_buf);
+  C_REST_FREE((void *)(html_buf));
   return 0;
 }
 
@@ -1044,8 +1043,8 @@ int c_rest_enable_swagger_ui(struct c_rest_router *router,
   c_rest_router_get_openapi_spec(router, &spec);
   if (spec) {
     if (spec->swagger_openapi_url)
-      free(spec->swagger_openapi_url);
-    spec->swagger_openapi_url = (char *)malloc(strlen(openapi_url) + 1);
+      C_REST_FREE((void *)(spec->swagger_openapi_url));
+    if (C_REST_MALLOC(strlen(openapi_url) + 1, (void **)&spec->swagger_openapi_url) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); spec->swagger_openapi_url = NULL; }
     if (spec->swagger_openapi_url) {
 #if defined(_MSC_VER)
       strcpy_s(spec->swagger_openapi_url, strlen(openapi_url) + 1, openapi_url);

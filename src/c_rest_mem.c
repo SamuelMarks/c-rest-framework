@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 /* clang-format on */
 
 typedef struct c_rest_mem_node {
@@ -33,7 +35,7 @@ static int add_node(void *ptr, size_t size, const char *file, int line) {
   if (!mem_initialized || !ptr)
     return 1;
 
-  node = (c_rest_mem_node *)malloc(sizeof(c_rest_mem_node));
+  if (C_REST_MALLOC(sizeof(c_rest_mem_node), (void **)&node) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); node = NULL; }
   if (!node)
     return 1;
 
@@ -79,7 +81,7 @@ int c_rest_mem_malloc(size_t size, const char *file, int line, void **out_ptr) {
   void *ptr;
   if (!out_ptr)
     return 1;
-  ptr = malloc(size);
+  if (C_REST_MALLOC(size, (void **)&ptr) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); ptr = NULL; }
   add_node(ptr, size, file, line);
   *out_ptr = ptr;
   return ptr ? 0 : 1;
@@ -90,7 +92,7 @@ int c_rest_mem_calloc(size_t count, size_t size, const char *file, int line,
   void *ptr;
   if (!out_ptr)
     return 1;
-  ptr = calloc(count, size);
+  if (C_REST_CALLOC(count, size, (void **)&ptr) != 0) { LOG_DEBUG("C_REST_CALLOC failed"); ptr = NULL; }
   add_node(ptr, count * size, file, line);
   *out_ptr = ptr;
   return ptr ? 0 : 1;
@@ -105,7 +107,7 @@ int c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line,
     return 1;
 
   if (!mem_initialized) {
-    new_ptr = realloc(ptr, size);
+    if (C_REST_REALLOC(ptr, size, (void **)&new_ptr) != 0) { LOG_DEBUG("C_REST_REALLOC failed"); new_ptr = NULL; }
     *out_ptr = new_ptr;
     return new_ptr ? 0 : 1;
   }
@@ -129,7 +131,7 @@ int c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line,
   }
   c_rest_mutex_unlock(mem_mutex);
 
-  new_ptr = realloc(ptr, size);
+  if (C_REST_REALLOC(ptr, size, (void **)&new_ptr) != 0) { LOG_DEBUG("C_REST_REALLOC failed"); new_ptr = NULL; }
   if (new_ptr && curr) {
     c_rest_mutex_lock(mem_mutex);
     curr->ptr = new_ptr;

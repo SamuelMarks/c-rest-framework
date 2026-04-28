@@ -8,6 +8,8 @@
 #endif
 
 #include <stdlib.h>
+#include "c_rest_log.h"
+#include "c_rest_mem.h"
 #include <string.h>
 
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) || defined(C_REST_USE_BORINGSSL)
@@ -99,7 +101,7 @@ int c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
     defined(C_REST_USE_BORINGSSL)
   ctx->ctx = SSL_CTX_new(SSLv23_server_method());
   if (!ctx->ctx) {
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
     return 1;
   }
   SSL_CTX_set_options(ctx->ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
@@ -113,13 +115,13 @@ int c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
 
   if (mbedtls_ctr_drbg_seed(&ctx->ctr_drbg, mbedtls_entropy_func, &ctx->entropy,
                             NULL, 0) != 0) {
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
     return 1;
   }
   if (mbedtls_ssl_config_defaults(&ctx->conf, MBEDTLS_SSL_IS_SERVER,
                                   MBEDTLS_SSL_TRANSPORT_STREAM,
                                   MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
     return 1;
   }
   mbedtls_ssl_conf_rng(&ctx->conf, mbedtls_ctr_drbg_random, &ctx->ctr_drbg);
@@ -135,18 +137,18 @@ int c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
 #elif defined(C_REST_USE_WOLFSSL)
   ctx->ctx = wolfSSL_CTX_new(wolfTLSv1_2_server_method());
   if (!ctx->ctx) {
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
     return 1;
   }
 #elif defined(C_REST_USE_S2N)
   ctx->config = s2n_config_new();
   if (!ctx->config) {
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
     return 1;
   }
   if (s2n_config_set_cipher_preferences(ctx->config, "default_tls13") != 0) {
     s2n_config_free(ctx->config);
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
     return 1;
   }
 #endif
@@ -177,7 +179,7 @@ int c_rest_tls_context_destroy(struct c_rest_tls_context *ctx) {
   s2n_config_free(ctx->config);
 #endif
 
-  free(ctx);
+  C_REST_FREE((void *)(ctx));
   return 0;
 }
 
@@ -294,7 +296,7 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock,
     defined(C_REST_USE_BORINGSSL)
   conn->ssl = SSL_new(ctx->ctx);
   if (!conn->ssl) {
-    free(conn);
+    C_REST_FREE((void *)(conn));
     return 1;
   }
   SSL_set_fd(conn->ssl, (int)sock);
@@ -312,13 +314,13 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock,
       return C_REST_TLS_WANT_WRITE;
     }
     SSL_free(conn->ssl);
-    free(conn);
+    C_REST_FREE((void *)(conn));
     return 1;
   }
 #elif defined(C_REST_USE_MBEDTLS)
   mbedtls_ssl_init(&conn->ssl);
   if (mbedtls_ssl_setup(&conn->ssl, &ctx->conf) != 0) {
-    free(conn);
+    C_REST_FREE((void *)(conn));
     return 1;
   }
   /* mbedtls_net_context cannot easily be bypassed without writing custom bio
@@ -339,13 +341,13 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock,
       return C_REST_TLS_WANT_WRITE;
     }
     mbedtls_ssl_free(&conn->ssl);
-    free(conn);
+    C_REST_FREE((void *)(conn));
     return 1;
   }
 #elif defined(C_REST_USE_WOLFSSL)
   conn->ssl = wolfSSL_new(ctx->ctx);
   if (!conn->ssl) {
-    free(conn);
+    C_REST_FREE((void *)(conn));
     return 1;
   }
   wolfSSL_set_fd(conn->ssl, (int)sock);
@@ -362,7 +364,7 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock,
       return C_REST_TLS_WANT_WRITE;
     }
     wolfSSL_free(conn->ssl);
-    free(conn);
+    C_REST_FREE((void *)(conn));
     return 1;
   }
 #elif defined(C_REST_USE_S2N)
@@ -383,7 +385,7 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock,
         return C_REST_TLS_WANT_WRITE;
       }
       s2n_connection_free(conn->conn);
-      free(conn);
+      C_REST_FREE((void *)(conn));
       return 1;
     }
   }
@@ -518,6 +520,6 @@ int c_rest_tls_close(struct c_rest_tls_connection *conn) {
   s2n_shutdown(conn->conn, NULL);
   s2n_connection_free(conn->conn);
 #endif
-  free(conn);
+  C_REST_FREE((void *)(conn));
   return 0;
 }

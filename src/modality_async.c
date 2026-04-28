@@ -3,6 +3,8 @@
 #include "c_rest_platform.h"
 
 #include <stdlib.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 /* clang-format on */
 
 struct c_rest_event_loop {

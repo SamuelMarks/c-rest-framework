@@ -9,33 +9,58 @@
 extern "C" {
 #endif
 
-/*
- * Built-in CORS Middleware
+/**
+ * @brief Built-in CORS Middleware
+ *
+ * @param req The request.
+ * @param res The response.
+ * @param user_data User data.
+ * @return 0 to continue, non-zero to stop.
  */
 int c_rest_cors_middleware(struct c_rest_request *req,
                            struct c_rest_response *res, void *user_data);
 
-/*
- * Built-in Logger Middleware
+/**
+ * @brief Built-in Logger Middleware
+ *
+ * @param req The request.
+ * @param res The response.
+ * @param user_data User data.
+ * @return 0 to continue, non-zero to stop.
  */
 int c_rest_logger_middleware(struct c_rest_request *req,
                              struct c_rest_response *res, void *user_data);
 
-/*
- * Built-in Static File Middleware
+/**
+ * @brief Built-in Static File Middleware
  * user_data should be a string representing the physical root path.
+ *
+ * @param req The request.
+ * @param res The response.
+ * @param user_data Pointer to the physical root path string.
+ * @return 0 to continue, non-zero to stop.
  */
 int c_rest_static_middleware(struct c_rest_request *req,
                              struct c_rest_response *res, void *user_data);
 
-/*
- * Built-in HSTS (HTTP Strict Transport Security) Middleware
+/**
+ * @brief Built-in HSTS (HTTP Strict Transport Security) Middleware
+ *
+ * @param req The request.
+ * @param res The response.
+ * @param user_data User data.
+ * @return 0 to continue, non-zero to stop.
  */
 int c_rest_hsts_middleware(struct c_rest_request *req,
                            struct c_rest_response *res, void *user_data);
 
-/*
- * Built-in HTTP-to-HTTPS redirect Middleware
+/**
+ * @brief Built-in HTTP-to-HTTPS redirect Middleware
+ *
+ * @param req The request.
+ * @param res The response.
+ * @param user_data User data.
+ * @return 0 to continue, non-zero to stop.
  */
 int c_rest_https_redirect_middleware(struct c_rest_request *req,
                                      struct c_rest_response *res,
@@ -85,7 +110,7 @@ typedef int (*c_rest_oauth2_verify_fn)(const char *token,
 int c_rest_oauth2_middleware(struct c_rest_request *req,
                              struct c_rest_response *res, void *user_data);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 

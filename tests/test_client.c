@@ -19,18 +19,24 @@ static void async_callback(struct c_rest_client_response *res, void *data) {
 
 int test_client(void) {
   c_rest_client_context *client = NULL;
+printf("test_client Line 20\n"); fflush(stdout);
   struct c_rest_client_response *sync_res = NULL;
+printf("test_client Line 21\n"); fflush(stdout);
   struct c_rest_client_header headers[1];
+printf("test_client Line 22\n"); fflush(stdout);
   int res;
   char *encoded = NULL;
   char *decoded = NULL;
   struct c_rest_client_form_field fields[2];
+printf("test_client Line 26\n"); fflush(stdout);
   char *body = NULL;
   size_t body_len = 0;
 
   struct c_rest_client_form_field *parsed_fields = NULL;
+printf("test_client Line 30\n"); fflush(stdout);
   size_t parsed_count = 0;
   struct c_rest_client_header *custom_headers = NULL;
+printf("test_client Line 32\n"); fflush(stdout);
   size_t custom_headers_count = 0;
   char *auth_basic = NULL;
   char *auth_bearer = NULL;
@@ -39,12 +45,14 @@ int test_client(void) {
   printf("Running client tests...\n");
 
   res = c_rest_tls_init();
+printf("test_client Line 40\n"); fflush(stdout);
   if (res != 0) {
     printf("Failed to init TLS\n");
     return 1;
   }
 
   res = c_rest_client_init(&client);
+printf("test_client Line 46\n"); fflush(stdout);
   if (res != 0 || !client) {
     printf("Failed to init client %d\n", res);
     return 1;
@@ -58,6 +66,7 @@ int test_client(void) {
   (void)res;
   if (sync_res) {
     c_rest_client_response_free(sync_res);
+printf("test_client Line 59\n"); fflush(stdout);
   }
 
   res = c_rest_client_request_async(client, "http://localhost", "POST", NULL, 0,
@@ -70,6 +79,7 @@ int test_client(void) {
   }
 
   res = c_rest_proxy_request("http://localhost/proxy", NULL, NULL);
+printf("test_client Line 71\n"); fflush(stdout);
   (void)res;
 
   /* Test URL encoding/decoding */
@@ -135,6 +145,7 @@ int test_client(void) {
     return 1;
   }
   c_rest_client_form_fields_free(parsed_fields, parsed_count);
+printf("test_client Line 136\n"); fflush(stdout);
   free(body);
 
   /* Test Header Builders */
@@ -153,6 +164,7 @@ int test_client(void) {
   if (strcmp(custom_headers[0].key, "Accept") != 0)
     return 1;
   c_rest_client_headers_free(custom_headers, custom_headers_count);
+printf("test_client Line 154\n"); fflush(stdout);
 
   /* Test Auth basic/bearer */
   if (c_rest_client_build_auth_basic("Aladdin", "open sesame", &auth_basic) !=
@@ -178,12 +190,14 @@ int test_client(void) {
                                      fields, 2, &sync_res);
   if (sync_res) {
     c_rest_client_response_free(sync_res);
+printf("test_client Line 179\n"); fflush(stdout);
     sync_res = NULL;
   }
 
   /* Test JSON parsing on dummy response */
   {
     struct c_rest_client_response dummy_res;
+printf("test_client Line 185\n"); fflush(stdout);
     dummy_res.body = (void *)"{\"key\":\"value\"}";
     dummy_res.body_len = strlen((char *)dummy_res.body);
     if (c_rest_client_response_parse_json(&dummy_res, &json) != 0) {
@@ -195,5 +209,6 @@ int test_client(void) {
   }
 
   c_rest_client_destroy(client);
+printf("test_client Line 196\n"); fflush(stdout);
   return 0;
 }

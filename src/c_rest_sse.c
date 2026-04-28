@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 #include <stdio.h>
 
 #include "c_rest_mem.h"

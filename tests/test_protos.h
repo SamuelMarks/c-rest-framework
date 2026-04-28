@@ -20,6 +20,7 @@ int test_tls_integration(void);
 int test_oauth2(void);
 int test_openapi(void);
 int test_websocket(void);
+int test_base64(void);
 int test_rate_limiting_throttling_middleware(void);
 int test_http23(void);
 int test_full_multipart_form_streaming(void);

@@ -5,6 +5,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 
 #include <ctype.h>
 
@@ -76,10 +78,10 @@ static int parse_cookies_if_needed(struct c_rest_request *req) {
     key_len = (size_t)(eq - p);
     val_len = (size_t)(semi - eq - 1);
 
-    cp = (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
+    if (C_REST_MALLOC(sizeof(struct c_rest_header), (void **)&cp) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp = NULL; }
     if (cp) {
-      cp->key = (char *)malloc(key_len + 1);
-      cp->value = (char *)malloc(val_len + 1);
+      if (C_REST_MALLOC(key_len + 1, (void **)&cp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp->key = NULL; }
+      if (C_REST_MALLOC(val_len + 1, (void **)&cp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp->value = NULL; }
       if (cp->key && cp->value) {
         memcpy(cp->key, p, key_len);
         cp->key[key_len] = '\0';
@@ -90,10 +92,10 @@ static int parse_cookies_if_needed(struct c_rest_request *req) {
         req->cookies = cp;
       } else {
         if (cp->key)
-          free(cp->key);
+          C_REST_FREE((void *)(cp->key));
         if (cp->value)
-          free(cp->value);
-        free(cp);
+          C_REST_FREE((void *)(cp->value));
+        C_REST_FREE((void *)(cp));
       }
     }
 
@@ -137,7 +139,7 @@ static int parse_query_if_needed(struct c_rest_request *req) {
       amp = p + strlen(p);
     }
 
-    qp = (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
+    if (C_REST_MALLOC(sizeof(struct c_rest_header), (void **)&qp) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp = NULL; }
     if (!qp) {
       break; /* Out of memory */
     }
@@ -149,31 +151,31 @@ static int parse_query_if_needed(struct c_rest_request *req) {
       key_len = (size_t)(eq - p);
       val_len = (size_t)(amp - eq - 1);
 
-      qp->key = (char *)malloc(key_len + 1);
+      if (C_REST_MALLOC(key_len + 1, (void **)&qp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->key = NULL; }
       if (qp->key) {
         c_rest_url_decode(qp->key, p, key_len);
       }
 
-      qp->value = (char *)malloc(val_len + 1);
+      if (C_REST_MALLOC(val_len + 1, (void **)&qp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->value = NULL; }
       if (qp->value) {
         c_rest_url_decode(qp->value, eq + 1, val_len);
       }
     } else {
       key_len = (size_t)(amp - p);
-      qp->key = (char *)malloc(key_len + 1);
+      if (C_REST_MALLOC(key_len + 1, (void **)&qp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->key = NULL; }
       if (qp->key) {
         c_rest_url_decode(qp->key, p, key_len);
       }
-      qp->value = (char *)malloc(1);
+      if (C_REST_MALLOC(1, (void **)&qp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->value = NULL; }
       if (qp->value) {
         qp->value[0] = '\0';
       }
     }
 
     if (!qp->key || !qp->value) {
-      free(qp->key);
-      free(qp->value);
-      free(qp);
+      C_REST_FREE((void *)(qp->key));
+      C_REST_FREE((void *)(qp->value));
+      C_REST_FREE((void *)(qp));
     } else {
       qp->next = req->query_params;
       req->query_params = qp;
@@ -228,7 +230,7 @@ int c_rest_request_parse_urlencoded(struct c_rest_request *req) {
       amp = p + strlen(p);
     }
 
-    qp = (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
+    if (C_REST_MALLOC(sizeof(struct c_rest_header), (void **)&qp) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp = NULL; }
     if (!qp) {
       break; /* Out of memory */
     }
@@ -240,31 +242,31 @@ int c_rest_request_parse_urlencoded(struct c_rest_request *req) {
       key_len = (size_t)(eq - p);
       val_len = (size_t)(amp - eq - 1);
 
-      qp->key = (char *)malloc(key_len + 1);
+      if (C_REST_MALLOC(key_len + 1, (void **)&qp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->key = NULL; }
       if (qp->key) {
         c_rest_url_decode(qp->key, p, key_len);
       }
 
-      qp->value = (char *)malloc(val_len + 1);
+      if (C_REST_MALLOC(val_len + 1, (void **)&qp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->value = NULL; }
       if (qp->value) {
         c_rest_url_decode(qp->value, eq + 1, val_len);
       }
     } else {
       key_len = (size_t)(amp - p);
-      qp->key = (char *)malloc(key_len + 1);
+      if (C_REST_MALLOC(key_len + 1, (void **)&qp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->key = NULL; }
       if (qp->key) {
         c_rest_url_decode(qp->key, p, key_len);
       }
-      qp->value = (char *)malloc(1);
+      if (C_REST_MALLOC(1, (void **)&qp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->value = NULL; }
       if (qp->value) {
         qp->value[0] = '\0';
       }
     }
 
     if (!qp->key || !qp->value) {
-      free(qp->key);
-      free(qp->value);
-      free(qp);
+      C_REST_FREE((void *)(qp->key));
+      C_REST_FREE((void *)(qp->value));
+      C_REST_FREE((void *)(qp));
     } else {
       qp->next = req->form_params;
       req->form_params = qp;
@@ -352,9 +354,9 @@ int c_rest_request_cleanup(struct c_rest_request *req) {
   h = req->headers;
   while (h) {
     next_h = h->next;
-    free(h->key);
-    free(h->value);
-    free(h);
+    C_REST_FREE((void *)(h->key));
+    C_REST_FREE((void *)(h->value));
+    C_REST_FREE((void *)(h));
     h = next_h;
   }
   req->headers = NULL;
@@ -362,9 +364,9 @@ int c_rest_request_cleanup(struct c_rest_request *req) {
   h = req->query_params;
   while (h) {
     next_h = h->next;
-    free(h->key);
-    free(h->value);
-    free(h);
+    C_REST_FREE((void *)(h->key));
+    C_REST_FREE((void *)(h->value));
+    C_REST_FREE((void *)(h));
     h = next_h;
   }
   req->query_params = NULL;
@@ -372,9 +374,9 @@ int c_rest_request_cleanup(struct c_rest_request *req) {
   h = req->form_params;
   while (h) {
     next_h = h->next;
-    free(h->key);
-    free(h->value);
-    free(h);
+    C_REST_FREE((void *)(h->key));
+    C_REST_FREE((void *)(h->value));
+    C_REST_FREE((void *)(h));
     h = next_h;
   }
   req->form_params = NULL;
@@ -382,9 +384,9 @@ int c_rest_request_cleanup(struct c_rest_request *req) {
   h = req->cookies;
   while (h) {
     next_h = h->next;
-    free(h->key);
-    free(h->value);
-    free(h);
+    C_REST_FREE((void *)(h->key));
+    C_REST_FREE((void *)(h->value));
+    C_REST_FREE((void *)(h));
     h = next_h;
   }
   req->cookies = NULL;
@@ -394,16 +396,16 @@ int c_rest_request_cleanup(struct c_rest_request *req) {
     struct c_rest_path_var *next_pv;
     while (pv) {
       next_pv = pv->next;
-      free(pv->name);
-      free(pv->value);
-      free(pv);
+      C_REST_FREE((void *)(pv->name));
+      C_REST_FREE((void *)(pv->value));
+      C_REST_FREE((void *)(pv));
       pv = next_pv;
     }
     req->path_vars = NULL;
   }
 
   if (req->body) {
-    free(req->body);
+    C_REST_FREE((void *)(req->body));
     req->body = NULL;
   }
   return 0;
@@ -423,7 +425,7 @@ int c_rest_request_get_auth_bearer(struct c_rest_request *req,
     return 1;
   }
 
-  *out_token = (char *)malloc(strlen(auth_val + 7) + 1);
+  if (C_REST_MALLOC(strlen(auth_val + 7) + 1, (void **)out_token) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *out_token = NULL; }
   if (!*out_token)
     return 1;
 
@@ -465,25 +467,25 @@ int c_rest_request_get_auth_basic(struct c_rest_request *req,
     return 1;
   }
 
-  decoded = (char *)malloc(decoded_len + 1);
+  if (C_REST_MALLOC(decoded_len + 1, (void **)&decoded) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); decoded = NULL; }
   if (!decoded)
     return 1;
 
   if (c_rest_base64_decode(auth_val, auth_len, (unsigned char *)decoded,
                            &decoded_len) != 0) {
-    free(decoded);
+    C_REST_FREE((void *)(decoded));
     return 1;
   }
   decoded[decoded_len] = '\0';
 
   colon = strchr(decoded, ':');
   if (!colon) {
-    free(decoded);
+    C_REST_FREE((void *)(decoded));
     return 1;
   }
 
   *colon = '\0';
-  *out_username = (char *)malloc(strlen(decoded) + 1);
+  if (C_REST_MALLOC(strlen(decoded) + 1, (void **)out_username) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *out_username = NULL; }
   if (*out_username) {
 #if defined(_MSC_VER)
     strcpy_s(*out_username, strlen(decoded) + 1, decoded);
@@ -492,7 +494,7 @@ int c_rest_request_get_auth_basic(struct c_rest_request *req,
 #endif
   }
 
-  *out_password = (char *)malloc(strlen(colon + 1) + 1);
+  if (C_REST_MALLOC(strlen(colon + 1) + 1, (void **)out_password) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *out_password = NULL; }
   if (*out_password) {
 #if defined(_MSC_VER)
     strcpy_s(*out_password, strlen(colon + 1) + 1, colon + 1);
@@ -500,13 +502,13 @@ int c_rest_request_get_auth_basic(struct c_rest_request *req,
     strcpy(*out_password, colon + 1);
 #endif
   }
-  free(decoded);
+  C_REST_FREE((void *)(decoded));
 
   if (!*out_username || !*out_password) {
     if (*out_username)
-      free(*out_username);
+      C_REST_FREE((void *)(*out_username));
     if (*out_password)
-      free(*out_password);
+      C_REST_FREE((void *)(*out_password));
     return 1;
   }
 

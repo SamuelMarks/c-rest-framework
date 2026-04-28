@@ -4,6 +4,8 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 #include <stdio.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -117,7 +119,7 @@ struct thread_wrapper_args {
 static unsigned __stdcall thread_wrapper(void *arg) {
   struct thread_wrapper_args *args = (struct thread_wrapper_args *)arg;
   args->func(args->arg);
-  free(args);
+  C_REST_FREE((void *)(args));
   return 0;
 }
 
@@ -130,8 +132,7 @@ int c_rest_thread_create(c_rest_thread_t *out_thread, c_rest_thread_fn func,
   if (!out_thread || !func)
     return 1;
 
-  args =
-      (struct thread_wrapper_args *)malloc(sizeof(struct thread_wrapper_args));
+  if (C_REST_MALLOC(sizeof(struct thread_wrapper_args), (void **)&(args)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); args = NULL; }
   if (!args)
     return 1;
 
@@ -140,7 +141,7 @@ int c_rest_thread_create(c_rest_thread_t *out_thread, c_rest_thread_fn func,
 
   hThread = (HANDLE)_beginthreadex(NULL, 0, thread_wrapper, args, 0, &threadID);
   if (!hThread) {
-    free(args);
+    C_REST_FREE((void *)(args));
     return 1;
   }
 
@@ -170,7 +171,7 @@ int c_rest_mutex_create(c_rest_mutex_t *out_mutex) {
   if (!out_mutex)
     return 1;
 
-  cs = (CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
+  if (C_REST_MALLOC(sizeof(CRITICAL_SECTION), (void **)&cs) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cs = NULL; }
   if (!cs)
     return 1;
 
@@ -203,7 +204,7 @@ int c_rest_mutex_destroy(c_rest_mutex_t mutex) {
     return 1;
 
   DeleteCriticalSection(cs);
-  free(cs);
+  C_REST_FREE((void *)(cs));
   return 0;
 }
 
@@ -222,7 +223,7 @@ int c_rest_cond_create(c_rest_cond_t *out_cond) {
   if (!out_cond)
     return 1;
 
-  cond = (struct cond_impl *)malloc(sizeof(struct cond_impl));
+  if (C_REST_MALLOC(sizeof(struct cond_impl), (void **)&cond) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cond = NULL; }
   if (!cond)
     return 1;
 
@@ -238,7 +239,7 @@ int c_rest_cond_create(c_rest_cond_t *out_cond) {
     if (cond->events[1])
       CloseHandle(cond->events[1]);
     DeleteCriticalSection(&cond->waiters_count_lock);
-    free(cond);
+    C_REST_FREE((void *)(cond));
     return 1;
   }
 
@@ -303,7 +304,7 @@ int c_rest_cond_destroy(c_rest_cond_t c) {
   CloseHandle(cond->events[0]);
   CloseHandle(cond->events[1]);
   DeleteCriticalSection(&cond->waiters_count_lock);
-  free(cond);
+  C_REST_FREE((void *)(cond));
 
   return 0;
 }

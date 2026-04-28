@@ -17,8 +17,11 @@ extern "C" {
  * @brief JWT Middleware configuration context.
  */
 struct c_rest_jwt_middleware_config {
+  /** @brief Secret buffer */
   const unsigned char *secret;
+  /** @brief Secret buffer length */
   size_t secret_len;
+  /** @brief Pointer to user verification callback */
   int (*verify_payload)(const char *payload, void **out_auth_context);
 };
 
@@ -48,9 +51,8 @@ int c_rest_jwt_middleware(struct c_rest_request *req,
 
 #endif /* C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE */
 
-/* __cplusplus */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
 #endif /* C_REST_JWT_MIDDLEWARE_H */

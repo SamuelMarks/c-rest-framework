@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 
 #include <ctype.h>
 
@@ -46,12 +48,12 @@ int c_rest_response_set_header(struct c_rest_response *res, const char *key,
       if (c_rest_stricmp(h->key, key) == 0) {
         char *new_val;
         val_len = strlen(value) + 1;
-        new_val = (char *)malloc(val_len);
+        if (C_REST_MALLOC(val_len, (void **)&new_val) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_val = NULL; }
         if (!new_val) {
           return 1;
         }
         SAFE_STRCPY(new_val, val_len, value);
-        free(h->value);
+        C_REST_FREE((void *)(h->value));
         h->value = new_val;
         return 0;
       }
@@ -59,16 +61,16 @@ int c_rest_response_set_header(struct c_rest_response *res, const char *key,
   }
 
   /* Add new header */
-  new_h = (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
+  if (C_REST_MALLOC(sizeof(struct c_rest_header), (void **)&new_h) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h = NULL; }
   if (!new_h) {
     return 1;
   }
-  new_h->key = (char *)malloc(strlen(key) + 1);
-  new_h->value = (char *)malloc(strlen(value) + 1);
+  if (C_REST_MALLOC(strlen(key) + 1, (void **)&new_h->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->key = NULL; }
+  if (C_REST_MALLOC(strlen(value) + 1, (void **)&new_h->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->value = NULL; }
   if (!new_h->key || !new_h->value) {
-    free(new_h->key);
-    free(new_h->value);
-    free(new_h);
+    C_REST_FREE((void *)(new_h->key));
+    C_REST_FREE((void *)(new_h->value));
+    C_REST_FREE((void *)(new_h));
     return 1;
   }
   SAFE_STRCPY(new_h->key, strlen(key) + 1, key);
@@ -215,9 +217,9 @@ int c_rest_response_json(struct c_rest_response *res, const char *json_str) {
   c_rest_response_set_header(res, "Content-Type", "application/json");
 
   if (res->body) {
-    free(res->body);
+    C_REST_FREE((void *)(res->body));
   }
-  res->body = (char *)malloc(len + 1);
+  if (C_REST_MALLOC(len + 1, (void **)&res->body) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); res->body = NULL; }
   if (!res->body) {
     return 1;
   }
@@ -319,9 +321,9 @@ int c_rest_response_html(struct c_rest_response *res, const char *html_str) {
   c_rest_response_set_header(res, "Content-Type", "text/html");
 
   if (res->body) {
-    free(res->body);
+    C_REST_FREE((void *)(res->body));
   }
-  res->body = (char *)malloc(len + 1);
+  if (C_REST_MALLOC(len + 1, (void **)&res->body) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); res->body = NULL; }
   if (!res->body) {
     return 1;
   }
@@ -442,7 +444,7 @@ int c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
     len += strlen(attributes) + 2; /* ; attributes */
   }
 
-  cookie_str = (char *)malloc(len);
+  if (C_REST_MALLOC(len, (void **)&cookie_str) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cookie_str = NULL; }
   if (!cookie_str) {
     return 1;
   }
@@ -462,7 +464,7 @@ int c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
 #endif
 
   ret = c_rest_response_set_header(res, "Set-Cookie", cookie_str);
-  free(cookie_str);
+  C_REST_FREE((void *)(cookie_str));
 
   return ret;
 }
@@ -487,15 +489,15 @@ int c_rest_response_cleanup(struct c_rest_response *res) {
   h = res->headers;
   while (h) {
     next_h = h->next;
-    free(h->key);
-    free(h->value);
-    free(h);
+    C_REST_FREE((void *)(h->key));
+    C_REST_FREE((void *)(h->value));
+    C_REST_FREE((void *)(h));
     h = next_h;
   }
   res->headers = NULL;
 
   if (res->body) {
-    free(res->body);
+    C_REST_FREE((void *)(res->body));
     res->body = NULL;
   }
   return 0;
@@ -570,7 +572,7 @@ int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
   }
   est_len += res->body_len;
 
-  buf = (char *)malloc(est_len);
+  if (C_REST_MALLOC(est_len, (void **)&buf) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); buf = NULL; }
   if (!buf)
     return 1;
 

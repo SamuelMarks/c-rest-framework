@@ -2,6 +2,8 @@
 #include "c_rest_list.h"
 
 #include <stdlib.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 /* clang-format on */
 
 int c_rest_list_init(c_rest_list *list) {
@@ -18,7 +20,7 @@ int c_rest_list_push_back(c_rest_list *list, void *data) {
   if (!list)
     return 1;
 
-  node = (c_rest_list_node *)malloc(sizeof(c_rest_list_node));
+  if (C_REST_MALLOC(sizeof(c_rest_list_node), (void **)&node) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); node = NULL; }
   if (!node)
     return 1;
 
@@ -56,7 +58,7 @@ int c_rest_list_pop_front(c_rest_list *list, void **out_data) {
     list->tail = NULL;
   }
 
-  free(node);
+  C_REST_FREE((void *)(node));
   list->size--;
 
   *out_data = data;
@@ -76,7 +78,7 @@ int c_rest_list_destroy(c_rest_list *list, void (*free_data)(void *)) {
     if (free_data && node->data) {
       free_data(node->data);
     }
-    free(node);
+    C_REST_FREE((void *)(node));
     node = next;
   }
 

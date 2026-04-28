@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 /* clang-format on */
 
 #if defined(_MSC_VER)
@@ -16,7 +18,7 @@ int c_rest_string_init(c_rest_string *str, size_t initial_capacity) {
     return 1;
   if (initial_capacity == 0)
     initial_capacity = 16;
-  str->data = (char *)malloc(initial_capacity);
+  if (C_REST_MALLOC(initial_capacity, (void **)&str->data) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); str->data = NULL; }
   if (!str->data)
     return 1;
   str->data[0] = '\0';
@@ -34,7 +36,7 @@ int c_rest_string_append(c_rest_string *str, const char *data, size_t len) {
     while (str->length + len + 1 > new_cap) {
       new_cap *= 2;
     }
-    new_data = (char *)realloc(str->data, new_cap);
+    if (C_REST_REALLOC(str->data, new_cap, (void **)&new_data) != 0) { LOG_DEBUG("C_REST_REALLOC failed"); new_data = NULL; }
     if (!new_data)
       return 1;
     str->data = new_data;
@@ -56,7 +58,7 @@ int c_rest_string_destroy(c_rest_string *str) {
   if (!str)
     return 1;
   if (str->data)
-    free(str->data);
+    C_REST_FREE((void *)(str->data));
   str->data = NULL;
   str->length = 0;
   str->capacity = 0;

@@ -13,8 +13,8 @@
 void __stdcall Sleep(unsigned long dwMilliseconds);
 #else
 #include <unistd.h>
-#endif
 /* clang-format on */
+#endif
 
 static void sleep_ms(int milliseconds) {
 #if defined(_WIN32)

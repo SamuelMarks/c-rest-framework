@@ -193,6 +193,11 @@ int main(void) {
   if (res != 0)
     return res;
 
+  printf("Running test_base64...\n");
+  res = test_base64();
+  if (res != 0)
+    return res;
+
 #ifndef CDD_DOS
   printf("Running test_tls_integration...\n");
   res = test_tls_integration();

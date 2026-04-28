@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "c_rest_mem.h"
+#include "c_rest_log.h"
+#include "c_rest_mem.h"
 /* clang-format on */
 
 #ifdef C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING

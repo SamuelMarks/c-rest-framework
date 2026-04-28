@@ -10,7 +10,6 @@ struct c_orm_connection;
 struct c_orm_pool;
 struct c_orm_query;
 
-/* Database configuration for the framework context */
 /** @brief Database configuration */
 struct c_rest_db_config {
   /** @brief Connection string */
@@ -23,18 +22,22 @@ struct c_rest_db_config {
   int connect_timeout_ms;
 };
 
-/*
- * Wrapper for c-orm initialization within the framework.
- * Returns 0 on success, non-zero on error.
+/**
+ * @brief Wrapper for c-orm initialization within the framework.
+ * @param config Pointer to the database configuration.
+ * @param pool Pointer to hold the initialized pool.
+ * @return 0 on success, non-zero on error.
  */
 int c_rest_orm_init(struct c_rest_db_config *config, struct c_orm_pool **pool);
 
-/*
- * Wrapper for c-orm cleanup.
+/**
+ * @brief Wrapper for c-orm cleanup.
+ * @param pool The pool to cleanup.
+ * @return 0 on success, non-zero on error.
  */
 int c_rest_orm_cleanup(struct c_orm_pool *pool);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 

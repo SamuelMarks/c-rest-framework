@@ -3,6 +3,8 @@
 #include "c_rest_platform.h"
 
 #include <stdlib.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 #include <stdio.h>
 /* clang-format on */
 
@@ -104,7 +106,7 @@ static void worker_thread(void *arg) {
   if (wargs->ctx->allocator.free_cb) {
     wargs->ctx->allocator.free_cb(wargs);
   } else {
-    free(wargs);
+    C_REST_FREE((void *)(wargs));
   }
 }
 

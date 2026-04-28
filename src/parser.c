@@ -4,6 +4,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 /* clang-format on */
 
 int c_rest_parser_init(c_rest_parser_context *ctx,
@@ -90,7 +92,7 @@ static int basic_init(c_rest_parser_context *ctx,
   (void)callbacks;
   (void)user_data;
 
-  st = (struct basic_parser_state *)malloc(sizeof(struct basic_parser_state));
+  if (C_REST_MALLOC(sizeof(struct basic_parser_state), (void **)&st) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); st = NULL; }
   if (!st)
     return 1;
 
@@ -128,7 +130,8 @@ static int append_buf(struct basic_parser_state *st, char c, int is_key) {
   if (is_key) {
     if (st->key_len + 1 >= st->key_cap) {
       size_t new_cap = st->key_cap == 0 ? 64 : st->key_cap * 2;
-      char *n = (char *)realloc(st->key_buf, new_cap);
+      char *n = NULL;
+      if (C_REST_REALLOC(st->key_buf, new_cap, (void **)&n) != 0) { LOG_DEBUG("C_REST_REALLOC failed"); }
       if (!n)
         return 1;
       st->key_buf = n;
@@ -139,7 +142,8 @@ static int append_buf(struct basic_parser_state *st, char c, int is_key) {
   } else {
     if (st->buf_len + 1 >= st->buf_cap) {
       size_t new_cap = st->buf_cap == 0 ? 256 : st->buf_cap * 2;
-      char *n = (char *)realloc(st->buf, new_cap);
+      char *n = NULL;
+      if (C_REST_REALLOC(st->buf, new_cap, (void **)&n) != 0) { LOG_DEBUG("C_REST_REALLOC failed"); }
       if (!n)
         return 1;
       st->buf = n;
@@ -353,10 +357,10 @@ static int basic_destroy(c_rest_parser_context *ctx) {
     return 1;
   st = (struct basic_parser_state *)ctx->internal_state;
   if (st->buf)
-    free(st->buf);
+    C_REST_FREE((void *)(st->buf));
   if (st->key_buf)
-    free(st->key_buf);
-  free(st);
+    C_REST_FREE((void *)(st->key_buf));
+  C_REST_FREE((void *)(st));
   ctx->internal_state = NULL;
   return 0;
 }

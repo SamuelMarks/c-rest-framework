@@ -4,6 +4,7 @@
 /* clang-format off */
 #include <stddef.h>
 /* clang-format on */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,12 +27,43 @@ typedef struct c_rest_list {
   size_t size;
 } c_rest_list;
 
+/**
+ * @brief Initializes a linked list.
+ *
+ * @param list The list to initialize.
+ * @return 0 on success, non-zero on error.
+ */
 int c_rest_list_init(c_rest_list *list);
+
+/**
+ * @brief Pushes data to the back of the linked list.
+ *
+ * @param list The linked list.
+ * @param data The data to push.
+ * @return 0 on success, non-zero on error.
+ */
 int c_rest_list_push_back(c_rest_list *list, void *data);
+
+/**
+ * @brief Pops data from the front of the linked list.
+ *
+ * @param list The linked list.
+ * @param out_data Pointer to hold the popped data.
+ * @return 0 on success, non-zero on error.
+ */
 int c_rest_list_pop_front(c_rest_list *list, void **out_data);
+
+/**
+ * @brief Destroys the linked list.
+ *
+ * @param list The list to destroy.
+ * @param free_data Function to free the data in the list nodes.
+ * @return 0 on success, non-zero on error.
+ */
 int c_rest_list_destroy(c_rest_list *list, void (*free_data)(void *));
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
 #endif /* C_REST_LIST_H */

@@ -2,6 +2,8 @@
 #include "c_rest_ts_queue.h"
 
 #include <stdlib.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 /* clang-format on */
 
 int c_rest_ts_queue_init(c_rest_ts_queue *queue) {
@@ -29,7 +31,7 @@ int c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data) {
   if (!queue)
     return 1;
 
-  node = (c_rest_ts_queue_node *)malloc(sizeof(c_rest_ts_queue_node));
+  if (C_REST_MALLOC(sizeof(c_rest_ts_queue_node), (void **)&node) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); node = NULL; }
   if (!node)
     return 1;
 
@@ -40,7 +42,7 @@ int c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data) {
 
   if (queue->is_closed) {
     c_rest_mutex_unlock(queue->mutex);
-    free(node);
+    C_REST_FREE((void *)(node));
     return 1;
   }
 
@@ -88,7 +90,7 @@ int c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data) {
 
   c_rest_mutex_unlock(queue->mutex);
 
-  free(node);
+  C_REST_FREE((void *)(node));
   *out_data = data;
   return 0;
 }
@@ -119,7 +121,7 @@ int c_rest_ts_queue_destroy(c_rest_ts_queue *queue, void (*free_data)(void *)) {
     if (free_data && node->data) {
       free_data(node->data);
     }
-    free(node);
+    C_REST_FREE((void *)(node));
     node = next;
   }
   queue->head = NULL;

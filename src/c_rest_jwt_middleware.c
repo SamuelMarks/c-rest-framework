@@ -6,6 +6,8 @@
 #include "c_rest_crypto.h"
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 /* clang-format on */
 
 int c_rest_jwt_middleware_config_init(
@@ -54,7 +56,7 @@ int c_rest_jwt_middleware(struct c_rest_request *req,
   verify_res = c_rest_jwt_verify_hs256(token, config->secret,
                                        config->secret_len, &payload);
   if (verify_res != 0) {
-    free(token);
+    C_REST_FREE((void *)(token));
     c_rest_response_set_status(res, 401);
     c_rest_response_set_header(res, "WWW-Authenticate",
                                "Bearer realm=\"API\", error=\"invalid_token\"");
@@ -64,8 +66,8 @@ int c_rest_jwt_middleware(struct c_rest_request *req,
 
   if (config->verify_payload) {
     if (config->verify_payload(payload, &auth_ctx) != 0) {
-      free(token);
-      free(payload);
+      C_REST_FREE((void *)(token));
+      C_REST_FREE((void *)(payload));
       c_rest_response_set_status(res, 401);
       c_rest_response_set_header(
           res, "WWW-Authenticate",
@@ -81,8 +83,8 @@ int c_rest_jwt_middleware(struct c_rest_request *req,
 
   req->auth_context = auth_ctx;
 
-  free(token);
-  free(payload);
+  C_REST_FREE((void *)(token));
+  C_REST_FREE((void *)(payload));
   return 0;
 }
 

@@ -22,6 +22,8 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "c_rest_log.h"
+#include "c_rest_mem.h"
 #include <string.h>
 /* clang-format on */
 
@@ -73,7 +75,7 @@ int c_rest_client_init(c_rest_client_context **out_client) {
     return 1;
 
   if (http_client_init(&ctx->client) != 0) {
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
     return 1;
   }
 
@@ -83,7 +85,7 @@ int c_rest_client_init(c_rest_client_context **out_client) {
   if (http_wininet_context_init(
           (struct HttpTransportContext **)&ctx->client.transport) != 0) {
     http_client_free(&ctx->client);
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
     return 1;
   }
   ctx->client.send = http_wininet_send;
@@ -91,7 +93,7 @@ int c_rest_client_init(c_rest_client_context **out_client) {
   if (http_winhttp_context_init(
           (struct HttpTransportContext **)&ctx->client.transport) != 0) {
     http_client_free(&ctx->client);
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
     return 1;
   }
   ctx->client.send = http_winhttp_send;
@@ -101,7 +103,7 @@ int c_rest_client_init(c_rest_client_context **out_client) {
   if (http_curl_context_init(
           (struct HttpTransportContext **)&ctx->client.transport) != 0) {
     http_client_free(&ctx->client);
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
     return 1;
   }
   ctx->client.send = http_curl_send;
@@ -138,7 +140,7 @@ int c_rest_client_destroy(c_rest_client_context *client) {
 #endif
 
   http_client_free(&client->client);
-  free(client);
+  C_REST_FREE((void *)(client));
   return 0;
 }
 
@@ -148,15 +150,15 @@ int c_rest_client_response_free(struct c_rest_client_response *res) {
     return 1;
   if (res->headers) {
     for (i = 0; i < res->headers_count; ++i) {
-      free((void *)res->headers[i].key);
-      free((void *)res->headers[i].value);
+      C_REST_FREE((void *)(res->headers[i].key));
+      C_REST_FREE((void *)(res->headers[i].value));
     }
-    free(res->headers);
+    C_REST_FREE((void *)(res->headers));
   }
   if (res->body) {
-    free(res->body);
+    C_REST_FREE((void *)(res->body));
   }
-  free(res);
+  C_REST_FREE((void *)(res));
   return 0;
 }
 
@@ -247,7 +249,7 @@ int c_rest_client_request_sync(c_rest_client_context *client, const char *url,
 
   if (res) {
     http_response_free(res);
-    free(res);
+    C_REST_FREE((void *)(res));
   }
 
   req.url = NULL;
@@ -401,9 +403,9 @@ int c_rest_client_build_form_urlencoded(
     total_len += val_len;
 
     if (ekey)
-      free(ekey);
+      C_REST_FREE((void *)(ekey));
     if (eval)
-      free(eval);
+      C_REST_FREE((void *)(eval));
   }
 
   buf = (char *)malloc(total_len + 1);
@@ -428,14 +430,14 @@ int c_rest_client_build_form_urlencoded(
       size_t len = strlen(ekey);
       memcpy(buf + curr_pos, ekey, len);
       curr_pos += len;
-      free(ekey);
+      C_REST_FREE((void *)(ekey));
     }
     buf[curr_pos++] = '=';
     if (eval) {
       size_t len = strlen(eval);
       memcpy(buf + curr_pos, eval, len);
       curr_pos += len;
-      free(eval);
+      C_REST_FREE((void *)(eval));
     }
   }
 
@@ -537,11 +539,11 @@ int c_rest_client_parse_form_urlencoded(
 
     if (ekey) {
       c_rest_client_url_decode(ekey, (char **)&fields[i].key);
-      free(ekey);
+      C_REST_FREE((void *)(ekey));
     }
     if (eval) {
       c_rest_client_url_decode(eval, (char **)&fields[i].value);
-      free(eval);
+      C_REST_FREE((void *)(eval));
     }
 
     if (*amp == '\0') {
@@ -562,11 +564,11 @@ int c_rest_client_form_fields_free(struct c_rest_client_form_field *fields,
     return 1;
   for (i = 0; i < num_fields; ++i) {
     if (fields[i].key)
-      free((void *)fields[i].key);
+      C_REST_FREE((void *)(fields[i].key));
     if (fields[i].value)
-      free((void *)fields[i].value);
+      C_REST_FREE((void *)(fields[i].value));
   }
-  free(fields);
+  C_REST_FREE((void *)(fields));
   return 0;
 }
 
@@ -599,7 +601,7 @@ int c_rest_client_header_set(struct c_rest_client_header **headers,
 
   (*headers)[*headers_count].value = (char *)malloc(vlen);
   if (!(*headers)[*headers_count].value) {
-    free((void *)(*headers)[*headers_count].key);
+    C_REST_FREE((void *)((*headers)[*headers_count].key));
     return 1;
   }
 #if defined(_MSC_VER)
@@ -619,11 +621,11 @@ int c_rest_client_headers_free(struct c_rest_client_header *headers,
     return 1;
   for (i = 0; i < headers_count; ++i) {
     if (headers[i].key)
-      free((void *)headers[i].key);
+      C_REST_FREE((void *)(headers[i].key));
     if (headers[i].value)
-      free((void *)headers[i].value);
+      C_REST_FREE((void *)(headers[i].value));
   }
-  free(headers);
+  C_REST_FREE((void *)(headers));
   return 0;
 }
 
@@ -656,28 +658,28 @@ int c_rest_client_build_auth_basic(const char *username, const char *password,
   b64_len = 0;
   if (c_rest_base64_encode((unsigned char *)concat, clen, NULL, &b64_len) !=
       0) {
-    free(concat);
+    C_REST_FREE((void *)(concat));
     return 1;
   }
 
   b64 = (char *)malloc(b64_len + 1);
   if (!b64) {
-    free(concat);
+    C_REST_FREE((void *)(concat));
     return 1;
   }
 
   if (c_rest_base64_encode((unsigned char *)concat, clen, b64, &b64_len) != 0) {
-    free(concat);
-    free(b64);
+    C_REST_FREE((void *)(concat));
+    C_REST_FREE((void *)(b64));
     return 1;
   }
   b64[b64_len] = '\0';
-  free(concat);
+  C_REST_FREE((void *)(concat));
 
   hlen = 6 + b64_len + 1; /* "Basic " + b64 + null */
   *out_header = (char *)malloc(hlen);
   if (!*out_header) {
-    free(b64);
+    C_REST_FREE((void *)(b64));
     return 1;
   }
 
@@ -687,7 +689,7 @@ int c_rest_client_build_auth_basic(const char *username, const char *password,
   sprintf(*out_header, "Basic %s", b64);
 #endif
 
-  free(b64);
+  C_REST_FREE((void *)(b64));
   return 0;
 }
 
@@ -748,7 +750,7 @@ int c_rest_client_post_form_sync(c_rest_client_context *client, const char *url,
 
   c_rest_client_headers_free(all_headers, all_headers_count);
   if (body)
-    free(body);
+    C_REST_FREE((void *)(body));
 
   return ret;
 }
@@ -769,7 +771,7 @@ int c_rest_client_response_parse_json(const struct c_rest_client_response *res,
     str[res->body_len] = '\0';
 
     *out_json = (void *)json_parse_string(str);
-    free(str);
+    C_REST_FREE((void *)(str));
 
     if (!*out_json)
       return 1;

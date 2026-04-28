@@ -2,6 +2,8 @@
 #include "c_rest_pool.h"
 
 #include <stdlib.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 /* clang-format on */
 
 int c_rest_pool_init(c_rest_pool *pool, size_t object_size) {
@@ -24,7 +26,7 @@ int c_rest_pool_allocate(c_rest_pool *pool, void **out_ptr) {
     *out_ptr = (void *)block;
     return 0;
   }
-  *out_ptr = malloc(pool->object_size);
+  if (C_REST_MALLOC(pool->object_size, (void **)out_ptr) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *out_ptr = NULL; }
   return *out_ptr ? 0 : 1;
 }
 
@@ -48,7 +50,7 @@ int c_rest_pool_destroy(c_rest_pool *pool) {
   block = pool->free_list;
   while (block) {
     next = block->next;
-    free(block);
+    C_REST_FREE((void *)(block));
     block = next;
   }
   pool->free_list = NULL;

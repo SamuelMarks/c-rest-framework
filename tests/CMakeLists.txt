@@ -24,6 +24,7 @@ set(TEST_SRCS
     test_router.c
     test_request_response.c
     test_tls_context.c
+    test_base64.c
 )
 
 if(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)

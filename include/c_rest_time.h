@@ -28,7 +28,7 @@ int c_rest_http_date_format(time_t t, char *out_str, size_t out_len);
  */
 int c_rest_http_date_parse(const char *date_str, time_t *out_t);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 

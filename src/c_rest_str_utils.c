@@ -1,52 +1,74 @@
 /* clang-format off */
 #include "c_rest_str_utils.h"
+#include "c_rest_log.h"
 
 #include <ctype.h>
 #include <string.h>
+#include <stdlib.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
+/* clang-format on */
 
-int c_rest_strcasecmp(const char *s1, const char *s2) {
-  if (!s1 || !s2)
-    return -1;
+int c_rest_strcasecmp(const char *s1, const char *s2, int *out_cmp) {
+  if (!s1 || !s2 || !out_cmp) {
+    LOG_DEBUG("c_rest_strcasecmp: invalid arguments");
+    return 1;
+  }
   while (*s1 && *s2) {
     int c1 = tolower((unsigned char)*s1);
     int c2 = tolower((unsigned char)*s2);
     if (c1 != c2) {
-      return c1 - c2;
+      *out_cmp = c1 - c2;
+      return 0;
     }
     s1++;
     s2++;
   }
-  return tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
+  *out_cmp = tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
+  return 0;
 }
 
-int c_rest_strncasecmp(const char *s1, const char *s2, size_t n) {
-  if (!s1 || !s2 || n == 0)
+int c_rest_strncasecmp(const char *s1, const char *s2, size_t n, int *out_cmp) {
+  if (!s1 || !s2 || !out_cmp) {
+    LOG_DEBUG("c_rest_strncasecmp: invalid arguments");
+    return 1;
+  }
+  if (n == 0) {
+    *out_cmp = 0;
     return 0;
+  }
   while (n-- > 0 && *s1 && *s2) {
     int c1 = tolower((unsigned char)*s1);
     int c2 = tolower((unsigned char)*s2);
     if (c1 != c2) {
-      return c1 - c2;
+      *out_cmp = c1 - c2;
+      return 0;
     }
     s1++;
     s2++;
   }
   if (n == (size_t)-1) {
+    *out_cmp = 0;
     return 0;
   }
-  return tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
+  *out_cmp = tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
+  return 0;
 }
 
 int c_rest_strlcpy(char *dst, const char *src, size_t dsize, size_t *out_len) {
   size_t src_len;
   size_t copy_len;
 
-  if (!out_len)
+  if (!out_len) {
+    LOG_DEBUG("c_rest_strlcpy: invalid out_len");
     return 1;
+  }
   *out_len = 0;
 
-  if (!dst || !src)
+  if (!dst || !src) {
+    LOG_DEBUG("c_rest_strlcpy: invalid dst or src");
     return 1;
+  }
 
   src_len = strlen(src);
   if (dsize == 0) {
@@ -72,12 +94,16 @@ int c_rest_strlcat(char *dst, const char *src, size_t dsize, size_t *out_len) {
   size_t space_left;
   size_t copy_len;
 
-  if (!out_len)
+  if (!out_len) {
+    LOG_DEBUG("c_rest_strlcat: invalid out_len");
     return 1;
+  }
   *out_len = 0;
 
-  if (!dst || !src)
+  if (!dst || !src) {
+    LOG_DEBUG("c_rest_strlcat: invalid dst or src");
     return 1;
+  }
 
   dst_len = strlen(dst);
   src_len = strlen(src);
@@ -100,14 +126,16 @@ int c_rest_strlcat(char *dst, const char *src, size_t dsize, size_t *out_len) {
   return 0;
 }
 
-#include <stdlib.h>
-/* clang-format on */
-
 int c_rest_url_decode(char *dst, const char *src, size_t len) {
   size_t i;
-  char *p = dst;
-  if (!dst || !src)
+  char *p;
+  
+  if (!dst || !src) {
+    LOG_DEBUG("c_rest_url_decode: invalid dst or src");
     return 1;
+  }
+  
+  p = dst;
   for (i = 0; i < len; i++) {
     if (src[i] == '%') {
       if (i + 2 < len) {

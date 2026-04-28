@@ -2,6 +2,8 @@
 #include "c_rest_modality.h"
 
 #include <stdlib.h>
+#include "c_rest_mem.h"
+#include "c_rest_log.h"
 #include <stdio.h>
 
 extern const struct c_rest_modality_vtable sync_vtable;
@@ -98,7 +100,7 @@ int c_rest_init(enum c_rest_modality_type type,
     return 1; /* Unsupported modality or invalid enum */
   }
 
-  ctx = (struct c_rest_context *)malloc(sizeof(struct c_rest_context));
+  if (C_REST_MALLOC(sizeof(struct c_rest_context), (void **)&ctx) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); ctx = NULL; }
   if (!ctx) {
     return 1; /* Out of memory */
   }
@@ -133,7 +135,7 @@ int c_rest_init(enum c_rest_modality_type type,
 
   res = ctx->vtable->init(ctx);
   if (res != 0) {
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
     return res;
   }
 
@@ -207,7 +209,7 @@ int c_rest_destroy(struct c_rest_context *ctx) {
   if (ctx->allocator.free_cb) {
     ctx->allocator.free_cb(ctx);
   } else {
-    free(ctx);
+    C_REST_FREE((void *)(ctx));
   }
 
   c_rest_platform_cleanup();
@@ -263,7 +265,7 @@ struct connection_state {
 static void on_method(c_rest_parser_context *pctx, const char *method,
                       size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
-  st->method = (char *)malloc(len + 1);
+  if (C_REST_MALLOC(len + 1, (void **)&st->method) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); st->method = NULL; }
   if (st->method) {
     memcpy(st->method, method, len);
     st->method[len] = '\0';
@@ -272,7 +274,7 @@ static void on_method(c_rest_parser_context *pctx, const char *method,
 
 static void on_url(c_rest_parser_context *pctx, const char *url, size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
-  st->url = (char *)malloc(len + 1);
+  if (C_REST_MALLOC(len + 1, (void **)&st->url) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); st->url = NULL; }
   if (st->url) {
     memcpy(st->url, url, len);
     st->url[len] = '\0';
@@ -282,11 +284,10 @@ static void on_url(c_rest_parser_context *pctx, const char *url, size_t len) {
 static void on_header(c_rest_parser_context *pctx, const char *key,
                       size_t key_len, const char *val, size_t val_len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
-  struct c_rest_header *h =
-      (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
+  struct c_rest_header *h = NULL; if (C_REST_MALLOC(sizeof(struct c_rest_header), (void **)&h) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); }
   if (h) {
-    h->key = (char *)malloc(key_len + 1);
-    h->value = (char *)malloc(val_len + 1);
+    if (C_REST_MALLOC(key_len + 1, (void **)&h->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); h->key = NULL; }
+    if (C_REST_MALLOC(val_len + 1, (void **)&h->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); h->value = NULL; }
     if (h->key && h->value) {
       memcpy(h->key, key, key_len);
       h->key[key_len] = '\0';
@@ -296,17 +297,18 @@ static void on_header(c_rest_parser_context *pctx, const char *key,
       st->req.headers = h;
     } else {
       if (h->key)
-        free(h->key);
+        C_REST_FREE((void *)(h->key));
       if (h->value)
-        free(h->value);
-      free(h);
+        C_REST_FREE((void *)(h->value));
+      C_REST_FREE((void *)(h));
     }
   }
 }
 
 static void on_body(c_rest_parser_context *pctx, const char *data, size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
-  char *new_body = (char *)realloc(st->req.body, st->req.body_len + len + 1);
+  char *new_body = NULL;
+  if (C_REST_REALLOC(st->req.body, st->req.body_len + len + 1, (void **)&new_body) != 0) { LOG_DEBUG("C_REST_REALLOC failed"); }
   if (new_body) {
     memcpy(new_body + st->req.body_len, data, len);
     st->req.body = new_body;
@@ -432,9 +434,9 @@ int c_rest_handle_connection(struct c_rest_context *ctx, c_rest_socket_t sock) {
     c_rest_parser_destroy(&pctx);
 
     if (st.method)
-      free(st.method);
+      C_REST_FREE((void *)(st.method));
     if (st.url)
-      free(st.url);
+      C_REST_FREE((void *)(st.url));
 
   } while (keep_alive);
 

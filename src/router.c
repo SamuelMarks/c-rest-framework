@@ -8,6 +8,8 @@
 #endif
 
 #include <stdlib.h>
+#include "c_rest_log.h"
+#include "c_rest_mem.h"
 #include <string.h>
 
 struct c_rest_route_handler {
@@ -57,7 +59,7 @@ static int create_node(const char *segment, size_t len,
 
   node->segment = (char *)malloc(len + 1);
   if (!node->segment) {
-    free(node);
+    C_REST_FREE((void *)(node));
     return 1;
   }
   memcpy(node->segment, segment, len);
@@ -95,22 +97,22 @@ static int free_node(struct c_rest_route_node *node) {
     return 1;
 
   if (node->segment)
-    free(node->segment);
+    C_REST_FREE((void *)(node->segment));
   if (node->var_name)
-    free(node->var_name);
+    C_REST_FREE((void *)(node->var_name));
 
   h = node->handlers;
   while (h) {
     struct c_rest_route_handler *next_h = h->next;
     if (h->method)
-      free(h->method);
-    free(h);
+      C_REST_FREE((void *)(h->method));
+    C_REST_FREE((void *)(h));
     h = next_h;
   }
 
   free_node(node->children);
   free_node(node->next);
-  free(node);
+  C_REST_FREE((void *)(node));
   return 0;
 }
 int c_rest_router_init(c_rest_router **out_router) {
@@ -124,7 +126,7 @@ int c_rest_router_init(c_rest_router **out_router) {
     return 1;
 
   if (create_node("", 0, &router->root) != 0) {
-    free(router);
+    C_REST_FREE((void *)(router));
     return 1;
   }
   router->middlewares = NULL;
@@ -148,8 +150,8 @@ int c_rest_router_destroy(c_rest_router *router) {
   while (m) {
     struct c_rest_middleware_chain *next_m = m->next;
     if (m->path_prefix)
-      free(m->path_prefix);
-    free(m);
+      C_REST_FREE((void *)(m->path_prefix));
+    C_REST_FREE((void *)(m));
     m = next_m;
   }
 
@@ -157,8 +159,8 @@ int c_rest_router_destroy(c_rest_router *router) {
   while (m) {
     struct c_rest_middleware_chain *next_m = m->next;
     if (m->path_prefix)
-      free(m->path_prefix);
-    free(m);
+      C_REST_FREE((void *)(m->path_prefix));
+    C_REST_FREE((void *)(m));
     m = next_m;
   }
 
@@ -166,7 +168,7 @@ int c_rest_router_destroy(c_rest_router *router) {
     c_rest_openapi_spec_destroy(router->openapi_spec);
   }
 
-  free(router);
+  C_REST_FREE((void *)(router));
   return 0;
 }
 
@@ -247,7 +249,7 @@ int c_rest_router_add(c_rest_router *router, const char *method,
 
   h->method = (char *)malloc(strlen(method) + 1);
   if (!h->method) {
-    free(h);
+    C_REST_FREE((void *)(h));
     return 1;
   }
 #if defined(_MSC_VER)
@@ -415,7 +417,7 @@ static int c_rest_graphql_handler(struct c_rest_request *req,
 
   c_rest_response_set_status(res, 200);
   c_rest_response_json(res, json);
-  free(json);
+  C_REST_FREE((void *)(json));
   return 0;
 }
 
@@ -545,7 +547,7 @@ int c_rest_router_use(c_rest_router *router, const char *path_prefix,
   if (path_prefix) {
     m->path_prefix = (char *)malloc(strlen(path_prefix) + 1);
     if (!m->path_prefix) {
-      free(m);
+      C_REST_FREE((void *)(m));
       return 1;
     }
 #if defined(_MSC_VER)
@@ -590,7 +592,7 @@ int c_rest_router_use_post(c_rest_router *router, const char *path_prefix,
   if (path_prefix) {
     m->path_prefix = (char *)malloc(strlen(path_prefix) + 1);
     if (!m->path_prefix) {
-      free(m);
+      C_REST_FREE((void *)(m));
       return 1;
     }
 #if defined(_MSC_VER)
