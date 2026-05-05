@@ -565,9 +565,9 @@ int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
     }
     if (!found_cl) {
 #if defined(_MSC_VER)
-      sprintf_s(cl_buf, sizeof(cl_buf), "%lu", (unsigned long)res->body_len);
+      sprintf_s(cl_buf, sizeof(cl_buf), C_REST_FMT_SIZE_T, CAST_SIZE_T(res->body_len));
 #else
-      sprintf(cl_buf, "%lu", (unsigned long)res->body_len);
+      sprintf(cl_buf, C_REST_FMT_SIZE_T, CAST_SIZE_T(res->body_len));
 #endif
       c_rest_response_set_header(res, "Content-Length", cl_buf);
     }

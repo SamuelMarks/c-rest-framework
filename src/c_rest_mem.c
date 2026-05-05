@@ -187,8 +187,8 @@ int c_rest_mem_tracker_print_leaks(void) {
   c_rest_mutex_unlock(mem_mutex);
 
   if (count > 0) {
-    fprintf(stderr, "Total Leaks: %d (%lu bytes)\n", count,
-            (unsigned long)total_leaked);
+    fprintf(stderr, "Total Leaks: %d (" C_REST_FMT_SIZE_T " bytes)\n", count,
+            CAST_SIZE_T(total_leaked));
   } else {
     fprintf(stderr, "No memory leaks detected.\n");
   }
