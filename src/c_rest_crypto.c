@@ -1006,10 +1006,10 @@ int c_rest_hash_password(const char *password,
   }
 
 #if defined(_MSC_VER)
-  sprintf_s(*out_hash, out_len, "$pbkdf2-sha256$i=%lu$%s$%s",
-            C_REST_PBKDF2_ITERATIONS, salt_b64, hash_b64);
+  sprintf_s(*out_hash, out_len, "$pbkdf2-sha256$i=" C_REST_FMT_SIZE_T "$%s$%s",
+            CAST_SIZE_T(C_REST_PBKDF2_ITERATIONS), salt_b64, hash_b64);
 #else
-  sprintf(*out_hash, "$pbkdf2-sha256$i=%lu$%s$%s", C_REST_PBKDF2_ITERATIONS,
+  sprintf(*out_hash, "$pbkdf2-sha256$i=" C_REST_FMT_SIZE_T "$%s$%s", CAST_SIZE_T(C_REST_PBKDF2_ITERATIONS),
           salt_b64, hash_b64);
 #endif
 

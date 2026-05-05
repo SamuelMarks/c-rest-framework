@@ -1,6 +1,7 @@
 /* clang-format off */
 #include "test_protos.h"
 #include "c_rest_time.h"
+#include "c_rest_platform.h"
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -34,7 +35,7 @@ int test_time(void) {
   }
 
   if (t != 784111777) {
-    printf("Parsed time mismatch: %ld\n", (long)t);
+    printf("Parsed time mismatch: " C_REST_FMT_TIME_T "\n", CAST_TIME_T(t));
     return 1;
   }
 

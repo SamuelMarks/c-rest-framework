@@ -177,8 +177,8 @@ int c_rest_mem_tracker_print_leaks(void) {
   c_rest_mutex_lock(mem_mutex);
   curr = mem_list;
   while (curr) {
-    fprintf(stderr, "Leak: %lu bytes at %p, allocated in %s:%d\n",
-            (unsigned long)curr->size, curr->ptr, curr->file, curr->line);
+    fprintf(stderr, "Leak: " C_REST_FMT_SIZE_T " bytes at %p, allocated in %s:%d\n",
+            CAST_SIZE_T(curr->size), curr->ptr, curr->file, curr->line);
     total_leaked += curr->size;
     count++;
     curr = curr->next;

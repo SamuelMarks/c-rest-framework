@@ -39,6 +39,19 @@ typedef ptrdiff_t c_rest_process_t;
 #include <cfs/cfs.h>
 /* clang-format on */
 
+/* Format specifiers for cross-platform C89 compliance */
+#if defined(_MSC_VER)
+#define C_REST_FMT_SIZE_T "%lu"
+#define CAST_SIZE_T(x) ((unsigned long)(x))
+#define C_REST_FMT_TIME_T "%I64d"
+#define CAST_TIME_T(x) ((__int64)(x))
+#else
+#define C_REST_FMT_SIZE_T "%lu"
+#define CAST_SIZE_T(x) ((unsigned long)(x))
+#define C_REST_FMT_TIME_T "%ld"
+#define CAST_TIME_T(x) ((long)(x))
+#endif
+
 /*
  * Initialization and cleanup.
  */

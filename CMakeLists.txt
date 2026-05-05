@@ -254,7 +254,7 @@ if(C_REST_FRAMEWORK_FETCH_CAH)
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_C_ORM)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-orm/CMakeLists.txt")
+    if(0)
         FetchContent_Declare(
           c_orm
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-orm"

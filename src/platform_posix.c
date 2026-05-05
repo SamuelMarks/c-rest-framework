@@ -25,8 +25,8 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <time.h>
-/* clang-format on */
 #endif
+/* clang-format on */
 
 int c_rest_platform_init(void) { return 0; }
 
