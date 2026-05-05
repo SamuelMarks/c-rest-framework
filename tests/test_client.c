@@ -141,7 +141,8 @@ int test_client(void) {
     return 1;
   }
   if (parsed_count != 2) {
-    printf("Parsed count mismatch: " C_REST_FMT_SIZE_T "\n", CAST_SIZE_T(parsed_count));
+    printf("Parsed count mismatch: " C_REST_FMT_SIZE_T "\n",
+           CAST_SIZE_T(parsed_count));
     return 1;
   }
   if (strcmp(parsed_fields[0].key, "grant_type") != 0 ||
