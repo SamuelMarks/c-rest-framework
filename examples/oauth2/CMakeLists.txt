@@ -33,7 +33,7 @@ endif()
 
 # Fetch c-rest-framework if not found
 if(NOT TARGET c-rest-framework)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMakeLists.txt")
+    if(0)
         # Ensure we are actually adding the framework, we could check project name but this is good enough
         add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../.." c-rest-framework-build)
     else()
@@ -49,7 +49,7 @@ endif()
 
 # Fetch c-orm if not found
 if(NOT TARGET c-orm)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../c-orm/CMakeLists.txt")
+    if(0)
         add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../c-orm" c-orm-build)
     else()
         include(FetchContent)

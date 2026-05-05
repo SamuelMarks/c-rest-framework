@@ -202,7 +202,7 @@ set(C_ABSTRACT_HTTP_USE_LIBFETCH ${C_REST_FRAMEWORK_USE_LIBFETCH} CACHE BOOL "" 
 
 if(C_REST_FRAMEWORK_FETCH_C_FS)
     set(CDD_DEPS "FETCHCONTENT" CACHE STRING "" FORCE)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-fs/CMakeLists.txt")
+    if(0)
         FetchContent_Declare(
           cfs
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-fs"
