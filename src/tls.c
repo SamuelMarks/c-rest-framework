@@ -304,7 +304,8 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock,
 
   ret = SSL_accept(conn->ssl);
   if (ret <= 0) {
-    int err = SSL_get_error(conn->ssl, ret);
+    int err;
+    err = SSL_get_error(conn->ssl, ret);
     if (err == SSL_ERROR_WANT_READ) {
       *out_conn = conn;
       return C_REST_TLS_WANT_READ;
@@ -354,7 +355,8 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock,
 
   ret = wolfSSL_accept(conn->ssl);
   if (ret != WOLFSSL_SUCCESS) {
-    int err = wolfSSL_get_error(conn->ssl, ret);
+    int err;
+    err = wolfSSL_get_error(conn->ssl, ret);
     if (err == WOLFSSL_ERROR_WANT_READ) {
       *out_conn = conn;
       return C_REST_TLS_WANT_READ;
