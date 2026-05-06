@@ -397,24 +397,38 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock,
 
 int c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf, size_t len,
                     size_t *out_read) {
+#if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
+    defined(C_REST_USE_BORINGSSL)
+  int ret;
+  int err;
+#elif defined(C_REST_USE_MBEDTLS)
+  int ret;
+#elif defined(C_REST_USE_WOLFSSL)
+  int ret;
+  int err;
+#elif defined(C_REST_USE_S2N)
+  ssize_t ret;
+#endif
+
   (void)conn;
   (void)buf;
   (void)len;
+
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
-  int ret = SSL_read(conn->ssl, buf, (int)len);
+  ret = SSL_read(conn->ssl, buf, (int)len);
   if (ret > 0) {
     *out_read = (size_t)ret;
     return 0;
   }
-  int err = SSL_get_error(conn->ssl, ret);
+  err = SSL_get_error(conn->ssl, ret);
   if (err == SSL_ERROR_WANT_READ)
     return C_REST_TLS_WANT_READ;
   if (err == SSL_ERROR_WANT_WRITE)
     return C_REST_TLS_WANT_WRITE;
   return 1;
 #elif defined(C_REST_USE_MBEDTLS)
-  int ret = mbedtls_ssl_read(&conn->ssl, (unsigned char *)buf, len);
+  ret = mbedtls_ssl_read(&conn->ssl, (unsigned char *)buf, len);
   if (ret > 0) {
     *out_read = (size_t)ret;
     return 0;
@@ -425,19 +439,19 @@ int c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf, size_t len,
     return C_REST_TLS_WANT_WRITE;
   return 1;
 #elif defined(C_REST_USE_WOLFSSL)
-  int ret = wolfSSL_read(conn->ssl, buf, (int)len);
+  ret = wolfSSL_read(conn->ssl, buf, (int)len);
   if (ret > 0) {
     *out_read = (size_t)ret;
     return 0;
   }
-  int err = wolfSSL_get_error(conn->ssl, ret);
+  err = wolfSSL_get_error(conn->ssl, ret);
   if (err == WOLFSSL_ERROR_WANT_READ)
     return C_REST_TLS_WANT_READ;
   if (err == WOLFSSL_ERROR_WANT_WRITE)
     return C_REST_TLS_WANT_WRITE;
   return 1;
 #elif defined(C_REST_USE_S2N)
-  ssize_t ret = s2n_recv(conn->conn, buf, len, NULL);
+  ret = s2n_recv(conn->conn, buf, len, NULL);
   if (ret >= 0) {
     *out_read = (size_t)ret;
     return 0;
@@ -451,24 +465,38 @@ int c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf, size_t len,
 
 int c_rest_tls_write(struct c_rest_tls_connection *conn, const void *buf,
                      size_t len, size_t *out_written) {
+#if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
+    defined(C_REST_USE_BORINGSSL)
+  int ret;
+  int err;
+#elif defined(C_REST_USE_MBEDTLS)
+  int ret;
+#elif defined(C_REST_USE_WOLFSSL)
+  int ret;
+  int err;
+#elif defined(C_REST_USE_S2N)
+  ssize_t ret;
+#endif
+
   (void)conn;
   (void)buf;
   (void)len;
+
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
-  int ret = SSL_write(conn->ssl, buf, (int)len);
+  ret = SSL_write(conn->ssl, buf, (int)len);
   if (ret > 0) {
     *out_written = (size_t)ret;
     return 0;
   }
-  int err = SSL_get_error(conn->ssl, ret);
+  err = SSL_get_error(conn->ssl, ret);
   if (err == SSL_ERROR_WANT_READ)
     return C_REST_TLS_WANT_READ;
   if (err == SSL_ERROR_WANT_WRITE)
     return C_REST_TLS_WANT_WRITE;
   return 1;
 #elif defined(C_REST_USE_MBEDTLS)
-  int ret = mbedtls_ssl_write(&conn->ssl, (const unsigned char *)buf, len);
+  ret = mbedtls_ssl_write(&conn->ssl, (const unsigned char *)buf, len);
   if (ret > 0) {
     *out_written = (size_t)ret;
     return 0;
@@ -479,19 +507,19 @@ int c_rest_tls_write(struct c_rest_tls_connection *conn, const void *buf,
     return C_REST_TLS_WANT_WRITE;
   return 1;
 #elif defined(C_REST_USE_WOLFSSL)
-  int ret = wolfSSL_write(conn->ssl, buf, (int)len);
+  ret = wolfSSL_write(conn->ssl, buf, (int)len);
   if (ret > 0) {
     *out_written = (size_t)ret;
     return 0;
   }
-  int err = wolfSSL_get_error(conn->ssl, ret);
+  err = wolfSSL_get_error(conn->ssl, ret);
   if (err == WOLFSSL_ERROR_WANT_READ)
     return C_REST_TLS_WANT_READ;
   if (err == WOLFSSL_ERROR_WANT_WRITE)
     return C_REST_TLS_WANT_WRITE;
   return 1;
 #elif defined(C_REST_USE_S2N)
-  ssize_t ret = s2n_send(conn->conn, buf, len, NULL);
+  ret = s2n_send(conn->conn, buf, len, NULL);
   if (ret >= 0) {
     *out_written = (size_t)ret;
     return 0;
