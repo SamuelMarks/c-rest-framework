@@ -239,11 +239,8 @@ if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
     )
     FetchContent_MakeAvailable(c89stringutils)
     file(WRITE "${CMAKE_BINARY_DIR}/c89stringutilsConfig.cmake" "set(c89stringutils_FOUND TRUE)\n")
-    file(WRITE "${CMAKE_BINARY_DIR}/parsonConfig.cmake" "set(parson_FOUND TRUE)\nif(TARGET parson AND NOT TARGET parson::parson)\nadd_library(parson::parson ALIAS parson)\nendif()\n")
     list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
 endif()
-
-c_rest_framework_resolve_parson()
 
 if(C_REST_FRAMEWORK_FETCH_CDD_C)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../cdd-c/CMakeLists.txt")
@@ -594,6 +591,7 @@ if(WIN32)
 endif()
 
 c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
+c_rest_framework_resolve_parson()
 
 if(C_REST_FRAMEWORK_FETCH_CDD_C)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../cdd-c/CMakeLists.txt")
