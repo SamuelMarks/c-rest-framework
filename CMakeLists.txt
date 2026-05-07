@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(c-rest-framework C)
 
+# Global fPIC
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Set C standards
 set(CMAKE_C_STANDARD 90)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -218,6 +221,30 @@ if(C_REST_FRAMEWORK_FETCH_C_FS)
     FetchContent_MakeAvailable(cfs)
 endif()
 
+if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
+    FetchContent_Declare(
+        c_str_span
+        GIT_REPOSITORY https://github.com/SamuelMarks/c-str-span.git
+        GIT_TAG master
+        GIT_CONFIG "core.autocrlf=false"
+    )
+    FetchContent_MakeAvailable(c_str_span)
+    file(WRITE "${CMAKE_BINARY_DIR}/c_str_spanConfig.cmake" "set(c_str_span_FOUND TRUE)\n")
+
+    FetchContent_Declare(
+        c89stringutils
+        GIT_REPOSITORY https://github.com/offscale/c89stringutils.git
+        GIT_TAG master
+        GIT_CONFIG "core.autocrlf=false"
+    )
+    FetchContent_MakeAvailable(c89stringutils)
+    file(WRITE "${CMAKE_BINARY_DIR}/c89stringutilsConfig.cmake" "set(c89stringutils_FOUND TRUE)\n")
+    file(WRITE "${CMAKE_BINARY_DIR}/parsonConfig.cmake" "set(parson_FOUND TRUE)\nif(TARGET parson AND NOT TARGET parson::parson)\nadd_library(parson::parson ALIAS parson)\nendif()\n")
+    list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
+endif()
+
+c_rest_framework_resolve_parson()
+
 if(C_REST_FRAMEWORK_FETCH_CDD_C)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../cdd-c/CMakeLists.txt")
         FetchContent_Declare(
@@ -320,6 +347,8 @@ macro(c_rest_framework_resolve_parson)
         endif()
         target_include_directories(c-rest-framework PUBLIC ${parson_SOURCE_DIR})
         set(parson_RESOLVED ON)
+        file(WRITE "${CMAKE_BINARY_DIR}/parsonConfig.cmake" "set(parson_FOUND TRUE)\nif(TARGET parson AND NOT TARGET parson::parson)\nadd_library(parson::parson ALIAS parson)\nendif()\n")
+        list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
     elseif(C_REST_FRAMEWORK_USE_BEARSSL)
         target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_BEARSSL)
     elseif(C_REST_FRAMEWORK_USE_SCHANNEL)
@@ -565,8 +594,23 @@ if(WIN32)
 endif()
 
 c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
-c_rest_framework_resolve_parson()
 
+if(C_REST_FRAMEWORK_FETCH_CDD_C)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../cdd-c/CMakeLists.txt")
+        FetchContent_Declare(
+          cdd_c
+          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../cdd-c"
+        )
+    else()
+        FetchContent_Declare(
+          cdd_c
+          GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
+          GIT_TAG master
+          GIT_CONFIG "core.autocrlf=false"
+        )
+    endif()
+    FetchContent_MakeAvailable(cdd_c)
+endif()
 
 if(C_REST_FRAMEWORK_FETCH_CAH)
     target_link_libraries(c-rest-framework PUBLIC c-abstract-http)

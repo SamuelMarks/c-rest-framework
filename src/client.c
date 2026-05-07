@@ -7,6 +7,8 @@
 #else
 #include <c_abstract_http/http_winhttp.h>
 #endif
+#elif defined(__APPLE__)
+#include <c_abstract_http/http_apple.h>
 #else
 #ifndef CDD_DOS
 #include <c_abstract_http/http_curl.h>
@@ -98,6 +100,14 @@ int c_rest_client_init(c_rest_client_context **out_client) {
   }
   ctx->client.send = http_winhttp_send;
 #endif
+#elif defined(__APPLE__)
+  if (http_apple_context_init(
+          (struct HttpTransportContext **)&ctx->client.transport) != 0) {
+    http_client_free(&ctx->client);
+    C_REST_FREE((void *)(ctx));
+    return 1;
+  }
+  ctx->client.send = http_apple_send;
 #else
 #ifndef CDD_DOS
   if (http_curl_context_init(
@@ -132,6 +142,8 @@ int c_rest_client_destroy(c_rest_client_context *client) {
 #else
   http_winhttp_context_free(client->client.transport);
 #endif
+#elif defined(__APPLE__)
+  http_apple_context_free(client->client.transport);
 #else
 #ifndef CDD_DOS
   http_curl_context_free(client->client.transport);
