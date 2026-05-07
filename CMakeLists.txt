@@ -503,7 +503,12 @@ if(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
                 GIT_TAG master
                 GIT_CONFIG "core.autocrlf=false"
             )
+            set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+            set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
+            set(BUILD_TESTING_OLD ${BUILD_TESTING})
+            set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
             FetchContent_MakeAvailable(zlib)
+            set(BUILD_TESTING ${BUILD_TESTING_OLD} CACHE BOOL "" FORCE)
             if(MSVC AND MSVC_VERSION LESS 1600)
                 if(TARGET zlib)
                     target_compile_definitions(zlib PRIVATE EWOULDBLOCK=140)
@@ -538,7 +543,11 @@ if(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
                 GIT_CONFIG "core.autocrlf=false"
                 UPDATE_COMMAND ""
             )
+            set(BROTLI_DISABLE_TESTS ON CACHE BOOL "" FORCE)
+            set(BUILD_TESTING_OLD ${BUILD_TESTING})
+            set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
             FetchContent_MakeAvailable(brotli)
+            set(BUILD_TESTING ${BUILD_TESTING_OLD} CACHE BOOL "" FORCE)
             
             if(TARGET brotlienc-static)
                 target_link_libraries(c-rest-framework PUBLIC brotlienc-static brotlidec-static brotlicommon-static)
