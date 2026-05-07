@@ -243,6 +243,7 @@ if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_CDD_C)
+    set(C_CDD_USE_LIBCURL OFF CACHE BOOL "" FORCE)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../cdd-c/CMakeLists.txt")
         FetchContent_Declare(
           cdd_c
@@ -587,6 +588,7 @@ c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
 c_rest_framework_resolve_parson()
 
 if(C_REST_FRAMEWORK_FETCH_CDD_C)
+    set(C_CDD_USE_LIBCURL OFF CACHE BOOL "" FORCE)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../cdd-c/CMakeLists.txt")
         FetchContent_Declare(
           cdd_c
