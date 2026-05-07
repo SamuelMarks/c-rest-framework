@@ -322,8 +322,12 @@ int c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser) {
   return 0;
 }
 
-void *c_rest_multipart_parser_get_user_data(c_rest_multipart_parser *parser) {
-  return parser ? parser->user_data : NULL;
+int c_rest_multipart_parser_get_user_data(c_rest_multipart_parser *parser,
+                                          void **out_user_data) {
+  if (!out_user_data)
+    return 1;
+  *out_user_data = parser ? parser->user_data : NULL;
+  return 0;
 }
 
 #endif /* C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING */

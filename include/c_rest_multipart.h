@@ -68,7 +68,8 @@ int c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser);
 int c_rest_multipart_parser_clone(const c_rest_multipart_parser *parser,
                                   c_rest_multipart_parser **out_clone);
 
-void *c_rest_multipart_parser_get_user_data(c_rest_multipart_parser *parser);
+int c_rest_multipart_parser_get_user_data(c_rest_multipart_parser *parser,
+                                          void **out_user_data);
 
 #endif /* C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING */
 
