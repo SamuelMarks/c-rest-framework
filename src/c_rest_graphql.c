@@ -462,3 +462,5 @@ int c_rest_graphql_resolve(struct c_rest_graphql_node *doc,
 }
 
 #endif /* C_REST_FRAMEWORK_ENABLE_GRAPHQL */
+
+typedef int c_rest_graphql_dummy_declaration;

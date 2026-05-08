@@ -331,3 +331,5 @@ int c_rest_multipart_parser_get_user_data(c_rest_multipart_parser *parser,
 }
 
 #endif /* C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING */
+
+typedef int c_rest_multipart_dummy_declaration;

@@ -137,3 +137,5 @@ int c_rest_template_render(const struct c_rest_template_context *ctx,
 }
 
 #endif /* C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING */
+
+typedef int c_rest_template_dummy_declaration;

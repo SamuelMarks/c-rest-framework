@@ -55,3 +55,5 @@ int c_rest_orm_transaction_end_middleware(struct c_rest_request *req,
 /* ... */
 
 #endif /* C_REST_FRAMEWORK_USE_REAL_C_ORM */
+
+typedef int c_orm_middleware_dummy_declaration;

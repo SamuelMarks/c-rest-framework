@@ -1,6 +1,9 @@
 #ifndef C_REST_ORM_H
 #define C_REST_ORM_H
 
+/* clang-format off */
+/* clang-format on */
+
 #ifdef __cplusplus
 extern "C" {
 #endif

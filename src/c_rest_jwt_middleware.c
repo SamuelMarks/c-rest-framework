@@ -89,3 +89,5 @@ int c_rest_jwt_middleware(struct c_rest_request *req,
 }
 
 #endif /* C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE */
+
+typedef int c_rest_jwt_middleware_dummy_declaration;

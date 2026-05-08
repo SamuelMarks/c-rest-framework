@@ -22,3 +22,5 @@ int c_rest_orm_cleanup(struct c_orm_pool *pool) {
 }
 
 #endif /* C_REST_FRAMEWORK_USE_REAL_C_ORM */
+
+typedef int c_orm_mock_dummy_declaration;
