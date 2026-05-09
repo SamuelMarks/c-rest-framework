@@ -3,18 +3,21 @@
 #include "c_rest_log.h"
 /* clang-format on */
 
-static int is_little_endian(void) {
+static int is_little_endian(int *out_is_little) {
   unsigned int test = 1;
   unsigned char *p = (unsigned char *)&test;
-  return p[0] == 1;
+  *out_is_little = (p[0] == 1);
+  return 0;
 }
 
 int c_rest_htons(unsigned short hostshort, unsigned short *out_netshort) {
+  int little_endian;
   if (!out_netshort) {
     LOG_DEBUG("c_rest_htons: invalid argument out_netshort is NULL");
     return 1;
   }
-  if (is_little_endian()) {
+  is_little_endian(&little_endian);
+  if (little_endian) {
     *out_netshort = (unsigned short)(((hostshort >> 8) & 0x00FF) |
                                      ((hostshort << 8) & 0xFF00));
   } else {
@@ -24,11 +27,13 @@ int c_rest_htons(unsigned short hostshort, unsigned short *out_netshort) {
 }
 
 int c_rest_htonl(unsigned long hostlong, unsigned long *out_netlong) {
+  int little_endian;
   if (!out_netlong) {
     LOG_DEBUG("c_rest_htonl: invalid argument out_netlong is NULL");
     return 1;
   }
-  if (is_little_endian()) {
+  is_little_endian(&little_endian);
+  if (little_endian) {
     *out_netlong =
         ((hostlong >> 24) & 0x000000FF) | ((hostlong >> 8) & 0x0000FF00) |
         ((hostlong << 8) & 0x00FF0000) | ((hostlong << 24) & 0xFF000000);

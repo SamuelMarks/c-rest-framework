@@ -48,18 +48,20 @@ int c_rest_sse_event_destroy(struct c_rest_sse_event *ev) {
   return C_REST_SSE_OK;
 }
 
-static char *c_rest_sse_strdup(const char *s) {
+static int c_rest_sse_strdup(const char *s, char **out_str) {
   size_t len;
   char *copy;
   if (!s) {
-    return NULL;
+    *out_str = NULL;
+    return 0;
   }
   len = strlen(s);
   if (C_REST_MALLOC(len + 1, (void **)&copy) != 0) {
-    return NULL;
+    return 1;
   }
   memcpy(copy, s, len + 1);
-  return copy;
+  *out_str = copy;
+  return 0;
 }
 
 int c_rest_sse_event_clone(const struct c_rest_sse_event *src,
@@ -67,18 +69,30 @@ int c_rest_sse_event_clone(const struct c_rest_sse_event *src,
   if (!src || !dest) {
     return C_REST_SSE_ERR_INVALID_ARG;
   }
-  dest->id = src->id ? c_rest_sse_strdup(src->id) : NULL;
-  dest->event = src->event ? c_rest_sse_strdup(src->event) : NULL;
-  dest->data = src->data ? c_rest_sse_strdup(src->data) : NULL;
-  dest->retry = src->retry;
-
-  if ((src->id && !dest->id) || (src->event && !dest->event) ||
-      (src->data && !dest->data)) {
-    c_rest_sse_event_destroy(dest);
-    return C_REST_SSE_ERR_NOMEM;
+  if (src->id) {
+    if (c_rest_sse_strdup(src->id, &dest->id) != 0) goto err;
+  } else {
+    dest->id = NULL;
+  }
+  
+  if (src->event) {
+    if (c_rest_sse_strdup(src->event, &dest->event) != 0) goto err;
+  } else {
+    dest->event = NULL;
   }
 
+  if (src->data) {
+    if (c_rest_sse_strdup(src->data, &dest->data) != 0) goto err;
+  } else {
+    dest->data = NULL;
+  }
+  
+  dest->retry = src->retry;
   return C_REST_SSE_OK;
+
+err:
+  c_rest_sse_event_destroy(dest);
+  return C_REST_SSE_ERR_NOMEM;
 }
 
 int c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
@@ -318,7 +332,7 @@ int c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data,
         if (ctx->current_event.event) {
           C_REST_FREE(ctx->current_event.event);
         }
-        ctx->current_event.event = c_rest_sse_strdup("");
+        c_rest_sse_strdup("", &ctx->current_event.event);
       } else if (line_len == 4 && memcmp(line_start, "data", 4) == 0) {
         if (ctx->current_event.data) {
           append_to_string(&ctx->current_event.data, "\n", 1);

@@ -66,24 +66,39 @@ static int encode_internal(const unsigned char *src, size_t src_len, char *dst,
   return 0;
 }
 
-static unsigned char get_val(unsigned char c, int is_url) {
-  if (c >= 'A' && c <= 'Z')
-    return c - 'A';
-  if (c >= 'a' && c <= 'z')
-    return c - 'a' + 26;
-  if (c >= '0' && c <= '9')
-    return c - '0' + 52;
-  if (!is_url) {
-    if (c == '+')
-      return 62;
-    if (c == '/')
-      return 63;
-  } else {
-    if (c == '-')
-      return 62;
-    if (c == '_')
-      return 63;
+static int get_val(unsigned char c, int is_url, unsigned char *out_val) {
+  if (c >= 'A' && c <= 'Z') {
+    *out_val = c - 'A';
+    return 0;
   }
+  if (c >= 'a' && c <= 'z') {
+    *out_val = c - 'a' + 26;
+    return 0;
+  }
+  if (c >= '0' && c <= '9') {
+    *out_val = c - '0' + 52;
+    return 0;
+  }
+  if (!is_url) {
+    if (c == '+') {
+      *out_val = 62;
+      return 0;
+    }
+    if (c == '/') {
+      *out_val = 63;
+      return 0;
+    }
+  } else {
+    if (c == '-') {
+      *out_val = 62;
+      return 0;
+    }
+    if (c == '_') {
+      *out_val = 63;
+      return 0;
+    }
+  }
+  *out_val = 0;
   return 0;
 }
 
@@ -119,14 +134,25 @@ static int decode_internal(const char *src, size_t src_len, unsigned char *dst,
     return 1;
 
   for (i = 0, j = 0; i < in_len;) {
-    unsigned int sextet_a =
-        i < in_len ? (src[i] == '=' ? 0 & i++ : get_val(src[i++], is_url)) : 0;
-    unsigned int sextet_b =
-        i < in_len ? (src[i] == '=' ? 0 & i++ : get_val(src[i++], is_url)) : 0;
-    unsigned int sextet_c =
-        i < in_len ? (src[i] == '=' ? 0 & i++ : get_val(src[i++], is_url)) : 0;
-    unsigned int sextet_d =
-        i < in_len ? (src[i] == '=' ? 0 & i++ : get_val(src[i++], is_url)) : 0;
+    unsigned char val_a = 0, val_b = 0, val_c = 0, val_d = 0;
+    unsigned int sextet_a = 0, sextet_b = 0, sextet_c = 0, sextet_d = 0;
+
+    if (i < in_len) {
+      if (src[i] == '=') i++;
+      else { get_val(src[i++], is_url, &val_a); sextet_a = val_a; }
+    }
+    if (i < in_len) {
+      if (src[i] == '=') i++;
+      else { get_val(src[i++], is_url, &val_b); sextet_b = val_b; }
+    }
+    if (i < in_len) {
+      if (src[i] == '=') i++;
+      else { get_val(src[i++], is_url, &val_c); sextet_c = val_c; }
+    }
+    if (i < in_len) {
+      if (src[i] == '=') i++;
+      else { get_val(src[i++], is_url, &val_d); sextet_d = val_d; }
+    }
 
     unsigned long triple = ((unsigned long)sextet_a << 18) +
                            ((unsigned long)sextet_b << 12) +

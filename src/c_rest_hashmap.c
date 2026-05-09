@@ -13,13 +13,14 @@
 #define SAFE_STRCPY(dest, size, src) strcpy(dest, src)
 #endif
 
-static size_t hash_string(const char *str) {
+static int hash_string(const char *str, size_t *out_hash) {
   size_t hash = 5381;
   int c;
   while ((c = *str++)) {
     hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
   }
-  return hash;
+  *out_hash = hash;
+  return 0;
 }
 
 int c_rest_hashmap_init(c_rest_hashmap *map, size_t capacity) {
@@ -42,13 +43,14 @@ int c_rest_hashmap_init(c_rest_hashmap *map, size_t capacity) {
 }
 
 int c_rest_hashmap_put(c_rest_hashmap *map, const char *key, void *value) {
-  size_t index;
+  size_t index, hash;
   c_rest_hashmap_entry *entry;
   c_rest_hashmap_entry *new_entry;
 
   if (!map || !key)
     return 1;
-  index = hash_string(key) % map->capacity;
+  hash_string(key, &hash);
+  index = hash % map->capacity;
 
   entry = map->buckets[index];
   while (entry) {
@@ -84,13 +86,14 @@ int c_rest_hashmap_put(c_rest_hashmap *map, const char *key, void *value) {
 }
 
 int c_rest_hashmap_get(c_rest_hashmap *map, const char *key, void **out_value) {
-  size_t index;
+  size_t index, hash;
   c_rest_hashmap_entry *entry;
 
   if (!map || !key || !out_value)
     return 1;
 
-  index = hash_string(key) % map->capacity;
+  hash_string(key, &hash);
+  index = hash % map->capacity;
   entry = map->buckets[index];
   while (entry) {
     if (strcmp(entry->key, key) == 0) {
@@ -103,13 +106,14 @@ int c_rest_hashmap_get(c_rest_hashmap *map, const char *key, void **out_value) {
 }
 
 int c_rest_hashmap_remove(c_rest_hashmap *map, const char *key) {
-  size_t index;
+  size_t index, hash;
   c_rest_hashmap_entry *entry;
   c_rest_hashmap_entry *prev = NULL;
 
   if (!map || !key)
     return 1;
-  index = hash_string(key) % map->capacity;
+  hash_string(key, &hash);
+  index = hash % map->capacity;
 
   entry = map->buckets[index];
   while (entry) {

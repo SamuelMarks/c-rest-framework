@@ -34,16 +34,17 @@ alloc_node(enum c_rest_graphql_node_type type) {
 /**
  * @brief Allocates a new node list.
  */
-static struct c_rest_graphql_node_list *alloc_list(void) {
+static int alloc_list(struct c_rest_graphql_node_list **out_list) {
   struct c_rest_graphql_node_list *list = NULL;
   if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node_list), (void **)&list) !=
       0) {
-    return NULL;
+    return 1;
   }
   list->nodes = NULL;
   list->count = 0;
   list->capacity = 0;
-  return list;
+  *out_list = list;
+  return 0;
 }
 
 /**
@@ -86,14 +87,14 @@ static void skip_whitespace(struct c_rest_graphql_context *ctx) {
   }
 }
 
-static char *parse_name(struct c_rest_graphql_context *ctx) {
+static int parse_name(struct c_rest_graphql_context *ctx, char **out_name) {
   size_t start;
   size_t len;
   char *str;
 
   skip_whitespace(ctx);
   if (ctx->position >= ctx->length) {
-    return NULL;
+    return 1;
   }
 
   start = ctx->position;
@@ -106,17 +107,18 @@ static char *parse_name(struct c_rest_graphql_context *ctx) {
       ctx->position++;
     }
   } else {
-    return NULL;
+    return 1;
   }
 
   len = ctx->position - start;
   str = NULL;
   if (C_REST_MALLOC(len + 1, (void **)&str) != 0) {
-    return NULL;
+    return 1;
   }
   memcpy(str, &ctx->input[start], len);
   str[len] = '\0';
-  return str;
+  *out_name = str;
+  return 0;
 }
 
 static int parse_field(struct c_rest_graphql_context *ctx,
@@ -124,7 +126,7 @@ static int parse_field(struct c_rest_graphql_context *ctx,
 
 static int parse_selection_set(struct c_rest_graphql_context *ctx,
                                struct c_rest_graphql_node_list **out_list) {
-  struct c_rest_graphql_node_list *list;
+  struct c_rest_graphql_node_list *list = NULL;
   size_t i;
 
   skip_whitespace(ctx);
@@ -133,8 +135,7 @@ static int parse_selection_set(struct c_rest_graphql_context *ctx,
   }
   ctx->position++; /* skip '{' */
 
-  list = alloc_list();
-  if (!list)
+  if (alloc_list(&list) != 0 || !list)
     return -1;
 
   while (ctx->position < ctx->length) {
@@ -168,11 +169,10 @@ static int parse_selection_set(struct c_rest_graphql_context *ctx,
 
 static int parse_field(struct c_rest_graphql_context *ctx,
                        struct c_rest_graphql_node **out_node) {
-  char *name;
+  char *name = NULL;
   struct c_rest_graphql_node *node;
 
-  name = parse_name(ctx);
-  if (!name) {
+  if (parse_name(ctx, &name) != 0 || !name) {
     return -1;
   }
 
@@ -187,7 +187,9 @@ static int parse_field(struct c_rest_graphql_context *ctx,
     /* This was an alias */
     ctx->position++; /* skip ':' */
     node->alias = name;
-    node->name = parse_name(ctx);
+    if (parse_name(ctx, &node->name) != 0) {
+        node->name = NULL;
+    }
   } else {
     node->name = name;
   }
@@ -218,12 +220,12 @@ static int parse_operation(struct c_rest_graphql_context *ctx,
       strncmp(&ctx->input[ctx->position], "query", 5) == 0) {
     ctx->position += 5;
     op_type = C_REST_GRAPHQL_OP_QUERY;
-    name = parse_name(ctx);
+    if (parse_name(ctx, &name) != 0) name = NULL;
   } else if (ctx->position + 8 <= ctx->length &&
              strncmp(&ctx->input[ctx->position], "mutation", 8) == 0) {
     ctx->position += 8;
     op_type = C_REST_GRAPHQL_OP_MUTATION;
-    name = parse_name(ctx);
+    if (parse_name(ctx, &name) != 0) name = NULL;
   }
 
   node = alloc_node(C_REST_GRAPHQL_NODE_OPERATION);
@@ -284,8 +286,7 @@ int c_rest_graphql_parse(const char *query, size_t query_len,
   if (!doc)
     return -1;
 
-  doc->definitions = alloc_list();
-  if (!doc->definitions) {
+  if (alloc_list(&doc->definitions) != 0 || !doc->definitions) {
     c_rest_graphql_node_free(doc);
     return -1;
   }

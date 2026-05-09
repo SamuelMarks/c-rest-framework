@@ -33,26 +33,45 @@ struct c_rest_client_context {
   struct HttpClient client;
 };
 
-static enum HttpMethod method_from_str(const char *method_str) {
-  if (!method_str)
-    return HTTP_GET;
-  if (strcmp(method_str, "POST") == 0)
-    return HTTP_POST;
-  if (strcmp(method_str, "PUT") == 0)
-    return HTTP_PUT;
-  if (strcmp(method_str, "DELETE") == 0)
-    return HTTP_DELETE;
-  if (strcmp(method_str, "PATCH") == 0)
-    return HTTP_PATCH;
-  if (strcmp(method_str, "HEAD") == 0)
-    return HTTP_HEAD;
-  if (strcmp(method_str, "OPTIONS") == 0)
-    return HTTP_OPTIONS;
-  if (strcmp(method_str, "TRACE") == 0)
-    return HTTP_TRACE;
-  if (strcmp(method_str, "CONNECT") == 0)
-    return HTTP_CONNECT;
-  return HTTP_GET;
+static int method_from_str(const char *method_str, enum HttpMethod *out_method) {
+  if (!method_str) {
+    *out_method = HTTP_GET;
+    return 0;
+  }
+  if (strcmp(method_str, "POST") == 0) {
+    *out_method = HTTP_POST;
+    return 0;
+  }
+  if (strcmp(method_str, "PUT") == 0) {
+    *out_method = HTTP_PUT;
+    return 0;
+  }
+  if (strcmp(method_str, "DELETE") == 0) {
+    *out_method = HTTP_DELETE;
+    return 0;
+  }
+  if (strcmp(method_str, "PATCH") == 0) {
+    *out_method = HTTP_PATCH;
+    return 0;
+  }
+  if (strcmp(method_str, "HEAD") == 0) {
+    *out_method = HTTP_HEAD;
+    return 0;
+  }
+  if (strcmp(method_str, "OPTIONS") == 0) {
+    *out_method = HTTP_OPTIONS;
+    return 0;
+  }
+  if (strcmp(method_str, "TRACE") == 0) {
+    *out_method = HTTP_TRACE;
+    return 0;
+  }
+  if (strcmp(method_str, "CONNECT") == 0) {
+    *out_method = HTTP_CONNECT;
+    return 0;
+  }
+  *out_method = HTTP_GET;
+  return 0;
 }
 
 #ifndef C_REST_FRAMEWORK_USE_REAL_CAH
@@ -193,7 +212,9 @@ int c_rest_client_request_sync(c_rest_client_context *client, const char *url,
     return 1;
 
   req.url = (char *)url;
-  req.method = method_from_str(method);
+  if (method_from_str(method, &req.method) != 0) {
+    return 1;
+  }
 
   for (i = 0; i < headers_count; ++i) {
     http_headers_add(&req.headers, headers[i].key, headers[i].value);
@@ -293,10 +314,12 @@ int c_rest_client_request_async(
   return res;
 }
 
-static char hex_digit(int v) {
+static int hex_digit(int v, char *out_char) {
   if (v >= 0 && v < 10)
-    return (char)('0' + v);
-  return (char)('A' + (v - 10));
+    *out_char = (char)('0' + v);
+  else
+    *out_char = (char)('A' + (v - 10));
+  return 0;
 }
 
 int c_rest_client_url_encode(const char *in_str, char **out_str) {
@@ -319,9 +342,12 @@ int c_rest_client_url_encode(const char *in_str, char **out_str) {
     } else if (c == ' ') {
       out[j++] = '+';
     } else {
+      char hd1, hd2;
+      hex_digit(c >> 4, &hd1);
+      hex_digit(c & 15, &hd2);
       out[j++] = '%';
-      out[j++] = hex_digit(c >> 4);
-      out[j++] = hex_digit(c & 15);
+      out[j++] = hd1;
+      out[j++] = hd2;
     }
   }
   out[j] = '\0';
