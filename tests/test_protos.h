@@ -33,7 +33,7 @@ int test_jwt_json_web_tokens_authentication_middleware(void);
 
 #ifdef __cplusplus
 }
-#endif
+#endif /* __cplusplus */
 
 #endif /* C_REST_TEST_PROTOS_H */
 /* clang-format on */

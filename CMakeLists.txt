@@ -388,6 +388,7 @@ if(MSVC)
         src/c_rest_string.c
         src/c_rest_hashmap.c
         src/c_rest_list.c
+        src/c_rest_log.c
         src/c_rest_pool.c
         src/c_rest_ts_queue.c
         src/c_rest_mem.c
@@ -461,6 +462,7 @@ add_library(c-rest-framework
     src/c_rest_string.c
     src/c_rest_hashmap.c
     src/c_rest_list.c
+        src/c_rest_log.c
     src/c_rest_pool.c
     src/c_rest_ts_queue.c
     src/c_rest_mem.c
