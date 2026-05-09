@@ -16,9 +16,15 @@
 
 #define ASSERT_STR_EQ(expected, actual)                                        \
   do {                                                                         \
+    if ((expected) == NULL && (actual) == NULL) break;                         \
     if ((actual) == NULL) {                                                    \
       printf("%s:%d: Assertion failed: expected '%s', got NULL\n", __FILE__,   \
-             __LINE__, (expected));                                            \
+             __LINE__, (expected) ? (expected) : "NULL");                      \
+      return 1;                                                                \
+    }                                                                          \
+    if ((expected) == NULL) {                                                  \
+      printf("%s:%d: Assertion failed: expected NULL, got '%s'\n", __FILE__,   \
+             __LINE__, (actual));                                              \
       return 1;                                                                \
     }                                                                          \
     if (strcmp((expected), (actual)) != 0) {                                   \
