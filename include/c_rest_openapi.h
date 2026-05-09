@@ -7,7 +7,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 /**
  * @brief Reference to a schema struct

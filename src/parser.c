@@ -258,12 +258,16 @@ static int basic_execute(c_rest_parser_context *ctx, const char *data,
         while (*v == ' ')
           v++;
 
-        if (c_rest_stricmp(st->key_buf, "Content-Length", &cmp) == 0 && cmp == 0) {
+        if (c_rest_stricmp(st->key_buf, "Content-Length", &cmp) == 0 &&
+            cmp == 0) {
           st->content_length = (size_t)strtoul(v, NULL, 10);
-        } else if (c_rest_stricmp(st->key_buf, "Transfer-Encoding", &cmp) == 0 && cmp == 0) {
+        } else if (c_rest_stricmp(st->key_buf, "Transfer-Encoding", &cmp) ==
+                       0 &&
+                   cmp == 0) {
           if (strstr(v, "chunked"))
             st->is_chunked = 1;
-        } else if (c_rest_stricmp(st->key_buf, "Connection", &cmp) == 0 && cmp == 0) {
+        } else if (c_rest_stricmp(st->key_buf, "Connection", &cmp) == 0 &&
+                   cmp == 0) {
           int vcmp;
           if (c_rest_stricmp(v, "close", &vcmp) == 0 && vcmp == 0)
             st->keep_alive = 0;

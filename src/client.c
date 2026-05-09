@@ -390,7 +390,8 @@ int c_rest_client_url_decode(const char *in_str, char **out_str) {
       out[j++] = ' ';
     } else if (in_str[i] == '%' && i + 2 < len) {
       int h1, h2;
-      if (from_hex(in_str[i + 1], &h1) == 0 && from_hex(in_str[i + 2], &h2) == 0) {
+      if (from_hex(in_str[i + 1], &h1) == 0 &&
+          from_hex(in_str[i + 2], &h2) == 0) {
         out[j++] = (char)((h1 << 4) | h2);
         i += 2;
       } else {
