@@ -10,11 +10,12 @@ static const char *const wdays[] = {"Sun", "Mon", "Tue", "Wed",
 static const char *const months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-static int is_leap(int year) {
-  return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+static int is_leap(int year, int *out_leap) {
+  *out_leap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+  return 0;
 }
 
-static time_t portable_timegm(struct tm *tm) {
+static int portable_timegm(struct tm *tm, time_t *out_time) {
   static const int days_before_month[2][12] = {
       {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334},
       {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335}};
@@ -24,19 +25,24 @@ static time_t portable_timegm(struct tm *tm) {
   int days = 0;
   int y;
 
-  if (year < 1970)
-    return (time_t)-1;
-
-  for (y = 1970; y < year; y++) {
-    days += 365 + is_leap(y);
+  if (year < 1970) {
+    *out_time = (time_t)-1;
+    return 1;
   }
 
-  leap = is_leap(year);
+  for (y = 1970; y < year; y++) {
+    int lp;
+    is_leap(y, &lp);
+    days += 365 + lp;
+  }
+
+  is_leap(year, &leap);
   days += days_before_month[leap][month];
   days += tm->tm_mday - 1;
 
-  return (time_t)(days * 86400 + tm->tm_hour * 3600 + tm->tm_min * 60 +
-                  tm->tm_sec);
+  *out_time = (time_t)(days * 86400 + tm->tm_hour * 3600 + tm->tm_min * 60 +
+                       tm->tm_sec);
+  return 0;
 }
 
 int c_rest_http_date_format(time_t t, char *out_str, size_t out_len) {
@@ -123,9 +129,7 @@ int c_rest_http_date_parse(const char *date_str, time_t *out_t) {
   tm_info.tm_sec = sec;
   tm_info.tm_isdst = 0; /* GMT */
 
-  *out_t = portable_timegm(&tm_info);
-
-  if (*out_t == (time_t)-1) {
+  if (portable_timegm(&tm_info, out_t) != 0) {
     return 1;
   }
 

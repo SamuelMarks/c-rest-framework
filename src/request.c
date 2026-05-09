@@ -9,18 +9,19 @@
 #include "c_rest_log.h"
 
 #include <ctype.h>
-
-static int c_rest_stricmp(const char *s1, const char *s2) {
+static int c_rest_stricmp(const char *s1, const char *s2, int *out_cmp) {
   while (*s1 && *s2) {
     int c1 = tolower((unsigned char)*s1);
     int c2 = tolower((unsigned char)*s2);
     if (c1 != c2) {
-      return c1 - c2;
+      *out_cmp = c1 - c2;
+      return 0;
     }
     s1++;
     s2++;
   }
-  return tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
+  *out_cmp = tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
+  return 0;
 }
 
 int c_rest_request_get_header(struct c_rest_request *req, const char *key,
@@ -30,11 +31,13 @@ int c_rest_request_get_header(struct c_rest_request *req, const char *key,
     return 1;
   }
   for (h = req->headers; h != NULL; h = h->next) {
-    if (c_rest_stricmp(h->key, key) == 0) {
+    int cmp;
+    if (c_rest_stricmp(h->key, key, &cmp) == 0 && cmp == 0) {
       *out_value = h->value;
       return 0;
     }
   }
+  *out_value = NULL;
   return 1;
 }
 

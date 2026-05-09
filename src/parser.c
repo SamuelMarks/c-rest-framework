@@ -117,16 +117,19 @@ static int basic_init(c_rest_parser_context *ctx,
   return 0;
 }
 
-static int c_rest_stricmp(const char *s1, const char *s2) {
+static int c_rest_stricmp(const char *s1, const char *s2, int *out_cmp) {
   while (*s1 && *s2) {
     int c1 = tolower((unsigned char)*s1);
     int c2 = tolower((unsigned char)*s2);
-    if (c1 != c2)
-      return c1 - c2;
+    if (c1 != c2) {
+      *out_cmp = c1 - c2;
+      return 0;
+    }
     s1++;
     s2++;
   }
-  return tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
+  *out_cmp = tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
+  return 0;
 }
 
 static int append_buf(struct basic_parser_state *st, char c, int is_key) {
@@ -251,16 +254,18 @@ static int basic_execute(c_rest_parser_context *ctx, const char *data,
         /* process header */
         /* skip leading space in value */
         char *v = st->buf;
+        int cmp;
         while (*v == ' ')
           v++;
 
-        if (c_rest_stricmp(st->key_buf, "Content-Length") == 0) {
+        if (c_rest_stricmp(st->key_buf, "Content-Length", &cmp) == 0 && cmp == 0) {
           st->content_length = (size_t)strtoul(v, NULL, 10);
-        } else if (c_rest_stricmp(st->key_buf, "Transfer-Encoding") == 0) {
+        } else if (c_rest_stricmp(st->key_buf, "Transfer-Encoding", &cmp) == 0 && cmp == 0) {
           if (strstr(v, "chunked"))
             st->is_chunked = 1;
-        } else if (c_rest_stricmp(st->key_buf, "Connection") == 0) {
-          if (c_rest_stricmp(v, "close") == 0)
+        } else if (c_rest_stricmp(st->key_buf, "Connection", &cmp) == 0 && cmp == 0) {
+          int vcmp;
+          if (c_rest_stricmp(v, "close", &vcmp) == 0 && vcmp == 0)
             st->keep_alive = 0;
         }
 
