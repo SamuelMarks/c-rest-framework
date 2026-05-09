@@ -33,7 +33,8 @@ struct c_rest_client_context {
   struct HttpClient client;
 };
 
-static int method_from_str(const char *method_str, enum HttpMethod *out_method) {
+static int method_from_str(const char *method_str,
+                           enum HttpMethod *out_method) {
   if (!method_str) {
     *out_method = HTTP_GET;
     return 0;

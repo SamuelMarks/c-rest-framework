@@ -512,35 +512,50 @@ int c_rest_response_cleanup(struct c_rest_response *res) {
 static int get_status_text(int status_code, const char **out_text) {
   switch (status_code) {
   case 200:
-    *out_text = "OK"; break;
+    *out_text = "OK";
+    break;
   case 201:
-    *out_text = "Created"; break;
+    *out_text = "Created";
+    break;
   case 202:
-    *out_text = "Accepted"; break;
+    *out_text = "Accepted";
+    break;
   case 204:
-    *out_text = "No Content"; break;
+    *out_text = "No Content";
+    break;
   case 301:
-    *out_text = "Moved Permanently"; break;
+    *out_text = "Moved Permanently";
+    break;
   case 302:
-    *out_text = "Found"; break;
+    *out_text = "Found";
+    break;
   case 304:
-    *out_text = "Not Modified"; break;
+    *out_text = "Not Modified";
+    break;
   case 400:
-    *out_text = "Bad Request"; break;
+    *out_text = "Bad Request";
+    break;
   case 401:
-    *out_text = "Unauthorized"; break;
+    *out_text = "Unauthorized";
+    break;
   case 403:
-    *out_text = "Forbidden"; break;
+    *out_text = "Forbidden";
+    break;
   case 404:
-    *out_text = "Not Found"; break;
+    *out_text = "Not Found";
+    break;
   case 405:
-    *out_text = "Method Not Allowed"; break;
+    *out_text = "Method Not Allowed";
+    break;
   case 500:
-    *out_text = "Internal Server Error"; break;
+    *out_text = "Internal Server Error";
+    break;
   case 501:
-    *out_text = "Not Implemented"; break;
+    *out_text = "Not Implemented";
+    break;
   default:
-    *out_text = "Unknown"; break;
+    *out_text = "Unknown";
+    break;
   }
   return 0;
 }
@@ -552,6 +567,7 @@ int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
   struct c_rest_header *h;
   size_t offset = 0;
   char cl_buf[32];
+  const char *status_text;
 
   if (!res || !out_buf || !out_len)
     return 1;
@@ -584,16 +600,15 @@ int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
     LOG_DEBUG("C_REST_MALLOC failed");
     buf = NULL;
   }
-  const char *status_text;
+
   if (!buf)
     return 1;
 
   get_status_text(res->status_code ? res->status_code : 200, &status_text);
 
 #if defined(_MSC_VER)
-  offset +=
-      sprintf_s(buf + offset, est_len - offset, "HTTP/1.1 %d %s\r\n",
-                res->status_code ? res->status_code : 200, status_text);
+  offset += sprintf_s(buf + offset, est_len - offset, "HTTP/1.1 %d %s\r\n",
+                      res->status_code ? res->status_code : 200, status_text);
 #else
   offset += sprintf(buf + offset, "HTTP/1.1 %d %s\r\n",
                     res->status_code ? res->status_code : 200, status_text);

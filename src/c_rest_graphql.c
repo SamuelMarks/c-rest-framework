@@ -188,7 +188,7 @@ static int parse_field(struct c_rest_graphql_context *ctx,
     ctx->position++; /* skip ':' */
     node->alias = name;
     if (parse_name(ctx, &node->name) != 0) {
-        node->name = NULL;
+      node->name = NULL;
     }
   } else {
     node->name = name;
@@ -220,12 +220,14 @@ static int parse_operation(struct c_rest_graphql_context *ctx,
       strncmp(&ctx->input[ctx->position], "query", 5) == 0) {
     ctx->position += 5;
     op_type = C_REST_GRAPHQL_OP_QUERY;
-    if (parse_name(ctx, &name) != 0) name = NULL;
+    if (parse_name(ctx, &name) != 0)
+      name = NULL;
   } else if (ctx->position + 8 <= ctx->length &&
              strncmp(&ctx->input[ctx->position], "mutation", 8) == 0) {
     ctx->position += 8;
     op_type = C_REST_GRAPHQL_OP_MUTATION;
-    if (parse_name(ctx, &name) != 0) name = NULL;
+    if (parse_name(ctx, &name) != 0)
+      name = NULL;
   }
 
   node = alloc_node(C_REST_GRAPHQL_NODE_OPERATION);

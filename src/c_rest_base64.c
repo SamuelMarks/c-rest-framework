@@ -136,27 +136,43 @@ static int decode_internal(const char *src, size_t src_len, unsigned char *dst,
   for (i = 0, j = 0; i < in_len;) {
     unsigned char val_a = 0, val_b = 0, val_c = 0, val_d = 0;
     unsigned int sextet_a = 0, sextet_b = 0, sextet_c = 0, sextet_d = 0;
+    unsigned long triple;
 
     if (i < in_len) {
-      if (src[i] == '=') i++;
-      else { get_val(src[i++], is_url, &val_a); sextet_a = val_a; }
+      if (src[i] == '=')
+        i++;
+      else {
+        get_val(src[i++], is_url, &val_a);
+        sextet_a = val_a;
+      }
     }
     if (i < in_len) {
-      if (src[i] == '=') i++;
-      else { get_val(src[i++], is_url, &val_b); sextet_b = val_b; }
+      if (src[i] == '=')
+        i++;
+      else {
+        get_val(src[i++], is_url, &val_b);
+        sextet_b = val_b;
+      }
     }
     if (i < in_len) {
-      if (src[i] == '=') i++;
-      else { get_val(src[i++], is_url, &val_c); sextet_c = val_c; }
+      if (src[i] == '=')
+        i++;
+      else {
+        get_val(src[i++], is_url, &val_c);
+        sextet_c = val_c;
+      }
     }
     if (i < in_len) {
-      if (src[i] == '=') i++;
-      else { get_val(src[i++], is_url, &val_d); sextet_d = val_d; }
+      if (src[i] == '=')
+        i++;
+      else {
+        get_val(src[i++], is_url, &val_d);
+        sextet_d = val_d;
+      }
     }
 
-    unsigned long triple = ((unsigned long)sextet_a << 18) +
-                           ((unsigned long)sextet_b << 12) +
-                           ((unsigned long)sextet_c << 6) + sextet_d;
+    triple = ((unsigned long)sextet_a << 18) + ((unsigned long)sextet_b << 12) +
+             ((unsigned long)sextet_c << 6) + sextet_d;
 
     if (j < out_len)
       dst[j++] = (unsigned char)((triple >> 16) & 0xFF);
