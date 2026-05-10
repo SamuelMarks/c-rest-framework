@@ -323,8 +323,8 @@ static void on_header(c_rest_parser_context *pctx, const char *key,
 static void on_body(c_rest_parser_context *pctx, const char *data, size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
   char *new_body = NULL;
-  if (C_REST_REALLOC(st->req.body, st->req.body_len + len + 1,
-                     &new_body) != 0) {
+  if (C_REST_REALLOC(st->req.body, st->req.body_len + len + 1, &new_body) !=
+      0) {
     LOG_DEBUG("C_REST_REALLOC failed");
   }
   if (new_body) {

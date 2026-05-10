@@ -922,8 +922,7 @@ int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
   if (c_rest_base64url_encode(expected_sig, 32, NULL,
                               &encoded_expected_sig_len) != 0)
     return 1;
-  if (C_REST_MALLOC(encoded_expected_sig_len + 1,
-                    &encoded_expected_sig) != 0) {
+  if (C_REST_MALLOC(encoded_expected_sig_len + 1, &encoded_expected_sig) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     encoded_expected_sig = NULL;
   }

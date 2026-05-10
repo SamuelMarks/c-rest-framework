@@ -36,8 +36,7 @@ int c_rest_http23_ctx_init(c_rest_protocol_t protocol,
   ctx->protocol = protocol;
   ctx->is_ready = 0;
 
-  if (C_REST_MALLOC(sizeof(struct c_rest_request), &ctx->request) !=
-      0) {
+  if (C_REST_MALLOC(sizeof(struct c_rest_request), &ctx->request) != 0) {
     C_REST_FREE(ctx);
     return C_REST_HTTP23_ERR_MEMORY;
   }

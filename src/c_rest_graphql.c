@@ -36,8 +36,7 @@ alloc_node(enum c_rest_graphql_node_type type) {
  */
 static int alloc_list(struct c_rest_graphql_node_list **out_list) {
   struct c_rest_graphql_node_list *list = NULL;
-  if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node_list), &list) !=
-      0) {
+  if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node_list), &list) != 0) {
     return 1;
   }
   list->nodes = NULL;
@@ -397,8 +396,7 @@ int c_rest_graphql_schema_add_resolver(struct c_rest_graphql_schema *schema,
   if (!schema || !field_name || !resolver)
     return -1;
 
-  if (C_REST_MALLOC(sizeof(struct c_rest_graphql_resolver_entry),
-                    &entry) != 0)
+  if (C_REST_MALLOC(sizeof(struct c_rest_graphql_resolver_entry), &entry) != 0)
     return -1;
 
   len = strlen(field_name);

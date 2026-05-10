@@ -1047,8 +1047,8 @@ int c_rest_enable_swagger_ui(struct c_rest_router *router,
   if (spec) {
     if (spec->swagger_openapi_url)
       C_REST_FREE((void *)(spec->swagger_openapi_url));
-    if (C_REST_MALLOC(strlen(openapi_url) + 1,
-                      &spec->swagger_openapi_url) != 0) {
+    if (C_REST_MALLOC(strlen(openapi_url) + 1, &spec->swagger_openapi_url) !=
+        0) {
       LOG_DEBUG("C_REST_MALLOC failed");
       spec->swagger_openapi_url = NULL;
     }

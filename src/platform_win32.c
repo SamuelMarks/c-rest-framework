@@ -132,8 +132,7 @@ int c_rest_thread_create(c_rest_thread_t *out_thread, c_rest_thread_fn func,
   if (!out_thread || !func)
     return 1;
 
-  if (C_REST_MALLOC(sizeof(struct thread_wrapper_args), &(args)) !=
-      0) {
+  if (C_REST_MALLOC(sizeof(struct thread_wrapper_args), &(args)) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     args = NULL;
   }

@@ -297,8 +297,7 @@ int c_rest_multipart_parser_clone(const c_rest_multipart_parser *parser,
 
   *p = *parser;
   if (parser->boundary) {
-    if (C_REST_MALLOC(parser->boundary_length + 1, &p->boundary) !=
-        0) {
+    if (C_REST_MALLOC(parser->boundary_length + 1, &p->boundary) != 0) {
       C_REST_FREE(p);
       return 1;
     }

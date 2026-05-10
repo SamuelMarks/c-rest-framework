@@ -129,8 +129,7 @@ int c_rest_compress_data(c_rest_compression_ctx_t *ctx,
       if (ctx->z_strm.avail_out == 0) {
         unsigned char *new_buf = NULL;
         out_capacity *= 2;
-        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 ||
-            !new_buf) {
+        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 || !new_buf) {
           C_REST_FREE(out_buf);
           return 1;
         }
@@ -172,8 +171,7 @@ int c_rest_compress_data(c_rest_compression_ctx_t *ctx,
         unsigned char *new_buf = NULL;
         size_t offset = next_out - out_buf;
         out_capacity *= 2;
-        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 ||
-            !new_buf) {
+        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 || !new_buf) {
           C_REST_FREE(out_buf);
           return 1;
         }
@@ -226,8 +224,7 @@ int c_rest_compress_finish(c_rest_compression_ctx_t *ctx,
       if (ctx->z_strm.avail_out == 0) {
         unsigned char *new_buf = NULL;
         out_capacity *= 2;
-        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 ||
-            !new_buf) {
+        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 || !new_buf) {
           C_REST_FREE(out_buf);
           return 1;
         }
@@ -262,8 +259,7 @@ int c_rest_compress_finish(c_rest_compression_ctx_t *ctx,
         unsigned char *new_buf = NULL;
         size_t offset = next_out - out_buf;
         out_capacity *= 2;
-        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 ||
-            !new_buf) {
+        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 || !new_buf) {
           C_REST_FREE(out_buf);
           return 1;
         }
