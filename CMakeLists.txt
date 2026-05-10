@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
+if(POLICY CMP0079)
+  cmake_policy(SET CMP0079 NEW)
+endif()
 project(c-rest-framework C)
 
 # Global fPIC
