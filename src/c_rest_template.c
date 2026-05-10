@@ -14,7 +14,7 @@ int c_rest_template_init(struct c_rest_template_context *ctx,
     return 1;
   }
   len = strlen(template_str);
-  if (C_REST_MALLOC(len + 1, (void **)&copy) != 0) {
+  if (C_REST_MALLOC(len + 1, &copy) != 0) {
     return 1;
   }
 #if defined(_MSC_VER)
@@ -53,7 +53,7 @@ int c_rest_template_render(const struct c_rest_template_context *ctx,
   }
 
   out_cap = ctx->template_len + 128;
-  if (C_REST_MALLOC(out_cap, (void **)&out_buf) != 0) {
+  if (C_REST_MALLOC(out_cap, &out_buf) != 0) {
     return 1;
   }
 
@@ -75,7 +75,7 @@ int c_rest_template_render(const struct c_rest_template_context *ctx,
             if (out_len + val_len + 1 > out_cap) {
               size_t new_cap = out_cap * 2 + val_len;
               char *new_buf = NULL;
-              if (C_REST_REALLOC(out_buf, new_cap, (void **)&new_buf) != 0) {
+              if (C_REST_REALLOC(out_buf, new_cap, &new_buf) != 0) {
                 C_REST_FREE(out_buf);
                 return 1;
               }
@@ -100,7 +100,7 @@ int c_rest_template_render(const struct c_rest_template_context *ctx,
           if (out_len + copy_len + 1 > out_cap) {
             size_t new_cap = out_cap * 2 + copy_len;
             char *new_buf = NULL;
-            if (C_REST_REALLOC(out_buf, new_cap, (void **)&new_buf) != 0) {
+            if (C_REST_REALLOC(out_buf, new_cap, &new_buf) != 0) {
               C_REST_FREE(out_buf);
               return 1;
             }
@@ -122,7 +122,7 @@ int c_rest_template_render(const struct c_rest_template_context *ctx,
     if (out_len + 2 > out_cap) {
       size_t new_cap = out_cap * 2;
       char *new_buf = NULL;
-      if (C_REST_REALLOC(out_buf, new_cap, (void **)&new_buf) != 0) {
+      if (C_REST_REALLOC(out_buf, new_cap, &new_buf) != 0) {
         C_REST_FREE(out_buf);
         return 1;
       }

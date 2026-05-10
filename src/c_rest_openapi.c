@@ -12,7 +12,7 @@ int c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec) {
   if (!out_spec)
     return 1;
 
-  if (C_REST_MALLOC(sizeof(struct c_rest_openapi_spec), (void **)&(spec)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); spec = NULL; }
+  if (C_REST_MALLOC(sizeof(struct c_rest_openapi_spec), &(spec)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); spec = NULL; }
   if (!spec)
     return 1;
 
@@ -331,7 +331,7 @@ int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
 
 static int copy_string(const char **dst, const char *src) {
   if (src) {
-    if (C_REST_MALLOC(strlen(src) + 1, (void **)dst) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *dst = NULL; }
+    if (C_REST_MALLOC(strlen(src) + 1, dst) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *dst = NULL; }
     if (*dst) {
 #if defined(_MSC_VER)
       strcpy_s((char *)*dst, strlen(src) + 1, src);
@@ -352,7 +352,7 @@ static int copy_operation(struct c_rest_openapi_operation *dst,
   copy_string(&dst->description, src->description);
 
   if (src->n_tags > 0 && src->tags) {
-    if (C_REST_MALLOC(sizeof(char *) * src->n_tags, (void **)&dst->tags) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->tags = NULL; }
+    if (C_REST_MALLOC(sizeof(char *) * src->n_tags, &dst->tags) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->tags = NULL; }
     if (dst->tags) {
       dst->n_tags = src->n_tags;
       for (i = 0; i < src->n_tags; i++) {
@@ -372,7 +372,7 @@ static int copy_operation(struct c_rest_openapi_operation *dst,
   copy_string(&dst->external_docs.url, src->external_docs.url);
 
   if (src->n_security > 0 && src->security) {
-    if (C_REST_MALLOC(sizeof(struct c_rest_openapi_security_requirement) * src->n_security, (void **)&(dst->security)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->security = NULL; }
+    if (C_REST_MALLOC(sizeof(struct c_rest_openapi_security_requirement) * src->n_security, &(dst->security)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->security = NULL; }
     if (dst->security) {
       dst->n_security = src->n_security;
       for (i = 0; i < src->n_security; i++) {
@@ -381,7 +381,7 @@ static int copy_operation(struct c_rest_openapi_operation *dst,
         copy_string(&dst->security[i].name, src->security[i].name);
         dst->security[i].n_scopes = src->security[i].n_scopes;
         if (src->security[i].n_scopes > 0 && src->security[i].scopes) {
-          if (C_REST_MALLOC(sizeof(char *) * src->security[i].n_scopes, (void **)&(dst->security[i].scopes)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->security[i].scopes = NULL; }
+          if (C_REST_MALLOC(sizeof(char *) * src->security[i].n_scopes, &(dst->security[i].scopes)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->security[i].scopes = NULL; }
           if (dst->security[i].scopes) {
             for (k = 0; k < src->security[i].n_scopes; k++) {
               dst->security[i].scopes[k] = NULL;
@@ -409,8 +409,8 @@ int c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
         spec->capacity_components == 0 ? 8 : spec->capacity_components * 2;
     char **new_keys = NULL;
     char **new_json = NULL;
-    if (C_REST_MALLOC(sizeof(char *) * new_cap, (void **)&new_keys) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); }
-    if (C_REST_MALLOC(sizeof(char *) * new_cap, (void **)&new_json) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); }
+    if (C_REST_MALLOC(sizeof(char *) * new_cap, &new_keys) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); }
+    if (C_REST_MALLOC(sizeof(char *) * new_cap, &new_json) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); }
     if (!new_keys || !new_json) {
       if (new_keys)
         C_REST_FREE((void *)(new_keys));
@@ -464,7 +464,7 @@ int c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
   if (!path) {
     if (spec->n_paths >= spec->capacity_paths) {
       size_t new_cap = spec->capacity_paths == 0 ? 4 : spec->capacity_paths * 2;
-      struct c_rest_openapi_path *new_paths = NULL; if (C_REST_MALLOC(sizeof(struct c_rest_openapi_path) * new_cap, (void **)&(new_paths)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_paths = NULL; }
+      struct c_rest_openapi_path *new_paths = NULL; if (C_REST_MALLOC(sizeof(struct c_rest_openapi_path) * new_cap, &(new_paths)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_paths = NULL; }
       if (!new_paths)
         return 1;
 
@@ -1011,7 +1011,7 @@ static int swagger_ui_handler(struct c_rest_request *req,
 
   html_len = strlen(swagger_html_template_1) + strlen(swagger_html_template_2) +
              strlen(openapi_url) + 1;
-  if (C_REST_MALLOC(html_len, (void **)&html_buf) != 0) {
+  if (C_REST_MALLOC(html_len, &html_buf) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     html_buf = NULL;
   }
@@ -1048,7 +1048,7 @@ int c_rest_enable_swagger_ui(struct c_rest_router *router,
     if (spec->swagger_openapi_url)
       C_REST_FREE((void *)(spec->swagger_openapi_url));
     if (C_REST_MALLOC(strlen(openapi_url) + 1,
-                      (void **)&spec->swagger_openapi_url) != 0) {
+                      &spec->swagger_openapi_url) != 0) {
       LOG_DEBUG("C_REST_MALLOC failed");
       spec->swagger_openapi_url = NULL;
     }

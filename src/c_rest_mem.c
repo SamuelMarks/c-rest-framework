@@ -35,7 +35,7 @@ static int add_node(void *ptr, size_t size, const char *file, int line) {
   if (!mem_initialized || !ptr)
     return 1;
 
-  if (C_REST_MALLOC(sizeof(c_rest_mem_node), (void **)&node) != 0) {
+  if (C_REST_MALLOC(sizeof(c_rest_mem_node), &node) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     node = NULL;
   }
@@ -80,47 +80,50 @@ static int remove_node(void *ptr) {
   return 0;
 }
 
-int c_rest_mem_malloc(size_t size, const char *file, int line, void **out_ptr) {
+int c_rest_mem_malloc(size_t size, const char *file, int line, void *out_ptr) {
+  void **real_out = (void **)out_ptr;
   void *ptr;
-  if (!out_ptr)
+  if (!real_out)
     return 1;
-  if (C_REST_MALLOC(size, (void **)&ptr) != 0) {
+  if (C_REST_MALLOC(size, &ptr) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     ptr = NULL;
   }
   add_node(ptr, size, file, line);
-  *out_ptr = ptr;
+  *real_out = ptr;
   return ptr ? 0 : 1;
 }
 
 int c_rest_mem_calloc(size_t count, size_t size, const char *file, int line,
-                      void **out_ptr) {
+                      void *out_ptr) {
+  void **real_out = (void **)out_ptr;
   void *ptr;
-  if (!out_ptr)
+  if (!real_out)
     return 1;
-  if (C_REST_CALLOC(count, size, (void **)&ptr) != 0) {
+  if (C_REST_CALLOC(count, size, &ptr) != 0) {
     LOG_DEBUG("C_REST_CALLOC failed");
     ptr = NULL;
   }
   add_node(ptr, count * size, file, line);
-  *out_ptr = ptr;
+  *real_out = ptr;
   return ptr ? 0 : 1;
 }
 
 int c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line,
-                       void **out_ptr) {
+                       void *out_ptr) {
+  void **real_out = (void **)out_ptr;
   c_rest_mem_node *curr;
   void *new_ptr;
 
-  if (!out_ptr)
+  if (!real_out)
     return 1;
 
   if (!mem_initialized) {
-    if (C_REST_REALLOC(ptr, size, (void **)&new_ptr) != 0) {
+    if (C_REST_REALLOC(ptr, size, &new_ptr) != 0) {
       LOG_DEBUG("C_REST_REALLOC failed");
       new_ptr = NULL;
     }
-    *out_ptr = new_ptr;
+    *real_out = new_ptr;
     return new_ptr ? 0 : 1;
   }
 
@@ -129,7 +132,7 @@ int c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line,
   }
   if (size == 0) {
     c_rest_mem_free(ptr);
-    *out_ptr = NULL;
+    *real_out = NULL;
     return 0;
   }
 
@@ -143,7 +146,7 @@ int c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line,
   }
   c_rest_mutex_unlock(mem_mutex);
 
-  if (C_REST_REALLOC(ptr, size, (void **)&new_ptr) != 0) {
+  if (C_REST_REALLOC(ptr, size, &new_ptr) != 0) {
     LOG_DEBUG("C_REST_REALLOC failed");
     new_ptr = NULL;
   }
@@ -155,7 +158,7 @@ int c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line,
     curr->line = line;
     c_rest_mutex_unlock(mem_mutex);
   }
-  *out_ptr = new_ptr;
+  *real_out = new_ptr;
   return new_ptr ? 0 : 1;
 }
 int c_rest_mem_free(void *ptr) {

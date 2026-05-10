@@ -17,7 +17,7 @@
 static struct c_rest_graphql_node *
 alloc_node(enum c_rest_graphql_node_type type) {
   struct c_rest_graphql_node *node = NULL;
-  if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node), (void **)&node) != 0) {
+  if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node), &node) != 0) {
     return NULL;
   }
   node->type = type;
@@ -36,7 +36,7 @@ alloc_node(enum c_rest_graphql_node_type type) {
  */
 static int alloc_list(struct c_rest_graphql_node_list **out_list) {
   struct c_rest_graphql_node_list *list = NULL;
-  if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node_list), (void **)&list) !=
+  if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node_list), &list) !=
       0) {
     return 1;
   }
@@ -56,7 +56,7 @@ static int list_append(struct c_rest_graphql_node_list *list,
     size_t new_cap = list->capacity == 0 ? 4 : list->capacity * 2;
     struct c_rest_graphql_node **new_nodes = NULL;
     if (C_REST_MALLOC(new_cap * sizeof(struct c_rest_graphql_node *),
-                      (void **)&new_nodes) != 0) {
+                      &new_nodes) != 0) {
       return -1;
     }
     if (list->nodes) {
@@ -112,7 +112,7 @@ static int parse_name(struct c_rest_graphql_context *ctx, char **out_name) {
 
   len = ctx->position - start;
   str = NULL;
-  if (C_REST_MALLOC(len + 1, (void **)&str) != 0) {
+  if (C_REST_MALLOC(len + 1, &str) != 0) {
     return 1;
   }
   memcpy(str, &ctx->input[start], len);
@@ -366,7 +366,7 @@ struct c_rest_graphql_resolver_entry {
 int c_rest_graphql_schema_init(struct c_rest_graphql_schema **schema) {
   if (!schema)
     return -1;
-  if (C_REST_MALLOC(sizeof(struct c_rest_graphql_schema), (void **)schema) != 0)
+  if (C_REST_MALLOC(sizeof(struct c_rest_graphql_schema), schema) != 0)
     return -1;
   (*schema)->resolvers = NULL;
   return 0;
@@ -398,11 +398,11 @@ int c_rest_graphql_schema_add_resolver(struct c_rest_graphql_schema *schema,
     return -1;
 
   if (C_REST_MALLOC(sizeof(struct c_rest_graphql_resolver_entry),
-                    (void **)&entry) != 0)
+                    &entry) != 0)
     return -1;
 
   len = strlen(field_name);
-  if (C_REST_MALLOC(len + 1, (void **)&entry->field_name) != 0) {
+  if (C_REST_MALLOC(len + 1, &entry->field_name) != 0) {
     C_REST_FREE(entry);
     return -1;
   }
@@ -455,7 +455,7 @@ int c_rest_graphql_resolve(struct c_rest_graphql_node *doc,
   }
 
   *out_json = NULL;
-  if (C_REST_MALLOC(len + 1, (void **)out_json) != 0)
+  if (C_REST_MALLOC(len + 1, out_json) != 0)
     return -1;
 
   memcpy(*out_json, dummy, len + 1);

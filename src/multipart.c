@@ -50,12 +50,12 @@ int c_rest_multipart_parser_init(
   if (!out_parser || !boundary)
     return 1;
 
-  if (C_REST_MALLOC(sizeof(c_rest_multipart_parser), (void **)&p) != 0)
+  if (C_REST_MALLOC(sizeof(c_rest_multipart_parser), &p) != 0)
     return 1;
 
   blen = strlen(boundary);
   p->boundary_length = blen;
-  if (C_REST_MALLOC(blen + 1, (void **)&p->boundary) != 0) {
+  if (C_REST_MALLOC(blen + 1, &p->boundary) != 0) {
     C_REST_FREE(p);
     return 1;
   }
@@ -292,12 +292,12 @@ int c_rest_multipart_parser_clone(const c_rest_multipart_parser *parser,
   if (!parser || !out_clone)
     return 1;
 
-  if (C_REST_MALLOC(sizeof(c_rest_multipart_parser), (void **)&p) != 0)
+  if (C_REST_MALLOC(sizeof(c_rest_multipart_parser), &p) != 0)
     return 1;
 
   *p = *parser;
   if (parser->boundary) {
-    if (C_REST_MALLOC(parser->boundary_length + 1, (void **)&p->boundary) !=
+    if (C_REST_MALLOC(parser->boundary_length + 1, &p->boundary) !=
         0) {
       C_REST_FREE(p);
       return 1;

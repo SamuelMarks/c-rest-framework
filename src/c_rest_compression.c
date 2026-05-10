@@ -33,7 +33,7 @@ int c_rest_compression_ctx_init(c_rest_compression_ctx_t **ctx,
 
 #if (defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP) ||             \
      defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI))
-  if (C_REST_MALLOC(sizeof(c_rest_compression_ctx_t), (void **)&new_ctx) != 0 ||
+  if (C_REST_MALLOC(sizeof(c_rest_compression_ctx_t), &new_ctx) != 0 ||
       !new_ctx)
     return 1;
 
@@ -119,7 +119,7 @@ int c_rest_compress_data(c_rest_compression_ctx_t *ctx,
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP)
   if (ctx->type == C_REST_COMPRESSION_GZIP) {
     out_capacity = in_len + 4096; /* Some extra space */
-    if (C_REST_MALLOC(out_capacity, (void **)&out_buf) != 0 || !out_buf)
+    if (C_REST_MALLOC(out_capacity, &out_buf) != 0 || !out_buf)
       return 1;
 
     ctx->z_strm.avail_in = (uInt)in_len;
@@ -129,7 +129,7 @@ int c_rest_compress_data(c_rest_compression_ctx_t *ctx,
       if (ctx->z_strm.avail_out == 0) {
         unsigned char *new_buf = NULL;
         out_capacity *= 2;
-        if (C_REST_REALLOC(out_buf, out_capacity, (void **)&new_buf) != 0 ||
+        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 ||
             !new_buf) {
           C_REST_FREE(out_buf);
           return 1;
@@ -161,7 +161,7 @@ int c_rest_compress_data(c_rest_compression_ctx_t *ctx,
     uint8_t *next_out;
 
     out_capacity = in_len + 4096;
-    if (C_REST_MALLOC(out_capacity, (void **)&out_buf) != 0 || !out_buf)
+    if (C_REST_MALLOC(out_capacity, &out_buf) != 0 || !out_buf)
       return 1;
 
     available_out = out_capacity;
@@ -172,7 +172,7 @@ int c_rest_compress_data(c_rest_compression_ctx_t *ctx,
         unsigned char *new_buf = NULL;
         size_t offset = next_out - out_buf;
         out_capacity *= 2;
-        if (C_REST_REALLOC(out_buf, out_capacity, (void **)&new_buf) != 0 ||
+        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 ||
             !new_buf) {
           C_REST_FREE(out_buf);
           return 1;
@@ -214,7 +214,7 @@ int c_rest_compress_finish(c_rest_compression_ctx_t *ctx,
   *out_data = NULL;
   *out_len = 0;
 
-  if (C_REST_MALLOC(out_capacity, (void **)&out_buf) != 0 || !out_buf)
+  if (C_REST_MALLOC(out_capacity, &out_buf) != 0 || !out_buf)
     return 1;
 
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP)
@@ -226,7 +226,7 @@ int c_rest_compress_finish(c_rest_compression_ctx_t *ctx,
       if (ctx->z_strm.avail_out == 0) {
         unsigned char *new_buf = NULL;
         out_capacity *= 2;
-        if (C_REST_REALLOC(out_buf, out_capacity, (void **)&new_buf) != 0 ||
+        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 ||
             !new_buf) {
           C_REST_FREE(out_buf);
           return 1;
@@ -262,7 +262,7 @@ int c_rest_compress_finish(c_rest_compression_ctx_t *ctx,
         unsigned char *new_buf = NULL;
         size_t offset = next_out - out_buf;
         out_capacity *= 2;
-        if (C_REST_REALLOC(out_buf, out_capacity, (void **)&new_buf) != 0 ||
+        if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0 ||
             !new_buf) {
           C_REST_FREE(out_buf);
           return 1;
@@ -328,7 +328,7 @@ int c_rest_compress_buffer(c_rest_compression_type_t type,
     return 1;
   }
 
-  if (C_REST_MALLOC(len1 + len2, (void **)out_data) != 0 || !*out_data) {
+  if (C_REST_MALLOC(len1 + len2, out_data) != 0 || !*out_data) {
     if (data1)
       C_REST_FREE(data1);
     if (data2)

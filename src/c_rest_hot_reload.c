@@ -108,7 +108,7 @@ int c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
     return C_REST_HOT_RELOAD_ERR_PARAM;
   }
 
-  err = C_REST_MALLOC(sizeof(c_rest_hot_reload_ctx_t), (void **)out_ctx);
+  err = C_REST_MALLOC(sizeof(c_rest_hot_reload_ctx_t), out_ctx);
   if (err != 0) {
     return C_REST_HOT_RELOAD_ERR_ALLOC;
   }
@@ -149,14 +149,14 @@ int c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx,
 
     if (ctx->watched_paths) {
       err = C_REST_REALLOC(ctx->watched_paths, sizeof(char *) * new_cap,
-                           (void **)&new_paths);
+                           &new_paths);
       if (err != 0) {
         return C_REST_HOT_RELOAD_ERR_ALLOC;
       }
       ctx->watched_paths = new_paths;
 
       err = C_REST_REALLOC(ctx->last_modified_times, sizeof(time_t) * new_cap,
-                           (void **)&new_times);
+                           &new_times);
       if (err != 0) {
         /* We successfully grew watched_paths but not last_modified_times.
          * The capacity isn't updated yet, so next time it will retry growing.
@@ -167,12 +167,12 @@ int c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx,
       }
       ctx->last_modified_times = new_times;
     } else {
-      err = C_REST_MALLOC(sizeof(char *) * new_cap, (void **)&new_paths);
+      err = C_REST_MALLOC(sizeof(char *) * new_cap, &new_paths);
       if (err != 0) {
         return C_REST_HOT_RELOAD_ERR_ALLOC;
       }
 
-      err = C_REST_MALLOC(sizeof(time_t) * new_cap, (void **)&new_times);
+      err = C_REST_MALLOC(sizeof(time_t) * new_cap, &new_times);
       if (err != 0) {
         C_REST_FREE(new_paths);
         return C_REST_HOT_RELOAD_ERR_ALLOC;
@@ -186,7 +186,7 @@ int c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx,
   }
 
   path_len = strlen(path);
-  err = C_REST_MALLOC(path_len + 1, (void **)&path_copy);
+  err = C_REST_MALLOC(path_len + 1, &path_copy);
   if (err != 0) {
     return C_REST_HOT_RELOAD_ERR_ALLOC;
   }
@@ -355,7 +355,7 @@ static int hot_reload_sse_handler(struct c_rest_request *req,
     struct c_rest_sse_event ev;
     c_rest_sse_event_init(&ev);
     /* We must dup strings if we rely on c_rest_sse_event_destroy */
-    C_REST_MALLOC(7, (void **)&ev.event);
+    C_REST_MALLOC(7, &ev.event);
     if (ev.event) {
 #if defined(_MSC_VER)
       strcpy_s(ev.event, 7, "reload");
@@ -364,7 +364,7 @@ static int hot_reload_sse_handler(struct c_rest_request *req,
 #endif
     }
 
-    C_REST_MALLOC(5, (void **)&ev.data);
+    C_REST_MALLOC(5, &ev.data);
     if (ev.data) {
 #if defined(_MSC_VER)
       strcpy_s(ev.data, 5, "true");

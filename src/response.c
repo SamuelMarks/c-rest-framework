@@ -52,7 +52,7 @@ int c_rest_response_set_header(struct c_rest_response *res, const char *key,
       if (c_rest_stricmp(h->key, key, &hcmp) == 0 && hcmp == 0) {
         char *new_val;
         val_len = strlen(value) + 1;
-        if (C_REST_MALLOC(val_len, (void **)&new_val) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_val = NULL; }
+        if (C_REST_MALLOC(val_len, &new_val) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_val = NULL; }
         if (!new_val) {
           return 1;
         }
@@ -65,12 +65,12 @@ int c_rest_response_set_header(struct c_rest_response *res, const char *key,
   }
 
   /* Add new header */
-  if (C_REST_MALLOC(sizeof(struct c_rest_header), (void **)&new_h) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h = NULL; }
+  if (C_REST_MALLOC(sizeof(struct c_rest_header), &new_h) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h = NULL; }
   if (!new_h) {
     return 1;
   }
-  if (C_REST_MALLOC(strlen(key) + 1, (void **)&new_h->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->key = NULL; }
-  if (C_REST_MALLOC(strlen(value) + 1, (void **)&new_h->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->value = NULL; }
+  if (C_REST_MALLOC(strlen(key) + 1, &new_h->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->key = NULL; }
+  if (C_REST_MALLOC(strlen(value) + 1, &new_h->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->value = NULL; }
   if (!new_h->key || !new_h->value) {
     C_REST_FREE((void *)(new_h->key));
     C_REST_FREE((void *)(new_h->value));
@@ -223,7 +223,7 @@ int c_rest_response_json(struct c_rest_response *res, const char *json_str) {
   if (res->body) {
     C_REST_FREE((void *)(res->body));
   }
-  if (C_REST_MALLOC(len + 1, (void **)&res->body) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); res->body = NULL; }
+  if (C_REST_MALLOC(len + 1, &res->body) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); res->body = NULL; }
   if (!res->body) {
     return 1;
   }
@@ -327,7 +327,7 @@ int c_rest_response_html(struct c_rest_response *res, const char *html_str) {
   if (res->body) {
     C_REST_FREE((void *)(res->body));
   }
-  if (C_REST_MALLOC(len + 1, (void **)&res->body) != 0) {
+  if (C_REST_MALLOC(len + 1, &res->body) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     res->body = NULL;
   }
@@ -451,7 +451,7 @@ int c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
     len += strlen(attributes) + 2; /* ; attributes */
   }
 
-  if (C_REST_MALLOC(len, (void **)&cookie_str) != 0) {
+  if (C_REST_MALLOC(len, &cookie_str) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     cookie_str = NULL;
   }
@@ -601,7 +601,7 @@ int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
   }
   est_len += res->body_len;
 
-  if (C_REST_MALLOC(est_len, (void **)&buf) != 0) {
+  if (C_REST_MALLOC(est_len, &buf) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     buf = NULL;
   }

@@ -11,11 +11,11 @@ extern "C" {
 #endif
 
 int c_rest_mem_tracker_init(void);
-int c_rest_mem_malloc(size_t size, const char *file, int line, void **out_ptr);
+int c_rest_mem_malloc(size_t size, const char *file, int line, void *out_ptr);
 int c_rest_mem_calloc(size_t count, size_t size, const char *file, int line,
-                      void **out_ptr);
+                      void *out_ptr);
 int c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line,
-                       void **out_ptr);
+                       void *out_ptr);
 int c_rest_mem_free(void *ptr);
 int c_rest_mem_tracker_print_leaks(void);
 int c_rest_mem_tracker_cleanup(void);

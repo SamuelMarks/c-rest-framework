@@ -92,7 +92,7 @@ static int dummy_resolver(const char *field_name, char **out_json,
     *called = 1;
   }
 
-  if (C_REST_MALLOC(len + 1, (void **)out_json) != 0)
+  if (C_REST_MALLOC(len + 1, out_json) != 0)
     return -1;
 
   memcpy(*out_json, res, len + 1);

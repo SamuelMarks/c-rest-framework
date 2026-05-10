@@ -165,7 +165,7 @@ int c_rest_thread_create(c_rest_thread_t *out_thread, c_rest_thread_fn func,
   if (!out_thread || !func)
     return 1;
 
-  if (C_REST_MALLOC(sizeof(struct thread_wrapper_args), (void **)&(args)) !=
+  if (C_REST_MALLOC(sizeof(struct thread_wrapper_args), &(args)) !=
       0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     args = NULL;
@@ -210,7 +210,7 @@ int c_rest_mutex_create(c_rest_mutex_t *out_mutex) {
   if (!out_mutex)
     return 1;
 
-  if (C_REST_MALLOC(sizeof(pthread_mutex_t), (void **)&m) != 0) {
+  if (C_REST_MALLOC(sizeof(pthread_mutex_t), &m) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     m = NULL;
   }
@@ -280,7 +280,7 @@ int c_rest_cond_create(c_rest_cond_t *out_cond) {
   if (!out_cond)
     return 1;
 
-  if (C_REST_MALLOC(sizeof(pthread_cond_t), (void **)&cond) != 0) {
+  if (C_REST_MALLOC(sizeof(pthread_cond_t), &cond) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     cond = NULL;
   }

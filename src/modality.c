@@ -100,7 +100,7 @@ int c_rest_init(enum c_rest_modality_type type,
     return 1; /* Unsupported modality or invalid enum */
   }
 
-  if (C_REST_MALLOC(sizeof(struct c_rest_context), (void **)&ctx) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); ctx = NULL; }
+  if (C_REST_MALLOC(sizeof(struct c_rest_context), &ctx) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); ctx = NULL; }
   if (!ctx) {
     return 1; /* Out of memory */
   }
@@ -265,7 +265,7 @@ struct connection_state {
 static void on_method(c_rest_parser_context *pctx, const char *method,
                       size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
-  if (C_REST_MALLOC(len + 1, (void **)&st->method) != 0) {
+  if (C_REST_MALLOC(len + 1, &st->method) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     st->method = NULL;
   }
@@ -277,7 +277,7 @@ static void on_method(c_rest_parser_context *pctx, const char *method,
 
 static void on_url(c_rest_parser_context *pctx, const char *url, size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
-  if (C_REST_MALLOC(len + 1, (void **)&st->url) != 0) {
+  if (C_REST_MALLOC(len + 1, &st->url) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     st->url = NULL;
   }
@@ -291,15 +291,15 @@ static void on_header(c_rest_parser_context *pctx, const char *key,
                       size_t key_len, const char *val, size_t val_len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
   struct c_rest_header *h = NULL;
-  if (C_REST_MALLOC(sizeof(struct c_rest_header), (void **)&h) != 0) {
+  if (C_REST_MALLOC(sizeof(struct c_rest_header), &h) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
   }
   if (h) {
-    if (C_REST_MALLOC(key_len + 1, (void **)&h->key) != 0) {
+    if (C_REST_MALLOC(key_len + 1, &h->key) != 0) {
       LOG_DEBUG("C_REST_MALLOC failed");
       h->key = NULL;
     }
-    if (C_REST_MALLOC(val_len + 1, (void **)&h->value) != 0) {
+    if (C_REST_MALLOC(val_len + 1, &h->value) != 0) {
       LOG_DEBUG("C_REST_MALLOC failed");
       h->value = NULL;
     }
@@ -324,7 +324,7 @@ static void on_body(c_rest_parser_context *pctx, const char *data, size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
   char *new_body = NULL;
   if (C_REST_REALLOC(st->req.body, st->req.body_len + len + 1,
-                     (void **)&new_body) != 0) {
+                     &new_body) != 0) {
     LOG_DEBUG("C_REST_REALLOC failed");
   }
   if (new_body) {

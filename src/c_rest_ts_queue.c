@@ -31,7 +31,7 @@ int c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data) {
   if (!queue)
     return 1;
 
-  if (C_REST_MALLOC(sizeof(c_rest_ts_queue_node), (void **)&node) != 0) {
+  if (C_REST_MALLOC(sizeof(c_rest_ts_queue_node), &node) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     node = NULL;
   }
