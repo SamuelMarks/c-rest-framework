@@ -16,22 +16,20 @@
 
 #define ASSERT_STR_EQ(expected, actual)                                        \
   do {                                                                         \
-    const char* exp_ = (expected);                                             \
-    const char* act_ = (actual);                                               \
-    if (exp_ == NULL && act_ == NULL) break;                                   \
-    if (act_ == NULL) {                                                        \
+    if ((const void *)(expected) == NULL && (const void *)(actual) == NULL) break; \
+    if ((const void *)(actual) == NULL) {                                      \
       printf("%s:%d: Assertion failed: expected '%s', got NULL\n", __FILE__,   \
-             __LINE__, exp_ ? exp_ : "NULL");                                  \
+             __LINE__, (expected) ? (expected) : "NULL");                      \
       return 1;                                                                \
     }                                                                          \
-    if (exp_ == NULL) {                                                        \
+    if ((const void *)(expected) == NULL) {                                    \
       printf("%s:%d: Assertion failed: expected NULL, got '%s'\n", __FILE__,   \
-             __LINE__, act_);                                                  \
+             __LINE__, (actual));                                              \
       return 1;                                                                \
     }                                                                          \
-    if (strcmp(exp_, act_) != 0) {                                             \
+    if (strcmp((expected), (actual)) != 0) {                                   \
       printf("%s:%d: Assertion failed: expected '%s', got '%s'\n", __FILE__,   \
-             __LINE__, exp_, act_);                                            \
+             __LINE__, (expected), (actual));                                  \
       return 1;                                                                \
     }                                                                          \
   } while (0)
