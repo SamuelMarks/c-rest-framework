@@ -51,19 +51,20 @@ int c_rest_sse_event_destroy(struct c_rest_sse_event *ev) {
 static int c_rest_sse_strdup(const char *s, char **out_str) {
   size_t len;
   char *copy;
+  void *tmp;
   if (!s) {
     *out_str = NULL;
     return 0;
   }
   len = strlen(s);
-  if (C_REST_MALLOC(len + 1, (void **)&copy) != 0) {
+  if (C_REST_MALLOC(len + 1, &tmp) != 0) {
     return 1;
   }
+  copy = (char *)tmp;
   memcpy(copy, s, len + 1);
   *out_str = copy;
   return 0;
 }
-
 int c_rest_sse_event_clone(const struct c_rest_sse_event *src,
                            struct c_rest_sse_event *dest) {
   if (!src || !dest) {
@@ -102,6 +103,7 @@ int c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
   const char *data_ptr;
   const char *nl;
   size_t data_len;
+  void *tmp_out_buf;
 
   if (!ev || !out_buf || !out_len) {
     return C_REST_SSE_ERR_INVALID_ARG;
@@ -148,11 +150,11 @@ int c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
   c_rest_string_append_cstr(&s, "\n");
 
   data_len = s.length;
-  if (C_REST_MALLOC(data_len + 1, (void **)out_buf) != 0) {
+  if (C_REST_MALLOC(data_len + 1, &tmp_out_buf) != 0) {
     c_rest_string_destroy(&s);
     return C_REST_SSE_ERR_NOMEM;
   }
-
+  *out_buf = (char *)tmp_out_buf;
   memcpy(*out_buf, s.data, data_len);
   (*out_buf)[data_len] = '\0';
   *out_len = data_len;
@@ -164,13 +166,15 @@ int c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
 
 int c_rest_sse_context_init(struct c_rest_sse_context **out_ctx) {
   struct c_rest_sse_context *ctx;
+  void *tmp_ctx;
   if (!out_ctx) {
     return C_REST_SSE_ERR_INVALID_ARG;
   }
 
-  if (C_REST_MALLOC(sizeof(struct c_rest_sse_context), (void **)&ctx) != 0) {
+  if (C_REST_MALLOC(sizeof(struct c_rest_sse_context), &tmp_ctx) != 0) {
     return C_REST_SSE_ERR_NOMEM;
   }
+  ctx = (struct c_rest_sse_context *)tmp_ctx;
 
   ctx->buffer = NULL;
   ctx->buffer_len = 0;
@@ -199,15 +203,17 @@ int c_rest_sse_context_destroy(struct c_rest_sse_context *ctx) {
 static int append_to_string(char **dest, const char *src, size_t len) {
   size_t old_len;
   char *new_str;
+  void *tmp_new_str;
 
   if (!src || len == 0) {
     return C_REST_SSE_OK;
   }
 
   old_len = *dest ? strlen(*dest) : 0;
-  if (C_REST_MALLOC(old_len + len + 1, (void **)&new_str) != 0) {
+  if (C_REST_MALLOC(old_len + len + 1, &tmp_new_str) != 0) {
     return C_REST_SSE_ERR_NOMEM;
   }
+  new_str = (char *)tmp_new_str;
 
   if (*dest) {
     memcpy(new_str, *dest, old_len);
@@ -238,13 +244,15 @@ int c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data,
 
   if (data && len > 0) {
     if (ctx->buffer_len + len > ctx->buffer_cap) {
+      void *tmp_new_buf;
       ctx->buffer_cap = (ctx->buffer_len + len) * 2;
       if (ctx->buffer_cap < 256) {
         ctx->buffer_cap = 256;
       }
-      if (C_REST_MALLOC(ctx->buffer_cap, (void **)&new_buf) != 0) {
+      if (C_REST_MALLOC(ctx->buffer_cap, &tmp_new_buf) != 0) {
         return C_REST_SSE_ERR_NOMEM;
       }
+      new_buf = (char *)tmp_new_buf;
       if (ctx->buffer) {
         memcpy(new_buf, ctx->buffer, ctx->buffer_len);
         C_REST_FREE(ctx->buffer);
