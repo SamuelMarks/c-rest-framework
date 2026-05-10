@@ -14,11 +14,11 @@
 #endif
 
 int c_rest_string_init(c_rest_string *str, size_t initial_capacity) {
+  void *tmp_data;
   if (!str)
     return 1;
   if (initial_capacity == 0)
     initial_capacity = 16;
-  void *tmp_data;
   if (C_REST_MALLOC(initial_capacity, &tmp_data) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     str->data = NULL;
@@ -39,10 +39,10 @@ int c_rest_string_append(c_rest_string *str, const char *data, size_t len) {
   if (str->length + len + 1 > str->capacity) {
     size_t new_cap = str->capacity > 0 ? str->capacity * 2 : 16;
     char *new_data;
+    void *tmp_new_data;
     while (str->length + len + 1 > new_cap) {
       new_cap *= 2;
     }
-    void *tmp_new_data;
     if (C_REST_REALLOC(str->data, new_cap, &tmp_new_data) != 0) {
       LOG_DEBUG("C_REST_REALLOC failed");
       new_data = NULL;
