@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "c_rest_response.h"
+/* clang-format on */
 
 #define ASSERT_EQ(expected, actual)                                            \
   do {                                                                         \
@@ -16,13 +18,14 @@
 
 #define ASSERT_STR_EQ(expected, actual)                                        \
   do {                                                                         \
-    if ((expected) == NULL && (actual) == NULL) break;                         \
-    if ((actual) == NULL) {                                                    \
+    if ((const void *)(expected) == NULL && (const void *)(actual) == NULL)    \
+      break;                                                                   \
+    if ((const void *)(actual) == NULL) {                                      \
       printf("%s:%d: Assertion failed: expected '%s', got NULL\n", __FILE__,   \
              __LINE__, (expected) ? (expected) : "NULL");                      \
       return 1;                                                                \
     }                                                                          \
-    if ((expected) == NULL) {                                                  \
+    if ((const void *)(expected) == NULL) {                                    \
       printf("%s:%d: Assertion failed: expected NULL, got '%s'\n", __FILE__,   \
              __LINE__, (actual));                                              \
       return 1;                                                                \
@@ -177,9 +180,6 @@ static int test_sse_parse_fragmented(void) {
   c_rest_sse_context_destroy(ctx);
   return 0;
 }
-
-#include "c_rest_response.h"
-/* clang-format on */
 
 static int test_sse_wrappers(void) {
   struct c_rest_response res;
