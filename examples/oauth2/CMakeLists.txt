@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 project(oauth2_example C)
 
+if(CMAKE_CROSSCOMPILING)
+    set(CMAKE_DISABLE_FIND_PACKAGE_SQLite3 ON)
+    set(CMAKE_DISABLE_FIND_PACKAGE_CURL ON)
+endif()
+
 set(CMAKE_C_STANDARD 90)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
@@ -37,7 +42,7 @@ endif()
 
 # Fetch c-rest-framework if not found
 if(NOT TARGET c-rest-framework)
-    if(0)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../..")
         # Ensure we are actually adding the framework, we could check project name but this is good enough
         add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../.." c-rest-framework-build)
     else()
@@ -53,7 +58,7 @@ endif()
 
 # Fetch c-orm if not found
 if(NOT TARGET c-orm)
-    if(0)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../c-orm/CMakeLists.txt")
         add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../c-orm" c-orm-build)
     else()
         include(FetchContent)
@@ -91,7 +96,7 @@ option(OAUTH2_BUILD_TESTS "Build tests" ON)
 if(OAUTH2_BUILD_TESTS)
     enable_testing()
     include(FetchContent)
-    
+
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../../greatest/greatest.h")
         message(STATUS "Using local greatest for tests")
         FetchContent_Declare(
@@ -114,6 +119,49 @@ if(OAUTH2_BUILD_TESTS)
         target_link_libraries(oauth2_tests PRIVATE Threads::Threads)
     endif()
     add_test(NAME oauth2_test COMMAND oauth2_tests)
+
+    if(WIN32 AND BUILD_SHARED_LIBS)
+        if(TARGET cfs)
+            add_custom_command(TARGET oauth2_tests POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:cfs>" "$<TARGET_FILE_DIR:oauth2_tests>"
+            )
+        endif()
+        if(TARGET c89stringutils)
+            add_custom_command(TARGET oauth2_tests POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c89stringutils>" "$<TARGET_FILE_DIR:oauth2_tests>"
+            )
+        endif()
+        if(TARGET c-abstract-http)
+            add_custom_command(TARGET oauth2_tests POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c-abstract-http>" "$<TARGET_FILE_DIR:oauth2_tests>"
+            )
+        endif()
+        if(TARGET c_orm)
+            add_custom_command(TARGET oauth2_tests POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c_orm>" "$<TARGET_FILE_DIR:oauth2_tests>"
+            )
+        endif()
+        if(TARGET c-rest-framework)
+            add_custom_command(TARGET oauth2_tests POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c-rest-framework>" "$<TARGET_FILE_DIR:oauth2_tests>"
+            )
+        endif()
+        if(TARGET c_cdd)
+            add_custom_command(TARGET oauth2_tests POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c_cdd>" "$<TARGET_FILE_DIR:oauth2_tests>"
+            )
+        endif()
+        if(TARGET c_str_span)
+            add_custom_command(TARGET oauth2_tests POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c_str_span>" "$<TARGET_FILE_DIR:oauth2_tests>"
+            )
+        endif()
+        if(TARGET oauth2_example_shared)
+            add_custom_command(TARGET oauth2_tests POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:oauth2_example_shared>" "$<TARGET_FILE_DIR:oauth2_tests>"
+            )
+        endif()
+    endif()
 endif()
 
 if(OAUTH2_LTO AND lto_supported)

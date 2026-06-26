@@ -99,6 +99,7 @@ static int test_jwt_middleware_success(void) {
   }
 
   free(jwt_token);
+  c_rest_response_cleanup(&res);
   return 0;
 }
 
@@ -121,6 +122,7 @@ static int test_jwt_middleware_missing_token(void) {
   if (res.status_code != 401)
     return 1;
 
+  c_rest_response_cleanup(&res);
   return 0;
 }
 
@@ -170,6 +172,7 @@ static int test_jwt_middleware_invalid_signature(void) {
   }
 
   free(jwt_token);
+  c_rest_response_cleanup(&res);
   return 0;
 }
 
@@ -217,6 +220,7 @@ static int test_jwt_middleware_invalid_payload(void) {
   }
 
   free(jwt_token);
+  c_rest_response_cleanup(&res);
   return 0;
 }
 

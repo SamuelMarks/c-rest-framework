@@ -4,7 +4,10 @@
 #include <stdlib.h>
 
 #include "c_rest_modality.h"
+#include "greatest.h"
 /* clang-format on */
+
+GREATEST_MAIN_DEFS();
 
 static void test_logger(const char *msg) { printf("LOG: %s\n", msg); }
 
@@ -63,7 +66,11 @@ int test_router(void);
 int test_template(void);
 #endif
 #ifdef C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART
-int test_hot_reload(void);
+SUITE_EXTERN(suite_hot_reload);
+int test_hot_reload(void) {
+  RUN_SUITE(suite_hot_reload);
+  return greatest_info.failed > 0 ? 1 : 0;
+}
 #endif
 #ifdef C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI
 int test_response_compression_gzip_brotli(void);
@@ -86,7 +93,11 @@ int test_tls_context(void);
 int test_tls_integration(void);
 #endif
 #ifndef CDD_DOS
-int test_oauth2(void);
+SUITE_EXTERN(oauth2_suite);
+int test_oauth2(void) {
+  RUN_SUITE(oauth2_suite);
+  return greatest_info.failed > 0 ? 1 : 0;
+}
 #endif
 #ifndef CDD_DOS
 int test_openapi(void);
@@ -96,9 +107,11 @@ int test_rate_limiting_throttling_middleware(void);
 int test_server_sent_events_sse(void);
 #endif
 
-int main(void) {
-
+int main(int argc, char **argv) {
   int res = 0;
+  (void)argc;
+  (void)argv;
+  GREATEST_INIT();
 
   printf("Running test_init_destroy...\n");
   res = test_init_destroy();
@@ -240,6 +253,7 @@ int main(void) {
     return res;
 #endif
 
-  printf("All tests passed.\\n");
+  GREATEST_PRINT_REPORT();
+  printf("All tests passed.\n");
   return 0;
 }

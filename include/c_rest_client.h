@@ -221,7 +221,7 @@ int c_rest_client_response_parse_json(const struct c_rest_client_response *res,
  */
 int c_rest_proxy_request(const char *target_url, void *req, void *res);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 

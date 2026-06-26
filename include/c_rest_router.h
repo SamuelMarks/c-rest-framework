@@ -125,7 +125,7 @@ int c_rest_router_use_post(c_rest_router *router, const char *path_prefix,
 int c_rest_router_dispatch(c_rest_router *router, struct c_rest_request *req,
                            struct c_rest_response *res);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 

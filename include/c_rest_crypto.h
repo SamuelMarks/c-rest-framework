@@ -135,7 +135,7 @@ int c_rest_hash_password(const char *password,
  */
 int c_rest_verify_password(const char *password, const char *hash);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 

@@ -20,6 +20,8 @@ TEST test_client_init_fail_nulls(void) {
                                   "client_secret", db));
   ASSERT_EQ(1, oauth2_client_init("http://localhost:8080/oauth/token",
                                   "client_id", NULL, db));
+  if (db && db->vtable && db->vtable->disconnect)
+    db->vtable->disconnect(db);
   PASS();
 }
 
@@ -33,6 +35,8 @@ TEST test_server_init_fail_nulls(void) {
   ASSERT_EQ(1, oauth2_server_init(router, NULL));
 
   c_rest_router_destroy(router);
+  if (db && db->vtable && db->vtable->disconnect)
+    db->vtable->disconnect(db);
   PASS();
 }
 

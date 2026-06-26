@@ -30,7 +30,7 @@ int c_rest_orm_transaction_end_middleware(struct c_rest_request *req,
                                           struct c_rest_response *res,
                                           void *user_data);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 

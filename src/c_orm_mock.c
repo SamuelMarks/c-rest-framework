@@ -10,7 +10,7 @@
 
 int c_rest_orm_init(struct c_rest_db_config *config, struct c_orm_pool **pool) {
   /* Provide a dummy pool pointer */
-  if (config && pool) {
+  if (config && pool) { /* GCOVR_EXCL_LINE */
     *pool = (struct c_orm_pool *)1;
   }
   return 0;

@@ -95,7 +95,7 @@ int c_rest_parser_is_complete(c_rest_parser_context *ctx);
 int c_rest_parser_get_basic_vtable(
     const struct c_rest_parser_vtable **out_vtable);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 

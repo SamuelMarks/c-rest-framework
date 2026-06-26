@@ -20,5 +20,3 @@ add_subdirectory(app_full_multi)
 if(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART)
   add_subdirectory(app_hot_reload)
 endif()
-
-

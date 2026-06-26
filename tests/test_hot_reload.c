@@ -164,9 +164,3 @@ SUITE(suite_hot_reload) {
   RUN_TEST(test_hot_reload_modification);
   RUN_TEST(test_hot_reload_edge_cases);
 }
-
-int test_hot_reload(void) {
-  GREATEST_INIT();
-  RUN_SUITE(suite_hot_reload);
-  return 0;
-}

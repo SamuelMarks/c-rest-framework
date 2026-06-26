@@ -162,7 +162,7 @@ int c_rest_request_get_auth_bearer(struct c_rest_request *req,
 int c_rest_request_get_auth_basic(struct c_rest_request *req,
                                   char **out_username, char **out_password);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 

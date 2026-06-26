@@ -98,6 +98,14 @@ if(WIN32 AND BUILD_SHARED_LIBS)
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c-rest-framework>" "$<TARGET_FILE_DIR:c-rest-framework-tests>"
         )
     endif()
+    if(TARGET c_cdd)
+        add_custom_command(TARGET c-rest-framework-tests POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c_cdd>" "$<TARGET_FILE_DIR:c-rest-framework-tests>"
+        )
+    endif()
+    if(TARGET c_str_span)
+        add_custom_command(TARGET c-rest-framework-tests POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c_str_span>" "$<TARGET_FILE_DIR:c-rest-framework-tests>"
+        )
+    endif()
 endif()
-
-

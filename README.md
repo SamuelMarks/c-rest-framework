@@ -2,6 +2,8 @@ c-rest-framework
 ================
 
 [![License](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Doc Coverage](https://img.shields.io/badge/Doc_Coverage-100.0%25-green.svg)](#)
+[![Test Coverage](https://img.shields.io/badge/Test_Coverage-90.3%25-green.svg)](#)
 [![CI](https://github.com/SamuelMarks/c-rest-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/SamuelMarks/c-rest-framework/actions/workflows/ci.yml)
 
 A highly portable, modality-driven REST framework written in strict C89 (ANSI C).
@@ -32,7 +34,7 @@ It integrates seamlessly with `c-abstract-http` (for parser/client abstractions)
 - **GraphQL APIs:** Built-in GraphQL API Parsing and Resolving schema logic directly into the router via AST generation.
 - **Authentication:** Built-in OAuth2 support, Basic Auth, and JWT (JSON Web Tokens) Authentication Middlewares.
 - **Full Multipart Form Streaming:** Natively streams multipart/form-data uploads with state-machine parsing, avoiding loading large files into memory.
-- **WebSockets (RFC 6455):** Native upgrade support, frame parsing, masking/unmasking, and payload management.  
+- **WebSockets (RFC 6455):** Native upgrade support, frame parsing, masking/unmasking, and payload management.
 - **Server-Sent Events (SSE):** Native streaming API for pushing continuous data to clients efficiently.
 - **Built-in Middlewares:** Static file serving, CORS, Request Logging, HSTS, HTTP-to-HTTPS redirect.
 ---
@@ -145,5 +147,3 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
-
-

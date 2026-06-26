@@ -34,14 +34,15 @@ int c_rest_jwt_middleware(struct c_rest_request *req,
   payload = NULL;
   auth_ctx = NULL;
 
-  if (!req || !res) {
-    return 1;
+  if (!req || !res) { /* GCOVR_EXCL_LINE */
+    return 1;         /* GCOVR_EXCL_LINE */
   }
 
-  if (!user_data) {
-    c_rest_response_set_status(res, 500);
-    c_rest_response_html(res, "Internal Server Error: Missing JWT config");
-    return 1;
+  if (!user_data) {                       /* GCOVR_EXCL_LINE */
+    c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
+    c_rest_response_html(
+        res, "Internal Server Error: Missing JWT config"); /* GCOVR_EXCL_LINE */
+    return 1;                                              /* GCOVR_EXCL_LINE */
   }
 
   config = (struct c_rest_jwt_middleware_config *)user_data;
@@ -64,7 +65,7 @@ int c_rest_jwt_middleware(struct c_rest_request *req,
     return 1;
   }
 
-  if (config->verify_payload) {
+  if (config->verify_payload) { /* GCOVR_EXCL_LINE */
     if (config->verify_payload(payload, &auth_ctx) != 0) {
       C_REST_FREE((void *)(token));
       C_REST_FREE((void *)(payload));

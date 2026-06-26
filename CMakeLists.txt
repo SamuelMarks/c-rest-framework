@@ -4,6 +4,13 @@ if(POLICY CMP0079)
 endif()
 project(c-rest-framework C)
 
+set(CURL_DISABLE_INSTALL ON CACHE BOOL "" FORCE)
+set(CURL_ENABLE_EXPORT_TARGET OFF CACHE BOOL "" FORCE)
+if(CMAKE_CROSSCOMPILING)
+    set(CMAKE_DISABLE_FIND_PACKAGE_SQLite3 ON)
+    set(CMAKE_DISABLE_FIND_PACKAGE_CURL ON)
+endif()
+
 # Global fPIC
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -89,7 +96,7 @@ macro(c_rest_framework_resolve_dependency PkgName FetchRepo FetchTag)
     if(MINGW OR CYGWIN OR (MSVC AND MSVC_VERSION LESS 1500))
         set(_VCPKG_APPLICABLE OFF)
     endif()
-    
+
     set(${PkgName}_RESOLVED OFF)
 
     if(_VCPKG_APPLICABLE AND DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
@@ -208,7 +215,7 @@ set(C_ABSTRACT_HTTP_USE_LIBFETCH ${C_REST_FRAMEWORK_USE_LIBFETCH} CACHE BOOL "" 
 
 if(C_REST_FRAMEWORK_FETCH_C_FS)
     set(CDD_DEPS "FETCHCONTENT" CACHE STRING "" FORCE)
-    if(0)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-fs/CMakeLists.txt")
         FetchContent_Declare(
           cfs
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-fs"
@@ -245,32 +252,7 @@ if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
     list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
 endif()
 
-if(C_REST_FRAMEWORK_FETCH_CDD_C)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../cdd-c/CMakeLists.txt")
-        FetchContent_Declare(
-          cdd_c
-          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../cdd-c"
-        )
-    else()
-        FetchContent_Declare(
-          cdd_c
-          GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
-          GIT_TAG master
-          GIT_CONFIG "core.autocrlf=false"
-        )
-    endif()
-    FetchContent_MakeAvailable(cdd_c)
-    if (TARGET c_cdd)
-        if (NOT WIN32 AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "DOS")
-            find_package(OpenSSL QUIET)
-            if (OpenSSL_FOUND)
-                target_link_libraries(c_cdd PUBLIC OpenSSL::SSL OpenSSL::Crypto)
-            else()
-                target_link_libraries(c_cdd PUBLIC ssl crypto)
-            endif()
-        endif()
-    endif()
-endif()
+
 
 if(C_REST_FRAMEWORK_FETCH_CAH)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http/CMakeLists.txt")
@@ -291,7 +273,7 @@ if(C_REST_FRAMEWORK_FETCH_CAH)
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_C_ORM)
-    if(0)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-orm/CMakeLists.txt")
         FetchContent_Declare(
           c_orm
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-orm"
@@ -316,13 +298,19 @@ macro(c_rest_framework_resolve_parson)
 
     set(parson_RESOLVED OFF)
 
-    if(_VCPKG_APPLICABLE AND DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake") 
+    if(_VCPKG_APPLICABLE AND DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
         find_package(parson CONFIG QUIET)
         if(parson_FOUND)
             message(STATUS "Found parson via vcpkg")
             set(parson_RESOLVED ON)
             target_link_libraries(c-rest-framework PUBLIC parson::parson)
         endif()
+    endif()
+
+    if(TARGET parson)
+        message(STATUS "parson already provided by parent")
+        set(parson_RESOLVED ON)
+        target_link_libraries(c-rest-framework PUBLIC parson)
     endif()
 
     if(NOT parson_RESOLVED)
@@ -419,7 +407,7 @@ if(MSVC)
         PROPERTIES COMPILE_OPTIONS "/Za"
     )
 
-    
+
 
     if(C_REST_FRAMEWORK_STATIC_CRT)
         foreach(flag_var
@@ -441,7 +429,7 @@ if(MSVC)
 elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     # Step 16: Define C89 strict compilation flags for GCC (-ansi -pedantic -Wall)
     set(C_REST_GNU_FLAGS -ansi -pedantic -Wall)
-    
+
     if(C_REST_FRAMEWORK_USE_ASAN)
         add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
         add_link_options(-fsanitize=address)
@@ -509,12 +497,12 @@ endif()
 
 if(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
     target_compile_definitions(c-rest-framework PUBLIC C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP)
-    
+
     set(_VCPKG_APPLICABLE ON)
     if(MINGW OR CYGWIN OR (MSVC AND MSVC_VERSION LESS 1500))
         set(_VCPKG_APPLICABLE OFF)
     endif()
-    
+
     set(ZLIB_RESOLVED OFF)
     if(_VCPKG_APPLICABLE AND DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
         find_package(ZLIB CONFIG QUIET)
@@ -583,13 +571,13 @@ if(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
             set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
             FetchContent_MakeAvailable(brotli)
             set(BUILD_TESTING ${BUILD_TESTING_OLD} CACHE BOOL "" FORCE)
-            
+
             if(TARGET brotlienc-static)
                 target_link_libraries(c-rest-framework PUBLIC brotlienc-static brotlidec-static brotlicommon-static)
             else()
                 target_link_libraries(c-rest-framework PUBLIC brotlienc brotlidec brotlicommon)
             endif()
-            
+
             target_include_directories(c-rest-framework PUBLIC ${brotli_SOURCE_DIR}/c/include)
         endif()
     endif()
@@ -681,10 +669,3 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     add_subdirectory(tests)
     add_subdirectory(examples)
 endif()
-
-
-
-
-
-
-

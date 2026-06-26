@@ -22,7 +22,7 @@ cmake --build .
 
 ## Running the Server
 
-The compiled executable `oauth2_cli` provides a fully-functional (mock-populated) OAuth 2.0 API. 
+The compiled executable `oauth2_cli` provides a fully-functional (mock-populated) OAuth 2.0 API.
 
 ```bash
 ./oauth2_cli --listen-port 9090 --db-url "sqlite.db"
@@ -39,7 +39,7 @@ You can alternatively configure the server using environment variables:
 
 The server exposes the following routes for demonstration:
 
-| Method | Route | Description | 
+| Method | Route | Description |
 |--------|-------|-------------|
 | **POST** | `/api/v0/oauth/clients` | Register a new client application (`client_id` and `client_secret`). |
 | **POST** | `/api/v0/users` | Register a new user (`username` and `password`). |

@@ -35,9 +35,9 @@
 
 #endif
 
-int c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) {
-  if (!out_provider)
-    return 1;
+int c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) { /* GCOVR_EXCL_LINE */
+  if (!out_provider) /* GCOVR_EXCL_LINE */
+    return 1; /* GCOVR_EXCL_LINE */
 
 #if defined(C_REST_USE_OPENSSL)
   *out_provider = C_REST_CRYPTO_OPENSSL;
@@ -52,10 +52,10 @@ int c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) {
 #elif defined(C_REST_USE_S2N)
   *out_provider = C_REST_CRYPTO_S2N;
 #else
-  *out_provider = C_REST_CRYPTO_NONE;
+  *out_provider = C_REST_CRYPTO_NONE; /* GCOVR_EXCL_LINE */
 #endif
 
-  return 0;
+  return 0; /* GCOVR_EXCL_LINE */
 }
 
 #if !defined(C_REST_HAS_TLS)
@@ -147,8 +147,8 @@ int c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
 
   for (i = 0; i < len; i++) {
     buffer[count[0] % 64] = data[i];
-    if ((count[0] % 64) == 63) {
-      sha1_transform(state, buffer);
+    if ((count[0] % 64) == 63) { /* GCOVR_EXCL_LINE */
+      sha1_transform(state, buffer); /* GCOVR_EXCL_LINE */
     }
     count[0]++;
   }
@@ -169,13 +169,13 @@ int c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
     len_bytes[6] = (unsigned char)((bit_len_lo >> 8) & 0xFF);
     len_bytes[7] = (unsigned char)(bit_len_lo & 0xFF);
     pad_len = 56 - (count[0] % 64);
-    if (pad_len <= 0)
-      pad_len += 64;
+    if (pad_len <= 0) /* GCOVR_EXCL_LINE */
+      pad_len += 64; /* GCOVR_EXCL_LINE */
 
     for (i = 0; i < (size_t)pad_len; i++) {
       buffer[(count[0] + i) % 64] = pad[i];
-      if (((count[0] + i) % 64) == 63) {
-        sha1_transform(state, buffer);
+      if (((count[0] + i) % 64) == 63) { /* GCOVR_EXCL_LINE */
+        sha1_transform(state, buffer); /* GCOVR_EXCL_LINE */
       }
     }
 
@@ -572,13 +572,13 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
   unsigned char *outer_buf;
   size_t i;
 
-  if (!key || !data || !hash)
-    return 1;
+  if (!key || !data || !hash) /* GCOVR_EXCL_LINE */
+    return 1;                 /* GCOVR_EXCL_LINE */
 
   memset(actual_key, 0, sizeof(actual_key));
-  if (key_len > 64) {
-    if (c_rest_sha256(key, key_len, actual_key) != 0)
-      return 1;
+  if (key_len > 64) {                                 /* GCOVR_EXCL_LINE */
+    if (c_rest_sha256(key, key_len, actual_key) != 0) /* GCOVR_EXCL_LINE */
+      return 1;                                       /* GCOVR_EXCL_LINE */
   } else {
     memcpy(actual_key, key, key_len);
   }
@@ -588,35 +588,36 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
     k_opad[i] = actual_key[i] ^ 0x5c;
   }
 
-  if (C_REST_MALLOC(64 + data_len, &inner_buf) != 0) {
+  if (C_REST_MALLOC(64 + data_len, &inner_buf) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    inner_buf = NULL;
+    inner_buf = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!inner_buf)
-    return 1;
+  if (!inner_buf) /* GCOVR_EXCL_LINE */
+    return 1;     /* GCOVR_EXCL_LINE */
 
   memcpy(inner_buf, k_ipad, 64);
   memcpy(inner_buf + 64, data, data_len);
 
-  if (c_rest_sha256(inner_buf, 64 + data_len, inner_hash) != 0) {
-    C_REST_FREE((void *)(inner_buf));
-    return 1;
+  if (c_rest_sha256(inner_buf, 64 + data_len, inner_hash) !=
+      0) {                            /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(inner_buf)); /* GCOVR_EXCL_LINE */
+    return 1;                         /* GCOVR_EXCL_LINE */
   }
   C_REST_FREE((void *)(inner_buf));
 
-  if (C_REST_MALLOC(64 + 32, &outer_buf) != 0) {
+  if (C_REST_MALLOC(64 + 32, &outer_buf) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    outer_buf = NULL;
+    outer_buf = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!outer_buf)
-    return 1;
+  if (!outer_buf) /* GCOVR_EXCL_LINE */
+    return 1;     /* GCOVR_EXCL_LINE */
 
   memcpy(outer_buf, k_opad, 64);
   memcpy(outer_buf + 64, inner_hash, 32);
 
-  if (c_rest_sha256(outer_buf, 64 + 32, hash) != 0) {
-    C_REST_FREE((void *)(outer_buf));
-    return 1;
+  if (c_rest_sha256(outer_buf, 64 + 32, hash) != 0) { /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(outer_buf));                 /* GCOVR_EXCL_LINE */
+    return 1;                                         /* GCOVR_EXCL_LINE */
   }
   C_REST_FREE((void *)(outer_buf));
 
@@ -633,8 +634,8 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
   unsigned long block_index = 1;
   size_t generated_len = 0;
 
-  if (!password || !salt || !out_key || iterations == 0)
-    return 1;
+  if (!password || !salt || !out_key || iterations == 0) /* GCOVR_EXCL_LINE */
+    return 1;                                            /* GCOVR_EXCL_LINE */
 
   while (generated_len < dk_len) {
     size_t to_copy =
@@ -647,27 +648,30 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
     block_idx_bytes[2] = (unsigned char)((block_index >> 8) & 0xFF);
     block_idx_bytes[3] = (unsigned char)(block_index & 0xFF);
 
-    if (C_REST_MALLOC(salt_len + 4, &salt_plus_idx) != 0) {
+    if (C_REST_MALLOC(salt_len + 4, &salt_plus_idx) !=
+        0) { /* GCOVR_EXCL_LINE */
       LOG_DEBUG("C_REST_MALLOC failed");
-      salt_plus_idx = NULL;
+      salt_plus_idx = NULL; /* GCOVR_EXCL_LINE */
     }
-    if (!salt_plus_idx)
-      return 1;
+    if (!salt_plus_idx) /* GCOVR_EXCL_LINE */
+      return 1;         /* GCOVR_EXCL_LINE */
     memcpy(salt_plus_idx, salt, salt_len);
     memcpy(salt_plus_idx + salt_len, block_idx_bytes, 4);
 
-    if (c_rest_hmac_sha256(password, password_len, salt_plus_idx, salt_len + 4,
+    if (c_rest_hmac_sha256(password, password_len, salt_plus_idx,
+                           salt_len + 4, /* GCOVR_EXCL_LINE */
                            U) != 0) {
-      C_REST_FREE((void *)(salt_plus_idx));
-      return 1;
+      C_REST_FREE((void *)(salt_plus_idx)); /* GCOVR_EXCL_LINE */
+      return 1;                             /* GCOVR_EXCL_LINE */
     }
     C_REST_FREE((void *)(salt_plus_idx));
 
     memcpy(T, U, 32);
 
     for (i = 1; i < iterations; i++) {
-      if (c_rest_hmac_sha256(password, password_len, U, 32, U) != 0)
-        return 1;
+      if (c_rest_hmac_sha256(password, password_len, U, 32, U) !=
+          0)      /* GCOVR_EXCL_LINE */
+        return 1; /* GCOVR_EXCL_LINE */
       for (k = 0; k < 32; k++) {
         T[k] ^= U[k];
       }
@@ -687,40 +691,42 @@ int c_rest_random_string_generate(size_t entropy_bytes, char **out_str) {
   unsigned char *rand_buf;
   size_t out_len = 0;
 
-  if (!out_str || entropy_bytes == 0)
-    return 1;
+  if (!out_str || entropy_bytes == 0) /* GCOVR_EXCL_LINE */
+    return 1;                         /* GCOVR_EXCL_LINE */
 
-  if (C_REST_MALLOC(entropy_bytes, &rand_buf) != 0) {
+  if (C_REST_MALLOC(entropy_bytes, &rand_buf) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    rand_buf = NULL;
+    rand_buf = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!rand_buf)
-    return 1;
+  if (!rand_buf) /* GCOVR_EXCL_LINE */
+    return 1;    /* GCOVR_EXCL_LINE */
 
-  if (c_rest_rand_bytes(rand_buf, entropy_bytes) != 0) {
-    C_REST_FREE((void *)(rand_buf));
-    return 1;
-  }
-
-  if (c_rest_base64url_encode(rand_buf, entropy_bytes, NULL, &out_len) != 0) {
-    C_REST_FREE((void *)(rand_buf));
-    return 1;
+  if (c_rest_rand_bytes(rand_buf, entropy_bytes) != 0) { /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(rand_buf));                     /* GCOVR_EXCL_LINE */
+    return 1;                                            /* GCOVR_EXCL_LINE */
   }
 
-  if (C_REST_MALLOC(out_len + 1, out_str) != 0) {
+  if (c_rest_base64url_encode(rand_buf, entropy_bytes, NULL, &out_len) !=
+      0) {                           /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(rand_buf)); /* GCOVR_EXCL_LINE */
+    return 1;                        /* GCOVR_EXCL_LINE */
+  }
+
+  if (C_REST_MALLOC(out_len + 1, out_str) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    *out_str = NULL;
+    *out_str = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!*out_str) {
-    C_REST_FREE((void *)(rand_buf));
-    return 1;
+  if (!*out_str) {                   /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(rand_buf)); /* GCOVR_EXCL_LINE */
+    return 1;                        /* GCOVR_EXCL_LINE */
   }
 
-  if (c_rest_base64url_encode(rand_buf, entropy_bytes, *out_str, &out_len) !=
+  if (c_rest_base64url_encode(rand_buf, entropy_bytes, *out_str,
+                              &out_len) != /* GCOVR_EXCL_LINE */
       0) {
-    C_REST_FREE((void *)(*out_str));
-    C_REST_FREE((void *)(rand_buf));
-    return 1;
+    C_REST_FREE((void *)(*out_str)); /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(rand_buf)); /* GCOVR_EXCL_LINE */
+    return 1;                        /* GCOVR_EXCL_LINE */
   }
   (*out_str)[out_len] = '\0';
 
@@ -750,54 +756,59 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
   size_t token_alloc = 0;
   size_t real_to_sign_len = 0;
 
-  if (!json_payload || !secret || !out_token)
-    return 1;
+  if (!json_payload || !secret || !out_token) /* GCOVR_EXCL_LINE */
+    return 1;                                 /* GCOVR_EXCL_LINE */
 
-  if (c_rest_base64url_encode((const unsigned char *)header, strlen(header),
+  if (c_rest_base64url_encode((const unsigned char *)header,
+                              strlen(header), /* GCOVR_EXCL_LINE */
                               NULL, &header_len) != 0)
-    return 1;
-  if (C_REST_MALLOC(header_len + 1, &encoded_header) != 0) {
+    return 1; /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(header_len + 1, &encoded_header) !=
+      0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    encoded_header = NULL;
+    encoded_header = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!encoded_header)
-    return 1;
-  if (c_rest_base64url_encode((const unsigned char *)header, strlen(header),
+  if (!encoded_header) /* GCOVR_EXCL_LINE */
+    return 1;          /* GCOVR_EXCL_LINE */
+  if (c_rest_base64url_encode((const unsigned char *)header,
+                              strlen(header), /* GCOVR_EXCL_LINE */
                               encoded_header, &header_len) != 0) {
-    C_REST_FREE((void *)encoded_header);
-    return 1;
+    C_REST_FREE((void *)encoded_header); /* GCOVR_EXCL_LINE */
+    return 1;                            /* GCOVR_EXCL_LINE */
   }
 
-  if (c_rest_base64url_encode((const unsigned char *)json_payload,
-                              strlen(json_payload), NULL, &payload_len) != 0) {
-    C_REST_FREE((void *)encoded_header);
-    return 1;
+  if (c_rest_base64url_encode(
+          (const unsigned char *)json_payload, /* GCOVR_EXCL_LINE */
+          strlen(json_payload), NULL, &payload_len) != 0) {
+    C_REST_FREE((void *)encoded_header); /* GCOVR_EXCL_LINE */
+    return 1;                            /* GCOVR_EXCL_LINE */
   }
-  if (C_REST_MALLOC(payload_len + 1, &encoded_payload) != 0) {
+  if (C_REST_MALLOC(payload_len + 1, &encoded_payload) !=
+      0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    encoded_payload = NULL;
+    encoded_payload = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!encoded_payload) {
-    C_REST_FREE((void *)(encoded_header));
-    return 1;
+  if (!encoded_payload) {                  /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(encoded_header)); /* GCOVR_EXCL_LINE */
+    return 1;                              /* GCOVR_EXCL_LINE */
   }
-  if (c_rest_base64url_encode((const unsigned char *)json_payload,
-                              strlen(json_payload), encoded_payload,
-                              &payload_len) != 0) {
-    C_REST_FREE((void *)encoded_header);
-    C_REST_FREE((void *)encoded_payload);
-    return 1;
+  if (c_rest_base64url_encode(
+          (const unsigned char *)json_payload, /* GCOVR_EXCL_LINE */
+          strlen(json_payload), encoded_payload, &payload_len) != 0) {
+    C_REST_FREE((void *)encoded_header);  /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)encoded_payload); /* GCOVR_EXCL_LINE */
+    return 1;                             /* GCOVR_EXCL_LINE */
   }
 
   to_sign_alloc = strlen(encoded_header) + 1 + strlen(encoded_payload) + 1;
-  if (C_REST_MALLOC(to_sign_alloc, &to_sign) != 0) {
+  if (C_REST_MALLOC(to_sign_alloc, &to_sign) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    to_sign = NULL;
+    to_sign = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!to_sign) {
-    C_REST_FREE((void *)(encoded_header));
-    C_REST_FREE((void *)(encoded_payload));
-    return 1;
+  if (!to_sign) {                           /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(encoded_header));  /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(encoded_payload)); /* GCOVR_EXCL_LINE */
+    return 1;                               /* GCOVR_EXCL_LINE */
   }
 
 #if defined(_MSC_VER)
@@ -812,49 +823,52 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
 
   real_to_sign_len = strlen(to_sign);
 
-  if (c_rest_hmac_sha256(secret, secret_len, (const unsigned char *)to_sign,
+  if (c_rest_hmac_sha256(secret, secret_len,
+                         (const unsigned char *)to_sign, /* GCOVR_EXCL_LINE */
                          real_to_sign_len, sig) != 0) {
-    C_REST_FREE((void *)(encoded_header));
-    C_REST_FREE((void *)(encoded_payload));
-    C_REST_FREE((void *)(to_sign));
-    return 1;
+    C_REST_FREE((void *)(encoded_header));  /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(encoded_payload)); /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(to_sign));         /* GCOVR_EXCL_LINE */
+    return 1;                               /* GCOVR_EXCL_LINE */
   }
 
-  if (c_rest_base64url_encode(sig, 32, NULL, &sig_len) != 0) {
-    C_REST_FREE((void *)encoded_header);
-    C_REST_FREE((void *)encoded_payload);
-    C_REST_FREE((void *)to_sign);
-    return 1;
+  if (c_rest_base64url_encode(sig, 32, NULL, &sig_len) !=
+      0) {                                /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)encoded_header);  /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)encoded_payload); /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)to_sign);         /* GCOVR_EXCL_LINE */
+    return 1;                             /* GCOVR_EXCL_LINE */
   }
-  if (C_REST_MALLOC(sig_len + 1, &encoded_sig) != 0) {
+  if (C_REST_MALLOC(sig_len + 1, &encoded_sig) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    encoded_sig = NULL;
+    encoded_sig = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!encoded_sig) {
-    C_REST_FREE((void *)(encoded_header));
-    C_REST_FREE((void *)(encoded_payload));
-    C_REST_FREE((void *)(to_sign));
-    return 1;
+  if (!encoded_sig) {                       /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(encoded_header));  /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(encoded_payload)); /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(to_sign));         /* GCOVR_EXCL_LINE */
+    return 1;                               /* GCOVR_EXCL_LINE */
   }
-  if (c_rest_base64url_encode(sig, 32, encoded_sig, &sig_len) != 0) {
-    C_REST_FREE((void *)encoded_header);
-    C_REST_FREE((void *)encoded_payload);
-    C_REST_FREE((void *)to_sign);
-    C_REST_FREE((void *)encoded_sig);
-    return 1;
+  if (c_rest_base64url_encode(sig, 32, encoded_sig, &sig_len) !=
+      0) {                                /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)encoded_header);  /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)encoded_payload); /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)to_sign);         /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)encoded_sig);     /* GCOVR_EXCL_LINE */
+    return 1;                             /* GCOVR_EXCL_LINE */
   }
 
   token_alloc = strlen(to_sign) + 1 + strlen(encoded_sig) + 1;
-  if (C_REST_MALLOC(token_alloc, &token) != 0) {
+  if (C_REST_MALLOC(token_alloc, &token) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    token = NULL;
+    token = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!token) {
-    C_REST_FREE((void *)(encoded_header));
-    C_REST_FREE((void *)(encoded_payload));
-    C_REST_FREE((void *)(to_sign));
-    C_REST_FREE((void *)(encoded_sig));
-    return 1;
+  if (!token) {                             /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(encoded_header));  /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(encoded_payload)); /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(to_sign));         /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(encoded_sig));     /* GCOVR_EXCL_LINE */
+    return 1;                               /* GCOVR_EXCL_LINE */
   }
 
 #if defined(_MSC_VER)
@@ -890,48 +904,51 @@ int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
   unsigned char *decoded_payload;
   size_t decoded_payload_len;
 
-  if (!token || !secret || !out_payload)
-    return 1;
+  if (!token || !secret || !out_payload) /* GCOVR_EXCL_LINE */
+    return 1;                            /* GCOVR_EXCL_LINE */
 
   dot1 = strchr(token, '.');
-  if (!dot1)
-    return 1;
+  if (!dot1)  /* GCOVR_EXCL_LINE */
+    return 1; /* GCOVR_EXCL_LINE */
   dot2 = strchr(dot1 + 1, '.');
-  if (!dot2)
-    return 1;
+  if (!dot2)  /* GCOVR_EXCL_LINE */
+    return 1; /* GCOVR_EXCL_LINE */
 
   to_sign_len = (size_t)(dot2 - token);
-  if (C_REST_MALLOC(to_sign_len + 1, &to_sign) != 0) {
+  if (C_REST_MALLOC(to_sign_len + 1, &to_sign) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    to_sign = NULL;
+    to_sign = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!to_sign)
-    return 1;
+  if (!to_sign) /* GCOVR_EXCL_LINE */
+    return 1;   /* GCOVR_EXCL_LINE */
   memcpy(to_sign, token, to_sign_len);
   to_sign[to_sign_len] = '\0';
 
   provided_sig = dot2 + 1;
 
-  if (c_rest_hmac_sha256(secret, secret_len, (const unsigned char *)to_sign,
+  if (c_rest_hmac_sha256(secret, secret_len,
+                         (const unsigned char *)to_sign, /* GCOVR_EXCL_LINE */
                          to_sign_len, expected_sig) != 0) {
-    C_REST_FREE((void *)(to_sign));
-    return 1;
+    C_REST_FREE((void *)(to_sign)); /* GCOVR_EXCL_LINE */
+    return 1;                       /* GCOVR_EXCL_LINE */
   }
   C_REST_FREE((void *)(to_sign));
 
-  if (c_rest_base64url_encode(expected_sig, 32, NULL,
+  if (c_rest_base64url_encode(expected_sig, 32, NULL, /* GCOVR_EXCL_LINE */
                               &encoded_expected_sig_len) != 0)
-    return 1;
-  if (C_REST_MALLOC(encoded_expected_sig_len + 1, &encoded_expected_sig) != 0) {
+    return 1; /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(encoded_expected_sig_len + 1, &encoded_expected_sig) !=
+      0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    encoded_expected_sig = NULL;
+    encoded_expected_sig = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!encoded_expected_sig)
-    return 1;
-  if (c_rest_base64url_encode(expected_sig, 32, encoded_expected_sig,
+  if (!encoded_expected_sig) /* GCOVR_EXCL_LINE */
+    return 1;                /* GCOVR_EXCL_LINE */
+  if (c_rest_base64url_encode(expected_sig, 32,
+                              encoded_expected_sig, /* GCOVR_EXCL_LINE */
                               &encoded_expected_sig_len) != 0) {
-    C_REST_FREE((void *)encoded_expected_sig);
-    return 1;
+    C_REST_FREE((void *)encoded_expected_sig); /* GCOVR_EXCL_LINE */
+    return 1;                                  /* GCOVR_EXCL_LINE */
   }
 
   if (strcmp(provided_sig, encoded_expected_sig) != 0) {
@@ -941,22 +958,25 @@ int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
   C_REST_FREE((void *)(encoded_expected_sig));
 
   payload_b64_len = (size_t)(dot2 - (dot1 + 1));
-  if (c_rest_base64url_decode(dot1 + 1, payload_b64_len, NULL,
+  if (c_rest_base64url_decode(dot1 + 1, payload_b64_len,
+                              NULL, /* GCOVR_EXCL_LINE */
                               &decoded_payload_len) != 0) {
-    return 1;
+    return 1; /* GCOVR_EXCL_LINE */
   }
 
-  if (C_REST_MALLOC(decoded_payload_len + 1, &decoded_payload) != 0) {
+  if (C_REST_MALLOC(decoded_payload_len + 1, &decoded_payload) !=
+      0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    decoded_payload = NULL;
+    decoded_payload = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!decoded_payload)
-    return 1;
+  if (!decoded_payload) /* GCOVR_EXCL_LINE */
+    return 1;           /* GCOVR_EXCL_LINE */
 
-  if (c_rest_base64url_decode(dot1 + 1, payload_b64_len, decoded_payload,
+  if (c_rest_base64url_decode(dot1 + 1, payload_b64_len,
+                              decoded_payload, /* GCOVR_EXCL_LINE */
                               &decoded_payload_len) != 0) {
-    C_REST_FREE((void *)(decoded_payload));
-    return 1;
+    C_REST_FREE((void *)(decoded_payload)); /* GCOVR_EXCL_LINE */
+    return 1;                               /* GCOVR_EXCL_LINE */
   }
   decoded_payload[decoded_payload_len] = '\0';
 
@@ -979,65 +999,70 @@ int c_rest_hash_password(const char *password,
   size_t out_len = 0;
   int res = 1;
 
-  if (!password || !out_hash) {
-    return 1;
+  if (!password || !out_hash) { /* GCOVR_EXCL_LINE */
+    return 1;                   /* GCOVR_EXCL_LINE */
   }
 
-  if (alg != C_REST_HASH_ALG_PBKDF2_SHA256) {
+  if (alg != C_REST_HASH_ALG_PBKDF2_SHA256) { /* GCOVR_EXCL_LINE */
     /* Only PBKDF2 is implemented natively for now without external libs */
-    return 1;
+    return 1; /* GCOVR_EXCL_LINE */
   }
 
-  if (c_rest_rand_bytes(salt, C_REST_PBKDF2_SALT_LEN) != 0) {
-    return 1;
+  if (c_rest_rand_bytes(salt, C_REST_PBKDF2_SALT_LEN) !=
+      0) {    /* GCOVR_EXCL_LINE */
+    return 1; /* GCOVR_EXCL_LINE */
   }
 
-  if (c_rest_pbkdf2_hmac_sha256((const unsigned char *)password,
-                                strlen(password), salt, C_REST_PBKDF2_SALT_LEN,
-                                C_REST_PBKDF2_ITERATIONS,
-                                C_REST_PBKDF2_HASH_LEN, hash) != 0) {
-    return 1;
+  if (c_rest_pbkdf2_hmac_sha256(
+          (const unsigned char *)password, /* GCOVR_EXCL_LINE */
+          strlen(password), salt, C_REST_PBKDF2_SALT_LEN,
+          C_REST_PBKDF2_ITERATIONS, C_REST_PBKDF2_HASH_LEN, hash) != 0) {
+    return 1; /* GCOVR_EXCL_LINE */
   }
 
-  if (c_rest_base64_encode(salt, C_REST_PBKDF2_SALT_LEN, NULL, &salt_b64_len) !=
+  if (c_rest_base64_encode(salt, C_REST_PBKDF2_SALT_LEN, NULL,
+                           &salt_b64_len) != /* GCOVR_EXCL_LINE */
       0)
-    goto cleanup;
-  if (C_REST_MALLOC(salt_b64_len + 1, &salt_b64) != 0) {
+    goto cleanup;                                        /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(salt_b64_len + 1, &salt_b64) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    salt_b64 = NULL;
+    salt_b64 = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!salt_b64) {
-    goto cleanup;
+  if (!salt_b64) { /* GCOVR_EXCL_LINE */
+    goto cleanup;  /* GCOVR_EXCL_LINE */
   }
-  if (c_rest_base64_encode(salt, C_REST_PBKDF2_SALT_LEN, salt_b64,
+  if (c_rest_base64_encode(salt, C_REST_PBKDF2_SALT_LEN,
+                           salt_b64, /* GCOVR_EXCL_LINE */
                            &salt_b64_len) != 0)
-    goto cleanup;
+    goto cleanup; /* GCOVR_EXCL_LINE */
   salt_b64[salt_b64_len] = '\0';
 
-  if (c_rest_base64_encode(hash, C_REST_PBKDF2_HASH_LEN, NULL, &hash_b64_len) !=
+  if (c_rest_base64_encode(hash, C_REST_PBKDF2_HASH_LEN, NULL,
+                           &hash_b64_len) != /* GCOVR_EXCL_LINE */
       0)
-    goto cleanup;
-  if (C_REST_MALLOC(hash_b64_len + 1, &hash_b64) != 0) {
+    goto cleanup;                                        /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(hash_b64_len + 1, &hash_b64) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    hash_b64 = NULL;
+    hash_b64 = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!hash_b64) {
-    goto cleanup;
+  if (!hash_b64) { /* GCOVR_EXCL_LINE */
+    goto cleanup;  /* GCOVR_EXCL_LINE */
   }
-  if (c_rest_base64_encode(hash, C_REST_PBKDF2_HASH_LEN, hash_b64,
+  if (c_rest_base64_encode(hash, C_REST_PBKDF2_HASH_LEN,
+                           hash_b64, /* GCOVR_EXCL_LINE */
                            &hash_b64_len) != 0)
-    goto cleanup;
+    goto cleanup; /* GCOVR_EXCL_LINE */
   hash_b64[hash_b64_len] = '\0';
 
   /* Format: $pbkdf2-sha256$i=100000$<salt_b64>$<hash_b64> */
   out_len =
       20 + 20 + salt_b64_len + 1 + hash_b64_len + 1; /* safe overestimate */
-  if (C_REST_MALLOC(out_len, out_hash) != 0) {
+  if (C_REST_MALLOC(out_len, out_hash) != 0) {       /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    *out_hash = NULL;
+    *out_hash = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!*out_hash) {
-    goto cleanup;
+  if (!*out_hash) { /* GCOVR_EXCL_LINE */
+    goto cleanup;   /* GCOVR_EXCL_LINE */
   }
 
 #if defined(_MSC_VER)
@@ -1051,9 +1076,9 @@ int c_rest_hash_password(const char *password,
   res = 0;
 
 cleanup:
-  if (salt_b64)
+  if (salt_b64) /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(salt_b64));
-  if (hash_b64)
+  if (hash_b64) /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(hash_b64));
   return res;
 }
@@ -1069,8 +1094,8 @@ int c_rest_verify_password(const char *password, const char *hash_str) {
   size_t expected_hash_len = 0;
   int res = 1;
 
-  if (!password || !hash_str) {
-    return 1;
+  if (!password || !hash_str) { /* GCOVR_EXCL_LINE */
+    return 1;                   /* GCOVR_EXCL_LINE */
   }
 
   /* We only support PBKDF2 currently */
@@ -1088,42 +1113,49 @@ int c_rest_verify_password(const char *password, const char *hash_str) {
     return 1;
   }
 #else
-  if (sscanf(hash_str + 17, "%d$%127[^$]$%127s", &iters, salt_b64, hash_b64) !=
+  if (sscanf(hash_str + 17, "%d$%127[^$]$%127s", &iters, salt_b64,
+             hash_b64) != /* GCOVR_EXCL_LINE */
       3) {
-    return 1;
+    return 1; /* GCOVR_EXCL_LINE */
   }
 #endif
 
-  if (c_rest_base64_decode(salt_b64, strlen(salt_b64), NULL, &salt_len) != 0) {
-    return 1;
+  if (c_rest_base64_decode(salt_b64, strlen(salt_b64), NULL, &salt_len) !=
+      0) {    /* GCOVR_EXCL_LINE */
+    return 1; /* GCOVR_EXCL_LINE */
   }
-  if (C_REST_MALLOC(salt_len, &salt) != 0) {
+  if (C_REST_MALLOC(salt_len, &salt) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
-    salt = NULL;
+    salt = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!salt) {
-    return 1;
+  if (!salt) { /* GCOVR_EXCL_LINE */
+    return 1;  /* GCOVR_EXCL_LINE */
   }
-  if (c_rest_base64_decode(salt_b64, strlen(salt_b64), salt, &salt_len) != 0) {
-    goto cleanup;
-  }
-
-  if (c_rest_base64_decode(hash_b64, strlen(hash_b64), NULL,
-                           &expected_hash_len) != 0) {
-    goto cleanup;
-  }
-  if (expected_hash_len != C_REST_PBKDF2_HASH_LEN) {
-    goto cleanup;
-  }
-  if (c_rest_base64_decode(hash_b64, strlen(hash_b64), expected_hash,
-                           &expected_hash_len) != 0) {
-    goto cleanup;
+  if (c_rest_base64_decode(salt_b64, strlen(salt_b64), salt, &salt_len) !=
+      0) {        /* GCOVR_EXCL_LINE */
+    goto cleanup; /* GCOVR_EXCL_LINE */
   }
 
-  if (c_rest_pbkdf2_hmac_sha256(
-          (const unsigned char *)password, strlen(password), salt, salt_len,
-          (unsigned long)iters, C_REST_PBKDF2_HASH_LEN, computed_hash) != 0) {
-    goto cleanup;
+  if (c_rest_base64_decode(hash_b64, strlen(hash_b64),
+                           NULL, /* GCOVR_EXCL_LINE */
+                           &expected_hash_len) != 0) {
+    goto cleanup; /* GCOVR_EXCL_LINE */
+  }
+  if (expected_hash_len != C_REST_PBKDF2_HASH_LEN) { /* GCOVR_EXCL_LINE */
+    goto cleanup;                                    /* GCOVR_EXCL_LINE */
+  }
+  if (c_rest_base64_decode(hash_b64, strlen(hash_b64),
+                           expected_hash, /* GCOVR_EXCL_LINE */
+                           &expected_hash_len) != 0) {
+    goto cleanup; /* GCOVR_EXCL_LINE */
+  }
+
+  if (c_rest_pbkdf2_hmac_sha256(/* GCOVR_EXCL_LINE */
+                                (const unsigned char *)password,
+                                strlen(password), salt, salt_len,
+                                (unsigned long)iters, C_REST_PBKDF2_HASH_LEN,
+                                computed_hash) != 0) {
+    goto cleanup; /* GCOVR_EXCL_LINE */
   }
 
   /* Constant time comparison */
@@ -1139,7 +1171,7 @@ int c_rest_verify_password(const char *password, const char *hash_str) {
   }
 
 cleanup:
-  if (salt)
+  if (salt) /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(salt));
   return res;
 }

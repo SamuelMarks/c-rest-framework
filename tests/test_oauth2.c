@@ -11,8 +11,6 @@
 #include <string.h>
 /* clang-format on */
 
-GREATEST_MAIN_DEFS();
-
 TEST test_password_hashing(void) {
   char *hash = NULL;
   int res;
@@ -291,15 +289,4 @@ SUITE(oauth2_suite) {
   RUN_TEST(test_basic_auth_parser);
   RUN_TEST(test_bearer_token_parser);
   RUN_TEST(test_auth_middleware);
-}
-
-int test_oauth2(void) {
-  int argc = 1;
-  char *argv[] = {"test_oauth2"};
-  (void)argc;
-  (void)argv;
-  GREATEST_INIT();
-  RUN_SUITE(oauth2_suite);
-  GREATEST_PRINT_REPORT();
-  return greatest_info.failed > 0 ? 1 : 0;
 }

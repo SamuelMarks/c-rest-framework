@@ -2,6 +2,7 @@
 #include "test_protos.h"
 #include "c_rest_request.h"
 #include "c_rest_response.h"
+#include "parson.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -139,7 +140,6 @@ int test_request_response(void) {
     char *large_body = (char *)malloc(1024 * 1024); /* 1MB */
     char *read_ptr = NULL;
     size_t read_len = 0;
-
     if (large_body) {
       memset(large_body, 'A', 1024 * 1024 - 1);
       large_body[1024 * 1024 - 1] = '\0';
@@ -149,9 +149,10 @@ int test_request_response(void) {
       c_rest_request_read_body(&req, &read_ptr, &read_len);
       if (!read_ptr || read_len != 1024 * 1024 - 1 || read_ptr[0] != 'A') {
         printf("Large body read failed\n");
+        free(large_body);
         return 1;
       }
-      /* req.body will be freed by cleanup */
+      free(large_body);
     }
   }
 
@@ -173,14 +174,14 @@ int test_request_response(void) {
       printf("JSON request parsing failed\n");
       return 1;
     }
+
     /* Test JSON Response Generation */
     res.headers_sent = 0; /* Reset state */
     if (c_rest_response_json_obj(&res, json_obj) != 0) {
       printf("JSON response generation failed\n");
       return 1;
     }
-    /* In parson, you'd typically free it here but we don't include parson.h in
-     * test. Assuming we just test it doesn't fail. */
+    json_value_free(json_obj);
   }
 
   /* Test JSON Dict Generation */

@@ -209,12 +209,8 @@ int test_openapi(void) {
 
   {
     struct c_rest_openapi_security_scheme scheme;
-    struct c_rest_openapi_oauth_flow flow;
-    const char *scope_keys[] = {"read"};
-    const char *scope_vals[] = {"Read access"};
 
     memset(&scheme, 0, sizeof(scheme));
-    memset(&flow, 0, sizeof(flow));
 
     scheme.name_key = _strdup("oauth2");
     scheme.type = _strdup("oauth2");
@@ -224,15 +220,6 @@ int test_openapi(void) {
     scheme.scheme = _strdup("bearer");
     scheme.bearer_format = _strdup("JWT");
     scheme.open_id_connect_url = _strdup("http://example.com/.well-known");
-
-    flow.authorization_url = _strdup("http://example.com/auth");
-    flow.token_url = _strdup("http://example.com/token");
-    flow.refresh_url = _strdup("http://example.com/refresh");
-    flow.scopes_keys = (const char **)malloc(sizeof(char *));
-    flow.scopes_keys[0] = _strdup(scope_keys[0]);
-    flow.scopes_values = (const char **)malloc(sizeof(char *));
-    flow.scopes_values[0] = _strdup(scope_vals[0]);
-    flow.n_scopes = 1;
 
     /* We test one flow, the others are structurally identical but let's just
      * test implicit for coverage */
@@ -353,9 +340,7 @@ int test_openapi(void) {
     return 1;
   }
 
-  if (res.body) {
-    free(res.body);
-  }
+  c_rest_response_cleanup(&res);
 
   c_rest_router_destroy(router);
 

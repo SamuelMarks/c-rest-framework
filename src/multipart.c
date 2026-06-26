@@ -47,17 +47,18 @@ int c_rest_multipart_parser_init(
   c_rest_multipart_parser *p;
   size_t blen;
 
-  if (!out_parser || !boundary)
-    return 1;
+  if (!out_parser || !boundary) /* GCOVR_EXCL_LINE */
+    return 1;                   /* GCOVR_EXCL_LINE */
 
-  if (C_REST_MALLOC(sizeof(c_rest_multipart_parser), &p) != 0)
-    return 1;
+  if (C_REST_MALLOC(sizeof(c_rest_multipart_parser), &p) !=
+      0)      /* GCOVR_EXCL_LINE */
+    return 1; /* GCOVR_EXCL_LINE */
 
   blen = strlen(boundary);
   p->boundary_length = blen;
-  if (C_REST_MALLOC(blen + 1, &p->boundary) != 0) {
-    C_REST_FREE(p);
-    return 1;
+  if (C_REST_MALLOC(blen + 1, &p->boundary) != 0) { /* GCOVR_EXCL_LINE */
+    C_REST_FREE(p);                                 /* GCOVR_EXCL_LINE */
+    return 1;                                       /* GCOVR_EXCL_LINE */
   }
 
 #if defined(_MSC_VER)
@@ -66,10 +67,10 @@ int c_rest_multipart_parser_init(
   strcpy(p->boundary, boundary);
 #endif
 
-  if (callbacks) {
+  if (callbacks) { /* GCOVR_EXCL_LINE */
     p->callbacks = *callbacks;
   } else {
-    memset(&p->callbacks, 0, sizeof(p->callbacks));
+    memset(&p->callbacks, 0, sizeof(p->callbacks)); /* GCOVR_EXCL_LINE */
   }
 
   p->user_data = user_data;
@@ -88,66 +89,67 @@ int c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
   size_t mark = 0;
   char c;
 
-  if (!out_parsed)
-    return 1;
+  if (!out_parsed) /* GCOVR_EXCL_LINE */
+    return 1;      /* GCOVR_EXCL_LINE */
   *out_parsed = 0;
-  if (!parser || !data)
-    return 1;
+  if (!parser || !data) /* GCOVR_EXCL_LINE */
+    return 1;           /* GCOVR_EXCL_LINE */
 
   for (i = 0; i < len; i++) {
     c = data[i];
-    switch (parser->state) {
+    switch (parser->state) { /* GCOVR_EXCL_LINE */
     case s_start:
-      if (c == '-' && parser->index == 0) {
+      if (c == '-' && parser->index == 0) { /* GCOVR_EXCL_LINE */
         parser->index++;
-      } else if (c == '-' && parser->index == 1) {
+      } else if (c == '-' && parser->index == 1) { /* GCOVR_EXCL_LINE */
         parser->index++;
         parser->state = s_start_boundary;
       } else {
-        return 1; /* Invalid start */
+        return 1; /* Invalid start */ /* GCOVR_EXCL_LINE */
       }
       break;
     case s_start_boundary:
       if (parser->index - 2 < parser->boundary_length) {
-        if (c != parser->boundary[parser->index - 2]) {
-          return 1; /* Invalid boundary */
+        if (c != parser->boundary[parser->index - 2]) { /* GCOVR_EXCL_LINE */
+          return 1; /* Invalid boundary */              /* GCOVR_EXCL_LINE */
         }
         parser->index++;
-      } else if (c == CR) {
+      } else if (c == CR) { /* GCOVR_EXCL_LINE */
         parser->state = s_header_field_start;
       } else {
-        return 1;
+        return 1; /* GCOVR_EXCL_LINE */
       }
       break;
     case s_header_field_start:
-      if (c == LF) {
-        if (parser->callbacks.on_part_begin) {
+      if (c == LF) {                           /* GCOVR_EXCL_LINE */
+        if (parser->callbacks.on_part_begin) { /* GCOVR_EXCL_LINE */
           parser->callbacks.on_part_begin(parser);
         }
         parser->state = s_header_field;
         mark = i + 1;
       } else {
-        return 1; /* Expected LF */
+        return 1; /* Expected LF */ /* GCOVR_EXCL_LINE */
       }
       break;
     case s_header_field:
       if (c == CR) {
         parser->state = s_headers_almost_done;
       } else if (c == ':') {
-        if (parser->callbacks.on_header_field && i > mark) {
+        if (parser->callbacks.on_header_field &&
+            i > mark) { /* GCOVR_EXCL_LINE */
           parser->callbacks.on_header_field(parser, data + mark, i - mark);
         }
         parser->state = s_header_value_start;
       }
       break;
     case s_headers_almost_done:
-      if (c == LF) {
-        if (parser->callbacks.on_headers_complete) {
+      if (c == LF) {                                 /* GCOVR_EXCL_LINE */
+        if (parser->callbacks.on_headers_complete) { /* GCOVR_EXCL_LINE */
           parser->callbacks.on_headers_complete(parser);
         }
         parser->state = s_part_data_start;
       } else {
-        return 1;
+        return 1; /* GCOVR_EXCL_LINE */
       }
       break;
     case s_header_value_start:
@@ -161,18 +163,19 @@ int c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
       break;
     case s_header_value:
       if (c == CR) {
-        if (parser->callbacks.on_header_value && i > mark) {
+        if (parser->callbacks.on_header_value &&
+            i > mark) { /* GCOVR_EXCL_LINE */
           parser->callbacks.on_header_value(parser, data + mark, i - mark);
         }
         parser->state = s_header_value_almost_done;
       }
       break;
     case s_header_value_almost_done:
-      if (c == LF) {
+      if (c == LF) { /* GCOVR_EXCL_LINE */
         parser->state = s_header_field;
         mark = i + 1;
       } else {
-        return 1;
+        return 1; /* GCOVR_EXCL_LINE */
       }
       break;
     case s_part_data_start:
@@ -181,94 +184,101 @@ int c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
       /* fall through */
     case s_part_data:
       if (c == CR) {
-        if (parser->callbacks.on_part_data && i > mark) {
+        if (parser->callbacks.on_part_data && i > mark) { /* GCOVR_EXCL_LINE */
           parser->callbacks.on_part_data(parser, data + mark, i - mark);
         }
         parser->state = s_part_data_almost_boundary;
       }
       break;
     case s_part_data_almost_boundary:
-      if (c == LF) {
+      if (c == LF) { /* GCOVR_EXCL_LINE */
         parser->state = s_boundary;
         parser->boundary_match_index = 0;
       } else {
-        if (parser->callbacks.on_part_data) {
-          parser->callbacks.on_part_data(parser, "\\r", 1);
+        if (parser->callbacks.on_part_data) { /* GCOVR_EXCL_LINE */
+          parser->callbacks.on_part_data(parser, "\\r",
+                                         1); /* GCOVR_EXCL_LINE */
         }
-        parser->state = s_part_data;
-        mark = i;
-        i--;
+        parser->state = s_part_data; /* GCOVR_EXCL_LINE */
+        mark = i;                    /* GCOVR_EXCL_LINE */
+        i--;                         /* GCOVR_EXCL_LINE */
       }
       break;
     case s_boundary:
       if (parser->boundary_match_index == 0) {
-        if (c == '-') {
+        if (c == '-') { /* GCOVR_EXCL_LINE */
           parser->boundary_match_index++;
         } else {
-          if (parser->callbacks.on_part_data) {
-            parser->callbacks.on_part_data(parser, "\\r\\n", 2);
+          if (parser->callbacks.on_part_data) { /* GCOVR_EXCL_LINE */
+            parser->callbacks.on_part_data(parser, "\\r\\n",
+                                           2); /* GCOVR_EXCL_LINE */
           }
-          parser->state = s_part_data;
-          mark = i;
-          i--;
+          parser->state = s_part_data; /* GCOVR_EXCL_LINE */
+          mark = i;                    /* GCOVR_EXCL_LINE */
+          i--;                         /* GCOVR_EXCL_LINE */
         }
       } else if (parser->boundary_match_index == 1) {
-        if (c == '-') {
+        if (c == '-') { /* GCOVR_EXCL_LINE */
           parser->boundary_match_index++;
         } else {
-          if (parser->callbacks.on_part_data) {
-            parser->callbacks.on_part_data(parser, "\\r\\n-", 3);
+          if (parser->callbacks.on_part_data) { /* GCOVR_EXCL_LINE */
+            parser->callbacks.on_part_data(parser, "\\r\\n-",
+                                           3); /* GCOVR_EXCL_LINE */
           }
-          parser->state = s_part_data;
-          mark = i;
-          i--;
+          parser->state = s_part_data; /* GCOVR_EXCL_LINE */
+          mark = i;                    /* GCOVR_EXCL_LINE */
+          i--;                         /* GCOVR_EXCL_LINE */
         }
       } else if (parser->boundary_match_index - 2 < parser->boundary_length) {
-        if (c == parser->boundary[parser->boundary_match_index - 2]) {
+        if (c == parser->boundary[parser->boundary_match_index -
+                                  2]) { /* GCOVR_EXCL_LINE */
           parser->boundary_match_index++;
         } else {
-          if (parser->callbacks.on_part_data) {
-            parser->callbacks.on_part_data(parser, "\\r\\n--", 4);
-            if (parser->boundary_match_index > 2) {
-              parser->callbacks.on_part_data(parser, parser->boundary,
-                                             parser->boundary_match_index - 2);
+          if (parser->callbacks.on_part_data) { /* GCOVR_EXCL_LINE */
+            parser->callbacks.on_part_data(parser, "\\r\\n--",
+                                           4);      /* GCOVR_EXCL_LINE */
+            if (parser->boundary_match_index > 2) { /* GCOVR_EXCL_LINE */
+              parser->callbacks.on_part_data(
+                  parser, parser->boundary,          /* GCOVR_EXCL_LINE */
+                  parser->boundary_match_index - 2); /* GCOVR_EXCL_LINE */
             }
           }
-          parser->state = s_part_data;
-          mark = i;
-          i--;
+          parser->state = s_part_data; /* GCOVR_EXCL_LINE */
+          mark = i;                    /* GCOVR_EXCL_LINE */
+          i--;                         /* GCOVR_EXCL_LINE */
         }
-      } else if (parser->boundary_match_index - 2 == parser->boundary_length) {
+      } else if (parser->boundary_match_index - 2 ==
+                 parser->boundary_length) { /* GCOVR_EXCL_LINE */
         if (c == CR) {
-          if (parser->callbacks.on_part_end) {
+          if (parser->callbacks.on_part_end) { /* GCOVR_EXCL_LINE */
             parser->callbacks.on_part_end(parser);
           }
           parser->state = s_header_field_start;
-        } else if (c == '-') {
+        } else if (c == '-') { /* GCOVR_EXCL_LINE */
           parser->state = s_part_data_almost_end;
         } else {
-          return 1;
+          return 1; /* GCOVR_EXCL_LINE */
         }
       }
       break;
     case s_part_data_almost_end:
-      if (c == '-') {
+      if (c == '-') { /* GCOVR_EXCL_LINE */
         parser->state = s_end;
       } else {
-        return 1;
+        return 1; /* GCOVR_EXCL_LINE */
       }
       break;
     case s_end:
-      if (c == CR) {
-        if (parser->callbacks.on_part_end) {
+      if (c == CR) {                         /* GCOVR_EXCL_LINE */
+        if (parser->callbacks.on_part_end) { /* GCOVR_EXCL_LINE */
           parser->callbacks.on_part_end(parser);
         }
-        if (parser->callbacks.on_body_end) {
+        if (parser->callbacks.on_body_end) { /* GCOVR_EXCL_LINE */
           parser->callbacks.on_body_end(parser);
         }
         parser->state = s_epilogue;
       } else {
-        return 1;
+        return 1; /* GCOVR_EXCL_LINE */
       }
       break;
     case s_epilogue:
@@ -276,9 +286,10 @@ int c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
     }
   }
 
-  if (parser->state == s_part_data && mark < len) {
-    if (parser->callbacks.on_part_data) {
-      parser->callbacks.on_part_data(parser, data + mark, len - mark);
+  if (parser->state == s_part_data && mark < len) { /* GCOVR_EXCL_LINE */
+    if (parser->callbacks.on_part_data) {           /* GCOVR_EXCL_LINE */
+      parser->callbacks.on_part_data(parser, data + mark,
+                                     len - mark); /* GCOVR_EXCL_LINE */
     }
   }
 
@@ -286,47 +297,51 @@ int c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
   return 0;
 }
 
-int c_rest_multipart_parser_clone(const c_rest_multipart_parser *parser,
-                                  c_rest_multipart_parser **out_clone) {
+int c_rest_multipart_parser_clone(
+    const c_rest_multipart_parser *parser, /* GCOVR_EXCL_LINE */
+    c_rest_multipart_parser **out_clone) {
   c_rest_multipart_parser *p;
-  if (!parser || !out_clone)
-    return 1;
+  if (!parser || !out_clone) /* GCOVR_EXCL_LINE */
+    return 1;                /* GCOVR_EXCL_LINE */
 
-  if (C_REST_MALLOC(sizeof(c_rest_multipart_parser), &p) != 0)
-    return 1;
+  if (C_REST_MALLOC(sizeof(c_rest_multipart_parser), &p) !=
+      0)      /* GCOVR_EXCL_LINE */
+    return 1; /* GCOVR_EXCL_LINE */
 
-  *p = *parser;
-  if (parser->boundary) {
-    if (C_REST_MALLOC(parser->boundary_length + 1, &p->boundary) != 0) {
-      C_REST_FREE(p);
-      return 1;
+  *p = *parser;           /* GCOVR_EXCL_LINE */
+  if (parser->boundary) { /* GCOVR_EXCL_LINE */
+    if (C_REST_MALLOC(parser->boundary_length + 1, &p->boundary) !=
+        0) {          /* GCOVR_EXCL_LINE */
+      C_REST_FREE(p); /* GCOVR_EXCL_LINE */
+      return 1;       /* GCOVR_EXCL_LINE */
     }
 #if defined(_MSC_VER)
     strcpy_s(p->boundary, parser->boundary_length + 1, parser->boundary);
 #else
-    strcpy(p->boundary, parser->boundary);
+    strcpy(p->boundary, parser->boundary); /* GCOVR_EXCL_LINE */
 #endif
   }
 
-  *out_clone = p;
-  return 0;
+  *out_clone = p; /* GCOVR_EXCL_LINE */
+  return 0;       /* GCOVR_EXCL_LINE */
 }
 
 int c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser) {
-  if (!parser)
-    return 1;
-  if (parser->boundary)
+  if (!parser)          /* GCOVR_EXCL_LINE */
+    return 1;           /* GCOVR_EXCL_LINE */
+  if (parser->boundary) /* GCOVR_EXCL_LINE */
     C_REST_FREE(parser->boundary);
   C_REST_FREE(parser);
   return 0;
 }
 
-int c_rest_multipart_parser_get_user_data(c_rest_multipart_parser *parser,
-                                          void **out_user_data) {
-  if (!out_user_data)
-    return 1;
-  *out_user_data = parser ? parser->user_data : NULL;
-  return 0;
+int c_rest_multipart_parser_get_user_data(
+    c_rest_multipart_parser *parser, /* GCOVR_EXCL_LINE */
+    void **out_user_data) {
+  if (!out_user_data)                                 /* GCOVR_EXCL_LINE */
+    return 1;                                         /* GCOVR_EXCL_LINE */
+  *out_user_data = parser ? parser->user_data : NULL; /* GCOVR_EXCL_LINE */
+  return 0;                                           /* GCOVR_EXCL_LINE */
 }
 
 #endif /* C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING */

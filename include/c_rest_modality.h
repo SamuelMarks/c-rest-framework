@@ -225,7 +225,7 @@ struct c_rest_connection_context {
  */
 int c_rest_handle_connection(struct c_rest_context *ctx, c_rest_socket_t sock);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 

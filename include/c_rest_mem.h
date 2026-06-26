@@ -30,15 +30,17 @@ int c_rest_mem_tracker_cleanup(void);
 #define C_REST_FREE(ptr) c_rest_mem_free(ptr)
 #else
 #define C_REST_MALLOC(size, out_ptr)                                           \
-  (*(out_ptr) = malloc(size), *(out_ptr) ? 0 : 1)
+  ((*((void **)(out_ptr))) = malloc(size), (*((void **)(out_ptr))) ? 0 : 1)
 #define C_REST_CALLOC(count, size, out_ptr)                                    \
-  (*(out_ptr) = calloc(count, size), *(out_ptr) ? 0 : 1)
+  ((*((void **)(out_ptr))) = calloc(count, size),                              \
+   (*((void **)(out_ptr))) ? 0 : 1)
 #define C_REST_REALLOC(ptr, size, out_ptr)                                     \
-  (*(out_ptr) = realloc(ptr, size), *(out_ptr) ? 0 : 1)
+  ((*((void **)(out_ptr))) = realloc(ptr, size),                               \
+   (*((void **)(out_ptr))) ? 0 : 1)
 #define C_REST_FREE(ptr) (free(ptr), 0)
 #endif
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 #endif /* C_REST_MEM_H */

@@ -6,4 +6,3 @@ target_link_libraries(app_hot_reload PRIVATE c-rest-framework)
 if(WIN32)
   target_link_libraries(app_hot_reload PRIVATE ws2_32)
 endif()
-

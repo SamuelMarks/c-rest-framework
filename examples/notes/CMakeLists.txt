@@ -5,7 +5,7 @@ if(BUILD_TESTING)
     # The note_model object is defined in main.c, but we don't want to redefine it or have multiple mains.
     # To fix this, let's just add both main.c and test_notes.c, but wait, main.c has a main() function!
     # I should split main.c or define note_model in test_notes.c for the test executable.
-    
+
     # Wait, I can just build test_notes.c and define note_model there.
     add_executable(test_notes test_notes.c)
     target_link_libraries(test_notes PRIVATE c-rest-framework)
@@ -37,6 +37,15 @@ if(BUILD_TESTING)
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c-rest-framework>" "$<TARGET_FILE_DIR:test_notes>"
             )
         endif()
+        if(TARGET c_cdd)
+            add_custom_command(TARGET test_notes POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c_cdd>" "$<TARGET_FILE_DIR:test_notes>"
+            )
+        endif()
+        if(TARGET c_str_span)
+            add_custom_command(TARGET test_notes POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c_str_span>" "$<TARGET_FILE_DIR:test_notes>"
+            )
+        endif()
     endif()
 endif()
-
