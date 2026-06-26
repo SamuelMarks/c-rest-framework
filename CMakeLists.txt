@@ -295,7 +295,7 @@ if(C_REST_FRAMEWORK_FETCH_C_ORM)
     endif()
     FetchContent_MakeAvailable(c_orm)
     add_definitions(-DC_REST_FRAMEWORK_USE_REAL_C_ORM)
-    
+
     if(TARGET c-orm_compiler_flags)
         get_target_property(_opts c-orm_compiler_flags INTERFACE_COMPILE_OPTIONS)
         if(_opts)
