@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "oauth2_server.h"
 
 #if defined(_MSC_VER)
@@ -259,8 +260,9 @@ int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
   return 0;
 }
 
-int oauth2_token_handler(struct c_rest_request *req,
-                         struct c_rest_response *res, void *user_data) {
+c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
+                                    struct c_rest_response *res,
+                                    void *user_data) {
   c_orm_db_t *db;
   const char *grant_type = NULL;
   const char *client_id = NULL;
@@ -436,8 +438,9 @@ int oauth2_token_handler(struct c_rest_request *req,
   return 0;
 }
 
-int oauth2_login_handler(struct c_rest_request *req,
-                         struct c_rest_response *res, void *user_data) {
+c_rest_error_t oauth2_login_handler(struct c_rest_request *req,
+                                    struct c_rest_response *res,
+                                    void *user_data) {
   c_orm_db_t *db = (c_orm_db_t *)user_data;
   const char *username = NULL;
   const char *password = NULL;
@@ -520,8 +523,9 @@ int oauth2_login_handler(struct c_rest_request *req,
   return 0;
 }
 
-int oauth2_logout_handler(struct c_rest_request *req,
-                          struct c_rest_response *res, void *user_data) {
+c_rest_error_t oauth2_logout_handler(struct c_rest_request *req,
+                                     struct c_rest_response *res,
+                                     void *user_data) {
   c_orm_db_t *db = (c_orm_db_t *)user_data;
   char *token_str = NULL;
   struct c_rest_json_pair json_pair;
@@ -546,8 +550,9 @@ int oauth2_logout_handler(struct c_rest_request *req,
   return 0;
 }
 
-int oauth2_secret_handler(struct c_rest_request *req,
-                          struct c_rest_response *res, void *user_data) {
+c_rest_error_t oauth2_secret_handler(struct c_rest_request *req,
+                                     struct c_rest_response *res,
+                                     void *user_data) {
   c_orm_db_t *db = (c_orm_db_t *)user_data;
   char *token_str = NULL;
   c_orm_oauth2_token_t db_token;
@@ -594,9 +599,9 @@ int oauth2_secret_handler(struct c_rest_request *req,
   return 0;
 }
 
-int oauth2_register_client_handler(struct c_rest_request *req,
-                                   struct c_rest_response *res,
-                                   void *user_data) {
+c_rest_error_t oauth2_register_client_handler(struct c_rest_request *req,
+                                              struct c_rest_response *res,
+                                              void *user_data) {
   c_orm_db_t *db = (c_orm_db_t *)user_data;
   const char *client_id = NULL;
   const char *client_secret = NULL;
@@ -657,8 +662,9 @@ int oauth2_register_client_handler(struct c_rest_request *req,
   return 0;
 }
 
-int oauth2_register_user_handler(struct c_rest_request *req,
-                                 struct c_rest_response *res, void *user_data) {
+c_rest_error_t oauth2_register_user_handler(struct c_rest_request *req,
+                                            struct c_rest_response *res,
+                                            void *user_data) {
   c_orm_db_t *db = (c_orm_db_t *)user_data;
   const char *username = NULL;
   const char *password = NULL;

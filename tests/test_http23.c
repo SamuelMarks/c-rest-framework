@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "test_protos.h"
 #include "c_rest_http23.h"
 #include <stdio.h>
@@ -18,27 +19,27 @@ int test_http23(void) {
 
   printf("Testing HTTP2/3 Init...\n");
   res = c_rest_http23_ctx_init(C_REST_PROTOCOL_HTTP2, &ctx);
-  if (res != C_REST_HTTP23_OK || !ctx) {
+  if (res != C_REST_OK || !ctx) {
     printf("Failed to init HTTP2/3 ctx\n");
     return 1;
   }
 
   printf("Testing HTTP2/3 Process...\n");
   res = c_rest_http23_process(ctx, "mock_data", 9, &consumed);
-  if (res != C_REST_HTTP23_OK || consumed != 9) {
+  if (res != C_REST_OK || consumed != 9) {
     printf("Failed to process data\n");
     return 1;
   }
 
   res = c_rest_http23_is_request_ready(ctx, &is_ready);
-  if (res != C_REST_HTTP23_OK || !is_ready) {
+  if (res != C_REST_OK || !is_ready) {
     printf("Request not ready\n");
     return 1;
   }
 
   printf("Testing HTTP2/3 Get Request...\n");
   res = c_rest_http23_get_request(ctx, &req);
-  if (res != C_REST_HTTP23_OK || !req) {
+  if (res != C_REST_OK || !req) {
     printf("Failed to get request\n");
     return 1;
   }
@@ -55,7 +56,7 @@ int test_http23(void) {
   res_obj.body_len = 5;
 
   res = c_rest_http23_format_response(ctx, &res_obj, &out_buf, &out_len);
-  if (res != C_REST_HTTP23_OK || !out_buf) {
+  if (res != C_REST_OK || !out_buf) {
     printf("Failed to format response\n");
     return 1;
   }
@@ -73,7 +74,7 @@ int test_http23(void) {
    * c_rest_mem.h */
 
   res = c_rest_http23_ctx_destroy(ctx);
-  if (res != C_REST_HTTP23_OK) {
+  if (res != C_REST_OK) {
     printf("Failed to destroy ctx\n");
     return 1;
   }

@@ -1,8 +1,10 @@
 #ifndef C_REST_STRING_H
 #define C_REST_STRING_H
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include <stddef.h>
+#include "c_rest_error.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -26,7 +28,7 @@ typedef struct c_rest_string {
  * @param initial_capacity The initial capacity to allocate.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_string_init(c_rest_string *str, size_t initial_capacity);
+c_rest_error_t c_rest_string_init(c_rest_string *str, size_t initial_capacity);
 
 /**
  * @brief Appends raw data to a dynamic string.
@@ -36,7 +38,8 @@ int c_rest_string_init(c_rest_string *str, size_t initial_capacity);
  * @param len The length of the data to append.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_string_append(c_rest_string *str, const char *data, size_t len);
+c_rest_error_t c_rest_string_append(c_rest_string *str, const char *data,
+                                    size_t len);
 
 /**
  * @brief Appends a null-terminated C string to a dynamic string.
@@ -45,7 +48,7 @@ int c_rest_string_append(c_rest_string *str, const char *data, size_t len);
  * @param cstr The null-terminated C string to append.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_string_append_cstr(c_rest_string *str, const char *cstr);
+c_rest_error_t c_rest_string_append_cstr(c_rest_string *str, const char *cstr);
 
 /**
  * @brief Destroys a dynamic string, freeing its memory.
@@ -53,7 +56,7 @@ int c_rest_string_append_cstr(c_rest_string *str, const char *cstr);
  * @param str The dynamic string to destroy.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_string_destroy(c_rest_string *str);
+c_rest_error_t c_rest_string_destroy(c_rest_string *str);
 
 #ifdef __cplusplus
 }

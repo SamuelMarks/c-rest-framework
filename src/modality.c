@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_modality.h"
 
 #include <stdlib.h>
@@ -19,26 +20,26 @@ static int dummy_init(struct c_rest_context *ctx) {
   if (ctx && ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
     ctx->logger.log_cb("Initializing Dummy modality"); /* GCOVR_EXCL_LINE */
   }
-  return 0;
+  return C_REST_OK;
 }
 
 static int dummy_destroy(struct c_rest_context *ctx) {
   if (ctx && ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
     ctx->logger.log_cb("Destroying Dummy modality"); /* GCOVR_EXCL_LINE */
   }
-  return 0;
+  return C_REST_OK;
 }
 
 static int dummy_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   (void)ctx;
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
 static int dummy_stop(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   if (ctx && ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
     ctx->logger.log_cb("Stopping Dummy modality"); /* GCOVR_EXCL_LINE */
   }
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
 static const struct c_rest_modality_vtable dummy_vtable = {
@@ -47,62 +48,62 @@ static const struct c_rest_modality_vtable dummy_vtable = {
 static int get_vtable(enum c_rest_modality_type type,
                       const struct c_rest_modality_vtable **out_vtable) {
   if (!out_vtable) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   switch (type) { /* GCOVR_EXCL_LINE */
   case C_REST_MODALITY_SYNC:
     *out_vtable = &sync_vtable;
-    return 0;
+    return C_REST_OK;
   case C_REST_MODALITY_SINGLE_THREAD:
     *out_vtable = &single_thread_vtable;
-    return 0;
+    return C_REST_OK;
   case C_REST_MODALITY_ASYNC:
     *out_vtable = &async_vtable;
-    return 0;
+    return C_REST_OK;
   case C_REST_MODALITY_MULTI_THREAD:
     *out_vtable = &multi_thread_vtable;
-    return 0;
+    return C_REST_OK;
   case C_REST_MODALITY_MULTI_PROCESS:
     *out_vtable = &multi_process_vtable;
-    return 0;
+    return C_REST_OK;
   case C_REST_MODALITY_GREENTHREAD:
     *out_vtable = &greenthread_vtable;
-    return 0;
+    return C_REST_OK;
   case C_REST_MODALITY_MESSAGE_PASSING:
     *out_vtable = &message_passing_vtable;
-    return 0;
+    return C_REST_OK;
   case C_REST_MODALITY_SINGLE_PROCESS:
     *out_vtable = &dummy_vtable;
-    return 0;
+    return C_REST_OK;
   default: /* GCOVR_EXCL_LINE */
     *out_vtable = NULL; /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 }
 
-int c_rest_init(enum c_rest_modality_type type,
+c_rest_error_t c_rest_init(enum c_rest_modality_type type,
                 struct c_rest_context **out_ctx) {
   struct c_rest_context *ctx;
   const struct c_rest_modality_vtable *vtable;
   int res;
 
   if (!out_ctx) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   *out_ctx = NULL;
 
   if (c_rest_platform_init() != 0) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (get_vtable(type, &vtable) != 0 || !vtable) { /* GCOVR_EXCL_LINE */
-    return 1; /* Unsupported modality or invalid enum */ /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* Unsupported modality or invalid enum */ /* GCOVR_EXCL_LINE */
   }
 
   if (C_REST_MALLOC(sizeof(struct c_rest_context), &ctx) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); ctx = NULL; } /* GCOVR_EXCL_LINE */
   if (!ctx) { /* GCOVR_EXCL_LINE */
-    return 1; /* Out of memory */ /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* Out of memory */ /* GCOVR_EXCL_LINE */
   }
 
   ctx->modality = type;
@@ -140,13 +141,13 @@ int c_rest_init(enum c_rest_modality_type type,
   }
 
   *out_ctx = ctx;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_run(struct c_rest_context *ctx) {
+c_rest_error_t c_rest_run(struct c_rest_context *ctx) {
   int res;
   if (!ctx) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   /* Initialize c-orm connection pool if configured */
@@ -170,12 +171,12 @@ int c_rest_run(struct c_rest_context *ctx) {
   if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
     ctx->logger.log_cb("No run loop implemented for the selected modality."); /* GCOVR_EXCL_LINE */
   }
-  return 1; /* GCOVR_EXCL_LINE */
+  return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_stop(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_stop(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   if (!ctx) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (ctx->vtable && ctx->vtable->stop) { /* GCOVR_EXCL_LINE */
@@ -185,13 +186,13 @@ int c_rest_stop(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
     ctx->logger.log_cb("No stop implemented for the selected modality."); /* GCOVR_EXCL_LINE */
   }
-  return 1; /* GCOVR_EXCL_LINE */
+  return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_destroy(struct c_rest_context *ctx) {
+c_rest_error_t c_rest_destroy(struct c_rest_context *ctx) {
   int res = 0;
   if (!ctx) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (ctx->db_pool) {
@@ -218,12 +219,12 @@ int c_rest_destroy(struct c_rest_context *ctx) {
 }
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
-int c_rest_set_multiplatform_env(struct c_rest_context *ctx, cm_env_t env) {
+c_rest_error_t c_rest_set_multiplatform_env(struct c_rest_context *ctx, cm_env_t env) {
   struct cm_allocator alloc;
   struct cm_logger logger;
 
   if (!ctx || !env) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   ctx->cm_env = env;
@@ -235,16 +236,16 @@ int c_rest_set_multiplatform_env(struct c_rest_context *ctx, cm_env_t env) {
   logger.log_cb = ctx->logger.log_cb;
   cm_env_set_logger(env, &logger);
 
-  return 0;
+  return C_REST_OK;
 }
 #endif
 
-int c_rest_set_router(struct c_rest_context *ctx, /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_set_router(struct c_rest_context *ctx, /* GCOVR_EXCL_LINE */
                       struct c_rest_router *router) {
   if (!ctx) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   ctx->router = router; /* GCOVR_EXCL_LINE */
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
 #include "c_rest_parser.h"
@@ -352,23 +353,24 @@ static void on_complete(c_rest_parser_context *pctx) { /* GCOVR_EXCL_LINE */
       1; /* GCOVR_EXCL_LINE */
 } /* GCOVR_EXCL_LINE */
 
-int c_rest_handle_connection(struct c_rest_context *ctx,
-                             c_rest_socket_t sock) { /* GCOVR_EXCL_LINE */
-  struct c_rest_tls_connection *tls_conn = NULL;     /* GCOVR_EXCL_LINE */
+c_rest_error_t
+c_rest_handle_connection(struct c_rest_context *ctx,
+                         c_rest_socket_t sock) { /* GCOVR_EXCL_LINE */
+  struct c_rest_tls_connection *tls_conn = NULL; /* GCOVR_EXCL_LINE */
   char buf[4096];
   size_t read_bytes, parsed_bytes;
   int res;
   int keep_alive = 0; /* GCOVR_EXCL_LINE */
 
-  if (!ctx)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!ctx)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (ctx->tls_ctx) { /* GCOVR_EXCL_LINE */
     res =
         c_rest_tls_accept(ctx->tls_ctx, sock, &tls_conn); /* GCOVR_EXCL_LINE */
     if (res != 0) {                                       /* GCOVR_EXCL_LINE */
       /* Handshake failed or WANT_READ/WRITE not handled recursively */
-      return 1; /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
     }
   }
 
@@ -480,5 +482,5 @@ int c_rest_handle_connection(struct c_rest_context *ctx,
     c_rest_tls_close(tls_conn); /* GCOVR_EXCL_LINE */
   }
 
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }

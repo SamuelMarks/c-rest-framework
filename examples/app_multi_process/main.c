@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_modality.h"
 #include "c_rest_request.h"
 #include "c_rest_response.h"
@@ -10,8 +11,9 @@
 
 static void my_log_cb(const char *message) { printf("[MP] %s\n", message); }
 
-static int handle_work(struct c_rest_request *req, struct c_rest_response *res,
-                       void *user_data) {
+static c_rest_error_t handle_work(struct c_rest_request *req,
+                                  struct c_rest_response *res,
+                                  void *user_data) {
   (void)req;
   (void)user_data;
   c_rest_response_json(res, "{\"worker_id\": 1, \"status\": \"done\"}");

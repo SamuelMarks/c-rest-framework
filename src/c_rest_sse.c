@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_sse.h"
 
 #include <stdlib.h>
@@ -17,20 +18,20 @@ struct c_rest_sse_context {
   struct c_rest_sse_event current_event;
 };
 
-int c_rest_sse_event_init(struct c_rest_sse_event *ev) {
+c_rest_error_t c_rest_sse_event_init(struct c_rest_sse_event *ev) {
   if (!ev) { /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_INVALID_ARG; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   ev->id = NULL;
   ev->event = NULL;
   ev->data = NULL;
   ev->retry = -1;
-  return C_REST_SSE_OK;
+  return C_REST_OK;
 }
 
-int c_rest_sse_event_destroy(struct c_rest_sse_event *ev) {
+c_rest_error_t c_rest_sse_event_destroy(struct c_rest_sse_event *ev) {
   if (!ev) { /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_INVALID_ARG; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   if (ev->id) {
     C_REST_FREE(ev->id);
@@ -45,30 +46,30 @@ int c_rest_sse_event_destroy(struct c_rest_sse_event *ev) {
     ev->data = NULL;
   }
   ev->retry = -1;
-  return C_REST_SSE_OK;
+  return C_REST_OK;
 }
 
-static int c_rest_sse_strdup(const char *s, char **out_str) {
+static c_rest_error_t c_rest_sse_strdup(const char *s, char **out_str) {
   size_t len;
   char *copy;
   void *tmp;
   if (!s) { /* GCOVR_EXCL_LINE */
     *out_str = NULL; /* GCOVR_EXCL_LINE */
-    return 0; /* GCOVR_EXCL_LINE */
+    return C_REST_OK; /* GCOVR_EXCL_LINE */
   }
   len = strlen(s);
   if (C_REST_MALLOC(len + 1, &tmp) != 0) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   copy = (char *)tmp;
   memcpy(copy, s, len + 1);
   *out_str = copy;
-  return 0;
+  return C_REST_OK;
 }
-int c_rest_sse_event_clone(const struct c_rest_sse_event *src,
+c_rest_error_t c_rest_sse_event_clone(const struct c_rest_sse_event *src,
                            struct c_rest_sse_event *dest) {
   if (!src || !dest) { /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_INVALID_ARG; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   if (src->id) { /* GCOVR_EXCL_LINE */
     if (c_rest_sse_strdup(src->id, &dest->id) != 0) goto err; /* GCOVR_EXCL_LINE */
@@ -89,14 +90,14 @@ int c_rest_sse_event_clone(const struct c_rest_sse_event *src,
   }
 
   dest->retry = src->retry;
-  return C_REST_SSE_OK;
+  return C_REST_OK;
 
 err: /* GCOVR_EXCL_LINE */
   c_rest_sse_event_destroy(dest); /* GCOVR_EXCL_LINE */
-  return C_REST_SSE_ERR_NOMEM; /* GCOVR_EXCL_LINE */
+  return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
+c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
                          size_t *out_len) {
   c_rest_string s;
   char retry_buf[32];
@@ -106,11 +107,11 @@ int c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
   void *tmp_out_buf;
 
   if (!ev || !out_buf || !out_len) { /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_INVALID_ARG; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (c_rest_string_init(&s, 128) != 0) { /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_NOMEM; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (ev->id) {
@@ -152,7 +153,7 @@ int c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
   data_len = s.length;
   if (C_REST_MALLOC(data_len + 1, &tmp_out_buf) != 0) { /* GCOVR_EXCL_LINE */
     c_rest_string_destroy(&s); /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_NOMEM; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   *out_buf = (char *)tmp_out_buf;
   memcpy(*out_buf, s.data, data_len);
@@ -161,18 +162,18 @@ int c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
 
   c_rest_string_destroy(&s);
 
-  return C_REST_SSE_OK;
+  return C_REST_OK;
 }
 
-int c_rest_sse_context_init(struct c_rest_sse_context **out_ctx) {
+c_rest_error_t c_rest_sse_context_init(struct c_rest_sse_context **out_ctx) {
   struct c_rest_sse_context *ctx;
   void *tmp_ctx;
   if (!out_ctx) { /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_INVALID_ARG; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (C_REST_MALLOC(sizeof(struct c_rest_sse_context), &tmp_ctx) != 0) { /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_NOMEM; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   ctx = (struct c_rest_sse_context *)tmp_ctx;
 
@@ -182,12 +183,12 @@ int c_rest_sse_context_init(struct c_rest_sse_context **out_ctx) {
   c_rest_sse_event_init(&ctx->current_event);
 
   *out_ctx = ctx;
-  return C_REST_SSE_OK;
+  return C_REST_OK;
 }
 
-int c_rest_sse_context_destroy(struct c_rest_sse_context *ctx) {
+c_rest_error_t c_rest_sse_context_destroy(struct c_rest_sse_context *ctx) {
   if (!ctx) { /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_INVALID_ARG; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (ctx->buffer) { /* GCOVR_EXCL_LINE */
@@ -197,7 +198,7 @@ int c_rest_sse_context_destroy(struct c_rest_sse_context *ctx) {
   c_rest_sse_event_destroy(&ctx->current_event);
   C_REST_FREE(ctx);
 
-  return C_REST_SSE_OK;
+  return C_REST_OK;
 }
 
 static int append_to_string(char **dest, const char *src, size_t len) {
@@ -206,12 +207,12 @@ static int append_to_string(char **dest, const char *src, size_t len) {
   void *tmp_new_str;
 
   if (!src || len == 0) { /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_OK; /* GCOVR_EXCL_LINE */
+    return C_REST_OK; /* GCOVR_EXCL_LINE */
   }
 
   old_len = *dest ? strlen(*dest) : 0; /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(old_len + len + 1, &tmp_new_str) != 0) { /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_NOMEM; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   new_str = (char *)tmp_new_str;
 
@@ -223,10 +224,10 @@ static int append_to_string(char **dest, const char *src, size_t len) {
   new_str[old_len + len] = '\0';
 
   *dest = new_str;
-  return C_REST_SSE_OK;
+  return C_REST_OK;
 }
 
-int c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data,
+c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data,
                      size_t len, struct c_rest_sse_event *out_event) {
   char *new_buf;
   const char *line_start;
@@ -239,7 +240,7 @@ int c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data,
   size_t processed = 0;
 
   if (!ctx || !out_event) { /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_INVALID_ARG; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (data && len > 0) { /* GCOVR_EXCL_LINE */
@@ -250,7 +251,7 @@ int c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data,
         ctx->buffer_cap = 256;
       }
       if (C_REST_MALLOC(ctx->buffer_cap, &tmp_new_buf) != 0) { /* GCOVR_EXCL_LINE */
-        return C_REST_SSE_ERR_NOMEM; /* GCOVR_EXCL_LINE */
+        return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
       }
       new_buf = (char *)tmp_new_buf;
       if (ctx->buffer) { /* GCOVR_EXCL_LINE */
@@ -360,7 +361,7 @@ int c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data,
     } else {
       ctx->buffer_len = 0;
     }
-    return C_REST_SSE_OK;
+    return C_REST_OK;
   }
 
   if (line_start > ctx->buffer) {
@@ -373,15 +374,15 @@ int c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data,
     }
   }
 
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }
 
 #include "c_rest_response.h"
 /* clang-format on */
 
-int c_rest_sse_init_response(struct c_rest_response *res) {
-  if (!res) {                          /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_INVALID_ARG; /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_sse_init_response(struct c_rest_response *res) {
+  if (!res) {                    /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   c_rest_response_set_status(res, 200);
@@ -392,19 +393,19 @@ int c_rest_sse_init_response(struct c_rest_response *res) {
   return c_rest_response_send(res);
 }
 
-int c_rest_sse_send_event(struct c_rest_response *res,
-                          const struct c_rest_sse_event *ev) {
+c_rest_error_t c_rest_sse_send_event(struct c_rest_response *res,
+                                     const struct c_rest_sse_event *ev) {
   char *buf;
   size_t len;
   int ret;
 
-  if (!res || !ev) {                   /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_INVALID_ARG; /* GCOVR_EXCL_LINE */
+  if (!res || !ev) {             /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   ret = c_rest_sse_serialize(ev, &buf, &len);
-  if (ret != C_REST_SSE_OK) { /* GCOVR_EXCL_LINE */
-    return ret;               /* GCOVR_EXCL_LINE */
+  if (ret != C_REST_OK) { /* GCOVR_EXCL_LINE */
+    return ret;           /* GCOVR_EXCL_LINE */
   }
 
   ret = c_rest_response_write_chunk(res, buf, len);
@@ -413,10 +414,10 @@ int c_rest_sse_send_event(struct c_rest_response *res,
   return ret;
 }
 
-int c_rest_sse_send_keepalive(struct c_rest_response *res) {
+c_rest_error_t c_rest_sse_send_keepalive(struct c_rest_response *res) {
   const char *keepalive = ": \n\n";
-  if (!res) {                          /* GCOVR_EXCL_LINE */
-    return C_REST_SSE_ERR_INVALID_ARG; /* GCOVR_EXCL_LINE */
+  if (!res) {                    /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   return c_rest_response_write_chunk(res, keepalive, strlen(keepalive));
 }

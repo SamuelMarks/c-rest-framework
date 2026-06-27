@@ -1,8 +1,10 @@
 #ifndef C_REST_MODALITY_H
 #define C_REST_MODALITY_H
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include <stddef.h>
+#include "c_rest_error.h"
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
 #include "c_multiplatform.h"
@@ -158,15 +160,15 @@ struct c_rest_context {
  * @param out_ctx Pointer to store the initialized struct pointer.
  * @return 0 on success, non-zero error code on failure.
  */
-int c_rest_init(enum c_rest_modality_type type,
-                struct c_rest_context **out_ctx);
+c_rest_error_t c_rest_init(enum c_rest_modality_type type,
+                           struct c_rest_context **out_ctx);
 
 /**
  * @brief Starts the framework engine and begins accepting connections.
  * @param ctx Pointer to the initialized context struct.
  * @return 0 on success, non-zero error code on failure.
  */
-int c_rest_run(struct c_rest_context *ctx);
+c_rest_error_t c_rest_run(struct c_rest_context *ctx);
 
 /**
  * @brief Signals the framework engine to stop accepting connections and
@@ -174,14 +176,14 @@ int c_rest_run(struct c_rest_context *ctx);
  * @param ctx Pointer to the initialized context struct.
  * @return 0 on success, non-zero error code on failure.
  */
-int c_rest_stop(struct c_rest_context *ctx);
+c_rest_error_t c_rest_stop(struct c_rest_context *ctx);
 
 /**
  * @brief Destroys and cleans up a framework context instance.
  * @param ctx Pointer to the context struct to destroy.
  * @return 0 on success, non-zero error code on failure.
  */
-int c_rest_destroy(struct c_rest_context *ctx);
+c_rest_error_t c_rest_destroy(struct c_rest_context *ctx);
 
 /**
  * @brief Set router for framework instance.
@@ -189,7 +191,8 @@ int c_rest_destroy(struct c_rest_context *ctx);
  * @param router Router
  * @return 0 on success
  */
-int c_rest_set_router(struct c_rest_context *ctx, struct c_rest_router *router);
+c_rest_error_t c_rest_set_router(struct c_rest_context *ctx,
+                                 struct c_rest_router *router);
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
 /**
@@ -198,7 +201,8 @@ int c_rest_set_router(struct c_rest_context *ctx, struct c_rest_router *router);
  * @param env The c-multiplatform environment instance.
  * @return 0 on success, non-zero error code on failure.
  */
-int c_rest_set_multiplatform_env(struct c_rest_context *ctx, cm_env_t env);
+c_rest_error_t c_rest_set_multiplatform_env(struct c_rest_context *ctx,
+                                            cm_env_t env);
 #endif
 
 /**
@@ -223,7 +227,8 @@ struct c_rest_connection_context {
  * @param sock Socket
  * @return 0 on success
  */
-int c_rest_handle_connection(struct c_rest_context *ctx, c_rest_socket_t sock);
+c_rest_error_t c_rest_handle_connection(struct c_rest_context *ctx,
+                                        c_rest_socket_t sock);
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_modality.h"
 #include "c_rest_router.h"
 #include "c_rest_request.h"
@@ -24,8 +25,9 @@ static void sleep_ms(int milliseconds) {
 #endif
 }
 
-static int my_sse_handler(struct c_rest_request *req,
-                          struct c_rest_response *res, void *user_data) {
+static c_rest_error_t my_sse_handler(struct c_rest_request *req,
+                                     struct c_rest_response *res,
+                                     void *user_data) {
   struct c_rest_sse_event ev;
   int i;
   (void)req;

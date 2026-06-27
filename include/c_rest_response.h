@@ -1,8 +1,10 @@
 #ifndef C_REST_RESPONSE_H
 #define C_REST_RESPONSE_H
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include <stddef.h>
+#include "c_rest_error.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -39,8 +41,8 @@ struct c_rest_response {
  * @param value Header value
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_set_header(struct c_rest_response *res, const char *key,
-                               const char *value);
+c_rest_error_t c_rest_response_set_header(struct c_rest_response *res,
+                                          const char *key, const char *value);
 
 /**
  * @brief Set the status code.
@@ -48,7 +50,8 @@ int c_rest_response_set_header(struct c_rest_response *res, const char *key,
  * @param status_code Status code
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_set_status(struct c_rest_response *res, int status_code);
+c_rest_error_t c_rest_response_set_status(struct c_rest_response *res,
+                                          int status_code);
 
 /**
  * @brief Check ETag and set status.
@@ -57,8 +60,9 @@ int c_rest_response_set_status(struct c_rest_response *res, int status_code);
  * @param etag ETag value
  * @return 1 if matched (304), 0 otherwise
  */
-int c_rest_response_check_etag(struct c_rest_request *req,
-                               struct c_rest_response *res, const char *etag);
+c_rest_error_t c_rest_response_check_etag(struct c_rest_request *req,
+                                          struct c_rest_response *res,
+                                          const char *etag);
 
 /**
  * @brief Set Cache-Control header.
@@ -66,15 +70,15 @@ int c_rest_response_check_etag(struct c_rest_request *req,
  * @param policy Policy string
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_set_cache_control(struct c_rest_response *res,
-                                      const char *policy);
+c_rest_error_t c_rest_response_set_cache_control(struct c_rest_response *res,
+                                                 const char *policy);
 
 /**
  * @brief Send the response headers.
  * @param res Response
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_send(struct c_rest_response *res);
+c_rest_error_t c_rest_response_send(struct c_rest_response *res);
 
 /**
  * @brief Send JSON string.
@@ -82,7 +86,8 @@ int c_rest_response_send(struct c_rest_response *res);
  * @param json_str JSON string
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_json(struct c_rest_response *res, const char *json_str);
+c_rest_error_t c_rest_response_json(struct c_rest_response *res,
+                                    const char *json_str);
 
 /**
  * @brief Send JSON object.
@@ -90,7 +95,8 @@ int c_rest_response_json(struct c_rest_response *res, const char *json_str);
  * @param json_obj JSON object (parson JSON_Value)
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_json_obj(struct c_rest_response *res, void *json_obj);
+c_rest_error_t c_rest_response_json_obj(struct c_rest_response *res,
+                                        void *json_obj);
 
 /**
  * @brief JSON value types.
@@ -125,9 +131,9 @@ struct c_rest_json_pair {
  * @param count Number of pairs
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_json_dict(struct c_rest_response *res,
-                              const struct c_rest_json_pair *pairs,
-                              size_t count);
+c_rest_error_t c_rest_response_json_dict(struct c_rest_response *res,
+                                         const struct c_rest_json_pair *pairs,
+                                         size_t count);
 
 /**
  * @brief Send HTML string.
@@ -135,7 +141,8 @@ int c_rest_response_json_dict(struct c_rest_response *res,
  * @param html_str HTML string
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_html(struct c_rest_response *res, const char *html_str);
+c_rest_error_t c_rest_response_html(struct c_rest_response *res,
+                                    const char *html_str);
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
 struct c_rest_template_context;
@@ -151,10 +158,10 @@ struct c_rest_template_context;
  *
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_template(struct c_rest_response *res,
-                             const struct c_rest_template_context *ctx,
-                             const char **keys, const char **values,
-                             size_t count);
+c_rest_error_t
+c_rest_response_template(struct c_rest_response *res,
+                         const struct c_rest_template_context *ctx,
+                         const char **keys, const char **values, size_t count);
 #endif /* C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING */
 
 /**
@@ -164,8 +171,8 @@ int c_rest_response_template(struct c_rest_response *res,
  * @param chunk_len Chunk length
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_write_chunk(struct c_rest_response *res, const char *chunk,
-                                size_t chunk_len);
+c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
+                                           const char *chunk, size_t chunk_len);
 
 /**
  * @brief Redirect to a URL.
@@ -174,8 +181,8 @@ int c_rest_response_write_chunk(struct c_rest_response *res, const char *chunk,
  * @param status_code Status code
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_redirect(struct c_rest_response *res, const char *url,
-                             int status_code);
+c_rest_error_t c_rest_response_redirect(struct c_rest_response *res,
+                                        const char *url, int status_code);
 
 /**
  * @brief Set a cookie.
@@ -185,8 +192,9 @@ int c_rest_response_redirect(struct c_rest_response *res, const char *url,
  * @param attributes Additional attributes (e.g. "HttpOnly; Secure")
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
-                               const char *value, const char *attributes);
+c_rest_error_t c_rest_response_set_cookie(struct c_rest_response *res,
+                                          const char *key, const char *value,
+                                          const char *attributes);
 
 /**
  * @brief Send a file.
@@ -194,15 +202,15 @@ int c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
  * @param filepath File path
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_send_file(struct c_rest_response *res,
-                              const char *filepath);
+c_rest_error_t c_rest_response_send_file(struct c_rest_response *res,
+                                         const char *filepath);
 
 /**
  * @brief Cleanup the response.
  * @param res Response
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_cleanup(struct c_rest_response *res);
+c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res);
 
 /**
  * @brief Serialize a response to an allocated buffer.
@@ -211,8 +219,8 @@ int c_rest_response_cleanup(struct c_rest_response *res);
  * @param out_len Output length
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
-                              size_t *out_len);
+c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
+                                         char **out_buf, size_t *out_len);
 
 /**
  * @brief Emit an OAuth2 error schema.
@@ -221,8 +229,9 @@ int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
  * @param error_description Optional description
  * @return 0 on success, 1 on failure
  */
-int c_rest_response_oauth2_error(struct c_rest_response *res, const char *error,
-                                 const char *error_description);
+c_rest_error_t c_rest_response_oauth2_error(struct c_rest_response *res,
+                                            const char *error,
+                                            const char *error_description);
 
 #ifdef __cplusplus
 }

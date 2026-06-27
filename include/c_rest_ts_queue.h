@@ -1,9 +1,11 @@
 #ifndef C_REST_TS_QUEUE_H
 #define C_REST_TS_QUEUE_H
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include "c_rest_platform.h"
 #include <stddef.h>
+#include "c_rest_error.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -40,7 +42,7 @@ typedef struct c_rest_ts_queue {
  * @param queue The queue to initialize.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_ts_queue_init(c_rest_ts_queue *queue);
+c_rest_error_t c_rest_ts_queue_init(c_rest_ts_queue *queue);
 
 /**
  * @brief Pushes data into a thread-safe queue.
@@ -49,7 +51,7 @@ int c_rest_ts_queue_init(c_rest_ts_queue *queue);
  * @param data The data to push.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data);
+c_rest_error_t c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data);
 
 /**
  * @brief Pops data from a thread-safe queue.
@@ -58,7 +60,7 @@ int c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data);
  * @param out_data Pointer to hold the popped data.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data);
+c_rest_error_t c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data);
 
 /**
  * @brief Closes a thread-safe queue.
@@ -66,7 +68,7 @@ int c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data);
  * @param queue The queue.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_ts_queue_close(c_rest_ts_queue *queue);
+c_rest_error_t c_rest_ts_queue_close(c_rest_ts_queue *queue);
 
 /**
  * @brief Destroys a thread-safe queue.
@@ -75,7 +77,8 @@ int c_rest_ts_queue_close(c_rest_ts_queue *queue);
  * @param free_data Function to free the data in the queue nodes.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_ts_queue_destroy(c_rest_ts_queue *queue, void (*free_data)(void *));
+c_rest_error_t c_rest_ts_queue_destroy(c_rest_ts_queue *queue,
+                                       void (*free_data)(void *));
 
 #ifdef __cplusplus
 }

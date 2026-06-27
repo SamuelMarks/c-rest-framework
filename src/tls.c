@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_tls.h"
 
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
@@ -27,10 +28,10 @@
 #include <wolfssl/ssl.h>
 #elif defined(C_REST_USE_S2N)
 #include <s2n.h>
-/* clang-format on */
 #endif
+/* clang-format on */
 
-int c_rest_tls_init(void) {
+c_rest_error_t c_rest_tls_init(void) {
   int res = 0;
   if (res != 0) /* GCOVR_EXCL_LINE */
     return res; /* GCOVR_EXCL_LINE */
@@ -41,14 +42,14 @@ int c_rest_tls_init(void) {
   OpenSSL_add_all_algorithms();
 #elif defined(C_REST_USE_WOLFSSL)
   if (wolfSSL_Init() != WOLFSSL_SUCCESS)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_S2N)
   /* S2N initialization */
   if (s2n_init() != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #endif
 
-  return 0;
+  return C_REST_OK;
 }
 
 struct c_rest_tls_context {
@@ -90,11 +91,11 @@ struct c_rest_tls_connection {
 #endif
 };
 
-int c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
+c_rest_error_t c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
   struct c_rest_tls_context *ctx =
       (struct c_rest_tls_context *)malloc(sizeof(struct c_rest_tls_context));
-  if (!ctx)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!ctx)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   memset(ctx, 0, sizeof(struct c_rest_tls_context));
 
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
@@ -102,7 +103,7 @@ int c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
   ctx->ctx = SSL_CTX_new(SSLv23_server_method());
   if (!ctx->ctx) {
     C_REST_FREE((void *)(ctx));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   SSL_CTX_set_options(ctx->ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
                                     SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
@@ -116,13 +117,13 @@ int c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
   if (mbedtls_ctr_drbg_seed(&ctx->ctr_drbg, mbedtls_entropy_func, &ctx->entropy,
                             NULL, 0) != 0) {
     C_REST_FREE((void *)(ctx));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   if (mbedtls_ssl_config_defaults(&ctx->conf, MBEDTLS_SSL_IS_SERVER,
                                   MBEDTLS_SSL_TRANSPORT_STREAM,
                                   MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
     C_REST_FREE((void *)(ctx));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   mbedtls_ssl_conf_rng(&ctx->conf, mbedtls_ctr_drbg_random, &ctx->ctr_drbg);
   /* Force TLS 1.2+ */
@@ -138,28 +139,28 @@ int c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
   ctx->ctx = wolfSSL_CTX_new(wolfTLSv1_2_server_method());
   if (!ctx->ctx) {
     C_REST_FREE((void *)(ctx));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 #elif defined(C_REST_USE_S2N)
   ctx->config = s2n_config_new();
   if (!ctx->config) {
     C_REST_FREE((void *)(ctx));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   if (s2n_config_set_cipher_preferences(ctx->config, "default_tls13") != 0) {
     s2n_config_free(ctx->config);
     C_REST_FREE((void *)(ctx));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 #endif
 
   *out_ctx = ctx;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_tls_context_destroy(struct c_rest_tls_context *ctx) {
-  if (!ctx)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_tls_context_destroy(struct c_rest_tls_context *ctx) {
+  if (!ctx)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
@@ -180,76 +181,77 @@ int c_rest_tls_context_destroy(struct c_rest_tls_context *ctx) {
 #endif
 
   C_REST_FREE((void *)(ctx));
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_tls_load_cert(struct c_rest_tls_context *ctx,
-                         const char *cert_path) {
+c_rest_error_t c_rest_tls_load_cert(struct c_rest_tls_context *ctx,
+                                    const char *cert_path) {
   (void)ctx;
   (void)cert_path;
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   if (SSL_CTX_use_certificate_chain_file(ctx->ctx, cert_path) <= 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_MBEDTLS)
   if (mbedtls_x509_crt_parse_file(&ctx->cert, cert_path) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
     /* Call conf_own_cert in load_key instead, because we need both cert and
      * pkey to be parsed */
 #elif defined(C_REST_USE_WOLFSSL)
   if (wolfSSL_CTX_use_certificate_chain_file(ctx->ctx, cert_path) !=
       WOLFSSL_SUCCESS)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_S2N)
   /* S2N handles cert+key loading together */
 #endif
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_tls_load_key(struct c_rest_tls_context *ctx, const char *key_path) {
+c_rest_error_t c_rest_tls_load_key(struct c_rest_tls_context *ctx,
+                                   const char *key_path) {
   (void)ctx;
   (void)key_path;
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   if (SSL_CTX_use_PrivateKey_file(ctx->ctx, key_path, SSL_FILETYPE_PEM) <= 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_MBEDTLS)
 #if MBEDTLS_VERSION_MAJOR >= 3
   if (mbedtls_pk_parse_keyfile(&ctx->pkey, key_path, NULL,
                                mbedtls_ctr_drbg_random, &ctx->ctr_drbg) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #else
   if (mbedtls_pk_parse_keyfile(&ctx->pkey, key_path, NULL) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #endif
   if (mbedtls_ssl_conf_own_cert(&ctx->conf, &ctx->cert, &ctx->pkey) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_WOLFSSL)
   if (wolfSSL_CTX_use_PrivateKey_file(ctx->ctx, key_path,
                                       WOLFSSL_FILETYPE_PEM) != WOLFSSL_SUCCESS)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_S2N)
   /* Omitted for brevity: s2n requires cert and key together in
    * `s2n_cert_chain_and_key_load_pem`. */
 #endif
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_tls_load_ca_chain(
-    struct c_rest_tls_context *ctx, /* GCOVR_EXCL_LINE */
-    const char *ca_chain_path) {
+c_rest_error_t
+c_rest_tls_load_ca_chain(struct c_rest_tls_context *ctx, /* GCOVR_EXCL_LINE */
+                         const char *ca_chain_path) {
   (void)ctx;
   (void)ca_chain_path;
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   if (SSL_CTX_load_verify_locations(ctx->ctx, ca_chain_path, NULL) <= 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_MBEDTLS)
   mbedtls_x509_crt ca_chain;
   mbedtls_x509_crt_init(&ca_chain);
   if (mbedtls_x509_crt_parse_file(&ca_chain, ca_chain_path) != 0) {
     mbedtls_x509_crt_free(&ca_chain);
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   mbedtls_ssl_conf_ca_chain(&ctx->conf, ca_chain.next, NULL);
   /* The CA chain is attached. In a real application, memory must be kept
@@ -257,42 +259,43 @@ int c_rest_tls_load_ca_chain(
 #elif defined(C_REST_USE_WOLFSSL)
   if (wolfSSL_CTX_load_verify_locations(ctx->ctx, ca_chain_path, NULL) !=
       WOLFSSL_SUCCESS)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_S2N)
 #endif
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_tls_set_alpn(struct c_rest_tls_context *ctx,
-                        const char *protocols) { /* GCOVR_EXCL_LINE */
+c_rest_error_t
+c_rest_tls_set_alpn(struct c_rest_tls_context *ctx,
+                    const char *protocols) { /* GCOVR_EXCL_LINE */
   (void)ctx;
   (void)protocols;
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   if (SSL_CTX_set_alpn_protos(ctx->ctx, (const unsigned char *)protocols,
                               (unsigned int)strlen(protocols)) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_MBEDTLS)
 #elif defined(C_REST_USE_WOLFSSL)
 #elif defined(C_REST_USE_S2N)
 #endif
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_tls_accept(struct c_rest_tls_context *ctx,
-                      c_rest_socket_t sock, /* GCOVR_EXCL_LINE */
-                      struct c_rest_tls_connection **out_conn) {
+c_rest_error_t c_rest_tls_accept(struct c_rest_tls_context *ctx,
+                                 c_rest_socket_t sock, /* GCOVR_EXCL_LINE */
+                                 struct c_rest_tls_connection **out_conn) {
   struct c_rest_tls_connection *conn;
   int ret = 0; /* GCOVR_EXCL_LINE */
   (void)ret;
 
-  if (!ctx)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!ctx)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   conn = (struct c_rest_tls_connection *)malloc(
       sizeof(*conn));             /* GCOVR_EXCL_LINE */
   if (!conn)                      /* GCOVR_EXCL_LINE */
-    return 1;                     /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;  /* GCOVR_EXCL_LINE */
   memset(conn, 0, sizeof(*conn)); /* GCOVR_EXCL_LINE */
   conn->sock = sock;              /* GCOVR_EXCL_LINE */
 
@@ -301,7 +304,7 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx,
   conn->ssl = SSL_new(ctx->ctx);
   if (!conn->ssl) {
     C_REST_FREE((void *)(conn));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   SSL_set_fd(conn->ssl, (int)sock);
   SSL_set_accept_state(conn->ssl);
@@ -320,13 +323,13 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx,
     }
     SSL_free(conn->ssl);
     C_REST_FREE((void *)(conn));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 #elif defined(C_REST_USE_MBEDTLS)
   mbedtls_ssl_init(&conn->ssl);
   if (mbedtls_ssl_setup(&conn->ssl, &ctx->conf) != 0) {
     C_REST_FREE((void *)(conn));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   /* mbedtls_net_context cannot easily be bypassed without writing custom bio
    * functions. For this codebase, since c_rest_socket_t maps to a handle/int,
@@ -347,13 +350,13 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx,
     }
     mbedtls_ssl_free(&conn->ssl);
     C_REST_FREE((void *)(conn));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 #elif defined(C_REST_USE_WOLFSSL)
   conn->ssl = wolfSSL_new(ctx->ctx);
   if (!conn->ssl) {
     C_REST_FREE((void *)(conn));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   wolfSSL_set_fd(conn->ssl, (int)sock);
 
@@ -371,7 +374,7 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx,
     }
     wolfSSL_free(conn->ssl);
     C_REST_FREE((void *)(conn));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 #elif defined(C_REST_USE_S2N)
   conn->conn = s2n_connection_new(S2N_SERVER);
@@ -392,18 +395,18 @@ int c_rest_tls_accept(struct c_rest_tls_context *ctx,
       }
       s2n_connection_free(conn->conn);
       C_REST_FREE((void *)(conn));
-      return 1;
+      return C_REST_ERROR_GENERIC;
     }
   }
 #endif
 
   *out_conn = conn; /* GCOVR_EXCL_LINE */
-  return 0;         /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf,
-                    size_t len, /* GCOVR_EXCL_LINE */
-                    size_t *out_read) {
+c_rest_error_t c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf,
+                               size_t len, /* GCOVR_EXCL_LINE */
+                               size_t *out_read) {
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   int ret;
@@ -426,53 +429,53 @@ int c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf,
   ret = SSL_read(conn->ssl, buf, (int)len);
   if (ret > 0) {
     *out_read = (size_t)ret;
-    return 0;
+    return C_REST_OK;
   }
   err = SSL_get_error(conn->ssl, ret);
   if (err == SSL_ERROR_WANT_READ)
     return C_REST_TLS_WANT_READ;
   if (err == SSL_ERROR_WANT_WRITE)
     return C_REST_TLS_WANT_WRITE;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_MBEDTLS)
   ret = mbedtls_ssl_read(&conn->ssl, (unsigned char *)buf, len);
   if (ret > 0) {
     *out_read = (size_t)ret;
-    return 0;
+    return C_REST_OK;
   }
   if (ret == MBEDTLS_ERR_SSL_WANT_READ)
     return C_REST_TLS_WANT_READ;
   if (ret == MBEDTLS_ERR_SSL_WANT_WRITE)
     return C_REST_TLS_WANT_WRITE;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_WOLFSSL)
   ret = wolfSSL_read(conn->ssl, buf, (int)len);
   if (ret > 0) {
     *out_read = (size_t)ret;
-    return 0;
+    return C_REST_OK;
   }
   err = wolfSSL_get_error(conn->ssl, ret);
   if (err == WOLFSSL_ERROR_WANT_READ)
     return C_REST_TLS_WANT_READ;
   if (err == WOLFSSL_ERROR_WANT_WRITE)
     return C_REST_TLS_WANT_WRITE;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_S2N)
   ret = s2n_recv(conn->conn, buf, len, NULL);
   if (ret >= 0) {
     *out_read = (size_t)ret;
-    return 0;
+    return C_REST_OK;
   }
-  return 1;
+  return C_REST_ERROR_GENERIC;
 #else
-  *out_read = 0; /* GCOVR_EXCL_LINE */
-  return 1;      /* GCOVR_EXCL_LINE */
+  *out_read = 0;               /* GCOVR_EXCL_LINE */
+  return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 #endif
 }
 
-int c_rest_tls_write(struct c_rest_tls_connection *conn,
-                     const void *buf, /* GCOVR_EXCL_LINE */
-                     size_t len, size_t *out_written) {
+c_rest_error_t c_rest_tls_write(struct c_rest_tls_connection *conn,
+                                const void *buf, /* GCOVR_EXCL_LINE */
+                                size_t len, size_t *out_written) {
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   int ret;
@@ -495,53 +498,54 @@ int c_rest_tls_write(struct c_rest_tls_connection *conn,
   ret = SSL_write(conn->ssl, buf, (int)len);
   if (ret > 0) {
     *out_written = (size_t)ret;
-    return 0;
+    return C_REST_OK;
   }
   err = SSL_get_error(conn->ssl, ret);
   if (err == SSL_ERROR_WANT_READ)
     return C_REST_TLS_WANT_READ;
   if (err == SSL_ERROR_WANT_WRITE)
     return C_REST_TLS_WANT_WRITE;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_MBEDTLS)
   ret = mbedtls_ssl_write(&conn->ssl, (const unsigned char *)buf, len);
   if (ret > 0) {
     *out_written = (size_t)ret;
-    return 0;
+    return C_REST_OK;
   }
   if (ret == MBEDTLS_ERR_SSL_WANT_READ)
     return C_REST_TLS_WANT_READ;
   if (ret == MBEDTLS_ERR_SSL_WANT_WRITE)
     return C_REST_TLS_WANT_WRITE;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_WOLFSSL)
   ret = wolfSSL_write(conn->ssl, buf, (int)len);
   if (ret > 0) {
     *out_written = (size_t)ret;
-    return 0;
+    return C_REST_OK;
   }
   err = wolfSSL_get_error(conn->ssl, ret);
   if (err == WOLFSSL_ERROR_WANT_READ)
     return C_REST_TLS_WANT_READ;
   if (err == WOLFSSL_ERROR_WANT_WRITE)
     return C_REST_TLS_WANT_WRITE;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_S2N)
   ret = s2n_send(conn->conn, buf, len, NULL);
   if (ret >= 0) {
     *out_written = (size_t)ret;
-    return 0;
+    return C_REST_OK;
   }
-  return 1;
+  return C_REST_ERROR_GENERIC;
 #else
-  *out_written = 0; /* GCOVR_EXCL_LINE */
-  return 1;         /* GCOVR_EXCL_LINE */
+  *out_written = 0;            /* GCOVR_EXCL_LINE */
+  return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 #endif
 }
 
-int c_rest_tls_close(struct c_rest_tls_connection *conn) { /* GCOVR_EXCL_LINE */
-  if (!conn)                                               /* GCOVR_EXCL_LINE */
-    return 0;                                              /* GCOVR_EXCL_LINE */
+c_rest_error_t
+c_rest_tls_close(struct c_rest_tls_connection *conn) { /* GCOVR_EXCL_LINE */
+  if (!conn)                                           /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                                  /* GCOVR_EXCL_LINE */
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   SSL_shutdown(conn->ssl);
@@ -557,5 +561,5 @@ int c_rest_tls_close(struct c_rest_tls_connection *conn) { /* GCOVR_EXCL_LINE */
   s2n_connection_free(conn->conn);
 #endif
   C_REST_FREE((void *)(conn)); /* GCOVR_EXCL_LINE */
-  return 0;                    /* GCOVR_EXCL_LINE */
+  return C_REST_OK;            /* GCOVR_EXCL_LINE */
 }

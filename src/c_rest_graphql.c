@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_graphql.h"
 #include "c_rest_mem.h"
 #include <ctype.h>
@@ -39,14 +40,14 @@ static int
 alloc_list(struct c_rest_graphql_node_list **out_list) { /* GCOVR_EXCL_LINE */
   struct c_rest_graphql_node_list *list = NULL;          /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node_list), &list) !=
-      0) {    /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+      0) {                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   list->nodes = NULL; /* GCOVR_EXCL_LINE */
   list->count = 0;    /* GCOVR_EXCL_LINE */
   list->capacity = 0; /* GCOVR_EXCL_LINE */
   *out_list = list;   /* GCOVR_EXCL_LINE */
-  return 0;           /* GCOVR_EXCL_LINE */
+  return C_REST_OK;   /* GCOVR_EXCL_LINE */
 }
 
 /**
@@ -63,7 +64,7 @@ list_append(struct c_rest_graphql_node_list *list, /* GCOVR_EXCL_LINE */
             new_cap *
                 sizeof(struct c_rest_graphql_node *), /* GCOVR_EXCL_LINE */
             &new_nodes) != 0) {                       /* GCOVR_EXCL_LINE */
-      return -1;                                      /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC;                    /* GCOVR_EXCL_LINE */
     }
     if (list->nodes) {               /* GCOVR_EXCL_LINE */
       memcpy(new_nodes, list->nodes, /* GCOVR_EXCL_LINE */
@@ -75,7 +76,7 @@ list_append(struct c_rest_graphql_node_list *list, /* GCOVR_EXCL_LINE */
     list->capacity = new_cap; /* GCOVR_EXCL_LINE */
   }
   list->nodes[list->count++] = node; /* GCOVR_EXCL_LINE */
-  return 0;                          /* GCOVR_EXCL_LINE */
+  return C_REST_OK;                  /* GCOVR_EXCL_LINE */
 }
 
 static void
@@ -105,7 +106,7 @@ static int parse_name(struct c_rest_graphql_context *ctx,
 
   skip_whitespace(ctx);               /* GCOVR_EXCL_LINE */
   if (ctx->position >= ctx->length) { /* GCOVR_EXCL_LINE */
-    return 1;                         /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;      /* GCOVR_EXCL_LINE */
   }
 
   start = ctx->position;                                   /* GCOVR_EXCL_LINE */
@@ -120,18 +121,18 @@ static int parse_name(struct c_rest_graphql_context *ctx,
       ctx->position++;                                    /* GCOVR_EXCL_LINE */
     }
   } else {
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   len = ctx->position - start;             /* GCOVR_EXCL_LINE */
   str = NULL;                              /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(len + 1, &str) != 0) { /* GCOVR_EXCL_LINE */
-    return 1;                              /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;           /* GCOVR_EXCL_LINE */
   }
   memcpy(str, &ctx->input[start], len); /* GCOVR_EXCL_LINE */
   str[len] = '\0';                      /* GCOVR_EXCL_LINE */
   *out_name = str;                      /* GCOVR_EXCL_LINE */
-  return 0;                             /* GCOVR_EXCL_LINE */
+  return C_REST_OK;                     /* GCOVR_EXCL_LINE */
 }
 
 static int parse_field(struct c_rest_graphql_context *ctx,
@@ -146,12 +147,12 @@ parse_selection_set(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
   skip_whitespace(ctx); /* GCOVR_EXCL_LINE */
   if (ctx->position >= ctx->length ||
       ctx->input[ctx->position] != '{') { /* GCOVR_EXCL_LINE */
-    return -1;                            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;          /* GCOVR_EXCL_LINE */
   }
   ctx->position++; /* skip '{' */ /* GCOVR_EXCL_LINE */
 
   if (alloc_list(&list) != 0 || !list) /* GCOVR_EXCL_LINE */
-    return -1;                         /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;       /* GCOVR_EXCL_LINE */
 
   while (ctx->position < ctx->length) {       /* GCOVR_EXCL_LINE */
     struct c_rest_graphql_node *field = NULL; /* GCOVR_EXCL_LINE */
@@ -164,7 +165,7 @@ parse_selection_set(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
         /* Error: Empty selection set not allowed */ /* GCOVR_EXCL_LINE */
       }
       *out_list = list; /* GCOVR_EXCL_LINE */
-      return 0;         /* GCOVR_EXCL_LINE */
+      return C_REST_OK; /* GCOVR_EXCL_LINE */
     }
 
     if (parse_field(ctx, &field) == 0) { /* GCOVR_EXCL_LINE */
@@ -178,10 +179,10 @@ parse_selection_set(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
   for (i = 0; i < list->count; i++) {         /* GCOVR_EXCL_LINE */
     c_rest_graphql_node_free(list->nodes[i]); /* GCOVR_EXCL_LINE */
   }
-  if (list->nodes)            /* GCOVR_EXCL_LINE */
-    C_REST_FREE(list->nodes); /* GCOVR_EXCL_LINE */
-  C_REST_FREE(list);          /* GCOVR_EXCL_LINE */
-  return -1;                  /* GCOVR_EXCL_LINE */
+  if (list->nodes)             /* GCOVR_EXCL_LINE */
+    C_REST_FREE(list->nodes);  /* GCOVR_EXCL_LINE */
+  C_REST_FREE(list);           /* GCOVR_EXCL_LINE */
+  return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 }
 
 static int parse_field(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
@@ -190,13 +191,13 @@ static int parse_field(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
   struct c_rest_graphql_node *node;
 
   if (parse_name(ctx, &name) != 0 || !name) { /* GCOVR_EXCL_LINE */
-    return -1;                                /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;              /* GCOVR_EXCL_LINE */
   }
 
   node = alloc_node(C_REST_GRAPHQL_NODE_FIELD); /* GCOVR_EXCL_LINE */
   if (!node) {                                  /* GCOVR_EXCL_LINE */
     C_REST_FREE(name);                          /* GCOVR_EXCL_LINE */
-    return -1;                                  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                /* GCOVR_EXCL_LINE */
   }
 
   skip_whitespace(ctx); /* GCOVR_EXCL_LINE */
@@ -219,12 +220,12 @@ static int parse_field(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
     if (parse_selection_set(ctx, &node->selection_set) !=
         0) {                          /* GCOVR_EXCL_LINE */
       c_rest_graphql_node_free(node); /* GCOVR_EXCL_LINE */
-      return -1;                      /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
     }
   }
 
   *out_node = node; /* GCOVR_EXCL_LINE */
-  return 0;         /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
 static int
@@ -258,7 +259,7 @@ parse_operation(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
   if (!node) {                                      /* GCOVR_EXCL_LINE */
     if (name)                                       /* GCOVR_EXCL_LINE */
       C_REST_FREE(name);                            /* GCOVR_EXCL_LINE */
-    return -1;                                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                    /* GCOVR_EXCL_LINE */
   }
 
   node->op_type = op_type; /* GCOVR_EXCL_LINE */
@@ -270,10 +271,10 @@ parse_operation(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
     if (parse_selection_set(ctx, &node->selection_set) !=
         0) {                          /* GCOVR_EXCL_LINE */
       c_rest_graphql_node_free(node); /* GCOVR_EXCL_LINE */
-      return -1;                      /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
     }
     *out_node = node; /* GCOVR_EXCL_LINE */
-    return 0;         /* GCOVR_EXCL_LINE */
+    return C_REST_OK; /* GCOVR_EXCL_LINE */
   }
 
   /* Shorthand query without "query" keyword */
@@ -286,26 +287,26 @@ parse_operation(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
       if (parse_selection_set(ctx, &node->selection_set) !=
           0) {                          /* GCOVR_EXCL_LINE */
         c_rest_graphql_node_free(node); /* GCOVR_EXCL_LINE */
-        return -1;                      /* GCOVR_EXCL_LINE */
+        return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
       }
       *out_node = node; /* GCOVR_EXCL_LINE */
-      return 0;         /* GCOVR_EXCL_LINE */
+      return C_REST_OK; /* GCOVR_EXCL_LINE */
     }
   }
 
   c_rest_graphql_node_free(node); /* GCOVR_EXCL_LINE */
-  return -1;                      /* GCOVR_EXCL_LINE */
+  return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_graphql_parse(const char *query,
-                         size_t query_len, /* GCOVR_EXCL_LINE */
-                         struct c_rest_graphql_node **out_doc) {
+c_rest_error_t c_rest_graphql_parse(const char *query,
+                                    size_t query_len, /* GCOVR_EXCL_LINE */
+                                    struct c_rest_graphql_node **out_doc) {
   struct c_rest_graphql_context ctx;
   struct c_rest_graphql_node *doc;
   struct c_rest_graphql_node *op = NULL; /* GCOVR_EXCL_LINE */
 
-  if (!query || !out_doc) /* GCOVR_EXCL_LINE */
-    return -1;            /* GCOVR_EXCL_LINE */
+  if (!query || !out_doc)        /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   ctx.input = query;        /* GCOVR_EXCL_LINE */
   ctx.length = query_len;   /* GCOVR_EXCL_LINE */
@@ -315,12 +316,12 @@ int c_rest_graphql_parse(const char *query,
 
   doc = alloc_node(C_REST_GRAPHQL_NODE_DOCUMENT); /* GCOVR_EXCL_LINE */
   if (!doc)                                       /* GCOVR_EXCL_LINE */
-    return -1;                                    /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                  /* GCOVR_EXCL_LINE */
 
   if (alloc_list(&doc->definitions) != 0 ||
       !doc->definitions) {         /* GCOVR_EXCL_LINE */
     c_rest_graphql_node_free(doc); /* GCOVR_EXCL_LINE */
-    return -1;                     /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;   /* GCOVR_EXCL_LINE */
   }
 
   skip_whitespace(&ctx);                   /* GCOVR_EXCL_LINE */
@@ -336,19 +337,19 @@ int c_rest_graphql_parse(const char *query,
   if (ctx.position < ctx.length ||
       doc->definitions->count == 0) { /* GCOVR_EXCL_LINE */
     c_rest_graphql_node_free(doc);    /* GCOVR_EXCL_LINE */
-    return -1;                        /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;      /* GCOVR_EXCL_LINE */
   }
 
-  *out_doc = doc; /* GCOVR_EXCL_LINE */
-  return 0;       /* GCOVR_EXCL_LINE */
+  *out_doc = doc;   /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_graphql_node_free(
+c_rest_error_t c_rest_graphql_node_free(
     struct c_rest_graphql_node *node) { /* GCOVR_EXCL_LINE */
   size_t i;
 
-  if (!node)  /* GCOVR_EXCL_LINE */
-    return 0; /* GCOVR_EXCL_LINE */
+  if (!node)          /* GCOVR_EXCL_LINE */
+    return C_REST_OK; /* GCOVR_EXCL_LINE */
 
   if (node->name)             /* GCOVR_EXCL_LINE */
     C_REST_FREE(node->name);  /* GCOVR_EXCL_LINE */
@@ -387,7 +388,7 @@ int c_rest_graphql_node_free(
   }
 
   C_REST_FREE(node); /* GCOVR_EXCL_LINE */
-  return 0;          /* GCOVR_EXCL_LINE */
+  return C_REST_OK;  /* GCOVR_EXCL_LINE */
 }
 
 struct c_rest_graphql_resolver_entry {
@@ -397,22 +398,22 @@ struct c_rest_graphql_resolver_entry {
   struct c_rest_graphql_resolver_entry *next;
 };
 
-int c_rest_graphql_schema_init(
+c_rest_error_t c_rest_graphql_schema_init(
     struct c_rest_graphql_schema **schema) { /* GCOVR_EXCL_LINE */
   if (!schema)                               /* GCOVR_EXCL_LINE */
-    return -1;                               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;             /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(sizeof(struct c_rest_graphql_schema), schema) !=
-      0)                       /* GCOVR_EXCL_LINE */
-    return -1;                 /* GCOVR_EXCL_LINE */
-  (*schema)->resolvers = NULL; /* GCOVR_EXCL_LINE */
-  return 0;                    /* GCOVR_EXCL_LINE */
+      0)                         /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  (*schema)->resolvers = NULL;   /* GCOVR_EXCL_LINE */
+  return C_REST_OK;              /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_graphql_schema_free(
+c_rest_error_t c_rest_graphql_schema_free(
     struct c_rest_graphql_schema *schema) { /* GCOVR_EXCL_LINE */
   struct c_rest_graphql_resolver_entry *entry, *next;
   if (!schema)                      /* GCOVR_EXCL_LINE */
-    return 0;                       /* GCOVR_EXCL_LINE */
+    return C_REST_OK;               /* GCOVR_EXCL_LINE */
   entry = schema->resolvers;        /* GCOVR_EXCL_LINE */
   while (entry) {                   /* GCOVR_EXCL_LINE */
     next = entry->next;             /* GCOVR_EXCL_LINE */
@@ -421,10 +422,10 @@ int c_rest_graphql_schema_free(
     entry = next;                   /* GCOVR_EXCL_LINE */
   }
   C_REST_FREE(schema); /* GCOVR_EXCL_LINE */
-  return 0;            /* GCOVR_EXCL_LINE */
+  return C_REST_OK;    /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_graphql_schema_add_resolver(
+c_rest_error_t c_rest_graphql_schema_add_resolver(
     struct c_rest_graphql_schema *schema, /* GCOVR_EXCL_LINE */
     const char *field_name, c_rest_graphql_resolver_fn resolver,
     void *user_data) {
@@ -432,16 +433,16 @@ int c_rest_graphql_schema_add_resolver(
   size_t len;
 
   if (!schema || !field_name || !resolver) /* GCOVR_EXCL_LINE */
-    return -1;                             /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;           /* GCOVR_EXCL_LINE */
 
   if (C_REST_MALLOC(sizeof(struct c_rest_graphql_resolver_entry), &entry) !=
-      0)       /* GCOVR_EXCL_LINE */
-    return -1; /* GCOVR_EXCL_LINE */
+      0)                         /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   len = strlen(field_name);                              /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(len + 1, &entry->field_name) != 0) { /* GCOVR_EXCL_LINE */
     C_REST_FREE(entry);                                  /* GCOVR_EXCL_LINE */
-    return -1;                                           /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                         /* GCOVR_EXCL_LINE */
   }
   memcpy(entry->field_name, field_name, len + 1); /* GCOVR_EXCL_LINE */
 
@@ -450,18 +451,19 @@ int c_rest_graphql_schema_add_resolver(
   entry->next = schema->resolvers; /* GCOVR_EXCL_LINE */
   schema->resolvers = entry;       /* GCOVR_EXCL_LINE */
 
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_graphql_resolve(
-    struct c_rest_graphql_node *doc, /* GCOVR_EXCL_LINE */
-    struct c_rest_graphql_schema *schema, char **out_json, size_t *out_len) {
+c_rest_error_t
+c_rest_graphql_resolve(struct c_rest_graphql_node *doc, /* GCOVR_EXCL_LINE */
+                       struct c_rest_graphql_schema *schema, char **out_json,
+                       size_t *out_len) {
   const char *dummy = "{\"data\": {}}"; /* GCOVR_EXCL_LINE */
   size_t len = strlen(dummy);           /* GCOVR_EXCL_LINE */
   size_t i, j;
 
   if (!doc || !out_json || !out_len) /* GCOVR_EXCL_LINE */
-    return -1;                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;     /* GCOVR_EXCL_LINE */
 
   /* Basic mock traversal: look for requested fields and trigger resolvers */
   if (schema && doc->definitions) {                 /* GCOVR_EXCL_LINE */
@@ -499,12 +501,12 @@ int c_rest_graphql_resolve(
 
   *out_json = NULL;                          /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(len + 1, out_json) != 0) /* GCOVR_EXCL_LINE */
-    return -1;                               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;             /* GCOVR_EXCL_LINE */
 
   memcpy(*out_json, dummy, len + 1); /* GCOVR_EXCL_LINE */
   *out_len = len;                    /* GCOVR_EXCL_LINE */
 
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
 #endif /* C_REST_FRAMEWORK_ENABLE_GRAPHQL */

@@ -1,8 +1,10 @@
 #ifndef C_REST_LIST_H
 #define C_REST_LIST_H
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include <stddef.h>
+#include "c_rest_error.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -33,7 +35,7 @@ typedef struct c_rest_list {
  * @param list The list to initialize.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_list_init(c_rest_list *list);
+c_rest_error_t c_rest_list_init(c_rest_list *list);
 
 /**
  * @brief Pushes data to the back of the linked list.
@@ -42,7 +44,7 @@ int c_rest_list_init(c_rest_list *list);
  * @param data The data to push.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_list_push_back(c_rest_list *list, void *data);
+c_rest_error_t c_rest_list_push_back(c_rest_list *list, void *data);
 
 /**
  * @brief Pops data from the front of the linked list.
@@ -51,7 +53,7 @@ int c_rest_list_push_back(c_rest_list *list, void *data);
  * @param out_data Pointer to hold the popped data.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_list_pop_front(c_rest_list *list, void **out_data);
+c_rest_error_t c_rest_list_pop_front(c_rest_list *list, void **out_data);
 
 /**
  * @brief Destroys the linked list.
@@ -60,7 +62,8 @@ int c_rest_list_pop_front(c_rest_list *list, void **out_data);
  * @param free_data Function to free the data in the list nodes.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_list_destroy(c_rest_list *list, void (*free_data)(void *));
+c_rest_error_t c_rest_list_destroy(c_rest_list *list,
+                                   void (*free_data)(void *));
 
 #ifdef __cplusplus
 }

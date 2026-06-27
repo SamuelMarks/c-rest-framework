@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_hot_reload.h"
 #include "c_rest_router.h"
 #include "c_rest_request.h"
@@ -11,8 +12,9 @@
 #include <string.h>
 /* clang-format on */
 
-static int handle_home(struct c_rest_request *req, struct c_rest_response *res,
-                       void *user_data) {
+static c_rest_error_t handle_home(struct c_rest_request *req,
+                                  struct c_rest_response *res,
+                                  void *user_data) {
   const char *html =
       "<html><body><h1>Hello, Hot-Reload!</h1><script>const evtSource = new "
       "EventSource('/_hot_reload'); evtSource.onmessage = function(e) { if "

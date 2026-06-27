@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "test_protos.h"
 #include "c_rest_openapi.h"
 #include "c_rest_router.h"
@@ -28,8 +29,9 @@ static char *portable_strdup(const char *s) {
 #define _strdup portable_strdup
 #endif
 
-static int dummy_handler(struct c_rest_request *req,
-                         struct c_rest_response *res, void *user_data) {
+static c_rest_error_t dummy_handler(struct c_rest_request *req,
+                                    struct c_rest_response *res,
+                                    void *user_data) {
   (void)req;
   (void)res;
   (void)user_data;

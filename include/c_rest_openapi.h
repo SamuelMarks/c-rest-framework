@@ -1,8 +1,10 @@
 #ifndef C_REST_OPENAPI_H
 #define C_REST_OPENAPI_H
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include <stddef.h>
+#include "c_rest_error.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -288,12 +290,13 @@ struct c_rest_openapi_spec {
   size_t n_security_schemes; /**< Number of security schemes */
 };
 
-int c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec);
-int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec);
+c_rest_error_t c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec);
+c_rest_error_t c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec);
 
-int c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
-                                 const char *route, const char *method,
-                                 const struct c_rest_openapi_operation *op);
+c_rest_error_t
+c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
+                             const char *route, const char *method,
+                             const struct c_rest_openapi_operation *op);
 
 /**
  * @brief Add a JSON schema to the components/schemas section.
@@ -302,9 +305,10 @@ int c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
  * @param json_schema_str The raw JSON schema string. Will be parsed and merged.
  * @return 0 on success.
  */
-int c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
-                                             const char *schema_name,
-                                             const char *json_schema_str);
+c_rest_error_t
+c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
+                                         const char *schema_name,
+                                         const char *json_schema_str);
 
 struct c_rest_router;
 
@@ -315,8 +319,9 @@ struct c_rest_router;
  * json_free_serialized_string() from parson.
  * @return 0 on success.
  */
-int c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
-                                char **out_json);
+c_rest_error_t
+c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
+                            char **out_json);
 
 /**
  * @brief Add a route to serve the OpenAPI specification.
@@ -324,7 +329,8 @@ int c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
  * @param path The URL path (e.g., "/openapi.json").
  * @return 0 on success.
  */
-int c_rest_enable_openapi(struct c_rest_router *router, const char *path);
+c_rest_error_t c_rest_enable_openapi(struct c_rest_router *router,
+                                     const char *path);
 
 /**
  * @brief Add a route to serve Swagger UI documentation.
@@ -333,8 +339,9 @@ int c_rest_enable_openapi(struct c_rest_router *router, const char *path);
  * @param openapi_url The URL path to the OpenAPI JSON (e.g., "/openapi.json").
  * @return 0 on success.
  */
-int c_rest_enable_swagger_ui(struct c_rest_router *router,
-                             const char *docs_path, const char *openapi_url);
+c_rest_error_t c_rest_enable_swagger_ui(struct c_rest_router *router,
+                                        const char *docs_path,
+                                        const char *openapi_url);
 
 #ifdef __cplusplus
 }

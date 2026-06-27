@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "greatest.h"
 #include "oauth2_client.h"
 #include "oauth2_server.h"

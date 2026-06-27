@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_router.h"
 #include "c_rest_modality.h"
 #include "c_orm_db.h"

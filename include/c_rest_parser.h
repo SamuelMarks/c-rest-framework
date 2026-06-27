@@ -1,8 +1,10 @@
 #ifndef C_REST_PARSER_H
 #define C_REST_PARSER_H
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include <stddef.h>
+#include "c_rest_error.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -74,26 +76,26 @@ struct c_rest_parser_context {
 };
 
 /* Wrapper functions */
-int c_rest_parser_init(c_rest_parser_context *ctx,
-                       const struct c_rest_parser_vtable *vtable,
-                       const struct c_rest_parser_callbacks *callbacks,
-                       void *user_data);
-int c_rest_parser_execute(c_rest_parser_context *ctx, const char *data,
-                          size_t len, size_t *out_parsed);
-int c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
-                                    int *out_keep_alive);
-int c_rest_parser_destroy(c_rest_parser_context *ctx);
+c_rest_error_t c_rest_parser_init(
+    c_rest_parser_context *ctx, const struct c_rest_parser_vtable *vtable,
+    const struct c_rest_parser_callbacks *callbacks, void *user_data);
+c_rest_error_t c_rest_parser_execute(c_rest_parser_context *ctx,
+                                     const char *data, size_t len,
+                                     size_t *out_parsed);
+c_rest_error_t c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
+                                               int *out_keep_alive);
+c_rest_error_t c_rest_parser_destroy(c_rest_parser_context *ctx);
 
 /**
  * @brief Check if parser reached complete state.
  * @param ctx Context
  * @return 1 if complete, 0 otherwise
  */
-int c_rest_parser_is_complete(c_rest_parser_context *ctx);
+c_rest_error_t c_rest_parser_is_complete(c_rest_parser_context *ctx);
 
 /* Specific parser backends */
-int c_rest_parser_get_basic_vtable(
-    const struct c_rest_parser_vtable **out_vtable);
+c_rest_error_t
+c_rest_parser_get_basic_vtable(const struct c_rest_parser_vtable **out_vtable);
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "test_protos.h"
 #include "c_rest_multipart.h"
 

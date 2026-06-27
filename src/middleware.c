@@ -1,5 +1,6 @@
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include "c_rest_middleware.h"
 #include "c_rest_request.h"
 #include "c_rest_response.h"
@@ -10,11 +11,12 @@
 #include "c_rest_log.h"
 /* clang-format on */
 
-int c_rest_cors_middleware(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
-                           struct c_rest_response *res, void *user_data) {
+c_rest_error_t
+c_rest_cors_middleware(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
+                       struct c_rest_response *res, void *user_data) {
   (void)user_data;
-  if (!req || !res) /* GCOVR_EXCL_LINE */
-    return 1;       /* GCOVR_EXCL_LINE */
+  if (!req || !res)              /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   c_rest_response_set_header(res, "Access-Control-Allow-Origin",
                              "*"); /* GCOVR_EXCL_LINE */
@@ -25,53 +27,56 @@ int c_rest_cors_middleware(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
       res, "Access-Control-Allow-Headers", /* GCOVR_EXCL_LINE */
       "Content-Type, Authorization");
 
-  if (strcmp(req->method, "OPTIONS") == 0) { /* GCOVR_EXCL_LINE */
-    res->status_code = 204;                  /* GCOVR_EXCL_LINE */
-    return 1; /* Short-circuit */            /* GCOVR_EXCL_LINE */
+  if (strcmp(req->method, "OPTIONS") == 0) {         /* GCOVR_EXCL_LINE */
+    res->status_code = 204;                          /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* Short-circuit */ /* GCOVR_EXCL_LINE */
   }
 
-  return 0; /* Continue */ /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* Continue */ /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_logger_middleware(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
-                             struct c_rest_response *res, void *user_data) {
+c_rest_error_t
+c_rest_logger_middleware(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
+                         struct c_rest_response *res, void *user_data) {
   (void)res;
   (void)user_data;
   /* Simple mock logging */
   if (req && req->method && req->path) { /* GCOVR_EXCL_LINE */
     /* In reality, use framework logger */
   }
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_static_middleware(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
-                             struct c_rest_response *res, void *user_data) {
+c_rest_error_t
+c_rest_static_middleware(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
+                         struct c_rest_response *res, void *user_data) {
   /* const char *root = (const char *)user_data; */
   (void)req;
   (void)res;
   (void)user_data;
   /* Check file existence, set content type, write body. */
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_hsts_middleware(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
-                           struct c_rest_response *res, void *user_data) {
+c_rest_error_t
+c_rest_hsts_middleware(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
+                       struct c_rest_response *res, void *user_data) {
   (void)req;
   (void)user_data;
-  if (!res)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!res)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   c_rest_response_set_header(res,
                              "Strict-Transport-Security", /* GCOVR_EXCL_LINE */
                              "max-age=31536000; includeSubDomains");
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_https_redirect_middleware(
+c_rest_error_t c_rest_https_redirect_middleware(
     struct c_rest_request *req, /* GCOVR_EXCL_LINE */
     struct c_rest_response *res, void *user_data) {
   (void)user_data;
   if (!res || !req)                          /* GCOVR_EXCL_LINE */
-    return 1;                                /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;             /* GCOVR_EXCL_LINE */
   if (req->scheme) {                         /* GCOVR_EXCL_LINE */
     if (strcmp(req->scheme, "https") != 0) { /* GCOVR_EXCL_LINE */
       char url[1024];
@@ -89,11 +94,12 @@ int c_rest_https_redirect_middleware(
       return c_rest_response_redirect(res, url, 301); /* GCOVR_EXCL_LINE */
     }
   }
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_auth_middleware(struct c_rest_request *req,
-                           struct c_rest_response *res, void *user_data) {
+c_rest_error_t c_rest_auth_middleware(struct c_rest_request *req,
+                                      struct c_rest_response *res,
+                                      void *user_data) {
   struct c_rest_auth_verifier *verifier;
   char *token = NULL;
   char *user = NULL;
@@ -102,8 +108,8 @@ int c_rest_auth_middleware(struct c_rest_request *req,
   int is_bearer = 0;
   int is_basic = 0;
 
-  if (!req || !res) { /* GCOVR_EXCL_LINE */
-    return 1;         /* GCOVR_EXCL_LINE */
+  if (!req || !res) {            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (!user_data) {                       /* GCOVR_EXCL_LINE */
@@ -111,7 +117,7 @@ int c_rest_auth_middleware(struct c_rest_request *req,
     c_rest_response_html(
         res,
         "Internal Server Error: Missing auth verifier"); /* GCOVR_EXCL_LINE */
-    return 1;                                            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                         /* GCOVR_EXCL_LINE */
   }
 
   verifier = (struct c_rest_auth_verifier *)user_data;
@@ -126,7 +132,7 @@ int c_rest_auth_middleware(struct c_rest_request *req,
     c_rest_response_set_status(res, 401);
     c_rest_response_set_header(res, "WWW-Authenticate", "Bearer realm=\"API\"");
     c_rest_response_html(res, "Unauthorized: Missing authentication");
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   if (is_bearer) {
@@ -136,7 +142,7 @@ int c_rest_auth_middleware(struct c_rest_request *req,
       c_rest_response_html(                 /* GCOVR_EXCL_LINE */
                            res, "Internal Server Error: Bearer auth not "
                                 "supported by verifier");
-      return 1; /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
     }
     if (verifier->verify_bearer(token, &auth_ctx) != 0) {
       C_REST_FREE((void *)(token));
@@ -145,7 +151,7 @@ int c_rest_auth_middleware(struct c_rest_request *req,
           res, "WWW-Authenticate",
           "Bearer realm=\"API\", error=\"invalid_token\"");
       c_rest_response_html(res, "Unauthorized: Invalid token");
-      return 1;
+      return C_REST_ERROR_GENERIC;
     }
     C_REST_FREE((void *)(token));
   } else if (is_basic) {                    /* GCOVR_EXCL_LINE */
@@ -156,7 +162,7 @@ int c_rest_auth_middleware(struct c_rest_request *req,
       c_rest_response_html(                 /* GCOVR_EXCL_LINE */
                            res, "Internal Server Error: Basic auth not "
                                 "supported by verifier");
-      return 1; /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
     }
     if (verifier->verify_basic(user, pass, &auth_ctx) != 0) {
       C_REST_FREE((void *)(user));
@@ -165,18 +171,19 @@ int c_rest_auth_middleware(struct c_rest_request *req,
       c_rest_response_set_header(res, "WWW-Authenticate",
                                  "Basic realm=\"API\"");
       c_rest_response_html(res, "Unauthorized: Invalid credentials");
-      return 1;
+      return C_REST_ERROR_GENERIC;
     }
     C_REST_FREE((void *)(user));
     C_REST_FREE((void *)(pass));
   }
 
   req->auth_context = auth_ctx;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_oauth2_middleware(struct c_rest_request *req,
-                             struct c_rest_response *res, void *user_data) {
+c_rest_error_t c_rest_oauth2_middleware(struct c_rest_request *req,
+                                        struct c_rest_response *res,
+                                        void *user_data) {
   char *token = NULL;
   c_rest_oauth2_verify_fn verify_fn;
   void *auth_ctx = NULL;
@@ -185,8 +192,8 @@ int c_rest_oauth2_middleware(struct c_rest_request *req,
     c_rest_oauth2_verify_fn func;
   } u;
 
-  if (!req || !res) { /* GCOVR_EXCL_LINE */
-    return 1;         /* GCOVR_EXCL_LINE */
+  if (!req || !res) {            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (!user_data) {                       /* GCOVR_EXCL_LINE */
@@ -194,7 +201,7 @@ int c_rest_oauth2_middleware(struct c_rest_request *req,
     c_rest_response_html(
         res,
         "Internal Server Error: Missing OAuth2 verifier"); /* GCOVR_EXCL_LINE */
-    return 1;                                              /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                           /* GCOVR_EXCL_LINE */
   }
 
   u.ptr = user_data;
@@ -204,7 +211,7 @@ int c_rest_oauth2_middleware(struct c_rest_request *req,
     c_rest_response_set_status(res, 401);
     c_rest_response_set_header(res, "WWW-Authenticate", "Bearer realm=\"API\"");
     c_rest_response_html(res, "Unauthorized: Missing or invalid Bearer token");
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   if (verify_fn(token, &auth_ctx) != 0) {
@@ -213,11 +220,11 @@ int c_rest_oauth2_middleware(struct c_rest_request *req,
     c_rest_response_set_header(res, "WWW-Authenticate",
                                "Bearer realm=\"API\", error=\"invalid_token\"");
     c_rest_response_html(res, "Unauthorized: Invalid token");
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   C_REST_FREE((void *)(token));
   req->auth_context = auth_ctx;
 
-  return 0;
+  return C_REST_OK;
 }

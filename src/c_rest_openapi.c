@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_openapi.h"
 
 #include <stdlib.h>
@@ -7,14 +8,14 @@
 #include "c_rest_log.h"
 
 #ifndef CDD_DOS
-int c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec) {
+c_rest_error_t c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec) {
   struct c_rest_openapi_spec *spec;
   if (!out_spec) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (C_REST_MALLOC(sizeof(struct c_rest_openapi_spec), &(spec)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); spec = NULL; } /* GCOVR_EXCL_LINE */
   if (!spec) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   memset(spec, 0, sizeof(struct c_rest_openapi_spec));
   spec->paths = NULL;
@@ -26,7 +27,7 @@ int c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec) {
   spec->capacity_components = 0;
 
   *out_spec = spec;
-  return 0;
+  return C_REST_OK;
 }
 
 static void free_operation(struct c_rest_openapi_operation *op) {
@@ -73,10 +74,10 @@ static void free_operation(struct c_rest_openapi_operation *op) {
   }
 }
 
-int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
+c_rest_error_t c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
   size_t i, j;
   if (!spec) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (spec->openapi_version) /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(spec->openapi_version)); /* GCOVR_EXCL_LINE */
@@ -326,7 +327,7 @@ int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
     C_REST_FREE((void *)(spec->security_schemes));
   }
   C_REST_FREE((void *)(spec));
-  return 0;
+  return C_REST_OK;
 }
 
 static int copy_string(const char **dst, const char *src) {
@@ -340,7 +341,7 @@ static int copy_string(const char **dst, const char *src) {
 #endif
     }
   }
-  return 0;
+  return C_REST_OK;
 }
 
 static int copy_operation(struct c_rest_openapi_operation *dst,
@@ -395,14 +396,14 @@ static int copy_operation(struct c_rest_openapi_operation *dst,
       }
     }
   }
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
+c_rest_error_t c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
                                              const char *schema_name,
                                              const char *json_schema_str) {
   if (!spec || !schema_name || !json_schema_str) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (spec->n_components >= spec->capacity_components) { /* GCOVR_EXCL_LINE */
     size_t new_cap =
@@ -416,7 +417,7 @@ int c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
         C_REST_FREE((void *)(new_keys)); /* GCOVR_EXCL_LINE */
       if (new_json) /* GCOVR_EXCL_LINE */
         C_REST_FREE((void *)(new_json)); /* GCOVR_EXCL_LINE */
-      return 1; /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
     }
     if (spec->component_schemas_keys) { /* GCOVR_EXCL_LINE */
       memcpy(new_keys, spec->component_schemas_keys, /* GCOVR_EXCL_LINE */
@@ -442,17 +443,17 @@ int c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
               json_schema_str);
 
   spec->n_components++;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
+c_rest_error_t c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
                                  const char *route, const char *method,
                                  const struct c_rest_openapi_operation *op) {
   size_t i;
   struct c_rest_openapi_path *path = NULL;
 
   if (!spec || !route || !method || !op) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   for (i = 0; i < spec->n_paths; i++) { /* GCOVR_EXCL_LINE */
     if (strcmp(spec->paths[i].route, route) == 0) { /* GCOVR_EXCL_LINE */
@@ -466,7 +467,7 @@ int c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
       size_t new_cap = spec->capacity_paths == 0 ? 4 : spec->capacity_paths * 2; /* GCOVR_EXCL_LINE */
       struct c_rest_openapi_path *new_paths = NULL; if (C_REST_MALLOC(sizeof(struct c_rest_openapi_path) * new_cap, &(new_paths)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_paths = NULL; } /* GCOVR_EXCL_LINE */
       if (!new_paths) /* GCOVR_EXCL_LINE */
-        return 1; /* GCOVR_EXCL_LINE */
+        return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
       if (spec->paths) { /* GCOVR_EXCL_LINE */
         memcpy(new_paths, spec->paths, /* GCOVR_EXCL_LINE */
@@ -502,7 +503,7 @@ int c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
     copy_operation(&path->query, op); /* GCOVR_EXCL_LINE */
   }
 
-  return 0;
+  return C_REST_OK;
 }
 
 #include "parson.h"
@@ -528,7 +529,7 @@ static int serialize_operation(JSON_Object *methods_obj,
               op->n_tags == 0 && /* GCOVR_EXCL_LINE */
               !op->request_body && op->n_responses == 0 &&
               !op->operation_id)) /* GCOVR_EXCL_LINE */
-    return 0;
+    return C_REST_OK;
 
   op_val = json_value_init_object();
   op_obj = json_value_get_object(op_val);
@@ -589,11 +590,12 @@ static int serialize_operation(JSON_Object *methods_obj,
   }
 
   json_object_set_value(methods_obj, method_name, op_val);
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
-                                char **out_json) {
+c_rest_error_t
+c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
+                            char **out_json) {
   JSON_Value *root_val;
   JSON_Object *root_obj;
   JSON_Value *info_val;
@@ -603,8 +605,8 @@ int c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
   JSON_Value *components_val;
   size_t i, j, k;
 
-  if (!spec || !out_json) /* GCOVR_EXCL_LINE */
-    return 1;             /* GCOVR_EXCL_LINE */
+  if (!spec || !out_json)        /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   root_val = json_value_init_object();
   root_obj = json_value_get_object(root_val);
@@ -945,13 +947,14 @@ int c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
   *out_json = json_serialize_to_string_pretty(root_val);
   json_value_free(root_val);
 
-  if (!*out_json) /* GCOVR_EXCL_LINE */
-    return 1;     /* GCOVR_EXCL_LINE */
-  return 0;
+  if (!*out_json)                /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  return C_REST_OK;
 }
 
-static int openapi_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
-                           struct c_rest_response *res, void *user_data) {
+static c_rest_error_t
+openapi_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
+                struct c_rest_response *res, void *user_data) {
   struct c_rest_router *router =
       (struct c_rest_router *)user_data;         /* GCOVR_EXCL_LINE */
   struct c_rest_openapi_spec *spec = NULL;       /* GCOVR_EXCL_LINE */
@@ -971,12 +974,13 @@ static int openapi_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
     c_rest_response_json(res, /* GCOVR_EXCL_LINE */
                          "{\"error\": \"Failed to serialize OpenAPI spec\"}");
   }
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_enable_openapi(struct c_rest_router *router, const char *path) {
-  if (!router || !path) /* GCOVR_EXCL_LINE */
-    return 1;           /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_enable_openapi(struct c_rest_router *router,
+                                     const char *path) {
+  if (!router || !path)          /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   return c_rest_router_add(router, "GET", path, openapi_handler, router);
 }
 
@@ -1010,8 +1014,9 @@ static const char *swagger_html_template_1 =
   "</body>\n"                                                                  \
   "</html>"
 
-static int swagger_ui_handler(struct c_rest_request *req,
-                              struct c_rest_response *res, void *user_data) {
+static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
+                                         struct c_rest_response *res,
+                                         void *user_data) {
   struct c_rest_router *router = (struct c_rest_router *)user_data;
   struct c_rest_openapi_spec *spec = NULL;
   char *html_buf;
@@ -1053,14 +1058,15 @@ static int swagger_ui_handler(struct c_rest_request *req,
   res->status_code = 200;
   c_rest_response_html(res, html_buf);
   C_REST_FREE((void *)(html_buf));
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_enable_swagger_ui(struct c_rest_router *router,
-                             const char *docs_path, const char *openapi_url) {
+c_rest_error_t c_rest_enable_swagger_ui(struct c_rest_router *router,
+                                        const char *docs_path,
+                                        const char *openapi_url) {
   struct c_rest_openapi_spec *spec = NULL;
   if (!router || !docs_path || !openapi_url) /* GCOVR_EXCL_LINE */
-    return 1;                                /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;             /* GCOVR_EXCL_LINE */
 
   c_rest_router_get_openapi_spec(router, &spec);
   if (spec) {                                           /* GCOVR_EXCL_LINE */
@@ -1085,49 +1091,54 @@ int c_rest_enable_swagger_ui(struct c_rest_router *router,
                            router);
 }
 #else
-int c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec) {
+c_rest_error_t c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec) {
   if (out_spec)
     *out_spec = NULL;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }
-int c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
+c_rest_error_t c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
   (void)spec;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }
-int c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
-                                             const char *schema_name,
-                                             const char *json_schema_str) {
+c_rest_error_t
+c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
+                                         const char *schema_name,
+                                         const char *json_schema_str) {
   (void)spec;
   (void)schema_name;
   (void)json_schema_str;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }
-int c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
-                                 const char *route, const char *method,
-                                 const struct c_rest_openapi_operation *op) {
+c_rest_error_t
+c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
+                             const char *route, const char *method,
+                             const struct c_rest_openapi_operation *op) {
   (void)spec;
   (void)route;
   (void)method;
   (void)op;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }
-int c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
-                                char **out_json) {
+c_rest_error_t
+c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
+                            char **out_json) {
   (void)spec;
   if (out_json)
     *out_json = NULL;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }
-int c_rest_enable_openapi(struct c_rest_router *router, const char *path) {
+c_rest_error_t c_rest_enable_openapi(struct c_rest_router *router,
+                                     const char *path) {
   (void)router;
   (void)path;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }
-int c_rest_enable_swagger_ui(struct c_rest_router *router,
-                             const char *docs_path, const char *openapi_url) {
+c_rest_error_t c_rest_enable_swagger_ui(struct c_rest_router *router,
+                                        const char *docs_path,
+                                        const char *openapi_url) {
   (void)router;
   (void)docs_path;
   (void)openapi_url;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }
 #endif

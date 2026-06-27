@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_modality.h"
 #include "c_rest_multipart.h"
 #include "c_rest_request.h"
@@ -52,8 +53,8 @@ static int on_body_end(c_rest_multipart_parser *parser) {
   return 0;
 }
 
-static int upload_handler(struct c_rest_request *req,
-                          struct c_rest_response *res, void *ctx) {
+static c_rest_error_t upload_handler(struct c_rest_request *req,
+                                     struct c_rest_response *res, void *ctx) {
   c_rest_multipart_parser *parser = NULL;
   struct c_rest_multipart_callbacks callbacks = {0};
   size_t parsed = 0;

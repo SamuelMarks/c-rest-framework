@@ -1,4 +1,6 @@
 /* clang-format off */
+#include "c_rest_error.h"
+/* clang-format on */
 #ifndef C_REST_TEST_PROTOS_H
 #define C_REST_TEST_PROTOS_H
 
@@ -36,4 +38,3 @@ int test_jwt_json_web_tokens_authentication_middleware(void);
 #endif /* __cplusplus */
 
 #endif /* C_REST_TEST_PROTOS_H */
-/* clang-format on */

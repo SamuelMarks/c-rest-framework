@@ -1,8 +1,10 @@
 #ifndef C_REST_TIME_H
 #define C_REST_TIME_H
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include <stddef.h>
+#include "c_rest_error.h"
 #include <time.h>
 /* clang-format on */
 
@@ -18,7 +20,7 @@ extern "C" {
  * @param out_len Length of the output buffer.
  * @return 0 on success, non-zero on failure.
  */
-int c_rest_http_date_format(time_t t, char *out_str, size_t out_len);
+c_rest_error_t c_rest_http_date_format(time_t t, char *out_str, size_t out_len);
 
 /**
  * @brief Parse an HTTP Date string into a time_t value.
@@ -26,7 +28,7 @@ int c_rest_http_date_format(time_t t, char *out_str, size_t out_len);
  * @param out_t The parsed time.
  * @return 0 on success, non-zero on failure.
  */
-int c_rest_http_date_parse(const char *date_str, time_t *out_t);
+c_rest_error_t c_rest_http_date_parse(const char *date_str, time_t *out_t);
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_template.h"
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
@@ -6,16 +7,16 @@
 #include <string.h>
 /* clang-format on */
 
-int c_rest_template_init(struct c_rest_template_context *ctx,
-                         const char *template_str) {
+c_rest_error_t c_rest_template_init(struct c_rest_template_context *ctx,
+                                    const char *template_str) {
   size_t len;
   char *copy;
   if (!ctx || !template_str) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   len = strlen(template_str);
   if (C_REST_MALLOC(len + 1, &copy) != 0) { /* GCOVR_EXCL_LINE */
-    return 1;                               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;            /* GCOVR_EXCL_LINE */
   }
 #if defined(_MSC_VER)
   strcpy_s(copy, len + 1, template_str);
@@ -24,24 +25,24 @@ int c_rest_template_init(struct c_rest_template_context *ctx,
 #endif
   ctx->template_str = copy;
   ctx->template_len = len;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_template_destroy(struct c_rest_template_context *ctx) {
+c_rest_error_t c_rest_template_destroy(struct c_rest_template_context *ctx) {
   if (!ctx) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   if (ctx->template_str) { /* GCOVR_EXCL_LINE */
     C_REST_FREE(ctx->template_str);
     ctx->template_str = NULL;
   }
   ctx->template_len = 0;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_template_render(const struct c_rest_template_context *ctx,
-                           const char **keys, const char **values, size_t count,
-                           char **out_result) {
+c_rest_error_t c_rest_template_render(const struct c_rest_template_context *ctx,
+                                      const char **keys, const char **values,
+                                      size_t count, char **out_result) {
   size_t out_len = 0;
   size_t out_cap = 0;
   char *out_buf = NULL;
@@ -49,12 +50,12 @@ int c_rest_template_render(const struct c_rest_template_context *ctx,
   size_t i;
 
   if (!ctx || !ctx->template_str || !out_result) { /* GCOVR_EXCL_LINE */
-    return 1;                                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                   /* GCOVR_EXCL_LINE */
   }
 
   out_cap = ctx->template_len + 128;
   if (C_REST_MALLOC(out_cap, &out_buf) != 0) { /* GCOVR_EXCL_LINE */
-    return 1;                                  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;               /* GCOVR_EXCL_LINE */
   }
 
   p = ctx->template_str;
@@ -77,9 +78,9 @@ int c_rest_template_render(const struct c_rest_template_context *ctx,
               size_t new_cap = out_cap * 2 + val_len; /* GCOVR_EXCL_LINE */
               char *new_buf = NULL;                   /* GCOVR_EXCL_LINE */
               if (C_REST_REALLOC(out_buf, new_cap, &new_buf) !=
-                  0) {                /* GCOVR_EXCL_LINE */
-                C_REST_FREE(out_buf); /* GCOVR_EXCL_LINE */
-                return 1;             /* GCOVR_EXCL_LINE */
+                  0) {                       /* GCOVR_EXCL_LINE */
+                C_REST_FREE(out_buf);        /* GCOVR_EXCL_LINE */
+                return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
               }
               out_buf = new_buf; /* GCOVR_EXCL_LINE */
               out_cap = new_cap; /* GCOVR_EXCL_LINE */
@@ -103,9 +104,9 @@ int c_rest_template_render(const struct c_rest_template_context *ctx,
             size_t new_cap = out_cap * 2 + copy_len; /* GCOVR_EXCL_LINE */
             char *new_buf = NULL;                    /* GCOVR_EXCL_LINE */
             if (C_REST_REALLOC(out_buf, new_cap, &new_buf) !=
-                0) {                /* GCOVR_EXCL_LINE */
-              C_REST_FREE(out_buf); /* GCOVR_EXCL_LINE */
-              return 1;             /* GCOVR_EXCL_LINE */
+                0) {                       /* GCOVR_EXCL_LINE */
+              C_REST_FREE(out_buf);        /* GCOVR_EXCL_LINE */
+              return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
             }
             out_buf = new_buf; /* GCOVR_EXCL_LINE */
             out_cap = new_cap; /* GCOVR_EXCL_LINE */
@@ -126,9 +127,9 @@ int c_rest_template_render(const struct c_rest_template_context *ctx,
       size_t new_cap = out_cap * 2; /* GCOVR_EXCL_LINE */
       char *new_buf = NULL;         /* GCOVR_EXCL_LINE */
       if (C_REST_REALLOC(out_buf, new_cap, &new_buf) !=
-          0) {                /* GCOVR_EXCL_LINE */
-        C_REST_FREE(out_buf); /* GCOVR_EXCL_LINE */
-        return 1;             /* GCOVR_EXCL_LINE */
+          0) {                       /* GCOVR_EXCL_LINE */
+        C_REST_FREE(out_buf);        /* GCOVR_EXCL_LINE */
+        return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
       }
       out_buf = new_buf; /* GCOVR_EXCL_LINE */
       out_cap = new_cap; /* GCOVR_EXCL_LINE */
@@ -137,7 +138,7 @@ int c_rest_template_render(const struct c_rest_template_context *ctx,
   }
   out_buf[out_len] = '\0';
   *out_result = out_buf;
-  return 0;
+  return C_REST_OK;
 }
 
 #endif /* C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING */

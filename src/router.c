@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_request.h"
 #include "c_rest_response.h"
 #include "c_rest_router.h"
@@ -13,7 +14,7 @@
 #include <string.h>
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
-static int c_rest_template_handler(struct c_rest_request *req,
+static c_rest_error_t c_rest_template_handler(struct c_rest_request *req,
                                    struct c_rest_response *res,
                                    void *user_data);
 #endif
@@ -57,16 +58,16 @@ static int create_node(const char *segment, size_t len,
   struct c_rest_route_node *node;
 
   if (!out_node) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   node = (struct c_rest_route_node *)malloc(sizeof(struct c_rest_route_node));
   if (!node) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   node->segment = (char *)malloc(len + 1);
   if (!node->segment) { /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(node)); /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   memcpy(node->segment, segment, len);
   node->segment[len] = '\0';
@@ -94,13 +95,13 @@ static int create_node(const char *segment, size_t len,
   node->handlers = NULL;
 
   *out_node = node;
-  return 0;
+  return C_REST_OK;
 }
 
 static int free_node(struct c_rest_route_node *node) {
   struct c_rest_route_handler *h;
   if (!node)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   if (node->segment) /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(node->segment));
@@ -124,21 +125,21 @@ static int free_node(struct c_rest_route_node *node) {
   free_node(node->children);
   free_node(node->next);
   C_REST_FREE((void *)(node));
-  return 0;
+  return C_REST_OK;
 }
-int c_rest_router_init(c_rest_router **out_router) {
+c_rest_error_t c_rest_router_init(c_rest_router **out_router) {
   struct c_rest_router *router;
 
   if (!out_router) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   router = (struct c_rest_router *)malloc(sizeof(struct c_rest_router));
   if (!router) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (create_node("", 0, &router->root) != 0) { /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(router)); /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   router->middlewares = NULL;
   router->post_middlewares = NULL;
@@ -146,14 +147,14 @@ int c_rest_router_init(c_rest_router **out_router) {
   c_rest_openapi_spec_init(&router->openapi_spec);
 
   *out_router = router;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_router_destroy(c_rest_router *router) {
+c_rest_error_t c_rest_router_destroy(c_rest_router *router) {
   struct c_rest_middleware_chain *m;
 
   if (!router) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   free_node(router->root);
 
@@ -180,7 +181,7 @@ int c_rest_router_destroy(c_rest_router *router) {
   }
 
   C_REST_FREE((void *)(router));
-  return 0;
+  return C_REST_OK;
 }
 
 static int find_or_add_child(struct c_rest_route_node *parent,
@@ -190,7 +191,7 @@ static int find_or_add_child(struct c_rest_route_node *parent,
   struct c_rest_route_node *new_node;
 
   if (!parent || !out_child) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   child = parent->children;
 
@@ -198,22 +199,22 @@ static int find_or_add_child(struct c_rest_route_node *parent,
     if (strlen(child->segment) == len && /* GCOVR_EXCL_LINE */
         strncmp(child->segment, segment, len) == 0) { /* GCOVR_EXCL_LINE */
       *out_child = child; /* GCOVR_EXCL_LINE */
-      return 0; /* GCOVR_EXCL_LINE */
+      return C_REST_OK; /* GCOVR_EXCL_LINE */
     }
     child = child->next;
   }
 
   if (create_node(segment, len, &new_node) != 0) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   new_node->next = parent->children;
   parent->children = new_node;
   new_node->parent = parent;
 
   *out_child = new_node;
-  return 0;
+  return C_REST_OK;
 }
-int c_rest_router_add(c_rest_router *router, const char *method,
+c_rest_error_t c_rest_router_add(c_rest_router *router, const char *method,
                       const char *path, c_rest_handler_fn handler,
                       void *user_data) {
   const char *p;
@@ -221,7 +222,7 @@ int c_rest_router_add(c_rest_router *router, const char *method,
   struct c_rest_route_handler *h;
 
   if (!router || !router->root || !method || !path || !handler) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   curr = router->root;
   p = path;
@@ -242,7 +243,7 @@ int c_rest_router_add(c_rest_router *router, const char *method,
 
     if (len > 0) { /* GCOVR_EXCL_LINE */
       if (find_or_add_child(curr, p, len, &child) != 0) /* GCOVR_EXCL_LINE */
-        return 1; /* GCOVR_EXCL_LINE */
+        return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
       curr = child;
     }
 
@@ -256,12 +257,12 @@ int c_rest_router_add(c_rest_router *router, const char *method,
   h = (struct c_rest_route_handler *)malloc(
       sizeof(struct c_rest_route_handler));
   if (!h) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   h->method = (char *)malloc(strlen(method) + 1);
   if (!h->method) { /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(h)); /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 #if defined(_MSC_VER)
   strcpy_s(h->method, strlen(method) + 1, method);
@@ -274,10 +275,10 @@ int c_rest_router_add(c_rest_router *router, const char *method,
   h->next = curr->handlers;
   curr->handlers = h;
 
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_router_add_openapi(c_rest_router *router, const char *method,
+c_rest_error_t c_rest_router_add_openapi(c_rest_router *router, const char *method,
                               const char *path, c_rest_handler_fn handler,
                               void *user_data,
                               const struct c_rest_openapi_operation *op_meta) {
@@ -296,7 +297,7 @@ struct c_rest_ws_route_data {
   void *user_data;
 };
 
-static int c_rest_ws_upgrade_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
+static c_rest_error_t c_rest_ws_upgrade_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
                                      struct c_rest_response *res,
                                      void *user_data) {
   int ret;
@@ -305,19 +306,19 @@ static int c_rest_ws_upgrade_handler(struct c_rest_request *req, /* GCOVR_EXCL_L
   return ret; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_router_add_websocket(c_rest_router *router, const char *path, /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_websocket(c_rest_router *router, const char *path, /* GCOVR_EXCL_LINE */
                                 c_rest_websocket_on_message_fn on_message,
                                 c_rest_websocket_on_close_fn on_close,
                                 void *user_data) {
   struct c_rest_ws_route_data *ws_data;
 
   if (!router || !path) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   ws_data = (struct c_rest_ws_route_data *)malloc( /* GCOVR_EXCL_LINE */
       sizeof(struct c_rest_ws_route_data));
   if (!ws_data) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   ws_data->on_message = on_message; /* GCOVR_EXCL_LINE */
   ws_data->on_close = on_close; /* GCOVR_EXCL_LINE */
@@ -327,7 +328,7 @@ int c_rest_router_add_websocket(c_rest_router *router, const char *path, /* GCOV
                            ws_data);
 }
 
-int c_rest_router_add_websocket_openapi( /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_websocket_openapi( /* GCOVR_EXCL_LINE */
     c_rest_router *router, const char *path,
     c_rest_websocket_on_message_fn on_message,
     c_rest_websocket_on_close_fn on_close, void *user_data,
@@ -346,7 +347,7 @@ struct c_rest_sse_route_data {
   void *user_data;
 };
 
-static int c_rest_sse_handler_wrapper(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
+static c_rest_error_t c_rest_sse_handler_wrapper(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
                                       struct c_rest_response *res,
                                       void *user_data) {
   struct c_rest_sse_route_data *sse_data = /* GCOVR_EXCL_LINE */
@@ -361,20 +362,20 @@ static int c_rest_sse_handler_wrapper(struct c_rest_request *req, /* GCOVR_EXCL_
   if (sse_data && sse_data->handler) { /* GCOVR_EXCL_LINE */
     return sse_data->handler(req, res, sse_data->user_data); /* GCOVR_EXCL_LINE */
   }
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_router_add_sse(c_rest_router *router, const char *path, /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_sse(c_rest_router *router, const char *path, /* GCOVR_EXCL_LINE */
                           c_rest_handler_fn handler, void *user_data) {
   struct c_rest_sse_route_data *sse_data;
 
   if (!router || !path) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   sse_data = (struct c_rest_sse_route_data *)malloc( /* GCOVR_EXCL_LINE */
       sizeof(struct c_rest_sse_route_data));
   if (!sse_data) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   sse_data->handler = handler; /* GCOVR_EXCL_LINE */
   sse_data->user_data = user_data; /* GCOVR_EXCL_LINE */
@@ -383,7 +384,7 @@ int c_rest_router_add_sse(c_rest_router *router, const char *path, /* GCOVR_EXCL
                            sse_data);
 }
 
-int c_rest_router_add_sse_openapi( /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_sse_openapi( /* GCOVR_EXCL_LINE */
     c_rest_router *router, const char *path, c_rest_handler_fn handler,
     void *user_data, const struct c_rest_openapi_operation *op_meta) {
   int res = c_rest_router_add_sse(router, path, handler, user_data); /* GCOVR_EXCL_LINE */
@@ -397,7 +398,7 @@ int c_rest_router_add_sse_openapi( /* GCOVR_EXCL_LINE */
 #ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
 #include "c_rest_graphql.h"
 
-static int c_rest_graphql_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
+static c_rest_error_t c_rest_graphql_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
                                   struct c_rest_response *res,
                                   void *user_data) {
   struct c_rest_graphql_schema *schema = /* GCOVR_EXCL_LINE */
@@ -409,13 +410,13 @@ static int c_rest_graphql_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE
 
   if (!req->body) { /* GCOVR_EXCL_LINE */
     c_rest_response_set_status(res, 400); /* GCOVR_EXCL_LINE */
-    return 0; /* GCOVR_EXCL_LINE */
+    return C_REST_OK; /* GCOVR_EXCL_LINE */
   }
 
   ret = c_rest_graphql_parse((const char *)req->body, req->body_len, &doc); /* GCOVR_EXCL_LINE */
   if (ret != 0) { /* GCOVR_EXCL_LINE */
     c_rest_response_set_status(res, 400); /* GCOVR_EXCL_LINE */
-    return 0; /* GCOVR_EXCL_LINE */
+    return C_REST_OK; /* GCOVR_EXCL_LINE */
   }
 
   ret = c_rest_graphql_resolve(doc, schema, &json, &len); /* GCOVR_EXCL_LINE */
@@ -423,25 +424,25 @@ static int c_rest_graphql_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE
 
   if (ret != 0) { /* GCOVR_EXCL_LINE */
     c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    return 0; /* GCOVR_EXCL_LINE */
+    return C_REST_OK; /* GCOVR_EXCL_LINE */
   }
 
   c_rest_response_set_status(res, 200); /* GCOVR_EXCL_LINE */
   c_rest_response_json(res, json); /* GCOVR_EXCL_LINE */
   C_REST_FREE((void *)(json)); /* GCOVR_EXCL_LINE */
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_router_add_graphql(c_rest_router *router, const char *path, /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_graphql(c_rest_router *router, const char *path, /* GCOVR_EXCL_LINE */
                               struct c_rest_graphql_schema *schema) {
   if (!router || !path || !schema) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   return c_rest_router_add(router, "POST", path, c_rest_graphql_handler, /* GCOVR_EXCL_LINE */
                            schema);
 }
 
-int c_rest_router_add_graphql_openapi( /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_graphql_openapi( /* GCOVR_EXCL_LINE */
     c_rest_router *router, const char *path,
     struct c_rest_graphql_schema *schema,
     const struct c_rest_openapi_operation *op_meta) {
@@ -463,9 +464,9 @@ struct c_rest_template_route_data {
   void *user_data;
 };
 
-static int c_rest_template_handler(struct c_rest_request *req,
-                                   struct c_rest_response *res,
-                                   void *user_data) {
+static c_rest_error_t c_rest_template_handler(struct c_rest_request *req,
+                                              struct c_rest_response *res,
+                                              void *user_data) {
   struct c_rest_template_route_data *route_data =
       (struct c_rest_template_route_data *)user_data;
   const char **keys = NULL;
@@ -476,41 +477,40 @@ static int c_rest_template_handler(struct c_rest_request *req,
   if (!route_data || !route_data->ctx ||
       !route_data->data_provider) {       /* GCOVR_EXCL_LINE */
     c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    return 0;                             /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                     /* GCOVR_EXCL_LINE */
   }
 
   ret = route_data->data_provider(req, &keys, &values, &count,
                                   route_data->user_data);
   if (ret != 0) {                         /* GCOVR_EXCL_LINE */
     c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    return 0;                             /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                     /* GCOVR_EXCL_LINE */
   }
 
   ret = c_rest_response_template(res, route_data->ctx, keys, values, count);
   if (ret != 0) {                         /* GCOVR_EXCL_LINE */
     c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    return 0;                             /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                     /* GCOVR_EXCL_LINE */
   }
 
   c_rest_response_set_status(res, 200);
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_router_add_template(c_rest_router *router, const char *method,
-                               const char *path,
-                               const struct c_rest_template_context *ctx,
-                               c_rest_template_data_fn data_provider,
-                               void *user_data) {
+c_rest_error_t c_rest_router_add_template(
+    c_rest_router *router, const char *method, const char *path,
+    const struct c_rest_template_context *ctx,
+    c_rest_template_data_fn data_provider, void *user_data) {
   struct c_rest_template_route_data *route_data;
 
   if (!router || !path || !ctx || !data_provider) { /* GCOVR_EXCL_LINE */
-    return 1;                                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                    /* GCOVR_EXCL_LINE */
   }
 
   route_data = (struct c_rest_template_route_data *)malloc(
       sizeof(struct c_rest_template_route_data));
-  if (!route_data) { /* GCOVR_EXCL_LINE */
-    return 1;        /* GCOVR_EXCL_LINE */
+  if (!route_data) {             /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   route_data->ctx = ctx;
@@ -521,15 +521,15 @@ int c_rest_router_add_template(c_rest_router *router, const char *method,
                            route_data);
 }
 
-int c_rest_router_add_template_openapi(/* GCOVR_EXCL_LINE */
-                                       c_rest_router *router,
-                                       const char *method, const char *path,
-                                       const struct c_rest_template_context
-                                           *ctx,
-                                       c_rest_template_data_fn data_provider,
-                                       void *user_data,
-                                       const struct c_rest_openapi_operation
-                                           *op_meta) {
+c_rest_error_t
+c_rest_router_add_template_openapi(/* GCOVR_EXCL_LINE */
+                                   c_rest_router *router, const char *method,
+                                   const char *path,
+                                   const struct c_rest_template_context *ctx,
+                                   c_rest_template_data_fn data_provider,
+                                   void *user_data,
+                                   const struct c_rest_openapi_operation
+                                       *op_meta) {
   int res = c_rest_router_add_template(router, method, path, ctx,
                                        data_provider, /* GCOVR_EXCL_LINE */
                                        user_data);
@@ -541,32 +541,34 @@ int c_rest_router_add_template_openapi(/* GCOVR_EXCL_LINE */
 }
 #endif
 
-int c_rest_router_get_openapi_spec(c_rest_router *router,
-                                   struct c_rest_openapi_spec **out_spec) {
-  if (!router || !out_spec) /* GCOVR_EXCL_LINE */
-    return -1;              /* GCOVR_EXCL_LINE */
+c_rest_error_t
+c_rest_router_get_openapi_spec(c_rest_router *router,
+                               struct c_rest_openapi_spec **out_spec) {
+  if (!router || !out_spec)      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   *out_spec = router->openapi_spec;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_router_use(c_rest_router *router, const char *path_prefix,
-                      c_rest_middleware_fn middleware, void *user_data) {
+c_rest_error_t c_rest_router_use(c_rest_router *router, const char *path_prefix,
+                                 c_rest_middleware_fn middleware,
+                                 void *user_data) {
   struct c_rest_middleware_chain *m;
   struct c_rest_middleware_chain *tail;
 
-  if (!router || !middleware) /* GCOVR_EXCL_LINE */
-    return 1;                 /* GCOVR_EXCL_LINE */
+  if (!router || !middleware)    /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   m = (struct c_rest_middleware_chain *)malloc(
       sizeof(struct c_rest_middleware_chain));
-  if (!m)     /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!m)                        /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (path_prefix) { /* GCOVR_EXCL_LINE */
     m->path_prefix = (char *)malloc(strlen(path_prefix) + 1);
-    if (!m->path_prefix) {      /* GCOVR_EXCL_LINE */
-      C_REST_FREE((void *)(m)); /* GCOVR_EXCL_LINE */
-      return 1;                 /* GCOVR_EXCL_LINE */
+    if (!m->path_prefix) {         /* GCOVR_EXCL_LINE */
+      C_REST_FREE((void *)(m));    /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
     }
 #if defined(_MSC_VER)
     strcpy_s(m->path_prefix, strlen(path_prefix) + 1, path_prefix);
@@ -591,27 +593,29 @@ int c_rest_router_use(c_rest_router *router, const char *path_prefix,
     tail->next = m; /* GCOVR_EXCL_LINE */
   }
 
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_router_use_post(c_rest_router *router, const char *path_prefix,
-                           c_rest_middleware_fn middleware, void *user_data) {
+c_rest_error_t c_rest_router_use_post(c_rest_router *router,
+                                      const char *path_prefix,
+                                      c_rest_middleware_fn middleware,
+                                      void *user_data) {
   struct c_rest_middleware_chain *m;
   struct c_rest_middleware_chain *tail;
 
-  if (!router || !middleware) /* GCOVR_EXCL_LINE */
-    return 1;                 /* GCOVR_EXCL_LINE */
+  if (!router || !middleware)    /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   m = (struct c_rest_middleware_chain *)malloc(
       sizeof(struct c_rest_middleware_chain));
-  if (!m)     /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!m)                        /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (path_prefix) { /* GCOVR_EXCL_LINE */
     m->path_prefix = (char *)malloc(strlen(path_prefix) + 1);
-    if (!m->path_prefix) {      /* GCOVR_EXCL_LINE */
-      C_REST_FREE((void *)(m)); /* GCOVR_EXCL_LINE */
-      return 1;                 /* GCOVR_EXCL_LINE */
+    if (!m->path_prefix) {         /* GCOVR_EXCL_LINE */
+      C_REST_FREE((void *)(m));    /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
     }
 #if defined(_MSC_VER)
     strcpy_s(m->path_prefix, strlen(path_prefix) + 1, path_prefix);
@@ -636,7 +640,7 @@ int c_rest_router_use_post(c_rest_router *router, const char *path_prefix,
     tail->next = m; /* GCOVR_EXCL_LINE */
   }
 
-  return 0;
+  return C_REST_OK;
 }
 
 static int match_route(struct c_rest_route_node *node, const char *path,
@@ -648,15 +652,15 @@ static int match_route(struct c_rest_route_node *node, const char *path,
   struct c_rest_route_node *matched = NULL;
   int res;
 
-  if (!node || !out_node) /* GCOVR_EXCL_LINE */
-    return 1;             /* GCOVR_EXCL_LINE */
+  if (!node || !out_node)        /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   while (*path == '/')
     path++;
 
   if (*path == '\0') {
     *out_node = node;
-    return 0;
+    return C_REST_OK;
   }
 
   next_slash = strchr(path, '/');
@@ -670,7 +674,7 @@ static int match_route(struct c_rest_route_node *node, const char *path,
   while (child) {
     if (child->is_wildcard) { /* GCOVR_EXCL_LINE */
       *out_node = child;      /* GCOVR_EXCL_LINE */
-      return 0;               /* GCOVR_EXCL_LINE */
+      return C_REST_OK;       /* GCOVR_EXCL_LINE */
     }
 
     if (child->is_var ||
@@ -702,26 +706,27 @@ static int match_route(struct c_rest_route_node *node, const char *path,
           }
         }
         *out_node = matched;
-        return 0;
+        return C_REST_OK;
       }
     }
     child = child->next;
   }
 
   *out_node = NULL;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }
 
-int c_rest_router_dispatch(c_rest_router *router, struct c_rest_request *req,
-                           struct c_rest_response *res) {
+c_rest_error_t c_rest_router_dispatch(c_rest_router *router,
+                                      struct c_rest_request *req,
+                                      struct c_rest_response *res) {
   struct c_rest_middleware_chain *m;
   struct c_rest_route_node *matched_node = NULL;
   struct c_rest_route_handler *h;
   int middleware_res;
   int match_res;
 
-  if (!router || !req || !res) /* GCOVR_EXCL_LINE */
-    return 1;                  /* GCOVR_EXCL_LINE */
+  if (!router || !req || !res)   /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   req->path_vars = NULL;
 
@@ -734,7 +739,7 @@ int c_rest_router_dispatch(c_rest_router *router, struct c_rest_request *req,
       middleware_res = m->middleware(req, res, m->user_data);
       if (middleware_res != 0) { /* GCOVR_EXCL_LINE */
         /* Middleware short-circuited */
-        return 0; /* GCOVR_EXCL_LINE */
+        return C_REST_OK; /* GCOVR_EXCL_LINE */
       }
     }
     m = m->next;
@@ -745,7 +750,7 @@ int c_rest_router_dispatch(c_rest_router *router, struct c_rest_request *req,
   if (match_res != 0 || !matched_node) { /* GCOVR_EXCL_LINE */
     /* 404 Not Found */
     res->status_code = 404;
-    return 0;
+    return C_REST_OK;
   }
 
   /* 3. Check Method */
@@ -774,5 +779,5 @@ int c_rest_router_dispatch(c_rest_router *router, struct c_rest_request *req,
     m = m->next;
   }
 
-  return 0;
+  return C_REST_OK;
 }

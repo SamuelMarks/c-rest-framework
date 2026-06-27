@@ -1,7 +1,8 @@
+/* clang-format off */
+#include "c_rest_error.h"
 #ifndef OAUTH2_CLIENT_H
 #define OAUTH2_CLIENT_H
 
-/* clang-format off */
 #include "c_orm_db.h"
 #include "c_rest_client.h"
 /* clang-format on */

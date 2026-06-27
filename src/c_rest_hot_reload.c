@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_hot_reload.h"
 #include "c_rest_mem.h"
 #include "c_rest_platform.h"
@@ -47,7 +48,7 @@ static int get_file_mtime(c_rest_hot_reload_ctx_t *ctx, const char *path,
     unsigned long mtime_ul;
     if (cm_file_get_mtime(ctx->cm_env, path, &mtime_ul) == 0) {
       *out_mtime = (time_t)mtime_ul;
-      return 0;
+      return C_REST_OK;
     }
   }
 #endif
@@ -55,17 +56,17 @@ static int get_file_mtime(c_rest_hot_reload_ctx_t *ctx, const char *path,
   struct _stat64 st;
   if (_stat64(path, &st) == 0) {
     *out_mtime = st.st_mtime;
-    return 0;
+    return C_REST_OK;
   }
 #else
   struct stat st;
   if (stat(path, &st) == 0) {
     *out_mtime = st.st_mtime;
-    return 0;
+    return C_REST_OK;
   }
 #endif
   *out_mtime = 0;
-  return -1;
+  return C_REST_ERROR_GENERIC;
 }
 
 static void sleep_seconds(c_rest_hot_reload_ctx_t *ctx, int seconds) {
@@ -91,7 +92,7 @@ static void watcher_thread_func(void *arg) {
 }
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
-int c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *ctx,
+c_rest_error_t c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *ctx,
                                             cm_env_t env) {
   if (!ctx)
     return C_REST_HOT_RELOAD_ERR_PARAM;
@@ -100,7 +101,7 @@ int c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *ctx,
 }
 #endif
 
-int c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
+c_rest_error_t c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
                            struct c_rest_logger *logger) {
   int err;
 
@@ -131,7 +132,7 @@ int c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
   return C_REST_HOT_RELOAD_SUCCESS;
 }
 
-int c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx,
+c_rest_error_t c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx,
                                 const char *path) {
   size_t path_len;
   char *path_copy;
@@ -208,7 +209,7 @@ int c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx,
   return C_REST_HOT_RELOAD_SUCCESS;
 }
 
-int c_rest_hot_reload_poll(c_rest_hot_reload_ctx_t *ctx,
+c_rest_error_t c_rest_hot_reload_poll(c_rest_hot_reload_ctx_t *ctx,
                            c_rest_hot_reload_callback_t on_reload,
                            void *user_data) {
   size_t i;
@@ -237,7 +238,7 @@ int c_rest_hot_reload_poll(c_rest_hot_reload_ctx_t *ctx,
   return C_REST_HOT_RELOAD_SUCCESS;
 }
 
-int c_rest_hot_reload_start(c_rest_hot_reload_ctx_t *ctx,
+c_rest_error_t c_rest_hot_reload_start(c_rest_hot_reload_ctx_t *ctx,
                             c_rest_hot_reload_callback_t on_reload,
                             void *user_data) {
   if (!ctx || !on_reload) {
@@ -273,7 +274,7 @@ int c_rest_hot_reload_start(c_rest_hot_reload_ctx_t *ctx,
   return C_REST_HOT_RELOAD_SUCCESS;
 }
 
-int c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
+c_rest_error_t c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
   size_t i;
 
   if (!ctx) {
@@ -318,7 +319,7 @@ int c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
 #include "c_rest_router.h"
 #include "c_rest_sse.h"
 
-static int hot_reload_sse_handler(struct c_rest_request *req,
+static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
                                   struct c_rest_response *res,
                                   void *user_data) {
   (void)user_data;
@@ -336,12 +337,12 @@ static int hot_reload_sse_handler(struct c_rest_request *req,
     res->status_code = 503;
     res->body = (char *)"Hot reload context not available";
     res->body_len = 32;
-    return 0;
+    return C_REST_OK;
   }
 
   res->status_code = 200;
   if (c_rest_sse_init_response(res) != 0) {
-    return 0;
+    return C_REST_OK;
   }
 
   while (hr_ctx->state == C_REST_HOT_RELOAD_STATE_WATCHING) {
@@ -376,10 +377,10 @@ static int hot_reload_sse_handler(struct c_rest_request *req,
     c_rest_sse_send_event(res, &ev);
     c_rest_sse_event_destroy(&ev);
   }
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_hot_reload_register_routes(struct c_rest_router *router,
+c_rest_error_t c_rest_hot_reload_register_routes(struct c_rest_router *router,
                                       const char *path) {
   if (!router || !path) {
     return C_REST_HOT_RELOAD_ERR_PARAM;
@@ -393,8 +394,8 @@ int c_rest_hot_reload_register_routes(struct c_rest_router *router,
 #else
 #include "c_rest_router.h"
 /* clang-format on */
-int c_rest_hot_reload_register_routes(struct c_rest_router *router,
-                                      const char *path) {
+c_rest_error_t c_rest_hot_reload_register_routes(struct c_rest_router *router,
+                                                 const char *path) {
   (void)router;
   (void)path;
   return C_REST_HOT_RELOAD_ERR_SYSTEM;

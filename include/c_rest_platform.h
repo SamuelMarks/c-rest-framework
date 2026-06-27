@@ -1,8 +1,10 @@
 #ifndef C_REST_PLATFORM_H
 #define C_REST_PLATFORM_H
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include <stddef.h>
+#include "c_rest_error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,20 +57,21 @@ typedef ptrdiff_t c_rest_process_t;
 /*
  * Initialization and cleanup.
  */
-int c_rest_platform_init(void);
-int c_rest_platform_cleanup(void);
+c_rest_error_t c_rest_platform_init(void);
+c_rest_error_t c_rest_platform_cleanup(void);
 
 /*
  * Sockets
  */
-int c_rest_socket_create(c_rest_socket_t *out_sock);
-int c_rest_socket_bind(c_rest_socket_t sock, const char *host,
-                       unsigned short port);
-int c_rest_socket_listen(c_rest_socket_t sock, int backlog);
-int c_rest_socket_accept(c_rest_socket_t server_sock,
-                         c_rest_socket_t *out_client_sock);
-int c_rest_socket_set_nonblocking(c_rest_socket_t sock, int nonblocking);
-int c_rest_socket_close(c_rest_socket_t sock);
+c_rest_error_t c_rest_socket_create(c_rest_socket_t *out_sock);
+c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock, const char *host,
+                                  unsigned short port);
+c_rest_error_t c_rest_socket_listen(c_rest_socket_t sock, int backlog);
+c_rest_error_t c_rest_socket_accept(c_rest_socket_t server_sock,
+                                    c_rest_socket_t *out_client_sock);
+c_rest_error_t c_rest_socket_set_nonblocking(c_rest_socket_t sock,
+                                             int nonblocking);
+c_rest_error_t c_rest_socket_close(c_rest_socket_t sock);
 /**
  * @brief Receive data from a socket.
  * @param sock The socket.
@@ -77,8 +80,8 @@ int c_rest_socket_close(c_rest_socket_t sock);
  * @param out_read Amount read.
  * @return 0 on success.
  */
-int c_rest_socket_recv(c_rest_socket_t sock, void *buf, size_t len,
-                       size_t *out_read);
+c_rest_error_t c_rest_socket_recv(c_rest_socket_t sock, void *buf, size_t len,
+                                  size_t *out_read);
 
 /**
  * @brief Send data to a socket.
@@ -88,44 +91,45 @@ int c_rest_socket_recv(c_rest_socket_t sock, void *buf, size_t len,
  * @param out_written Amount written.
  * @return 0 on success.
  */
-int c_rest_socket_send(c_rest_socket_t sock, const void *buf, size_t len,
-                       size_t *out_written);
+c_rest_error_t c_rest_socket_send(c_rest_socket_t sock, const void *buf,
+                                  size_t len, size_t *out_written);
 
 /*
  * Threading
  */
 typedef void (*c_rest_thread_fn)(void *arg);
-int c_rest_thread_create(c_rest_thread_t *out_thread, c_rest_thread_fn func,
-                         void *arg);
-int c_rest_thread_join(c_rest_thread_t thread);
+c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
+                                    c_rest_thread_fn func, void *arg);
+c_rest_error_t c_rest_thread_join(c_rest_thread_t thread);
 
-int c_rest_mutex_create(c_rest_mutex_t *out_mutex);
-int c_rest_mutex_lock(c_rest_mutex_t mutex);
-int c_rest_mutex_unlock(c_rest_mutex_t mutex);
-int c_rest_mutex_destroy(c_rest_mutex_t mutex);
+c_rest_error_t c_rest_mutex_create(c_rest_mutex_t *out_mutex);
+c_rest_error_t c_rest_mutex_lock(c_rest_mutex_t mutex);
+c_rest_error_t c_rest_mutex_unlock(c_rest_mutex_t mutex);
+c_rest_error_t c_rest_mutex_destroy(c_rest_mutex_t mutex);
 
-int c_rest_cond_create(c_rest_cond_t *out_cond);
-int c_rest_cond_wait(c_rest_cond_t cond, c_rest_mutex_t mutex);
-int c_rest_cond_signal(c_rest_cond_t cond);
-int c_rest_cond_destroy(c_rest_cond_t cond);
+c_rest_error_t c_rest_cond_create(c_rest_cond_t *out_cond);
+c_rest_error_t c_rest_cond_wait(c_rest_cond_t cond, c_rest_mutex_t mutex);
+c_rest_error_t c_rest_cond_signal(c_rest_cond_t cond);
+c_rest_error_t c_rest_cond_destroy(c_rest_cond_t cond);
 
 /*
  * Processes
  */
-int c_rest_process_create(c_rest_process_t *out_proc, const char *executable,
-                          char *const argv[]);
-int c_rest_process_wait(c_rest_process_t proc, int *out_exit_code);
+c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
+                                     const char *executable,
+                                     char *const argv[]);
+c_rest_error_t c_rest_process_wait(c_rest_process_t proc, int *out_exit_code);
 
 /*
  * Time & Random
  */
-int c_rest_timer_get_ms(unsigned long *out_ms);
-int c_rest_random_get(void *buffer, size_t size);
+c_rest_error_t c_rest_timer_get_ms(unsigned long *out_ms);
+c_rest_error_t c_rest_random_get(void *buffer, size_t size);
 
 /*
  * Error mapping
  */
-int c_rest_get_last_error(int *out_error);
+c_rest_error_t c_rest_get_last_error(int *out_error);
 
 #ifdef __cplusplus
 }

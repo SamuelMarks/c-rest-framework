@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_platform.h"
 
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -16,36 +17,36 @@
  * Implementation of Windows platform layer.
  */
 
-int c_rest_platform_init(void) {
+c_rest_error_t c_rest_platform_init(void) {
   WSADATA wsaData;
   int res = WSAStartup(MAKEWORD(2, 2), &wsaData);
   if (res != 0) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_platform_cleanup(void) {
+c_rest_error_t c_rest_platform_cleanup(void) {
   WSACleanup();
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_socket_create(c_rest_socket_t *out_sock) {
+c_rest_error_t c_rest_socket_create(c_rest_socket_t *out_sock) {
   SOCKET sock;
   if (!out_sock)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (sock == INVALID_SOCKET) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   *out_sock = (c_rest_socket_t)sock;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_socket_bind(c_rest_socket_t sock, const char *host,
-                       unsigned short port) {
+c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock, const char *host,
+                                  unsigned short port) {
   struct sockaddr_in addr;
   SOCKET s = (SOCKET)sock;
   int res;
@@ -58,57 +59,58 @@ int c_rest_socket_bind(c_rest_socket_t sock, const char *host,
 
   res = bind(s, (struct sockaddr *)&addr, sizeof(addr));
   if (res == SOCKET_ERROR) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_socket_listen(c_rest_socket_t sock, int backlog) {
+c_rest_error_t c_rest_socket_listen(c_rest_socket_t sock, int backlog) {
   SOCKET s = (SOCKET)sock;
   int res = listen(s, backlog);
   if (res == SOCKET_ERROR) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_socket_accept(c_rest_socket_t server_sock,
-                         c_rest_socket_t *out_client_sock) {
+c_rest_error_t c_rest_socket_accept(c_rest_socket_t server_sock,
+                                    c_rest_socket_t *out_client_sock) {
   SOCKET s = (SOCKET)server_sock;
   SOCKET client;
   struct sockaddr_in client_addr;
   int addr_len = sizeof(client_addr);
 
   if (!out_client_sock)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   client = accept(s, (struct sockaddr *)&client_addr, &addr_len);
   if (client == INVALID_SOCKET) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   *out_client_sock = (c_rest_socket_t)client;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_socket_set_nonblocking(c_rest_socket_t sock, int nonblocking) {
+c_rest_error_t c_rest_socket_set_nonblocking(c_rest_socket_t sock,
+                                             int nonblocking) {
   SOCKET s = (SOCKET)sock;
   u_long mode = nonblocking ? 1 : 0;
   int res = ioctlsocket(s, FIONBIO, &mode);
   if (res != NO_ERROR) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_socket_close(c_rest_socket_t sock) {
+c_rest_error_t c_rest_socket_close(c_rest_socket_t sock) {
   SOCKET s = (SOCKET)sock;
   int res = closesocket(s);
   if (res == SOCKET_ERROR) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
-  return 0;
+  return C_REST_OK;
 }
 
 struct thread_wrapper_args {
@@ -120,24 +122,24 @@ static unsigned __stdcall thread_wrapper(void *arg) {
   struct thread_wrapper_args *args = (struct thread_wrapper_args *)arg;
   args->func(args->arg);
   C_REST_FREE((void *)(args));
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_thread_create(c_rest_thread_t *out_thread, c_rest_thread_fn func,
-                         void *arg) {
+c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
+                                    c_rest_thread_fn func, void *arg) {
   HANDLE hThread;
   unsigned threadID;
   struct thread_wrapper_args *args;
 
   if (!out_thread || !func)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   if (C_REST_MALLOC(sizeof(struct thread_wrapper_args), &(args)) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     args = NULL;
   }
   if (!args)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   args->func = func;
   args->arg = arg;
@@ -145,73 +147,73 @@ int c_rest_thread_create(c_rest_thread_t *out_thread, c_rest_thread_fn func,
   hThread = (HANDLE)_beginthreadex(NULL, 0, thread_wrapper, args, 0, &threadID);
   if (!hThread) {
     C_REST_FREE((void *)(args));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   *out_thread = (c_rest_thread_t)hThread;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_thread_join(c_rest_thread_t thread) {
+c_rest_error_t c_rest_thread_join(c_rest_thread_t thread) {
   HANDLE hThread = (HANDLE)thread;
   DWORD res;
 
   if (!hThread)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   res = WaitForSingleObject(hThread, INFINITE);
   if (res != WAIT_OBJECT_0) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   CloseHandle(hThread);
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_mutex_create(c_rest_mutex_t *out_mutex) {
+c_rest_error_t c_rest_mutex_create(c_rest_mutex_t *out_mutex) {
   CRITICAL_SECTION *cs;
 
   if (!out_mutex)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   if (C_REST_MALLOC(sizeof(CRITICAL_SECTION), &cs) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     cs = NULL;
   }
   if (!cs)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   InitializeCriticalSection(cs);
   *out_mutex = (c_rest_mutex_t)cs;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_mutex_lock(c_rest_mutex_t mutex) {
+c_rest_error_t c_rest_mutex_lock(c_rest_mutex_t mutex) {
   CRITICAL_SECTION *cs = (CRITICAL_SECTION *)mutex;
   if (!cs)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   EnterCriticalSection(cs);
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_mutex_unlock(c_rest_mutex_t mutex) {
+c_rest_error_t c_rest_mutex_unlock(c_rest_mutex_t mutex) {
   CRITICAL_SECTION *cs = (CRITICAL_SECTION *)mutex;
   if (!cs)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   LeaveCriticalSection(cs);
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_mutex_destroy(c_rest_mutex_t mutex) {
+c_rest_error_t c_rest_mutex_destroy(c_rest_mutex_t mutex) {
   CRITICAL_SECTION *cs = (CRITICAL_SECTION *)mutex;
   if (!cs)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   DeleteCriticalSection(cs);
   C_REST_FREE((void *)(cs));
-  return 0;
+  return C_REST_OK;
 }
 
 /* Cond vars are not trivial on pre-Vista windows natively.
@@ -223,18 +225,18 @@ struct cond_impl {
   CRITICAL_SECTION waiters_count_lock;
 };
 
-int c_rest_cond_create(c_rest_cond_t *out_cond) {
+c_rest_error_t c_rest_cond_create(c_rest_cond_t *out_cond) {
   struct cond_impl *cond;
 
   if (!out_cond)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   if (C_REST_MALLOC(sizeof(struct cond_impl), &cond) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
     cond = NULL;
   }
   if (!cond)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   cond->waiters_count = 0;
   InitializeCriticalSection(&cond->waiters_count_lock);
@@ -249,20 +251,20 @@ int c_rest_cond_create(c_rest_cond_t *out_cond) {
       CloseHandle(cond->events[1]);
     DeleteCriticalSection(&cond->waiters_count_lock);
     C_REST_FREE((void *)(cond));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   *out_cond = (c_rest_cond_t)cond;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_cond_wait(c_rest_cond_t c, c_rest_mutex_t m) {
+c_rest_error_t c_rest_cond_wait(c_rest_cond_t c, c_rest_mutex_t m) {
   struct cond_impl *cond = (struct cond_impl *)c;
   int wait_res;
   int last_waiter;
 
   if (!cond)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   EnterCriticalSection(&cond->waiters_count_lock);
   cond->waiters_count++;
@@ -283,15 +285,15 @@ int c_rest_cond_wait(c_rest_cond_t c, c_rest_mutex_t m) {
 
   c_rest_mutex_lock(m);
 
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_cond_signal(c_rest_cond_t c) {
+c_rest_error_t c_rest_cond_signal(c_rest_cond_t c) {
   struct cond_impl *cond = (struct cond_impl *)c;
   int have_waiters;
 
   if (!cond)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   EnterCriticalSection(&cond->waiters_count_lock);
   have_waiters = cond->waiters_count > 0;
@@ -301,25 +303,26 @@ int c_rest_cond_signal(c_rest_cond_t c) {
     SetEvent(cond->events[0]);
   }
 
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_cond_destroy(c_rest_cond_t c) {
+c_rest_error_t c_rest_cond_destroy(c_rest_cond_t c) {
   struct cond_impl *cond = (struct cond_impl *)c;
 
   if (!cond)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   CloseHandle(cond->events[0]);
   CloseHandle(cond->events[1]);
   DeleteCriticalSection(&cond->waiters_count_lock);
   C_REST_FREE((void *)(cond));
 
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_process_create(c_rest_process_t *out_proc, const char *executable,
-                          char *const argv[]) {
+c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
+                                     const char *executable,
+                                     char *const argv[]) {
   STARTUPINFOA si;
   PROCESS_INFORMATION pi;
   char cmdline[1024];
@@ -327,7 +330,7 @@ int c_rest_process_create(c_rest_process_t *out_proc, const char *executable,
   size_t len = 0;
 
   if (!out_proc || !executable)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   memset(&si, 0, sizeof(si));
   si.cb = sizeof(si);
@@ -355,25 +358,25 @@ int c_rest_process_create(c_rest_process_t *out_proc, const char *executable,
 
   if (!CreateProcessA(executable, cmdline[0] ? cmdline : NULL, NULL, NULL,
                       FALSE, 0, NULL, NULL, &si, &pi)) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   CloseHandle(pi.hThread);
   *out_proc = (c_rest_process_t)pi.hProcess;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_process_wait(c_rest_process_t proc, int *out_exit_code) {
+c_rest_error_t c_rest_process_wait(c_rest_process_t proc, int *out_exit_code) {
   HANDLE hProc = (HANDLE)proc;
   DWORD res;
   DWORD exit_code = 0;
 
   if (!hProc)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   res = WaitForSingleObject(hProc, INFINITE);
   if (res != WAIT_OBJECT_0) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   if (out_exit_code) {
@@ -385,12 +388,12 @@ int c_rest_process_wait(c_rest_process_t proc, int *out_exit_code) {
   }
 
   CloseHandle(hProc);
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_timer_get_ms(unsigned long *out_ms) {
+c_rest_error_t c_rest_timer_get_ms(unsigned long *out_ms) {
   if (!out_ms)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 28159)
@@ -399,12 +402,12 @@ int c_rest_timer_get_ms(unsigned long *out_ms) {
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_random_get(void *buffer, size_t size) {
+c_rest_error_t c_rest_random_get(void *buffer, size_t size) {
   if (!buffer || size == 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   /* Basic placeholder for RNG - we can use rand for now or proper
    * CryptGenRandom */
   /* Strict C89 fallback: */
@@ -415,40 +418,40 @@ int c_rest_random_get(void *buffer, size_t size) {
       buf[i] = (char)(rand() % 256);
     }
   }
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_get_last_error(int *out_error) {
+c_rest_error_t c_rest_get_last_error(int *out_error) {
   if (!out_error)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   *out_error = (int)GetLastError();
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_socket_recv(c_rest_socket_t sock, void *buf, size_t len,
-                       size_t *out_read) {
+c_rest_error_t c_rest_socket_recv(c_rest_socket_t sock, void *buf, size_t len,
+                                  size_t *out_read) {
   int ret;
   if (!buf || !out_read)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   *out_read = 0;
   ret = recv((SOCKET)sock, (char *)buf, (int)len, 0);
   if (ret > 0) {
     *out_read = (size_t)ret;
-    return 0;
+    return C_REST_OK;
   }
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }
 
-int c_rest_socket_send(c_rest_socket_t sock, const void *buf, size_t len,
-                       size_t *out_written) {
+c_rest_error_t c_rest_socket_send(c_rest_socket_t sock, const void *buf,
+                                  size_t len, size_t *out_written) {
   int ret;
   if (!buf || !out_written)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   *out_written = 0;
   ret = send((SOCKET)sock, (const char *)buf, (int)len, 0);
   if (ret > 0) {
     *out_written = (size_t)ret;
-    return 0;
+    return C_REST_OK;
   }
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }

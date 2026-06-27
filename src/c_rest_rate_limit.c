@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_rate_limit.h"
 #include "c_rest_mem.h"
 #include <time.h>
@@ -10,11 +11,12 @@ static void c_rest_rate_limiter_free_bucket(void *bucket_ptr) {
   }
 }
 
-int c_rest_rate_limiter_init(c_rest_rate_limiter *limiter, size_t capacity,
-                             size_t fill_rate, size_t max_entities) {
+c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
+                                        size_t capacity, size_t fill_rate,
+                                        size_t max_entities) {
   int ret;
   if (!limiter) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   limiter->config.capacity = capacity;
@@ -35,12 +37,13 @@ int c_rest_rate_limiter_init(c_rest_rate_limiter *limiter, size_t capacity,
   }
 
   limiter->initialized = 1;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
-                              const char *identifier, size_t tokens_needed,
-                              size_t *out_remaining) {
+c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
+                                         const char *identifier,
+                                         size_t tokens_needed,
+                                         size_t *out_remaining) {
   int ret;
   c_rest_rate_limit_bucket *bucket;
   void *val = NULL;
@@ -50,7 +53,7 @@ int c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
 
   if (!limiter || !limiter->initialized || !identifier ||
       !out_remaining) { /* GCOVR_EXCL_LINE */
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   now = time(NULL);
@@ -106,10 +109,10 @@ int c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
   return ret;
 }
 
-int c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter) {
+c_rest_error_t c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter) {
   int ret;
   if (!limiter || !limiter->initialized) { /* GCOVR_EXCL_LINE */
-    return 1;                              /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;           /* GCOVR_EXCL_LINE */
   }
 
   ret = c_rest_mutex_lock(limiter->mutex);
@@ -130,5 +133,5 @@ int c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter) {
   }
 
   limiter->initialized = 0;
-  return 0;
+  return C_REST_OK;
 }

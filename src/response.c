@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_request.h" /* For struct c_rest_header */
 #include "c_rest_response.h"
 #include "c_rest_mem.h"
@@ -19,22 +20,22 @@
 #define SAFE_STRCPY(dest, size, src) strcpy(dest, src)
 #endif
 
-static int c_rest_stricmp(const char *s1, const char *s2, int *out_cmp) {
+static c_rest_error_t c_rest_stricmp(const char *s1, const char *s2, int *out_cmp) {
   while (*s1 && *s2) { /* GCOVR_EXCL_LINE */
     int c1 = tolower((unsigned char)*s1);
     int c2 = tolower((unsigned char)*s2);
     if (c1 != c2) {
       *out_cmp = c1 - c2;
-      return 0;
+      return C_REST_OK;
     }
     s1++;
     s2++;
   }
   *out_cmp = tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_response_set_header(struct c_rest_response *res, const char *key,
+c_rest_error_t c_rest_response_set_header(struct c_rest_response *res, const char *key,
                                const char *value) {
   struct c_rest_header *h;
   struct c_rest_header *new_h;
@@ -42,7 +43,7 @@ int c_rest_response_set_header(struct c_rest_response *res, const char *key,
   int cmp;
 
   if (!res || !key || !value) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   /* Check if it already exists, replace value if it does */
@@ -51,15 +52,21 @@ int c_rest_response_set_header(struct c_rest_response *res, const char *key,
       int hcmp;
       if (c_rest_stricmp(h->key, key, &hcmp) == 0 && hcmp == 0) { /* GCOVR_EXCL_LINE */
         char *new_val;
-        val_len = strlen(value) + 1;
+
+#ifdef _MSC_VER
+/* CDD_SAFE_CRT */ val_len = strnlen_s(value, sizeof(value)) + 1;
+#else
+/* CDD_SAFE_CRT */ val_len = strlen(value) + 1;
+#endif
+
         if (C_REST_MALLOC(val_len, &new_val) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_val = NULL; } /* GCOVR_EXCL_LINE */
         if (!new_val) { /* GCOVR_EXCL_LINE */
-          return 1; /* GCOVR_EXCL_LINE */
+          return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
         }
         SAFE_STRCPY(new_val, val_len, value);
         C_REST_FREE((void *)(h->value));
         h->value = new_val;
-        return 0;
+        return C_REST_OK;
       }
     }
   }
@@ -67,7 +74,7 @@ int c_rest_response_set_header(struct c_rest_response *res, const char *key,
   /* Add new header */
   if (C_REST_MALLOC(sizeof(struct c_rest_header), &new_h) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h = NULL; } /* GCOVR_EXCL_LINE */
   if (!new_h) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   if (C_REST_MALLOC(strlen(key) + 1, &new_h->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->key = NULL; } /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(strlen(value) + 1, &new_h->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->value = NULL; } /* GCOVR_EXCL_LINE */
@@ -75,30 +82,42 @@ int c_rest_response_set_header(struct c_rest_response *res, const char *key,
     C_REST_FREE((void *)(new_h->key)); /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(new_h->value)); /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(new_h)); /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
-  SAFE_STRCPY(new_h->key, strlen(key) + 1, key);
-  SAFE_STRCPY(new_h->value, strlen(value) + 1, value);
+
+#ifdef _MSC_VER
+/* CDD_SAFE_CRT */ SAFE_STRCPY(new_h->key, strnlen_s(key, sizeof(key)) + 1, key);
+#else
+/* CDD_SAFE_CRT */ SAFE_STRCPY(new_h->key, strlen(key) + 1, key);
+#endif
+
+
+#ifdef _MSC_VER
+/* CDD_SAFE_CRT */ SAFE_STRCPY(new_h->value, strnlen_s(value, sizeof(value)) + 1, value);
+#else
+/* CDD_SAFE_CRT */ SAFE_STRCPY(new_h->value, strlen(value) + 1, value);
+#endif
+
 
   new_h->next = res->headers;
   res->headers = new_h;
 
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_response_set_status(struct c_rest_response *res, int status_code) {
+c_rest_error_t c_rest_response_set_status(struct c_rest_response *res, int status_code) {
   if (!res) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   res->status_code = status_code;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_response_check_etag(struct c_rest_request *req,
+c_rest_error_t c_rest_response_check_etag(struct c_rest_request *req,
                                struct c_rest_response *res, const char *etag) {
   const char *if_none_match;
   if (!req || !res || !etag) { /* GCOVR_EXCL_LINE */
-    return 0; /* GCOVR_EXCL_LINE */
+    return C_REST_OK; /* GCOVR_EXCL_LINE */
   }
 
   c_rest_response_set_header(res, "ETag", etag);
@@ -106,22 +125,22 @@ int c_rest_response_check_etag(struct c_rest_request *req,
   if (c_rest_request_get_header(req, "If-None-Match", &if_none_match) == 0) { /* GCOVR_EXCL_LINE */
     if (if_none_match && strcmp(if_none_match, etag) == 0) { /* GCOVR_EXCL_LINE */
       c_rest_response_set_status(res, 304); /* Not Modified */
-      return 1;                             /* Match found */
+      return C_REST_ERROR_GENERIC;                             /* Match found */
     }
   }
 
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_response_set_cache_control(struct c_rest_response *res,
+c_rest_error_t c_rest_response_set_cache_control(struct c_rest_response *res,
                                       const char *policy) {
   if (!res || !policy) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   return c_rest_response_set_header(res, "Cache-Control", policy);
 }
 
-int c_rest_response_send(struct c_rest_response *res) {
+c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
   struct c_rest_connection_context *ctx;
   char header_buf[4096];
   size_t offset = 0;
@@ -130,10 +149,10 @@ int c_rest_response_send(struct c_rest_response *res) {
   const char *status_text = "OK";
 
   if (!res) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   if (res->headers_sent) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (res->status_code == 400)
@@ -168,7 +187,13 @@ int c_rest_response_send(struct c_rest_response *res) {
     offset += sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
                         "%s: %s\r\n", h->key, h->value);
 #else
-    offset += sprintf(header_buf + offset, "%s: %s\r\n", h->key, h->value);
+
+#ifdef _MSC_VER
+/* CDD_SAFE_CRT */ offset += sprintf_s(header_buf + offset, sizeof(header_buf + offset), "%s: %s\r\n", h->key, h->value);
+#else
+/* CDD_SAFE_CRT */ offset += sprintf(header_buf + offset, "%s: %s\r\n", h->key, h->value);
+#endif
+
 #endif
   }
 
@@ -209,15 +234,21 @@ int c_rest_response_send(struct c_rest_response *res) {
   }
 
   res->headers_sent = 1;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_response_json(struct c_rest_response *res, const char *json_str) {
+c_rest_error_t c_rest_response_json(struct c_rest_response *res, const char *json_str) {
   size_t len;
   if (!res || !json_str) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
-  len = strlen(json_str);
+
+#ifdef _MSC_VER
+/* CDD_SAFE_CRT */ len = strnlen_s(json_str, sizeof(json_str));
+#else
+/* CDD_SAFE_CRT */ len = strlen(json_str);
+#endif
+
   c_rest_response_set_header(res, "Content-Type", "application/json");
 
   if (res->body) {
@@ -225,7 +256,7 @@ int c_rest_response_json(struct c_rest_response *res, const char *json_str) {
   }
   if (C_REST_MALLOC(len + 1, &res->body) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); res->body = NULL; } /* GCOVR_EXCL_LINE */
   if (!res->body) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   SAFE_STRCPY(res->body, len + 1, json_str);
   res->body_len = len;
@@ -233,17 +264,17 @@ int c_rest_response_json(struct c_rest_response *res, const char *json_str) {
   return c_rest_response_send(res);
 }
 
-int c_rest_response_json_obj(struct c_rest_response *res, void *json_obj) {
+c_rest_error_t c_rest_response_json_obj(struct c_rest_response *res, void *json_obj) {
   char *json_str;
   int ret;
 
   if (!res || !json_obj) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   json_str = json_serialize_to_string((JSON_Value *)json_obj);
   if (!json_str) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   ret = c_rest_response_json(res, json_str);
@@ -252,7 +283,7 @@ int c_rest_response_json_obj(struct c_rest_response *res, void *json_obj) {
   return ret;
 }
 
-int c_rest_response_json_dict(struct c_rest_response *res,
+c_rest_error_t c_rest_response_json_dict(struct c_rest_response *res,
                               const struct c_rest_json_pair *pairs,
                               size_t count) {
   JSON_Value *root_val;
@@ -261,12 +292,12 @@ int c_rest_response_json_dict(struct c_rest_response *res,
   int ret;
 
   if (!res) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   root_val = json_value_init_object();
   if (!root_val) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   root_obj = json_value_get_object(root_val);
 
@@ -296,18 +327,18 @@ int c_rest_response_json_dict(struct c_rest_response *res,
 #include "c_rest_template.h"
 /* clang-format on */
 
-int c_rest_response_template(struct c_rest_response *res,
-                             const struct c_rest_template_context *ctx,
-                             const char **keys, const char **values,
-                             size_t count) {
+c_rest_error_t
+c_rest_response_template(struct c_rest_response *res,
+                         const struct c_rest_template_context *ctx,
+                         const char **keys, const char **values, size_t count) {
   char *rendered = NULL;
   int ret;
-  if (!res || !ctx) { /* GCOVR_EXCL_LINE */
-    return 1;         /* GCOVR_EXCL_LINE */
+  if (!res || !ctx) {            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   if (c_rest_template_render(ctx, keys, values, count, &rendered) !=
-      0) {    /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+      0) {                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   ret = c_rest_response_html(res, rendered);
   if (rendered) { /* GCOVR_EXCL_LINE */
@@ -317,12 +348,19 @@ int c_rest_response_template(struct c_rest_response *res,
 }
 #endif /* C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING */
 
-int c_rest_response_html(struct c_rest_response *res, const char *html_str) {
+c_rest_error_t c_rest_response_html(struct c_rest_response *res,
+                                    const char *html_str) {
   size_t len;
-  if (!res || !html_str) { /* GCOVR_EXCL_LINE */
-    return 1;              /* GCOVR_EXCL_LINE */
+  if (!res || !html_str) {       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
-  len = strlen(html_str);
+
+#ifdef _MSC_VER
+  /* CDD_SAFE_CRT */ len = strnlen_s(html_str, sizeof(html_str));
+#else
+  /* CDD_SAFE_CRT */ len = strlen(html_str);
+#endif
+
   c_rest_response_set_header(res, "Content-Type", "text/html");
 
   if (res->body) {                    /* GCOVR_EXCL_LINE */
@@ -332,8 +370,8 @@ int c_rest_response_html(struct c_rest_response *res, const char *html_str) {
     LOG_DEBUG("C_REST_MALLOC failed");
     res->body = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!res->body) { /* GCOVR_EXCL_LINE */
-    return 1;       /* GCOVR_EXCL_LINE */
+  if (!res->body) {              /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   SAFE_STRCPY(res->body, len + 1, html_str);
   res->body_len = len;
@@ -341,15 +379,16 @@ int c_rest_response_html(struct c_rest_response *res, const char *html_str) {
   return c_rest_response_send(res);
 }
 
-int c_rest_response_write_chunk(struct c_rest_response *res, const char *chunk,
-                                size_t chunk_len) {
+c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
+                                           const char *chunk,
+                                           size_t chunk_len) {
   struct c_rest_connection_context *ctx;
   size_t written = 0;
   char hex_buf[32];
   size_t hex_len;
 
   if (!res || (!chunk && chunk_len > 0)) { /* GCOVR_EXCL_LINE */
-    return 1;                              /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;           /* GCOVR_EXCL_LINE */
   }
 
   if (!res->headers_sent) { /* GCOVR_EXCL_LINE */
@@ -357,13 +396,13 @@ int c_rest_response_write_chunk(struct c_rest_response *res, const char *chunk,
                                "chunked"); /* GCOVR_EXCL_LINE */
     res->is_chunked = 1;                   /* GCOVR_EXCL_LINE */
     if (c_rest_response_send(res) != 0) {  /* GCOVR_EXCL_LINE */
-      return 1;                            /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC;         /* GCOVR_EXCL_LINE */
     }
   }
 
   ctx = (struct c_rest_connection_context *)res->context;
   if (!ctx) { /* GCOVR_EXCL_LINE */
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   if (res->is_chunked) { /* GCOVR_EXCL_LINE */
@@ -430,14 +469,14 @@ int c_rest_response_write_chunk(struct c_rest_response *res, const char *chunk,
     }
   }
 
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_response_redirect(struct c_rest_response *res,
-                             const char *url, /* GCOVR_EXCL_LINE */
-                             int status_code) {
-  if (!res || !url) { /* GCOVR_EXCL_LINE */
-    return 1;         /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_response_redirect(struct c_rest_response *res,
+                                        const char *url, /* GCOVR_EXCL_LINE */
+                                        int status_code) {
+  if (!res || !url) {            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   if (status_code < 300 || status_code > 399) {            /* GCOVR_EXCL_LINE */
     status_code = 302; /* Default to temporary redirect */ /* GCOVR_EXCL_LINE */
@@ -447,27 +486,40 @@ int c_rest_response_redirect(struct c_rest_response *res,
   return c_rest_response_send(res);                 /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
-                               const char *value, const char *attributes) {
+c_rest_error_t c_rest_response_set_cookie(struct c_rest_response *res,
+                                          const char *key, const char *value,
+                                          const char *attributes) {
   char *cookie_str;
   size_t len;
   int ret;
 
-  if (!res || !key || !value) { /* GCOVR_EXCL_LINE */
-    return 1;                   /* GCOVR_EXCL_LINE */
+  if (!res || !key || !value) {  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
-  len = strlen(key) + strlen(value) + 2; /* key=value */
+#ifdef _MSC_VER
+  /* CDD_SAFE_CRT */ len =
+      strnlen_s(key, sizeof(key)) + strnlen_s(value, sizeof(value)) + 2;
+#else
+  /* CDD_SAFE_CRT */ len = strlen(key) + strlen(value) + 2;
+#endif
+  /* key=value */
   if (attributes) {
-    len += strlen(attributes) + 2; /* ; attributes */
+
+#ifdef _MSC_VER
+    /* CDD_SAFE_CRT */ len += strnlen_s(attributes, sizeof(attributes)) + 2;
+#else
+    /* CDD_SAFE_CRT */ len += strlen(attributes) + 2;
+#endif
+    /* ; attributes */
   }
 
   if (C_REST_MALLOC(len, &cookie_str) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
     cookie_str = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!cookie_str) { /* GCOVR_EXCL_LINE */
-    return 1;        /* GCOVR_EXCL_LINE */
+  if (!cookie_str) {             /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
 #if defined(_MSC_VER)
@@ -478,9 +530,22 @@ int c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
   }
 #else
   if (attributes) {
-    sprintf(cookie_str, "%s=%s; %s", key, value, attributes);
+
+#ifdef _MSC_VER
+    /* CDD_SAFE_CRT */ sprintf_s(cookie_str, sizeof(cookie_str), "%s=%s; %s",
+                                 key, value, attributes);
+#else
+    /* CDD_SAFE_CRT */ sprintf(cookie_str, "%s=%s; %s", key, value, attributes);
+#endif
+
   } else {
-    sprintf(cookie_str, "%s=%s", key, value);
+
+#ifdef _MSC_VER
+    /* CDD_SAFE_CRT */ sprintf_s(cookie_str, sizeof(cookie_str), "%s=%s", key,
+                                 value);
+#else
+    /* CDD_SAFE_CRT */ sprintf(cookie_str, "%s=%s", key, value);
+#endif
   }
 #endif
 
@@ -490,21 +555,22 @@ int c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
   return ret;
 }
 
-int c_rest_response_send_file(struct c_rest_response *res, /* GCOVR_EXCL_LINE */
-                              const char *filepath) {
-  if (!res || !filepath) { /* GCOVR_EXCL_LINE */
-    return 1;              /* GCOVR_EXCL_LINE */
+c_rest_error_t
+c_rest_response_send_file(struct c_rest_response *res, /* GCOVR_EXCL_LINE */
+                          const char *filepath) {
+  if (!res || !filepath) {       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   /* Stub: read file and put into response or stream it. */
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_response_cleanup(struct c_rest_response *res) {
+c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res) {
   struct c_rest_header *h;
   struct c_rest_header *next_h;
 
-  if (!res) { /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!res) {                    /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   h = res->headers;
@@ -521,7 +587,7 @@ int c_rest_response_cleanup(struct c_rest_response *res) {
     C_REST_FREE((void *)(res->body));
     res->body = NULL;
   }
-  return 0;
+  return C_REST_OK;
 }
 
 static int get_status_text(int status_code, const char **out_text) {
@@ -572,11 +638,11 @@ static int get_status_text(int status_code, const char **out_text) {
     *out_text = "Unknown";               /* GCOVR_EXCL_LINE */
     break;                               /* GCOVR_EXCL_LINE */
   }
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
-                              size_t *out_len) {
+c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
+                                         char **out_buf, size_t *out_len) {
   size_t est_len = 128; /* initial estimate */
   char *buf;
   struct c_rest_header *h;
@@ -585,7 +651,7 @@ int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
   const char *status_text;
 
   if (!res || !out_buf || !out_len) /* GCOVR_EXCL_LINE */
-    return 1;                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
 
   if (!res->is_chunked) { /* GCOVR_EXCL_LINE */
     int found_cl = 0;
@@ -618,8 +684,8 @@ int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
     buf = NULL; /* GCOVR_EXCL_LINE */
   }
 
-  if (!buf)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!buf)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   get_status_text(res->status_code ? res->status_code : 200,
                   &status_text); /* GCOVR_EXCL_LINE */
@@ -638,7 +704,15 @@ int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
     offset += sprintf_s(buf + offset, est_len - offset, "%s: %s\r\n", h->key,
                         h->value);
 #else
-    offset += sprintf(buf + offset, "%s: %s\r\n", h->key, h->value);
+
+#ifdef _MSC_VER
+    /* CDD_SAFE_CRT */ offset += sprintf_s(buf + offset, sizeof(buf + offset),
+                                           "%s: %s\r\n", h->key, h->value);
+#else
+    /* CDD_SAFE_CRT */ offset +=
+        sprintf(buf + offset, "%s: %s\r\n", h->key, h->value);
+#endif
+
 #endif
   }
 
@@ -649,20 +723,28 @@ int c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
 #endif
 
   if (res->body && res->body_len > 0) { /* GCOVR_EXCL_LINE */
-    memcpy(buf + offset, res->body, res->body_len);
+
+#ifdef _MSC_VER
+    /* CDD_SAFE_CRT */ memcpy_s(buf + offset, sizeof(buf + offset), res->body,
+                                res->body_len);
+#else
+    /* CDD_SAFE_CRT */ memcpy(buf + offset, res->body, res->body_len);
+#endif
+
     offset += res->body_len;
   }
 
   *out_buf = buf;
   *out_len = offset;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_response_oauth2_error(struct c_rest_response *res, const char *error,
-                                 const char *error_description) {
+c_rest_error_t c_rest_response_oauth2_error(struct c_rest_response *res,
+                                            const char *error,
+                                            const char *error_description) {
   struct c_rest_json_pair pairs[2];
-  if (!res || !error) /* GCOVR_EXCL_LINE */
-    return 1;         /* GCOVR_EXCL_LINE */
+  if (!res || !error)            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   pairs[0].key = "error";
   pairs[0].type = C_REST_JSON_TYPE_STRING;

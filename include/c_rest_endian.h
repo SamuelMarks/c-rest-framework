@@ -1,8 +1,10 @@
 #ifndef C_REST_ENDIAN_H
 #define C_REST_ENDIAN_H
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include <stddef.h>
+#include "c_rest_error.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -18,7 +20,8 @@ extern "C" {
  * byte order.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_htons(unsigned short hostshort, unsigned short *out_netshort);
+c_rest_error_t c_rest_htons(unsigned short hostshort,
+                            unsigned short *out_netshort);
 
 /**
  * @brief Converts a 32-bit unsigned integer from host byte order to network
@@ -29,7 +32,7 @@ int c_rest_htons(unsigned short hostshort, unsigned short *out_netshort);
  * byte order.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_htonl(unsigned long hostlong, unsigned long *out_netlong);
+c_rest_error_t c_rest_htonl(unsigned long hostlong, unsigned long *out_netlong);
 
 /**
  * @brief Converts a 16-bit unsigned integer from network byte order to host
@@ -40,7 +43,8 @@ int c_rest_htonl(unsigned long hostlong, unsigned long *out_netlong);
  * byte order.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_ntohs(unsigned short netshort, unsigned short *out_hostshort);
+c_rest_error_t c_rest_ntohs(unsigned short netshort,
+                            unsigned short *out_hostshort);
 
 /**
  * @brief Converts a 32-bit unsigned integer from network byte order to host
@@ -51,7 +55,7 @@ int c_rest_ntohs(unsigned short netshort, unsigned short *out_hostshort);
  * order.
  * @return 0 on success, non-zero on error.
  */
-int c_rest_ntohl(unsigned long netlong, unsigned long *out_hostlong);
+c_rest_error_t c_rest_ntohl(unsigned long netlong, unsigned long *out_hostlong);
 
 #ifdef __cplusplus
 }

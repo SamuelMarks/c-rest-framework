@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_mem.h"
 #include "c_rest_platform.h"
 
@@ -21,28 +22,28 @@ static c_rest_mem_node *mem_list = NULL;
 static c_rest_mutex_t mem_mutex = (c_rest_mutex_t)-1;
 static int mem_initialized = 0;
 
-int c_rest_mem_tracker_init(void) {         /* GCOVR_EXCL_LINE */
-  if (mem_initialized)                      /* GCOVR_EXCL_LINE */
-    return 0;                               /* GCOVR_EXCL_LINE */
-  if (c_rest_mutex_create(&mem_mutex) != 0) /* GCOVR_EXCL_LINE */
-    return 1;                               /* GCOVR_EXCL_LINE */
-  mem_initialized = 1;                      /* GCOVR_EXCL_LINE */
-  return 0;                                 /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_mem_tracker_init(void) { /* GCOVR_EXCL_LINE */
+  if (mem_initialized)                         /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                          /* GCOVR_EXCL_LINE */
+  if (c_rest_mutex_create(&mem_mutex) != 0)    /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;               /* GCOVR_EXCL_LINE */
+  mem_initialized = 1;                         /* GCOVR_EXCL_LINE */
+  return C_REST_OK;                            /* GCOVR_EXCL_LINE */
 }
 
 static int add_node(void *ptr, size_t size, const char *file,
                     int line) { /* GCOVR_EXCL_LINE */
   c_rest_mem_node *node;
-  if (!mem_initialized || !ptr) /* GCOVR_EXCL_LINE */
-    return 1;                   /* GCOVR_EXCL_LINE */
+  if (!mem_initialized || !ptr)  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (C_REST_MALLOC(sizeof(c_rest_mem_node), &node) !=
       0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
     node = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!node)  /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!node)                     /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   node->ptr = ptr;   /* GCOVR_EXCL_LINE */
   node->size = size; /* GCOVR_EXCL_LINE */
@@ -53,15 +54,15 @@ static int add_node(void *ptr, size_t size, const char *file,
   node->next = mem_list;          /* GCOVR_EXCL_LINE */
   mem_list = node;                /* GCOVR_EXCL_LINE */
   c_rest_mutex_unlock(mem_mutex); /* GCOVR_EXCL_LINE */
-  return 0;                       /* GCOVR_EXCL_LINE */
+  return C_REST_OK;               /* GCOVR_EXCL_LINE */
 }
 
 static int remove_node(void *ptr) { /* GCOVR_EXCL_LINE */
   c_rest_mem_node *curr;
   c_rest_mem_node *prev = NULL; /* GCOVR_EXCL_LINE */
 
-  if (!mem_initialized || !ptr) /* GCOVR_EXCL_LINE */
-    return 1;                   /* GCOVR_EXCL_LINE */
+  if (!mem_initialized || !ptr)  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   c_rest_mutex_lock(mem_mutex);  /* GCOVR_EXCL_LINE */
   curr = mem_list;               /* GCOVR_EXCL_LINE */
@@ -79,15 +80,15 @@ static int remove_node(void *ptr) { /* GCOVR_EXCL_LINE */
     curr = curr->next; /* GCOVR_EXCL_LINE */
   }
   c_rest_mutex_unlock(mem_mutex); /* GCOVR_EXCL_LINE */
-  return 0;                       /* GCOVR_EXCL_LINE */
+  return C_REST_OK;               /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_mem_malloc(size_t size, const char *file, int line,
-                      void *out_ptr) { /* GCOVR_EXCL_LINE */
-  void **real_out = (void **)out_ptr;  /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_mem_malloc(size_t size, const char *file, int line,
+                                 void *out_ptr) { /* GCOVR_EXCL_LINE */
+  void **real_out = (void **)out_ptr;             /* GCOVR_EXCL_LINE */
   void *ptr;
   if (!real_out)                        /* GCOVR_EXCL_LINE */
-    return 1;                           /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;        /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(size, &ptr) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
     ptr = NULL; /* GCOVR_EXCL_LINE */
@@ -97,13 +98,13 @@ int c_rest_mem_malloc(size_t size, const char *file, int line,
   return ptr ? 0 : 1;              /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_mem_calloc(size_t count, size_t size, const char *file,
-                      int line, /* GCOVR_EXCL_LINE */
-                      void *out_ptr) {
+c_rest_error_t c_rest_mem_calloc(size_t count, size_t size, const char *file,
+                                 int line, /* GCOVR_EXCL_LINE */
+                                 void *out_ptr) {
   void **real_out = (void **)out_ptr; /* GCOVR_EXCL_LINE */
   void *ptr;
   if (!real_out)                               /* GCOVR_EXCL_LINE */
-    return 1;                                  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;               /* GCOVR_EXCL_LINE */
   if (C_REST_CALLOC(count, size, &ptr) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_CALLOC failed");
     ptr = NULL; /* GCOVR_EXCL_LINE */
@@ -113,15 +114,15 @@ int c_rest_mem_calloc(size_t count, size_t size, const char *file,
   return ptr ? 0 : 1;                      /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_mem_realloc(void *ptr, size_t size, const char *file,
-                       int line, /* GCOVR_EXCL_LINE */
-                       void *out_ptr) {
+c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size, const char *file,
+                                  int line, /* GCOVR_EXCL_LINE */
+                                  void *out_ptr) {
   void **real_out = (void **)out_ptr; /* GCOVR_EXCL_LINE */
   c_rest_mem_node *curr;
   void *new_ptr;
 
-  if (!real_out) /* GCOVR_EXCL_LINE */
-    return 1;    /* GCOVR_EXCL_LINE */
+  if (!real_out)                 /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (!mem_initialized) {                           /* GCOVR_EXCL_LINE */
     if (C_REST_REALLOC(ptr, size, &new_ptr) != 0) { /* GCOVR_EXCL_LINE */
@@ -138,7 +139,7 @@ int c_rest_mem_realloc(void *ptr, size_t size, const char *file,
   if (size == 0) {        /* GCOVR_EXCL_LINE */
     c_rest_mem_free(ptr); /* GCOVR_EXCL_LINE */
     *real_out = NULL;     /* GCOVR_EXCL_LINE */
-    return 0;             /* GCOVR_EXCL_LINE */
+    return C_REST_OK;     /* GCOVR_EXCL_LINE */
   }
 
   c_rest_mutex_lock(mem_mutex); /* GCOVR_EXCL_LINE */
@@ -166,21 +167,21 @@ int c_rest_mem_realloc(void *ptr, size_t size, const char *file,
   *real_out = new_ptr;    /* GCOVR_EXCL_LINE */
   return new_ptr ? 0 : 1; /* GCOVR_EXCL_LINE */
 }
-int c_rest_mem_free(void *ptr) { /* GCOVR_EXCL_LINE */
-  if (ptr) {                     /* GCOVR_EXCL_LINE */
-    remove_node(ptr);            /* GCOVR_EXCL_LINE */
-    free(ptr);                   /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_mem_free(void *ptr) { /* GCOVR_EXCL_LINE */
+  if (ptr) {                                /* GCOVR_EXCL_LINE */
+    remove_node(ptr);                       /* GCOVR_EXCL_LINE */
+    free(ptr);                              /* GCOVR_EXCL_LINE */
   }
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_mem_tracker_print_leaks(void) { /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_mem_tracker_print_leaks(void) { /* GCOVR_EXCL_LINE */
   c_rest_mem_node *curr;
   int count = 0;           /* GCOVR_EXCL_LINE */
   size_t total_leaked = 0; /* GCOVR_EXCL_LINE */
 
   if (!mem_initialized) /* GCOVR_EXCL_LINE */
-    return 0;           /* GCOVR_EXCL_LINE */
+    return C_REST_OK;   /* GCOVR_EXCL_LINE */
 
   c_rest_mutex_lock(mem_mutex); /* GCOVR_EXCL_LINE */
   curr = mem_list;              /* GCOVR_EXCL_LINE */
@@ -206,12 +207,12 @@ int c_rest_mem_tracker_print_leaks(void) { /* GCOVR_EXCL_LINE */
   return count; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_mem_tracker_cleanup(void) { /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_mem_tracker_cleanup(void) { /* GCOVR_EXCL_LINE */
   c_rest_mem_node *curr;
   c_rest_mem_node *next;
 
   if (!mem_initialized) /* GCOVR_EXCL_LINE */
-    return 0;           /* GCOVR_EXCL_LINE */
+    return C_REST_OK;   /* GCOVR_EXCL_LINE */
 
   c_rest_mutex_lock(mem_mutex); /* GCOVR_EXCL_LINE */
   curr = mem_list;              /* GCOVR_EXCL_LINE */
@@ -225,5 +226,5 @@ int c_rest_mem_tracker_cleanup(void) { /* GCOVR_EXCL_LINE */
 
   c_rest_mutex_destroy(mem_mutex); /* GCOVR_EXCL_LINE */
   mem_initialized = 0;             /* GCOVR_EXCL_LINE */
-  return 0;                        /* GCOVR_EXCL_LINE */
+  return C_REST_OK;                /* GCOVR_EXCL_LINE */
 }

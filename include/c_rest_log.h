@@ -1,7 +1,8 @@
+/* clang-format off */
+#include "c_rest_error.h"
 #ifndef C_REST_LOG_H
 #define C_REST_LOG_H
 
-/* clang-format off */
 #include <stdio.h>
 /* clang-format on */
 

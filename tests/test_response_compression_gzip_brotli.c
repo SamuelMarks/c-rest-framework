@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "test_protos.h"
 #include "../include/c_rest_compression.h"
 #include "../include/c_rest_mem.h"
@@ -10,8 +11,8 @@
 #endif
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI)
 #include <brotli/decode.h>
-/* clang-format on */
 #endif
+/* clang-format on */
 
 #define ASSERT(cond)                                                           \
   do {                                                                         \

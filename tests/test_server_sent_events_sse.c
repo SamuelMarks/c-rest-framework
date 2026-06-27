@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "test_protos.h"
 #include "c_rest_sse.h"
 #include <string.h>
@@ -61,13 +62,13 @@
 
 static int test_sse_event_init_destroy(void) {
   struct c_rest_sse_event ev;
-  ASSERT_EQ(C_REST_SSE_OK, c_rest_sse_event_init(&ev));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_init(&ev));
   ASSERT_NULL(ev.id);
   ASSERT_NULL(ev.event);
   ASSERT_NULL(ev.data);
   ASSERT_EQ(-1, ev.retry);
 
-  ASSERT_EQ(C_REST_SSE_OK, c_rest_sse_event_destroy(&ev));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
   return 0;
 }
 
@@ -95,7 +96,7 @@ static int test_sse_event_clone(void) {
   src.data = test_strdup(data);
   src.retry = 1000;
 
-  ASSERT_EQ(C_REST_SSE_OK, c_rest_sse_event_clone(&src, &dest));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_clone(&src, &dest));
 
   ASSERT_STR_EQ(src.id, dest.id);
   ASSERT_STR_EQ(src.event, dest.event);
@@ -108,7 +109,7 @@ static int test_sse_event_clone(void) {
   free(src.event);
   free(src.data);
 
-  ASSERT_EQ(C_REST_SSE_OK, c_rest_sse_event_destroy(&dest));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&dest));
   return 0;
 }
 
@@ -123,7 +124,7 @@ static int test_sse_serialize(void) {
   ev.data = test_strdup("line1\nline2");
   ev.retry = 3000;
 
-  ASSERT_EQ(C_REST_SSE_OK, c_rest_sse_serialize(&ev, &out, &len));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_serialize(&ev, &out, &len));
   ASSERT(out != NULL);
 
   ASSERT_STR_EQ(
@@ -141,10 +142,10 @@ static int test_sse_parse_complete(void) {
   struct c_rest_sse_event ev;
   const char *payload = "id: 1\nevent: custom\nretry: 500\ndata: test data\n\n";
 
-  ASSERT_EQ(C_REST_SSE_OK, c_rest_sse_context_init(&ctx));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&ctx));
   c_rest_sse_event_init(&ev);
 
-  ASSERT_EQ(C_REST_SSE_OK,
+  ASSERT_EQ(C_REST_OK,
             c_rest_sse_parse(ctx, payload, strlen(payload), &ev));
 
   ASSERT_STR_EQ("1", ev.id);
@@ -161,13 +162,13 @@ static int test_sse_parse_fragmented(void) {
   struct c_rest_sse_context *ctx = NULL;
   struct c_rest_sse_event ev;
 
-  ASSERT_EQ(C_REST_SSE_OK, c_rest_sse_context_init(&ctx));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&ctx));
   c_rest_sse_event_init(&ev);
 
-  ASSERT_EQ(1, c_rest_sse_parse(ctx, "id: 2\nev", 8, &ev));
-  ASSERT_EQ(1, c_rest_sse_parse(ctx, "ent: partial\ndat", 16, &ev));
-  ASSERT_EQ(1, c_rest_sse_parse(ctx, "a: hello", 8, &ev));
-  ASSERT_EQ(C_REST_SSE_OK, c_rest_sse_parse(ctx, "\n\n", 2, &ev));
+  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_sse_parse(ctx, "id: 2\nev", 8, &ev));
+  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_sse_parse(ctx, "ent: partial\ndat", 16, &ev));
+  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_sse_parse(ctx, "a: hello", 8, &ev));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_parse(ctx, "\n\n", 2, &ev));
 
   ASSERT_STR_EQ("2", ev.id);
   ASSERT_STR_EQ("partial", ev.event);

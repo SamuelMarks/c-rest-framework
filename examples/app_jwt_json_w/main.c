@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_modality.h"
 #include "c_rest_jwt_middleware.h"
 #include "c_rest_crypto.h"
@@ -21,9 +22,9 @@ static int my_verify_payload(const char *payload, void **out_auth_context) {
   return 1;
 }
 
-static int protected_route_handler(struct c_rest_request *req,
-                                   struct c_rest_response *res,
-                                   void *user_data) {
+static c_rest_error_t protected_route_handler(struct c_rest_request *req,
+                                              struct c_rest_response *res,
+                                              void *user_data) {
   (void)user_data;
   if (req->auth_context == (void *)1) {
     c_rest_response_html(res,
@@ -35,9 +36,9 @@ static int protected_route_handler(struct c_rest_request *req,
   return 0;
 }
 
-static int generate_token_handler(struct c_rest_request *req,
-                                  struct c_rest_response *res,
-                                  void *user_data) {
+static c_rest_error_t generate_token_handler(struct c_rest_request *req,
+                                             struct c_rest_response *res,
+                                             void *user_data) {
   const unsigned char *secret = (const unsigned char *)user_data;
   char *token = NULL;
   char response_buf[1024];

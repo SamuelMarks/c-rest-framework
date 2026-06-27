@@ -1,5 +1,6 @@
-#ifdef C_REST_FRAMEWORK_USE_REAL_CAH
 /* clang-format off */
+#include "c_rest_error.h"
+#ifdef C_REST_FRAMEWORK_USE_REAL_CAH
 #include <c_abstract_http/c_abstract_http.h>
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__)
 #if defined(_MSC_VER) && _MSC_VER < 1600
@@ -37,42 +38,42 @@ static int method_from_str(const char *method_str,
                            enum HttpMethod *out_method) {
   if (!method_str) {        /* GCOVR_EXCL_LINE */
     *out_method = HTTP_GET; /* GCOVR_EXCL_LINE */
-    return 0;               /* GCOVR_EXCL_LINE */
+    return C_REST_OK;       /* GCOVR_EXCL_LINE */
   }
   if (strcmp(method_str, "POST") == 0) {
     *out_method = HTTP_POST;
-    return 0;
+    return C_REST_OK;
   }
   if (strcmp(method_str, "PUT") == 0) { /* GCOVR_EXCL_LINE */
     *out_method = HTTP_PUT;             /* GCOVR_EXCL_LINE */
-    return 0;                           /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                   /* GCOVR_EXCL_LINE */
   }
   if (strcmp(method_str, "DELETE") == 0) { /* GCOVR_EXCL_LINE */
     *out_method = HTTP_DELETE;             /* GCOVR_EXCL_LINE */
-    return 0;                              /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                      /* GCOVR_EXCL_LINE */
   }
   if (strcmp(method_str, "PATCH") == 0) { /* GCOVR_EXCL_LINE */
     *out_method = HTTP_PATCH;             /* GCOVR_EXCL_LINE */
-    return 0;                             /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                     /* GCOVR_EXCL_LINE */
   }
   if (strcmp(method_str, "HEAD") == 0) { /* GCOVR_EXCL_LINE */
     *out_method = HTTP_HEAD;             /* GCOVR_EXCL_LINE */
-    return 0;                            /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                    /* GCOVR_EXCL_LINE */
   }
   if (strcmp(method_str, "OPTIONS") == 0) { /* GCOVR_EXCL_LINE */
     *out_method = HTTP_OPTIONS;             /* GCOVR_EXCL_LINE */
-    return 0;                               /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                       /* GCOVR_EXCL_LINE */
   }
   if (strcmp(method_str, "TRACE") == 0) { /* GCOVR_EXCL_LINE */
     *out_method = HTTP_TRACE;             /* GCOVR_EXCL_LINE */
-    return 0;                             /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                     /* GCOVR_EXCL_LINE */
   }
   if (strcmp(method_str, "CONNECT") == 0) { /* GCOVR_EXCL_LINE */
     *out_method = HTTP_CONNECT;             /* GCOVR_EXCL_LINE */
-    return 0;                               /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                       /* GCOVR_EXCL_LINE */
   }
   *out_method = HTTP_GET;
-  return 0;
+  return C_REST_OK;
 }
 
 #ifndef C_REST_FRAMEWORK_USE_REAL_CAH
@@ -82,23 +83,23 @@ static int mock_send(struct HttpTransportContext *ctx,
   (void)req;
   if (res)
     *res = NULL;
-  return 0;
+  return C_REST_OK;
 }
 #endif
 
-int c_rest_client_init(c_rest_client_context **out_client) {
+c_rest_error_t c_rest_client_init(c_rest_client_context **out_client) {
   struct c_rest_client_context *ctx;
-  if (!out_client) /* GCOVR_EXCL_LINE */
-    return 1;      /* GCOVR_EXCL_LINE */
+  if (!out_client)               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   ctx = (struct c_rest_client_context *)malloc(
       sizeof(struct c_rest_client_context));
-  if (!ctx)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!ctx)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (http_client_init(&ctx->client) != 0) { /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(ctx));              /* GCOVR_EXCL_LINE */
-    return 1;                                /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;             /* GCOVR_EXCL_LINE */
   }
 
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
@@ -108,7 +109,7 @@ int c_rest_client_init(c_rest_client_context **out_client) {
           (struct HttpTransportContext **)&ctx->client.transport) != 0) {
     http_client_free(&ctx->client);
     C_REST_FREE((void *)(ctx));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   ctx->client.send = http_wininet_send;
 #else
@@ -116,7 +117,7 @@ int c_rest_client_init(c_rest_client_context **out_client) {
           (struct HttpTransportContext **)&ctx->client.transport) != 0) {
     http_client_free(&ctx->client);
     C_REST_FREE((void *)(ctx));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   ctx->client.send = http_winhttp_send;
 #endif
@@ -125,7 +126,7 @@ int c_rest_client_init(c_rest_client_context **out_client) {
           (struct HttpTransportContext **)&ctx->client.transport) != 0) {
     http_client_free(&ctx->client);
     C_REST_FREE((void *)(ctx));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   ctx->client.send = http_apple_send;
 #else
@@ -135,12 +136,12 @@ int c_rest_client_init(c_rest_client_context **out_client) {
                                  .transport) != 0) {
     http_client_free(&ctx->client); /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(ctx));     /* GCOVR_EXCL_LINE */
-    return 1;                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
   }
   ctx->client.send = http_curl_send;
 #else
   (void)ctx;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 #endif
 #endif
 #else
@@ -149,12 +150,12 @@ int c_rest_client_init(c_rest_client_context **out_client) {
 #endif
 
   *out_client = ctx;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_client_destroy(c_rest_client_context *client) {
-  if (!client) /* GCOVR_EXCL_LINE */
-    return 1;  /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_client_destroy(c_rest_client_context *client) {
+  if (!client)                   /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__)
@@ -174,13 +175,13 @@ int c_rest_client_destroy(c_rest_client_context *client) {
 
   http_client_free(&client->client);
   C_REST_FREE((void *)(client));
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_client_response_free(struct c_rest_client_response *res) {
+c_rest_error_t c_rest_client_response_free(struct c_rest_client_response *res) {
   size_t i;
   if (!res)                                         /* GCOVR_EXCL_LINE */
-    return 1;                                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                    /* GCOVR_EXCL_LINE */
   if (res->headers) {                               /* GCOVR_EXCL_LINE */
     for (i = 0; i < res->headers_count; ++i) {      /* GCOVR_EXCL_LINE */
       C_REST_FREE((void *)(res->headers[i].key));   /* GCOVR_EXCL_LINE */
@@ -192,15 +193,14 @@ int c_rest_client_response_free(struct c_rest_client_response *res) {
     C_REST_FREE((void *)(res->body));
   }
   C_REST_FREE((void *)(res));
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_client_request_sync(c_rest_client_context *client, const char *url,
-                               const char *method,
-                               const struct c_rest_client_header *headers,
-                               size_t headers_count, const void *body,
-                               size_t body_len,
-                               struct c_rest_client_response **out_res) {
+c_rest_error_t c_rest_client_request_sync(
+    c_rest_client_context *client, const char *url, const char *method,
+    const struct c_rest_client_header *headers, size_t headers_count,
+    const void *body, size_t body_len,
+    struct c_rest_client_response **out_res) {
   struct HttpRequest req;
   struct HttpResponse *res = NULL;
   int rc;
@@ -208,15 +208,15 @@ int c_rest_client_request_sync(c_rest_client_context *client, const char *url,
   struct c_rest_client_response *out = NULL;
 
   if (!client || !client->client.transport || !url ||
-      !method) /* GCOVR_EXCL_LINE */
-    return 1;  /* GCOVR_EXCL_LINE */
+      !method)                   /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (http_request_init(&req) != 0) /* GCOVR_EXCL_LINE */
-    return 1;                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
 
   req.url = (char *)url;
   if (method_from_str(method, &req.method) != 0) { /* GCOVR_EXCL_LINE */
-    return 1;                                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                   /* GCOVR_EXCL_LINE */
   }
 
   for (i = 0; i < headers_count; ++i) {
@@ -299,7 +299,7 @@ int c_rest_client_request_sync(c_rest_client_context *client, const char *url,
   return rc;
 }
 
-int c_rest_client_request_async(
+c_rest_error_t c_rest_client_request_async(
     c_rest_client_context *client, const char *url, const char *method,
     const struct c_rest_client_header *headers, size_t headers_count,
     const void *body, size_t body_len,
@@ -308,8 +308,8 @@ int c_rest_client_request_async(
   int res;
   struct c_rest_client_response *out = NULL;
   if (!client || !client->client.transport || !url ||
-      !method) /* GCOVR_EXCL_LINE */
-    return 1;  /* GCOVR_EXCL_LINE */
+      !method)                   /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   res = c_rest_client_request_sync(client, url, method, headers, headers_count,
                                    body, body_len, &out);
@@ -327,21 +327,21 @@ static int hex_digit(int v, char *out_char) {
     *out_char = (char)('0' + v);
   else
     *out_char = (char)('A' + (v - 10));
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_client_url_encode(const char *in_str, char **out_str) {
+c_rest_error_t c_rest_client_url_encode(const char *in_str, char **out_str) {
   size_t len;
   size_t i;
   size_t j = 0;
   char *out;
-  if (!in_str || !out_str) /* GCOVR_EXCL_LINE */
-    return 1;              /* GCOVR_EXCL_LINE */
+  if (!in_str || !out_str)       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   len = strlen(in_str);
   out = (char *)malloc(len * 3 + 1);
-  if (!out)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!out)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   for (i = 0; i < len; ++i) {
     unsigned char c = (unsigned char)in_str[i];
@@ -361,37 +361,37 @@ int c_rest_client_url_encode(const char *in_str, char **out_str) {
   }
   out[j] = '\0';
   *out_str = out;
-  return 0;
+  return C_REST_OK;
 }
 
 static int from_hex(char c, int *out_val) {
   if (c >= '0' && c <= '9') { /* GCOVR_EXCL_LINE */
     *out_val = c - '0';
-    return 0;
+    return C_REST_OK;
   }
   if (c >= 'A' && c <= 'F') { /* GCOVR_EXCL_LINE */
     *out_val = c - 'A' + 10;
-    return 0;
+    return C_REST_OK;
   }
   if (c >= 'a' && c <= 'f') { /* GCOVR_EXCL_LINE */
     *out_val = c - 'a' + 10;  /* GCOVR_EXCL_LINE */
-    return 0;                 /* GCOVR_EXCL_LINE */
+    return C_REST_OK;         /* GCOVR_EXCL_LINE */
   }
-  return 1; /* GCOVR_EXCL_LINE */
+  return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 }
 
-int c_rest_client_url_decode(const char *in_str, char **out_str) {
+c_rest_error_t c_rest_client_url_decode(const char *in_str, char **out_str) {
   size_t len;
   size_t i;
   size_t j = 0;
   char *out;
-  if (!in_str || !out_str) /* GCOVR_EXCL_LINE */
-    return 1;              /* GCOVR_EXCL_LINE */
+  if (!in_str || !out_str)       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   len = strlen(in_str);
   out = (char *)malloc(len + 1);
-  if (!out)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!out)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   for (i = 0; i < len; ++i) {
     if (in_str[i] == '+') {
@@ -411,10 +411,10 @@ int c_rest_client_url_decode(const char *in_str, char **out_str) {
   }
   out[j] = '\0';
   *out_str = out;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_client_build_form_urlencoded(
+c_rest_error_t c_rest_client_build_form_urlencoded(
     const struct c_rest_client_form_field *fields, size_t num_fields,
     char **out_body, size_t *out_len) {
   size_t i;
@@ -422,14 +422,14 @@ int c_rest_client_build_form_urlencoded(
   char *buf = NULL;
   size_t curr_pos = 0;
 
-  if (!out_body || !out_len) /* GCOVR_EXCL_LINE */
-    return 1;                /* GCOVR_EXCL_LINE */
+  if (!out_body || !out_len)     /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   *out_body = NULL;
   *out_len = 0;
 
   if (num_fields == 0 || !fields) /* GCOVR_EXCL_LINE */
-    return 0;                     /* GCOVR_EXCL_LINE */
+    return C_REST_OK;             /* GCOVR_EXCL_LINE */
 
   for (i = 0; i < num_fields; ++i) {
     char *ekey = NULL;
@@ -464,8 +464,8 @@ int c_rest_client_build_form_urlencoded(
   }
 
   buf = (char *)malloc(total_len + 1);
-  if (!buf)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!buf)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   for (i = 0; i < num_fields; ++i) {
     char *ekey = NULL;
@@ -500,10 +500,11 @@ int c_rest_client_build_form_urlencoded(
   *out_body = buf;
   *out_len = curr_pos;
 
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_proxy_request(const char *target_url, void *req, void *res) {
+c_rest_error_t c_rest_proxy_request(const char *target_url, void *req,
+                                    void *res) {
   /* Simple proxy stub */
   c_rest_client_context *client;
   int ret;
@@ -511,11 +512,11 @@ int c_rest_proxy_request(const char *target_url, void *req, void *res) {
   (void)req; /* unused in mock */
   (void)res; /* unused in mock */
 
-  if (!target_url) /* GCOVR_EXCL_LINE */
-    return 1;      /* GCOVR_EXCL_LINE */
+  if (!target_url)               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (c_rest_client_init(&client) != 0) { /* GCOVR_EXCL_LINE */
-    return 1;                             /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;          /* GCOVR_EXCL_LINE */
   }
 
   ret = c_rest_client_request_sync(client, target_url, "GET", NULL, 0, NULL, 0,
@@ -528,7 +529,7 @@ int c_rest_proxy_request(const char *target_url, void *req, void *res) {
   return ret;
 }
 
-int c_rest_client_parse_form_urlencoded(
+c_rest_error_t c_rest_client_parse_form_urlencoded(
     const char *body, struct c_rest_client_form_field **out_fields,
     size_t *out_num_fields) {
   const char *p;
@@ -537,7 +538,7 @@ int c_rest_client_parse_form_urlencoded(
   size_t i;
 
   if (!body || !out_fields || !out_num_fields) /* GCOVR_EXCL_LINE */
-    return 1;                                  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;               /* GCOVR_EXCL_LINE */
 
   p = body;
   while (*p) {
@@ -550,8 +551,8 @@ int c_rest_client_parse_form_urlencoded(
 
   fields = (struct c_rest_client_form_field *)calloc(
       count, sizeof(struct c_rest_client_form_field));
-  if (!fields) /* GCOVR_EXCL_LINE */
-    return 1;  /* GCOVR_EXCL_LINE */
+  if (!fields)                   /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   p = body;
   for (i = 0; i < count; ++i) { /* GCOVR_EXCL_LINE */
@@ -609,14 +610,15 @@ int c_rest_client_parse_form_urlencoded(
 
   *out_fields = fields;
   *out_num_fields = count;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_client_form_fields_free(struct c_rest_client_form_field *fields,
-                                   size_t num_fields) {
+c_rest_error_t
+c_rest_client_form_fields_free(struct c_rest_client_form_field *fields,
+                               size_t num_fields) {
   size_t i;
-  if (!fields) /* GCOVR_EXCL_LINE */
-    return 1;  /* GCOVR_EXCL_LINE */
+  if (!fields)                   /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   for (i = 0; i < num_fields; ++i) {
     if (fields[i].key) /* GCOVR_EXCL_LINE */
       C_REST_FREE((void *)(fields[i].key));
@@ -624,21 +626,21 @@ int c_rest_client_form_fields_free(struct c_rest_client_form_field *fields,
       C_REST_FREE((void *)(fields[i].value));
   }
   C_REST_FREE((void *)(fields));
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_client_header_set(struct c_rest_client_header **headers,
-                             size_t *headers_count, const char *key,
-                             const char *value) {
+c_rest_error_t c_rest_client_header_set(struct c_rest_client_header **headers,
+                                        size_t *headers_count, const char *key,
+                                        const char *value) {
   struct c_rest_client_header *new_headers;
   size_t klen, vlen;
   if (!headers || !headers_count || !key || !value) /* GCOVR_EXCL_LINE */
-    return 1;                                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                    /* GCOVR_EXCL_LINE */
 
   new_headers = (struct c_rest_client_header *)realloc(
       *headers, sizeof(struct c_rest_client_header) * (*headers_count + 1));
-  if (!new_headers) /* GCOVR_EXCL_LINE */
-    return 1;       /* GCOVR_EXCL_LINE */
+  if (!new_headers)              /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   *headers = new_headers;
 
@@ -647,7 +649,7 @@ int c_rest_client_header_set(struct c_rest_client_header **headers,
 
   (*headers)[*headers_count].key = (char *)malloc(klen);
   if (!(*headers)[*headers_count].key) /* GCOVR_EXCL_LINE */
-    return 1;                          /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;       /* GCOVR_EXCL_LINE */
 #if defined(_MSC_VER)
   strcpy_s((char *)(*headers)[*headers_count].key, klen, key);
 #else
@@ -657,7 +659,7 @@ int c_rest_client_header_set(struct c_rest_client_header **headers,
   (*headers)[*headers_count].value = (char *)malloc(vlen);
   if (!(*headers)[*headers_count].value) {                 /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)((*headers)[*headers_count].key)); /* GCOVR_EXCL_LINE */
-    return 1;                                              /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                           /* GCOVR_EXCL_LINE */
   }
 #if defined(_MSC_VER)
   strcpy_s((char *)(*headers)[*headers_count].value, vlen, value);
@@ -666,14 +668,14 @@ int c_rest_client_header_set(struct c_rest_client_header **headers,
 #endif
 
   (*headers_count)++;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_client_headers_free(struct c_rest_client_header *headers,
-                               size_t headers_count) {
+c_rest_error_t c_rest_client_headers_free(struct c_rest_client_header *headers,
+                                          size_t headers_count) {
   size_t i;
-  if (!headers) /* GCOVR_EXCL_LINE */
-    return 1;   /* GCOVR_EXCL_LINE */
+  if (!headers)                  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   for (i = 0; i < headers_count; ++i) {
     if (headers[i].key) /* GCOVR_EXCL_LINE */
       C_REST_FREE((void *)(headers[i].key));
@@ -681,11 +683,12 @@ int c_rest_client_headers_free(struct c_rest_client_header *headers,
       C_REST_FREE((void *)(headers[i].value));
   }
   C_REST_FREE((void *)(headers));
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_client_build_auth_basic(const char *username, const char *password,
-                                   char **out_header) {
+c_rest_error_t c_rest_client_build_auth_basic(const char *username,
+                                              const char *password,
+                                              char **out_header) {
   char *concat;
   size_t ulen, plen;
   size_t clen;
@@ -694,15 +697,15 @@ int c_rest_client_build_auth_basic(const char *username, const char *password,
   size_t hlen;
 
   if (!username || !password || !out_header) /* GCOVR_EXCL_LINE */
-    return 1;                                /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;             /* GCOVR_EXCL_LINE */
 
   ulen = strlen(username);
   plen = strlen(password);
   clen = ulen + plen + 1;
 
   concat = (char *)malloc(clen + 1);
-  if (!concat) /* GCOVR_EXCL_LINE */
-    return 1;  /* GCOVR_EXCL_LINE */
+  if (!concat)                   /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
 #if defined(_MSC_VER)
   sprintf_s(concat, clen + 1, "%s:%s", username, password);
@@ -715,29 +718,29 @@ int c_rest_client_build_auth_basic(const char *username, const char *password,
                            &b64_len) != /* GCOVR_EXCL_LINE */
       0) {
     C_REST_FREE((void *)(concat)); /* GCOVR_EXCL_LINE */
-    return 1;                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;   /* GCOVR_EXCL_LINE */
   }
 
   b64 = (char *)malloc(b64_len + 1);
   if (!b64) {                      /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(concat)); /* GCOVR_EXCL_LINE */
-    return 1;                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;   /* GCOVR_EXCL_LINE */
   }
 
   if (c_rest_base64_encode((unsigned char *)concat, clen, b64, &b64_len) !=
       0) {                         /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(concat)); /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(b64));    /* GCOVR_EXCL_LINE */
-    return 1;                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;   /* GCOVR_EXCL_LINE */
   }
   b64[b64_len] = '\0';
   C_REST_FREE((void *)(concat));
 
   hlen = 6 + b64_len + 1; /* "Basic " + b64 + null */
   *out_header = (char *)malloc(hlen);
-  if (!*out_header) {           /* GCOVR_EXCL_LINE */
-    C_REST_FREE((void *)(b64)); /* GCOVR_EXCL_LINE */
-    return 1;                   /* GCOVR_EXCL_LINE */
+  if (!*out_header) {            /* GCOVR_EXCL_LINE */
+    C_REST_FREE((void *)(b64));  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
 #if defined(_MSC_VER)
@@ -747,19 +750,20 @@ int c_rest_client_build_auth_basic(const char *username, const char *password,
 #endif
 
   C_REST_FREE((void *)(b64));
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_client_build_auth_bearer(const char *token, char **out_header) {
+c_rest_error_t c_rest_client_build_auth_bearer(const char *token,
+                                               char **out_header) {
   size_t hlen;
 
-  if (!token || !out_header) /* GCOVR_EXCL_LINE */
-    return 1;                /* GCOVR_EXCL_LINE */
+  if (!token || !out_header)     /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   hlen = 7 + strlen(token) + 1; /* "Bearer " + token + null */
   *out_header = (char *)malloc(hlen);
-  if (!*out_header) /* GCOVR_EXCL_LINE */
-    return 1;       /* GCOVR_EXCL_LINE */
+  if (!*out_header)              /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
 #if defined(_MSC_VER)
   sprintf_s(*out_header, hlen, "Bearer %s", token);
@@ -767,15 +771,14 @@ int c_rest_client_build_auth_bearer(const char *token, char **out_header) {
   sprintf(*out_header, "Bearer %s", token);
 #endif
 
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_client_post_form_sync(c_rest_client_context *client, const char *url,
-                                 const struct c_rest_client_header *headers,
-                                 size_t headers_count,
-                                 const struct c_rest_client_form_field *fields,
-                                 size_t num_fields,
-                                 struct c_rest_client_response **out_res) {
+c_rest_error_t c_rest_client_post_form_sync(
+    c_rest_client_context *client, const char *url,
+    const struct c_rest_client_header *headers, size_t headers_count,
+    const struct c_rest_client_form_field *fields, size_t num_fields,
+    struct c_rest_client_response **out_res) {
   int ret;
   char *body = NULL;
   size_t body_len = 0;
@@ -783,8 +786,8 @@ int c_rest_client_post_form_sync(c_rest_client_context *client, const char *url,
   size_t all_headers_count = 0;
   size_t i;
 
-  if (!client || !url) /* GCOVR_EXCL_LINE */
-    return 1;          /* GCOVR_EXCL_LINE */
+  if (!client || !url)           /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   ret =
       c_rest_client_build_form_urlencoded(fields, num_fields, &body, &body_len);
@@ -813,27 +816,28 @@ int c_rest_client_post_form_sync(c_rest_client_context *client, const char *url,
   return ret;
 }
 
-int c_rest_client_response_parse_json(const struct c_rest_client_response *res,
-                                      void **out_json) {
-  if (!res || !out_json) /* GCOVR_EXCL_LINE */
-    return 1;            /* GCOVR_EXCL_LINE */
+c_rest_error_t
+c_rest_client_response_parse_json(const struct c_rest_client_response *res,
+                                  void **out_json) {
+  if (!res || !out_json)         /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   *out_json = NULL;
   if (!res->body || res->body_len == 0) /* GCOVR_EXCL_LINE */
-    return 1;                           /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;        /* GCOVR_EXCL_LINE */
 
   {
     char *str = (char *)malloc(res->body_len + 1);
-    if (!str)   /* GCOVR_EXCL_LINE */
-      return 1; /* GCOVR_EXCL_LINE */
+    if (!str)                      /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
     memcpy(str, res->body, res->body_len);
     str[res->body_len] = '\0';
 
     *out_json = (void *)json_parse_string(str);
     C_REST_FREE((void *)(str));
 
-    if (!*out_json) /* GCOVR_EXCL_LINE */
-      return 1;     /* GCOVR_EXCL_LINE */
+    if (!*out_json)                /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
-  return 0;
+  return C_REST_OK;
 }

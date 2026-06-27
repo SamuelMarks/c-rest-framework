@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_log.h"
 #include <stdio.h>
 #include <stdarg.h>

@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_base64.h"
 
 #include <string.h>
@@ -12,17 +13,17 @@ static const char base64url_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                       "abcdefghijklmnopqrstuvwxyz"
                                       "0123456789-_";
 
-static enum c_rest_base64_error
-encode_internal(const unsigned char *src, size_t src_len, char *dst,
-                size_t *dst_len, const char *chars, int use_padding) {
+static c_rest_error_t encode_internal(const unsigned char *src, size_t src_len,
+                                      char *dst, size_t *dst_len,
+                                      const char *chars, int use_padding) {
   size_t i = 0;
   size_t j = 0;
   size_t out_len = 4 * ((src_len + 2) / 3);
   size_t val;
   size_t pad_len;
 
-  if (!dst_len)                              /* GCOVR_EXCL_LINE */
-    return C_REST_BASE64_ERROR_NULL_POINTER; /* GCOVR_EXCL_LINE */
+  if (!dst_len)                  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   if (!dst) {
     if (use_padding) {
       *dst_len = out_len + 1;
@@ -31,7 +32,7 @@ encode_internal(const unsigned char *src, size_t src_len, char *dst,
       pad_len = (val == 0) ? 0 : (3 - val);
       *dst_len = out_len - pad_len + 1;
     }
-    return C_REST_BASE64_SUCCESS;
+    return C_REST_OK;
   }
 
   for (i = 0; i < src_len;) {
@@ -64,60 +65,60 @@ encode_internal(const unsigned char *src, size_t src_len, char *dst,
     *dst_len = out_len;
   }
 
-  return C_REST_BASE64_SUCCESS;
+  return C_REST_OK;
 }
 
-static enum c_rest_base64_error get_val(unsigned char c, int is_url,
-                                        unsigned char *out_val) {
+static c_rest_error_t get_val(unsigned char c, int is_url,
+                              unsigned char *out_val) {
   if (c >= 'A' && c <= 'Z') {
     *out_val = c - 'A';
-    return C_REST_BASE64_SUCCESS;
+    return C_REST_OK;
   }
   if (c >= 'a' && c <= 'z') { /* GCOVR_EXCL_LINE */
     *out_val = c - 'a' + 26;
-    return C_REST_BASE64_SUCCESS;
+    return C_REST_OK;
   }
   if (c >= '0' && c <= '9') { /* GCOVR_EXCL_LINE */
     *out_val = c - '0' + 52;
-    return C_REST_BASE64_SUCCESS;
+    return C_REST_OK;
   }
   if (!is_url) {    /* GCOVR_EXCL_LINE */
     if (c == '+') { /* GCOVR_EXCL_LINE */
       *out_val = 62;
-      return C_REST_BASE64_SUCCESS;
+      return C_REST_OK;
     }
-    if (c == '/') {                 /* GCOVR_EXCL_LINE */
-      *out_val = 63;                /* GCOVR_EXCL_LINE */
-      return C_REST_BASE64_SUCCESS; /* GCOVR_EXCL_LINE */
+    if (c == '/') {     /* GCOVR_EXCL_LINE */
+      *out_val = 63;    /* GCOVR_EXCL_LINE */
+      return C_REST_OK; /* GCOVR_EXCL_LINE */
     }
   } else {
-    if (c == '-') {                 /* GCOVR_EXCL_LINE */
-      *out_val = 62;                /* GCOVR_EXCL_LINE */
-      return C_REST_BASE64_SUCCESS; /* GCOVR_EXCL_LINE */
+    if (c == '-') {     /* GCOVR_EXCL_LINE */
+      *out_val = 62;    /* GCOVR_EXCL_LINE */
+      return C_REST_OK; /* GCOVR_EXCL_LINE */
     }
-    if (c == '_') {                 /* GCOVR_EXCL_LINE */
-      *out_val = 63;                /* GCOVR_EXCL_LINE */
-      return C_REST_BASE64_SUCCESS; /* GCOVR_EXCL_LINE */
+    if (c == '_') {     /* GCOVR_EXCL_LINE */
+      *out_val = 63;    /* GCOVR_EXCL_LINE */
+      return C_REST_OK; /* GCOVR_EXCL_LINE */
     }
   }
-  *out_val = 0;                 /* GCOVR_EXCL_LINE */
-  return C_REST_BASE64_SUCCESS; /* GCOVR_EXCL_LINE */
+  *out_val = 0;     /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-static enum c_rest_base64_error decode_internal(const char *src, size_t src_len,
-                                                unsigned char *dst,
-                                                size_t *dst_len, int is_url) {
+static c_rest_error_t decode_internal(const char *src, size_t src_len,
+                                      unsigned char *dst, size_t *dst_len,
+                                      int is_url) {
   size_t i = 0;
   size_t j = 0;
   size_t in_len = src_len;
   size_t out_len;
   size_t pad_len = 0;
 
-  if (!src || !dst_len)                      /* GCOVR_EXCL_LINE */
-    return C_REST_BASE64_ERROR_NULL_POINTER; /* GCOVR_EXCL_LINE */
+  if (!src || !dst_len)          /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
-  if (!is_url && in_len % 4 != 0)             /* GCOVR_EXCL_LINE */
-    return C_REST_BASE64_ERROR_INVALID_INPUT; /* GCOVR_EXCL_LINE */
+  if (!is_url && in_len % 4 != 0) /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;  /* GCOVR_EXCL_LINE */
 
   if (in_len > 0 && src[in_len - 1] == '=') { /* GCOVR_EXCL_LINE */
     pad_len++;
@@ -131,10 +132,10 @@ static enum c_rest_base64_error decode_internal(const char *src, size_t src_len,
 
   if (!dst) {
     *dst_len = out_len;
-    return C_REST_BASE64_SUCCESS;
+    return C_REST_OK;
   }
-  if (*dst_len < out_len)                        /* GCOVR_EXCL_LINE */
-    return C_REST_BASE64_ERROR_BUFFER_TOO_SMALL; /* GCOVR_EXCL_LINE */
+  if (*dst_len < out_len)        /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   for (i = 0, j = 0; i < in_len;) {
     unsigned char val_a = 0, val_b = 0, val_c = 0, val_d = 0;
@@ -185,30 +186,25 @@ static enum c_rest_base64_error decode_internal(const char *src, size_t src_len,
       dst[j++] = (unsigned char)(triple & 0xFF);
   }
   *dst_len = out_len;
-  return C_REST_BASE64_SUCCESS;
+  return C_REST_OK;
 }
 
-enum c_rest_base64_error c_rest_base64_encode(const unsigned char *src,
-                                              size_t src_len, char *dst,
-                                              size_t *dst_len) {
+c_rest_error_t c_rest_base64_encode(const unsigned char *src, size_t src_len,
+                                    char *dst, size_t *dst_len) {
   return encode_internal(src, src_len, dst, dst_len, base64_chars, 1);
 }
 
-enum c_rest_base64_error c_rest_base64url_encode(const unsigned char *src,
-                                                 size_t src_len, char *dst,
-                                                 size_t *dst_len) {
+c_rest_error_t c_rest_base64url_encode(const unsigned char *src, size_t src_len,
+                                       char *dst, size_t *dst_len) {
   return encode_internal(src, src_len, dst, dst_len, base64url_chars, 0);
 }
 
-enum c_rest_base64_error c_rest_base64_decode(const char *src, size_t src_len,
-                                              unsigned char *dst,
-                                              size_t *dst_len) {
+c_rest_error_t c_rest_base64_decode(const char *src, size_t src_len,
+                                    unsigned char *dst, size_t *dst_len) {
   return decode_internal(src, src_len, dst, dst_len, 0);
 }
 
-enum c_rest_base64_error c_rest_base64url_decode(const char *src,
-                                                 size_t src_len,
-                                                 unsigned char *dst,
-                                                 size_t *dst_len) {
+c_rest_error_t c_rest_base64url_decode(const char *src, size_t src_len,
+                                       unsigned char *dst, size_t *dst_len) {
   return decode_internal(src, src_len, dst, dst_len, 1);
 }

@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_parser.h"
 
 #include <ctype.h>
@@ -8,12 +9,11 @@
 #include "c_rest_log.h"
 /* clang-format on */
 
-int c_rest_parser_init(c_rest_parser_context *ctx,
-                       const struct c_rest_parser_vtable *vtable,
-                       const struct c_rest_parser_callbacks *callbacks,
-                       void *user_data) {
+c_rest_error_t c_rest_parser_init(
+    c_rest_parser_context *ctx, const struct c_rest_parser_vtable *vtable,
+    const struct c_rest_parser_callbacks *callbacks, void *user_data) {
   if (!ctx || !vtable || !vtable->init) { /* GCOVR_EXCL_LINE */
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   ctx->vtable = vtable;
@@ -33,32 +33,33 @@ int c_rest_parser_init(c_rest_parser_context *ctx,
   return ctx->vtable->init(ctx, &ctx->callbacks, user_data);
 }
 
-int c_rest_parser_execute(c_rest_parser_context *ctx, const char *data,
-                          size_t len, size_t *out_parsed) {
-  if (!out_parsed) /* GCOVR_EXCL_LINE */
-    return 1;      /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_parser_execute(c_rest_parser_context *ctx,
+                                     const char *data, size_t len,
+                                     size_t *out_parsed) {
+  if (!out_parsed)               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   *out_parsed = 0;
   if (!ctx || !ctx->vtable || !ctx->vtable->execute) { /* GCOVR_EXCL_LINE */
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   return ctx->vtable->execute(ctx, data, len, out_parsed);
 }
 
-int c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
-                                    int *out_keep_alive) {
-  if (!out_keep_alive) /* GCOVR_EXCL_LINE */
-    return 1;          /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
+                                               int *out_keep_alive) {
+  if (!out_keep_alive)           /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   if (!ctx || !ctx->vtable ||
       !ctx->vtable->should_keep_alive) { /* GCOVR_EXCL_LINE */
     *out_keep_alive = 0;                 /* GCOVR_EXCL_LINE */
-    return 0;                            /* GCOVR_EXCL_LINE */
+    return C_REST_OK;                    /* GCOVR_EXCL_LINE */
   }
   return ctx->vtable->should_keep_alive(ctx, out_keep_alive);
 }
 
-int c_rest_parser_destroy(c_rest_parser_context *ctx) {
+c_rest_error_t c_rest_parser_destroy(c_rest_parser_context *ctx) {
   if (!ctx || !ctx->vtable || !ctx->vtable->destroy) { /* GCOVR_EXCL_LINE */
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   return ctx->vtable->destroy(ctx);
 }
@@ -98,8 +99,8 @@ static int basic_init(c_rest_parser_context *ctx,
     LOG_DEBUG("C_REST_MALLOC failed");
     st = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!st)    /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!st)                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   st->state = 0;
   st->has_error = 0;
@@ -116,22 +117,23 @@ static int basic_init(c_rest_parser_context *ctx,
   st->chunk_left = 0;
 
   ctx->internal_state = st;
-  return 0;
+  return C_REST_OK;
 }
 
-static int c_rest_stricmp(const char *s1, const char *s2, int *out_cmp) {
+static c_rest_error_t c_rest_stricmp(const char *s1, const char *s2,
+                                     int *out_cmp) {
   while (*s1 && *s2) { /* GCOVR_EXCL_LINE */
     int c1 = tolower((unsigned char)*s1);
     int c2 = tolower((unsigned char)*s2);
     if (c1 != c2) {
       *out_cmp = c1 - c2;
-      return 0;
+      return C_REST_OK;
     }
     s1++;
     s2++;
   }
   *out_cmp = tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
-  return 0;
+  return C_REST_OK;
 }
 
 static int append_buf(struct basic_parser_state *st, char c, int is_key) {
@@ -143,8 +145,8 @@ static int append_buf(struct basic_parser_state *st, char c, int is_key) {
       if (C_REST_REALLOC(st->key_buf, new_cap, &n) != 0) {
         LOG_DEBUG("C_REST_REALLOC failed");
       }
-      if (!n)     /* GCOVR_EXCL_LINE */
-        return 1; /* GCOVR_EXCL_LINE */
+      if (!n)                        /* GCOVR_EXCL_LINE */
+        return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
       st->key_buf = n;
       st->key_cap = new_cap;
     }
@@ -158,15 +160,15 @@ static int append_buf(struct basic_parser_state *st, char c, int is_key) {
       if (C_REST_REALLOC(st->buf, new_cap, &n) != 0) {
         LOG_DEBUG("C_REST_REALLOC failed");
       }
-      if (!n)     /* GCOVR_EXCL_LINE */
-        return 1; /* GCOVR_EXCL_LINE */
+      if (!n)                        /* GCOVR_EXCL_LINE */
+        return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
       st->buf = n;
       st->buf_cap = new_cap;
     }
     st->buf[st->buf_len++] = c;
     st->buf[st->buf_len] = '\0';
   }
-  return 0;
+  return C_REST_OK;
 }
 
 static int basic_execute(c_rest_parser_context *ctx, const char *data,
@@ -175,19 +177,19 @@ static int basic_execute(c_rest_parser_context *ctx, const char *data,
   size_t i = 0;
 
   if (!ctx || !data || !out_parsed ||
-      !ctx->internal_state) /* GCOVR_EXCL_LINE */
-    return 1;               /* GCOVR_EXCL_LINE */
+      !ctx->internal_state)      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   st = (struct basic_parser_state *)ctx->internal_state;
   *out_parsed = 0;
 
-  if (st->has_error) /* GCOVR_EXCL_LINE */
-    return 1;        /* GCOVR_EXCL_LINE */
+  if (st->has_error)             /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (len >= 9 && strncmp(data, "MALFORMED", 9) == 0) { /* GCOVR_EXCL_LINE */
     if (ctx->callbacks.on_error)                        /* GCOVR_EXCL_LINE */
       ctx->callbacks.on_error(ctx, "Malformed");        /* GCOVR_EXCL_LINE */
     st->has_error = 1;
-    return 0;
+    return C_REST_OK;
   }
 
   while (i < len) {
@@ -202,8 +204,8 @@ static int basic_execute(c_rest_parser_context *ctx, const char *data,
       } else if (c == '\r' || c == '\n') { /* GCOVR_EXCL_LINE */
         /* ignore blank lines at start */
       } else {
-        if (append_buf(st, c, 0)) /* GCOVR_EXCL_LINE */
-          return 1;               /* GCOVR_EXCL_LINE */
+        if (append_buf(st, c, 0))      /* GCOVR_EXCL_LINE */
+          return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
       }
       i++;
       break;
@@ -214,8 +216,8 @@ static int basic_execute(c_rest_parser_context *ctx, const char *data,
         st->buf_len = 0;
         st->state = 3; /* version */
       } else {
-        if (append_buf(st, c, 0)) /* GCOVR_EXCL_LINE */
-          return 1;               /* GCOVR_EXCL_LINE */
+        if (append_buf(st, c, 0))      /* GCOVR_EXCL_LINE */
+          return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
       }
       i++;
       break;
@@ -248,8 +250,8 @@ static int basic_execute(c_rest_parser_context *ctx, const char *data,
         st->state = 5; /* header value */
         st->buf_len = 0;
       } else {
-        if (append_buf(st, c, 1)) /* GCOVR_EXCL_LINE */
-          return 1;               /* GCOVR_EXCL_LINE */
+        if (append_buf(st, c, 1))      /* GCOVR_EXCL_LINE */
+          return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
       }
       i++;
       break;
@@ -289,14 +291,14 @@ static int basic_execute(c_rest_parser_context *ctx, const char *data,
         st->buf_len = 0;
         st->state = 4; /* next header key */
       } else {
-        if (append_buf(st, c, 0)) /* GCOVR_EXCL_LINE */
-          return 1;               /* GCOVR_EXCL_LINE */
+        if (append_buf(st, c, 0))      /* GCOVR_EXCL_LINE */
+          return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
       }
       i++;
       break;
-    case 6:     /* headers done / wait */
-      return 0; /* Wait for external state change if needed */
-    case 7:     /* body identity */
+    case 6:             /* headers done / wait */
+      return C_REST_OK; /* Wait for external state change if needed */
+    case 7:             /* body identity */
     {
       size_t to_read = len - i;
       if (st->content_length > 0) { /* GCOVR_EXCL_LINE */
@@ -330,8 +332,8 @@ static int basic_execute(c_rest_parser_context *ctx, const char *data,
           st->state = 10; /* chunk data */
         }
       } else {
-        if (append_buf(st, c, 0)) /* GCOVR_EXCL_LINE */
-          return 1;               /* GCOVR_EXCL_LINE */
+        if (append_buf(st, c, 0))      /* GCOVR_EXCL_LINE */
+          return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
       }
       i++;
       break;
@@ -357,30 +359,30 @@ static int basic_execute(c_rest_parser_context *ctx, const char *data,
       }
       i++;
       break;
-    default:             /* GCOVR_EXCL_LINE */
-      st->has_error = 1; /* GCOVR_EXCL_LINE */
-      return 1;          /* GCOVR_EXCL_LINE */
+    default:                       /* GCOVR_EXCL_LINE */
+      st->has_error = 1;           /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
     }
   }
 
   *out_parsed = len;
-  return 0;
+  return C_REST_OK;
 }
 
 static int basic_should_keep_alive(c_rest_parser_context *ctx,
                                    int *out_keep_alive) {
   struct basic_parser_state *st;
   if (!ctx || !out_keep_alive || !ctx->internal_state) /* GCOVR_EXCL_LINE */
-    return 1;                                          /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                       /* GCOVR_EXCL_LINE */
   st = (struct basic_parser_state *)ctx->internal_state;
   *out_keep_alive = st->keep_alive;
-  return 0;
+  return C_REST_OK;
 }
 
 static int basic_destroy(c_rest_parser_context *ctx) {
   struct basic_parser_state *st;
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
-    return 1;                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
   st = (struct basic_parser_state *)ctx->internal_state;
   if (st->buf) /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(st->buf));
@@ -388,24 +390,24 @@ static int basic_destroy(c_rest_parser_context *ctx) {
     C_REST_FREE((void *)(st->key_buf));
   C_REST_FREE((void *)(st));
   ctx->internal_state = NULL;
-  return 0;
+  return C_REST_OK;
 }
 
 static const struct c_rest_parser_vtable basic_vtable = {
     basic_init, basic_execute, basic_should_keep_alive, basic_destroy};
 
-int c_rest_parser_get_basic_vtable(
-    const struct c_rest_parser_vtable **out_vtable) {
-  if (!out_vtable) /* GCOVR_EXCL_LINE */
-    return 1;      /* GCOVR_EXCL_LINE */
+c_rest_error_t
+c_rest_parser_get_basic_vtable(const struct c_rest_parser_vtable **out_vtable) {
+  if (!out_vtable)               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   *out_vtable = &basic_vtable;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_parser_is_complete(c_rest_parser_context *ctx) {
+c_rest_error_t c_rest_parser_is_complete(c_rest_parser_context *ctx) {
   struct basic_parser_state *st;
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
-    return 0;                       /* GCOVR_EXCL_LINE */
+    return C_REST_OK;               /* GCOVR_EXCL_LINE */
   st = (struct basic_parser_state *)ctx->internal_state;
   return (st->state == 6 || st->state == 7 || st->state == 11)
              ? 1

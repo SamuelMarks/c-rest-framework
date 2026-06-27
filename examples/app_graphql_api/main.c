@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_graphql.h"
 #include "c_rest_router.h"
 #include "c_rest_modality.h"
@@ -12,8 +13,8 @@
 #include <winsock2.h>
 #else
 #include <signal.h>
-/* clang-format on */
 #endif
+/* clang-format on */
 
 static void logger_cb(const char *msg) { printf("LOG: %s\n", msg); }
 

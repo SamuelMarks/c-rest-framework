@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_time.h"
 
 #include <string.h>
@@ -13,7 +14,7 @@ static const char *const months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 static int is_leap(int year, int *out_leap) {
   *out_leap = (year % 4 == 0 &&
                (year % 100 != 0 || year % 400 == 0)); /* GCOVR_EXCL_LINE */
-  return 0;
+  return C_REST_OK;
 }
 
 static int portable_timegm(struct tm *tm, time_t *out_time) {
@@ -26,9 +27,9 @@ static int portable_timegm(struct tm *tm, time_t *out_time) {
   int days = 0;
   int y;
 
-  if (year < 1970) {        /* GCOVR_EXCL_LINE */
-    *out_time = (time_t)-1; /* GCOVR_EXCL_LINE */
-    return 1;               /* GCOVR_EXCL_LINE */
+  if (year < 1970) {             /* GCOVR_EXCL_LINE */
+    *out_time = (time_t)-1;      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   for (y = 1970; y < year; y++) {
@@ -43,27 +44,28 @@ static int portable_timegm(struct tm *tm, time_t *out_time) {
 
   *out_time = (time_t)(days * 86400 + tm->tm_hour * 3600 + tm->tm_min * 60 +
                        tm->tm_sec);
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_http_date_format(time_t t, char *out_str, size_t out_len) {
+c_rest_error_t c_rest_http_date_format(time_t t, char *out_str,
+                                       size_t out_len) {
   struct tm *tm_info;
 #if defined(_MSC_VER)
   struct tm tm_buf;
   if (!out_str || out_len < 30) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   if (gmtime_s(&tm_buf, &t) != 0) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   tm_info = &tm_buf;
 #else
   if (!out_str || out_len < 30) { /* GCOVR_EXCL_LINE */
-    return 1;                     /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;  /* GCOVR_EXCL_LINE */
   }
   tm_info = gmtime(&t);
-  if (!tm_info) { /* GCOVR_EXCL_LINE */
-    return 1;     /* GCOVR_EXCL_LINE */
+  if (!tm_info) {                /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 #endif
 
@@ -80,10 +82,10 @@ int c_rest_http_date_format(time_t t, char *out_str, size_t out_len) {
           tm_info->tm_sec);
 #endif
 
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_http_date_parse(const char *date_str, time_t *out_t) {
+c_rest_error_t c_rest_http_date_parse(const char *date_str, time_t *out_t) {
   struct tm tm_info;
   char wday[4];
   char month[4];
@@ -91,8 +93,8 @@ int c_rest_http_date_parse(const char *date_str, time_t *out_t) {
   int i;
   int mon = -1;
 
-  if (!date_str || !out_t) { /* GCOVR_EXCL_LINE */
-    return 1;                /* GCOVR_EXCL_LINE */
+  if (!date_str || !out_t) {     /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   memset(&tm_info, 0, sizeof(tm_info));
@@ -102,13 +104,13 @@ int c_rest_http_date_parse(const char *date_str, time_t *out_t) {
   if (sscanf_s(date_str, "%3s, %d %3s %d %d:%d:%d GMT", wday,
                (unsigned int)sizeof(wday), &mday, month,
                (unsigned int)sizeof(month), &year, &hour, &min, &sec) != 7) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 #else
   if (sscanf(date_str, "%3s, %d %3s %d %d:%d:%d GMT", wday, &mday, month,
              &year, /* GCOVR_EXCL_LINE */
              &hour, &min, &sec) != 7) {
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 #endif
 
@@ -119,8 +121,8 @@ int c_rest_http_date_parse(const char *date_str, time_t *out_t) {
     }
   }
 
-  if (mon == -1) { /* GCOVR_EXCL_LINE */
-    return 1;      /* GCOVR_EXCL_LINE */
+  if (mon == -1) {               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   tm_info.tm_year = year - 1900;
@@ -132,8 +134,8 @@ int c_rest_http_date_parse(const char *date_str, time_t *out_t) {
   tm_info.tm_isdst = 0; /* GMT */
 
   if (portable_timegm(&tm_info, out_t) != 0) { /* GCOVR_EXCL_LINE */
-    return 1;                                  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;               /* GCOVR_EXCL_LINE */
   }
 
-  return 0;
+  return C_REST_OK;
 }

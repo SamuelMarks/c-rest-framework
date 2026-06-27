@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "test_protos.h"
 #include "c_rest_request.h"
 #include "c_rest_response.h"
@@ -12,8 +13,9 @@
 static int handler_called = 0;
 static int mw_called = 0;
 
-static int test_handler(struct c_rest_request *req, struct c_rest_response *res,
-                        void *user_data) {
+static c_rest_error_t test_handler(struct c_rest_request *req,
+                                   struct c_rest_response *res,
+                                   void *user_data) {
   (void)res;
   (void)user_data;
   handler_called = 1;
@@ -34,8 +36,9 @@ static int test_handler(struct c_rest_request *req, struct c_rest_response *res,
   return 0;
 }
 
-static int test_middleware(struct c_rest_request *req,
-                           struct c_rest_response *res, void *user_data) {
+static c_rest_error_t test_middleware(struct c_rest_request *req,
+                                      struct c_rest_response *res,
+                                      void *user_data) {
   (void)req;
   (void)res;
   (void)user_data;

@@ -1,8 +1,10 @@
 #ifndef C_REST_REQUEST_H
 #define C_REST_REQUEST_H
-
 /* clang-format off */
+#include "c_rest_error.h"
+
 #include <stddef.h>
+#include "c_rest_error.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -69,8 +71,9 @@ struct c_rest_request {
  * @param out_value Output value
  * @return 0 on success, 1 on failure
  */
-int c_rest_request_get_header(struct c_rest_request *req, const char *key,
-                              const char **out_value);
+c_rest_error_t c_rest_request_get_header(struct c_rest_request *req,
+                                         const char *key,
+                                         const char **out_value);
 
 /**
  * @brief Get a cookie from the request.
@@ -79,8 +82,9 @@ int c_rest_request_get_header(struct c_rest_request *req, const char *key,
  * @param out_value Output value
  * @return 0 on success, 1 on failure
  */
-int c_rest_request_get_cookie(struct c_rest_request *req, const char *key,
-                              const char **out_value);
+c_rest_error_t c_rest_request_get_cookie(struct c_rest_request *req,
+                                         const char *key,
+                                         const char **out_value);
 
 /**
  * @brief Get a query parameter from the request.
@@ -89,15 +93,16 @@ int c_rest_request_get_cookie(struct c_rest_request *req, const char *key,
  * @param out_value Output value
  * @return 0 on success, 1 on failure
  */
-int c_rest_request_get_query(struct c_rest_request *req, const char *key,
-                             const char **out_value);
+c_rest_error_t c_rest_request_get_query(struct c_rest_request *req,
+                                        const char *key,
+                                        const char **out_value);
 
 /**
  * @brief Parse the urlencoded body.
  * @param req Request
  * @return 0 on success, 1 on failure
  */
-int c_rest_request_parse_urlencoded(struct c_rest_request *req);
+c_rest_error_t c_rest_request_parse_urlencoded(struct c_rest_request *req);
 
 /**
  * @brief Get a form parameter from the urlencoded body.
@@ -106,8 +111,9 @@ int c_rest_request_parse_urlencoded(struct c_rest_request *req);
  * @param out_value Output value
  * @return 0 on success, 1 on failure
  */
-int c_rest_request_get_form_param(struct c_rest_request *req, const char *key,
-                                  const char **out_value);
+c_rest_error_t c_rest_request_get_form_param(struct c_rest_request *req,
+                                             const char *key,
+                                             const char **out_value);
 
 /**
  * @brief Read the body of the request.
@@ -116,8 +122,8 @@ int c_rest_request_get_form_param(struct c_rest_request *req, const char *key,
  * @param body_len Output body length
  * @return 0 on success, 1 on failure
  */
-int c_rest_request_read_body(struct c_rest_request *req, char **body,
-                             size_t *body_len);
+c_rest_error_t c_rest_request_read_body(struct c_rest_request *req, char **body,
+                                        size_t *body_len);
 
 /**
  * @brief Check if the request accepts the encoding.
@@ -125,8 +131,8 @@ int c_rest_request_read_body(struct c_rest_request *req, char **body,
  * @param encoding Encoding
  * @return 1 if accepted, 0 otherwise
  */
-int c_rest_request_accepts_encoding(struct c_rest_request *req,
-                                    const char *encoding);
+c_rest_error_t c_rest_request_accepts_encoding(struct c_rest_request *req,
+                                               const char *encoding);
 
 /**
  * @brief Parse the json body.
@@ -134,14 +140,15 @@ int c_rest_request_accepts_encoding(struct c_rest_request *req,
  * @param json_obj Output json object
  * @return 0 on success, 1 on failure
  */
-int c_rest_request_parse_json(struct c_rest_request *req, void **json_obj);
+c_rest_error_t c_rest_request_parse_json(struct c_rest_request *req,
+                                         void **json_obj);
 
 /**
  * @brief Cleanup the request.
  * @param req Request
  * @return 0 on success, 1 on failure
  */
-int c_rest_request_cleanup(struct c_rest_request *req);
+c_rest_error_t c_rest_request_cleanup(struct c_rest_request *req);
 
 /**
  * @brief Extract Bearer token from Authorization header.
@@ -149,8 +156,8 @@ int c_rest_request_cleanup(struct c_rest_request *req);
  * @param out_token Output token
  * @return 0 on success, 1 on failure
  */
-int c_rest_request_get_auth_bearer(struct c_rest_request *req,
-                                   char **out_token);
+c_rest_error_t c_rest_request_get_auth_bearer(struct c_rest_request *req,
+                                              char **out_token);
 
 /**
  * @brief Extract username and password from Basic Auth header.
@@ -159,8 +166,9 @@ int c_rest_request_get_auth_bearer(struct c_rest_request *req,
  * @param out_password Output password
  * @return 0 on success, 1 on failure
  */
-int c_rest_request_get_auth_basic(struct c_rest_request *req,
-                                  char **out_username, char **out_password);
+c_rest_error_t c_rest_request_get_auth_basic(struct c_rest_request *req,
+                                             char **out_username,
+                                             char **out_password);
 
 #ifdef __cplusplus
 }

@@ -91,7 +91,32 @@ if(C_REST_ENABLE_SERVER_SENT_EVENTS_SSE)
     add_definitions(-DC_REST_ENABLE_SERVER_SENT_EVENTS_SSE)
 endif()
 
-macro(c_rest_framework_resolve_dependency PkgName FetchRepo FetchTag)
+macro(c_rest_framework_strip_bad_flags tgt prop)
+    if(TARGET ${tgt})
+        get_target_property(_opts ${tgt} ${prop})
+        if(_opts)
+            list(REMOVE_ITEM _opts "-Werror" "-fprofile-arcs" "-ftest-coverage" "--coverage")
+            set(_new_opts "")
+            foreach(_opt IN LISTS _opts)
+                string(REPLACE "-fprofile-arcs;" "" _opt "${_opt}")
+                string(REPLACE ";-fprofile-arcs" "" _opt "${_opt}")
+                string(REPLACE "-fprofile-arcs" "" _opt "${_opt}")
+                string(REPLACE "-ftest-coverage;" "" _opt "${_opt}")
+                string(REPLACE ";-ftest-coverage" "" _opt "${_opt}")
+                string(REPLACE "-ftest-coverage" "" _opt "${_opt}")
+                string(REPLACE "--coverage;" "" _opt "${_opt}")
+                string(REPLACE ";--coverage" "" _opt "${_opt}")
+                string(REPLACE "--coverage" "" _opt "${_opt}")
+                list(APPEND _new_opts "${_opt}")
+            endforeach()
+            set_target_properties(${tgt} PROPERTIES ${prop} "${_new_opts}")
+        endif()
+    endif()
+endmacro()
+
+
+
+macro(c_rest_framework_resolve_dependency PkgName FetchURL)
     set(_VCPKG_APPLICABLE ON)
     if(MINGW OR CYGWIN OR (MSVC AND MSVC_VERSION LESS 1500))
         set(_VCPKG_APPLICABLE OFF)
@@ -118,10 +143,7 @@ macro(c_rest_framework_resolve_dependency PkgName FetchRepo FetchTag)
     if(NOT ${PkgName}_RESOLVED)
         message(STATUS "Fetching ${PkgName} via FetchContent")
         FetchContent_Declare(${PkgName}
-            GIT_REPOSITORY ${FetchRepo}
-            GIT_TAG ${FetchTag}
-            GIT_CONFIG "core.autocrlf=false"
-            UPDATE_COMMAND ""
+            URL ${FetchURL}
         )
         FetchContent_MakeAvailable(${PkgName})
         set(${PkgName}_RESOLVED ON)
@@ -142,30 +164,30 @@ endmacro()
 
 macro(c_rest_framework_apply_crypto tgt scope)
     if(C_REST_FRAMEWORK_USE_MBEDTLS)
-        c_rest_framework_resolve_dependency(mbedtls https://github.com/Mbed-TLS/mbedtls.git v3.4.0)
+        c_rest_framework_resolve_dependency(mbedtls https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v3.4.0.zip)
         target_link_libraries(${tgt} ${scope} mbedtls mbedcrypto mbedx509)
         target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_MBEDTLS)
     elseif(C_REST_FRAMEWORK_USE_OPENSSL)
-        c_rest_framework_resolve_dependency(OpenSSL https://github.com/openssl/openssl.git openssl-3.1.2)
+        c_rest_framework_resolve_dependency(OpenSSL https://github.com/openssl/openssl/archive/refs/tags/openssl-3.1.2.zip)
         target_link_libraries(${tgt} ${scope} OpenSSL::SSL OpenSSL::Crypto)
         target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_OPENSSL)
     elseif(C_REST_FRAMEWORK_USE_LIBRESSL)
-        c_rest_framework_resolve_dependency(LibreSSL https://github.com/libressl/portable.git v3.8.0)
+        c_rest_framework_resolve_dependency(LibreSSL https://github.com/libressl/portable/archive/refs/tags/v3.8.0.zip)
         target_link_libraries(${tgt} ${scope} LibreSSL::TLS LibreSSL::Crypto)
         target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_LIBRESSL)
     elseif(C_REST_FRAMEWORK_USE_BORINGSSL)
-        c_rest_framework_resolve_dependency(BoringSSL https://github.com/google/boringssl.git master)
+        c_rest_framework_resolve_dependency(BoringSSL https://github.com/google/boringssl/archive/refs/heads/master.zip)
         target_link_libraries(${tgt} ${scope} crypto ssl)
         target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_BORINGSSL)
     elseif(C_REST_FRAMEWORK_USE_WOLFSSL)
         set(WOLFSSL_EXAMPLES OFF CACHE BOOL "" FORCE)
         set(WOLFSSL_CRYPT_TESTS OFF CACHE BOOL "" FORCE)
-        c_rest_framework_resolve_dependency(wolfssl https://github.com/wolfSSL/wolfssl.git v5.6.6-stable)
+        c_rest_framework_resolve_dependency(wolfssl https://github.com/wolfSSL/wolfssl/archive/refs/tags/v5.6.6-stable.zip)
         target_link_libraries(${tgt} ${scope} wolfssl)
         target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_WOLFSSL)
     elseif(C_REST_FRAMEWORK_USE_S2N)
         set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-        c_rest_framework_resolve_dependency(s2n https://github.com/aws/s2n-tls.git main)
+        c_rest_framework_resolve_dependency(s2n https://github.com/aws/s2n-tls/archive/refs/heads/main.zip)
         target_link_libraries(${tgt} ${scope} s2n::s2n)
         target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_S2N)
     elseif(C_REST_FRAMEWORK_USE_BEARSSL)
@@ -215,7 +237,7 @@ set(C_ABSTRACT_HTTP_USE_LIBFETCH ${C_REST_FRAMEWORK_USE_LIBFETCH} CACHE BOOL "" 
 
 if(C_REST_FRAMEWORK_FETCH_C_FS)
     set(CDD_DEPS "FETCHCONTENT" CACHE STRING "" FORCE)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-fs/CMakeLists.txt")
+    if(FALSE)
         FetchContent_Declare(
           cfs
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-fs"
@@ -223,29 +245,21 @@ if(C_REST_FRAMEWORK_FETCH_C_FS)
     else()
         FetchContent_Declare(
           cfs
-          GIT_REPOSITORY https://github.com/SamuelMarks/c-fs.git
-          GIT_TAG master
-          GIT_CONFIG "core.autocrlf=false"
+          URL https://github.com/SamuelMarks/c-fs/archive/refs/heads/master.zip
         )
     endif()
     FetchContent_MakeAvailable(cfs)
+    c_rest_framework_strip_bad_flags(cfs_compiler_flags INTERFACE_COMPILE_OPTIONS)
+    c_rest_framework_strip_bad_flags(cfs_compiler_flags INTERFACE_LINK_OPTIONS)
 endif()
 
 if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
-    FetchContent_Declare(
-        c_str_span
-        GIT_REPOSITORY https://github.com/SamuelMarks/c-str-span.git
-        GIT_TAG master
-        GIT_CONFIG "core.autocrlf=false"
-    )
-    FetchContent_MakeAvailable(c_str_span)
-    file(WRITE "${CMAKE_BINARY_DIR}/c_str_spanConfig.cmake" "set(c_str_span_FOUND TRUE)\n")
+    file(WRITE "${CMAKE_BINARY_DIR}/c_str_spanConfig.cmake" "set(c_str_span_FOUND TRUE)
+")
 
     FetchContent_Declare(
         c89stringutils
-        GIT_REPOSITORY https://github.com/offscale/c89stringutils.git
-        GIT_TAG master
-        GIT_CONFIG "core.autocrlf=false"
+        URL https://github.com/offscale/c89stringutils/archive/refs/heads/master.zip
     )
     FetchContent_MakeAvailable(c89stringutils)
     file(WRITE "${CMAKE_BINARY_DIR}/c89stringutilsConfig.cmake" "set(c89stringutils_FOUND TRUE)\n")
@@ -255,7 +269,7 @@ endif()
 
 
 if(C_REST_FRAMEWORK_FETCH_CAH)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http/CMakeLists.txt")
+    if(FALSE)
         FetchContent_Declare(
           c_abstract_http
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http"
@@ -263,24 +277,34 @@ if(C_REST_FRAMEWORK_FETCH_CAH)
     else()
         FetchContent_Declare(
           c_abstract_http
-          GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
-          GIT_TAG master
-          GIT_CONFIG "core.autocrlf=false"
+          URL https://github.com/SamuelMarks/c-abstract-http/archive/refs/heads/master.zip
         )
     endif()
     FetchContent_MakeAvailable(c_abstract_http)
-    if(TARGET c-abstract-http)
-        get_target_property(_opts c-abstract-http COMPILE_OPTIONS)
-        if(_opts)
-            list(REMOVE_ITEM _opts "-Werror")
-            set_target_properties(c-abstract-http PROPERTIES COMPILE_OPTIONS "${_opts}")
-        endif()
-    endif()
+    c_rest_framework_strip_bad_flags(c-abstract-http COMPILE_OPTIONS)
+    c_rest_framework_strip_bad_flags(c-abstract-http LINK_OPTIONS)
     add_definitions(-DC_REST_FRAMEWORK_USE_REAL_CAH)
 endif()
 
+
+    if(FALSE)
+        message(STATUS "Using local c_str_span from ${CMAKE_CURRENT_LIST_DIR}/../c-str-span")
+        FetchContent_Declare(
+            c_str_span
+            SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-str-span"
+        )
+    else()
+        FetchContent_Declare(
+            c_str_span
+            URL https://github.com/SamuelMarks/c-str-span/archive/refs/heads/master.zip
+        )
+    endif()
+    FetchContent_MakeAvailable(c_str_span)
+    c_rest_framework_strip_bad_flags(c_str_span_compiler_flags INTERFACE_COMPILE_OPTIONS)
+    c_rest_framework_strip_bad_flags(c_str_span_compiler_flags INTERFACE_LINK_OPTIONS)
+
 if(C_REST_FRAMEWORK_FETCH_C_ORM)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-orm/CMakeLists.txt")
+    if(FALSE)
         FetchContent_Declare(
           c_orm
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-orm"
@@ -288,21 +312,14 @@ if(C_REST_FRAMEWORK_FETCH_C_ORM)
     else()
         FetchContent_Declare(
           c_orm
-          GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
-          GIT_TAG master
-          GIT_CONFIG "core.autocrlf=false"
+          URL https://github.com/SamuelMarks/c-orm/archive/refs/heads/master.zip
         )
     endif()
     FetchContent_MakeAvailable(c_orm)
     add_definitions(-DC_REST_FRAMEWORK_USE_REAL_C_ORM)
 
-    if(TARGET c-orm_compiler_flags)
-        get_target_property(_opts c-orm_compiler_flags INTERFACE_COMPILE_OPTIONS)
-        if(_opts)
-            list(REMOVE_ITEM _opts "-Werror")
-            set_target_properties(c-orm_compiler_flags PROPERTIES INTERFACE_COMPILE_OPTIONS "${_opts}")
-        endif()
-    endif()
+    c_rest_framework_strip_bad_flags(c-orm_compiler_flags INTERFACE_COMPILE_OPTIONS)
+    c_rest_framework_strip_bad_flags(c-orm_compiler_flags INTERFACE_LINK_OPTIONS)
 endif()
 
 macro(c_rest_framework_resolve_parson)
@@ -330,15 +347,13 @@ macro(c_rest_framework_resolve_parson)
 
     if(NOT parson_RESOLVED)
         message(STATUS "Fetching parson via FetchContent")
-        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../parson/CMakeLists.txt")
+        if(FALSE)
             message(STATUS "Using local parson")
             FetchContent_Declare(parson SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../parson")
         else()
             FetchContent_Declare(
                 parson
-                GIT_REPOSITORY https://github.com/SamuelMarks/parson.git
-                GIT_TAG master
-          GIT_CONFIG "core.autocrlf=false"
+                URL https://github.com/SamuelMarks/parson/archive/refs/heads/master.zip
             )
         endif()
         set(OLD_BSL ${BUILD_SHARED_LIBS})
@@ -378,7 +393,7 @@ if(MSVC)
     # Step 17: Define strict compilation flags for MSVC (/W4 /WX- /Za)
     # We use /WX- to disable treating warnings as errors by default but use high warning level
     # Note: /Za strictly enforces ANSI C but might cause issues with Windows headers.
-    add_compile_options(/W4 /WX-)
+    add_compile_options(/W4 /WX- /wd5286)
 
     # We apply /Za only to specific source files since windows.h is not ANSI compliant
     set_source_files_properties(
@@ -443,7 +458,7 @@ if(MSVC)
     endif()
 elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     # Step 16: Define C89 strict compilation flags for GCC (-ansi -pedantic -Wall)
-    set(C_REST_GNU_FLAGS -ansi -pedantic -Wall)
+    set(C_REST_GNU_FLAGS -ansi -pedantic -Wall -Werror)
 
     if(C_REST_FRAMEWORK_USE_ASAN)
         add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
@@ -536,9 +551,7 @@ if(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
     if(NOT ZLIB_RESOLVED)
             FetchContent_Declare(
                 zlib
-                GIT_REPOSITORY https://github.com/madler/zlib.git
-                GIT_TAG master
-                GIT_CONFIG "core.autocrlf=false"
+                URL https://github.com/madler/zlib/archive/refs/heads/master.zip
             )
             set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
             set(ZLIB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
@@ -576,10 +589,7 @@ if(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
         if(NOT BROTLI_RESOLVED)
             FetchContent_Declare(
                 brotli
-                GIT_REPOSITORY https://github.com/google/brotli.git
-                GIT_TAG master
-                GIT_CONFIG "core.autocrlf=false"
-                UPDATE_COMMAND ""
+                URL https://github.com/google/brotli/archive/refs/heads/master.zip
             )
             set(BROTLI_DISABLE_TESTS ON CACHE BOOL "" FORCE)
             set(BUILD_TESTING_OLD ${BUILD_TESTING})
@@ -606,7 +616,7 @@ c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
 c_rest_framework_resolve_parson()
 
 if(C_REST_FRAMEWORK_FETCH_CDD_C)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../cdd-c/CMakeLists.txt")
+    if(FALSE)
         FetchContent_Declare(
           cdd_c
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../cdd-c"
@@ -614,19 +624,12 @@ if(C_REST_FRAMEWORK_FETCH_CDD_C)
     else()
         FetchContent_Declare(
           cdd_c
-          GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
-          GIT_TAG master
-          GIT_CONFIG "core.autocrlf=false"
+          URL https://github.com/SamuelMarks/cdd-c/archive/refs/heads/master.zip
         )
     endif()
     FetchContent_MakeAvailable(cdd_c)
-    if(TARGET c_cdd_compiler_flags)
-        get_target_property(_opts c_cdd_compiler_flags INTERFACE_COMPILE_OPTIONS)
-        if(_opts)
-            list(REMOVE_ITEM _opts "-Werror")
-            set_target_properties(c_cdd_compiler_flags PROPERTIES INTERFACE_COMPILE_OPTIONS "${_opts}")
-        endif()
-    endif()
+    c_rest_framework_strip_bad_flags(c_cdd_compiler_flags INTERFACE_COMPILE_OPTIONS)
+    c_rest_framework_strip_bad_flags(c_cdd_compiler_flags INTERFACE_LINK_OPTIONS)
     if (TARGET c_cdd)
         if (NOT WIN32 AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "DOS")
             find_package(OpenSSL QUIET)
@@ -686,8 +689,36 @@ if(C_REST_FRAMEWORK_ENABLE_GRAPHQL)
     target_compile_definitions(c-rest-framework PUBLIC C_REST_FRAMEWORK_ENABLE_GRAPHQL)
 endif()
 
+
+c_rest_framework_strip_bad_flags(c_cdd_compiler_flags INTERFACE_COMPILE_OPTIONS)
+c_rest_framework_strip_bad_flags(c_cdd_compiler_flags INTERFACE_LINK_OPTIONS)
+c_rest_framework_strip_bad_flags(c-orm_compiler_flags INTERFACE_COMPILE_OPTIONS)
+c_rest_framework_strip_bad_flags(c-orm_compiler_flags INTERFACE_LINK_OPTIONS)
+c_rest_framework_strip_bad_flags(cfs_compiler_flags INTERFACE_COMPILE_OPTIONS)
+c_rest_framework_strip_bad_flags(cfs_compiler_flags INTERFACE_LINK_OPTIONS)
+c_rest_framework_strip_bad_flags(c_str_span_compiler_flags INTERFACE_COMPILE_OPTIONS)
+c_rest_framework_strip_bad_flags(c_str_span_compiler_flags INTERFACE_LINK_OPTIONS)
+c_rest_framework_strip_bad_flags(c-abstract-http COMPILE_OPTIONS)
+c_rest_framework_strip_bad_flags(c-abstract-http LINK_OPTIONS)
+c_rest_framework_strip_bad_flags(c-rest-framework COMPILE_OPTIONS)
+c_rest_framework_strip_bad_flags(c-rest-framework LINK_OPTIONS)
+
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     enable_testing()
     add_subdirectory(tests)
     add_subdirectory(examples)
+endif()
+if(TARGET c_cdd AND MSVC)
+    get_target_property(_opts c_cdd COMPILE_OPTIONS)
+    if(_opts)
+        list(REMOVE_ITEM _opts "/WX")
+        list(REMOVE_ITEM _opts "-Werror")
+        set_target_properties(c_cdd PROPERTIES COMPILE_OPTIONS "${_opts}")
+    endif()
+endif()
+if(TARGET c_cdd AND MSVC)
+    target_compile_options(c_cdd PRIVATE "/wd5286" "/WX-")
+endif()
+if(MSVC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd5286 /wd4201 /wd4100 /wd4189 /wd4996 /wd4232 /wd4244 /wd4267")
 endif()

@@ -49,8 +49,7 @@ if(NOT TARGET c-rest-framework)
         include(FetchContent)
         FetchContent_Declare(
             c-rest-framework
-            GIT_REPOSITORY https://github.com/SamuelMarks/c-rest-framework.git
-            GIT_TAG master
+            URL https://github.com/SamuelMarks/c-rest-framework/archive/refs/heads/master.zip
         )
         FetchContent_MakeAvailable(c-rest-framework)
     endif()
@@ -58,14 +57,13 @@ endif()
 
 # Fetch c-orm if not found
 if(NOT TARGET c-orm)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../c-orm/CMakeLists.txt")
+    if(FALSE)
         add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../c-orm" c-orm-build)
     else()
         include(FetchContent)
         FetchContent_Declare(
             c-orm
-            GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
-            GIT_TAG master
+            URL https://github.com/SamuelMarks/c-orm/archive/refs/heads/master.zip
         )
         FetchContent_MakeAvailable(c-orm)
     endif()

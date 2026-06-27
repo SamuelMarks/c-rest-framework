@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_modality.h"
 #include "c_rest_orm_crud.h"
 #include "c_rest_orm_middleware.h"
@@ -18,8 +19,9 @@ struct c_rest_orm_model note_model = {"notes", "id"};
  * @param res The HTTP response.
  * @param user_data Custom user data.
  */
-static int custom_404_handler(struct c_rest_request *req,
-                              struct c_rest_response *res, void *user_data) {
+static c_rest_error_t custom_404_handler(struct c_rest_request *req,
+                                         struct c_rest_response *res,
+                                         void *user_data) {
   (void)req;
   (void)user_data;
   c_rest_response_set_status(res, 404);

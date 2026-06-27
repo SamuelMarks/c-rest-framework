@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_http23.h"
 #include <stdio.h>
 #include <string.h>
@@ -16,14 +17,14 @@ int main(void) {
 
   printf("Starting HTTP/2 & HTTP/3 Example...\n");
   res = c_rest_http23_ctx_init(C_REST_PROTOCOL_HTTP3, &ctx);
-  if (res != C_REST_HTTP23_OK || !ctx) {
+  if (res != C_REST_OK || !ctx) {
     printf("Failed to init HTTP3 ctx\n");
     return 1;
   }
 
   printf("Processing simulated HTTP/3 frame...\n");
   res = c_rest_http23_process(ctx, "mock_frame_data", 15, &consumed);
-  if (res != C_REST_HTTP23_OK) {
+  if (res != C_REST_OK) {
     printf("Failed to process data\n");
     return 1;
   }

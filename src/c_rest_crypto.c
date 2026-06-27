@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_crypto.h"
 #include "c_rest_mem.h"
 #include "c_rest_tls.h"
@@ -35,9 +36,9 @@
 
 #endif
 
-int c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) { /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) { /* GCOVR_EXCL_LINE */
   if (!out_provider) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
 #if defined(C_REST_USE_OPENSSL)
   *out_provider = C_REST_CRYPTO_OPENSSL;
@@ -55,7 +56,7 @@ int c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) { /* GCOV
   *out_provider = C_REST_CRYPTO_NONE; /* GCOVR_EXCL_LINE */
 #endif
 
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
 #if !defined(C_REST_HAS_TLS)
@@ -65,7 +66,14 @@ typedef unsigned __int32 c_rest_uint32_t;
 #elif defined(__WATCOMC__)
 typedef unsigned long c_rest_uint32_t;
 #else
+#if defined(_MSC_VER) && _MSC_VER < 1600
+    typedef __int32 int32_t;
+    typedef unsigned __int32 uint32_t;
+    typedef __int64 int64_t;
+    typedef unsigned __int64 uint64_t;
+#else
 #include <stdint.h>
+#endif
 typedef uint32_t c_rest_uint32_t;
 #endif
 
@@ -132,7 +140,7 @@ static void sha1_transform(c_rest_uint32_t state[5],
   state[4] += e;
 }
 
-int c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
+c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
   c_rest_uint32_t state[5];
   c_rest_uint32_t count[2];
   unsigned char buffer[64];
@@ -188,7 +196,7 @@ int c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
   for (i = 0; i < 20; i++) {
     hash[i] = (unsigned char)(state[i >> 2] >> ((3 - (i & 3)) * 8));
   }
-  return 0;
+  return C_REST_OK;
 }
 
 /* Fallback to custom SHA256 if no crypto backend is available */
@@ -263,7 +271,7 @@ static void sha256_transform(c_rest_uint32_t state[8],
   state[7] += h;
 }
 
-int c_rest_sha256(const unsigned char *data, size_t len,
+c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
                   unsigned char hash[32]) {
   c_rest_uint32_t state[8];
   c_rest_uint32_t count[2];
@@ -323,87 +331,87 @@ int c_rest_sha256(const unsigned char *data, size_t len,
   for (i = 0; i < 32; i++) {
     hash[i] = (unsigned char)(state[i >> 2] >> ((3 - (i & 3)) * 8));
   }
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_rand_bytes(unsigned char *buf, size_t len) {
+c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
   /* Naive fallback */
   size_t i;
   for (i = 0; i < len; ++i) {
     buf[i] = (unsigned char)(rand() % 256);
   }
-  return 0;
+  return C_REST_OK;
 }
 
 #elif defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||           \
     defined(C_REST_USE_BORINGSSL)
 
-int c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
+c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
   unsigned int out_len = 0;
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
   if (!mdctx)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   if (1 != EVP_DigestInit_ex(mdctx, EVP_sha1(), NULL) ||
       1 != EVP_DigestUpdate(mdctx, data, len) ||
       1 != EVP_DigestFinal_ex(mdctx, hash, &out_len)) {
     EVP_MD_CTX_free(mdctx);
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   EVP_MD_CTX_free(mdctx);
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_sha256(const unsigned char *data, size_t len,
+c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
                   unsigned char hash[32]) {
   unsigned int out_len = 0;
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
   if (!mdctx)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   if (1 != EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL) ||
       1 != EVP_DigestUpdate(mdctx, data, len) ||
       1 != EVP_DigestFinal_ex(mdctx, hash, &out_len)) {
     EVP_MD_CTX_free(mdctx);
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   EVP_MD_CTX_free(mdctx);
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_rand_bytes(unsigned char *buf, size_t len) {
+c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
   if (RAND_bytes(buf, (int)len) != 1) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
-  return 0;
+  return C_REST_OK;
 }
 
 #elif defined(C_REST_USE_MBEDTLS)
 
-int c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
+c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
 #if MBEDTLS_VERSION_MAJOR >= 3
   if (mbedtls_sha1(data, len, hash) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #else
   mbedtls_sha1(data, len, hash);
 #endif
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_sha256(const unsigned char *data, size_t len,
+c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
                   unsigned char hash[32]) {
 #if MBEDTLS_VERSION_MAJOR >= 3
   if (mbedtls_sha256(data, len, hash, 0) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 #else
   mbedtls_sha256(data, len, hash, 0);
 #endif
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_rand_bytes(unsigned char *buf, size_t len) {
+c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
   mbedtls_entropy_context entropy;
   mbedtls_ctr_drbg_context ctr_drbg;
   int ret;
@@ -416,7 +424,7 @@ int c_rest_rand_bytes(unsigned char *buf, size_t len) {
   if (ret != 0) {
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_entropy_free(&entropy);
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   ret = mbedtls_ctr_drbg_random(&ctr_drbg, buf, len);
@@ -428,39 +436,39 @@ int c_rest_rand_bytes(unsigned char *buf, size_t len) {
 
 #elif defined(C_REST_USE_WOLFSSL)
 
-int c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
+c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
   wc_Sha1 sha;
   if (wc_InitSha1(&sha) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   if (wc_Sha1Update(&sha, data, len) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   if (wc_Sha1Final(&sha, hash) != 0)
-    return 1;
-  return 0;
+    return C_REST_ERROR_GENERIC;
+  return C_REST_OK;
 }
 
-int c_rest_sha256(const unsigned char *data, size_t len,
+c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
                   unsigned char hash[32]) {
   wc_Sha256 sha256;
   if (wc_InitSha256(&sha256) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   if (wc_Sha256Update(&sha256, data, len) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   if (wc_Sha256Final(&sha256, hash) != 0)
-    return 1;
-  return 0;
+    return C_REST_ERROR_GENERIC;
+  return C_REST_OK;
 }
 
-int c_rest_rand_bytes(unsigned char *buf, size_t len) {
+c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
   WC_RNG rng;
   if (wc_InitRng(&rng) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   if (wc_RNG_GenerateBlock(&rng, buf, len) != 0) {
     wc_FreeRng(&rng);
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   wc_FreeRng(&rng);
-  return 0;
+  return C_REST_OK;
 }
 
 #elif defined(C_REST_USE_S2N)
@@ -477,56 +485,58 @@ int c_rest_rand_bytes(unsigned char *buf, size_t len) {
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
 
-int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
-                       const unsigned char *data, size_t data_len,
-                       unsigned char hash[32]) {
+c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
+                                  const unsigned char *data, size_t data_len,
+                                  unsigned char hash[32]) {
   unsigned int out_len = 32;
   if (!HMAC(EVP_sha256(), key, (int)key_len, data, data_len, hash, &out_len)) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
-                              size_t password_len, const unsigned char *salt,
-                              size_t salt_len, unsigned long iterations,
-                              size_t dk_len, unsigned char *out_key) {
+c_rest_error_t
+c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
+                          const unsigned char *salt, size_t salt_len,
+                          unsigned long iterations, size_t dk_len,
+                          unsigned char *out_key) {
   if (PKCS5_PBKDF2_HMAC((const char *)password, (int)password_len, salt,
                         (int)salt_len, (int)iterations, EVP_sha256(),
                         (int)dk_len, out_key) != 1) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
-  return 0;
+  return C_REST_OK;
 }
 
 #elif defined(C_REST_USE_MBEDTLS)
 
-int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
-                       const unsigned char *data, size_t data_len,
-                       unsigned char hash[32]) {
+c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
+                                  const unsigned char *data, size_t data_len,
+                                  unsigned char hash[32]) {
   const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
   if (!info)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   if (mbedtls_md_hmac(info, key, key_len, data, data_len, hash) != 0)
-    return 1;
-  return 0;
+    return C_REST_ERROR_GENERIC;
+  return C_REST_OK;
 }
 
-int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
-                              size_t password_len, const unsigned char *salt,
-                              size_t salt_len, unsigned long iterations,
-                              size_t dk_len, unsigned char *out_key) {
+c_rest_error_t
+c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
+                          const unsigned char *salt, size_t salt_len,
+                          unsigned long iterations, size_t dk_len,
+                          unsigned char *out_key) {
   mbedtls_md_context_t ctx;
   const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
   int ret;
 
   if (!info)
-    return 1;
+    return C_REST_ERROR_GENERIC;
 
   mbedtls_md_init(&ctx);
   if (mbedtls_md_setup(&ctx, info, 1) != 0) {
     mbedtls_md_free(&ctx);
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   ret = mbedtls_pkcs5_pbkdf2_hmac(&ctx, password, password_len, salt, salt_len,
@@ -537,23 +547,24 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
 
 #elif defined(C_REST_USE_WOLFSSL)
 
-int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
-                       const unsigned char *data, size_t data_len,
-                       unsigned char hash[32]) {
+c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
+                                  const unsigned char *data, size_t data_len,
+                                  unsigned char hash[32]) {
   Hmac hmac;
   if (wc_HmacSetKey(&hmac, WC_HASH_TYPE_SHA256, key, (word32)key_len) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   if (wc_HmacUpdate(&hmac, data, (word32)data_len) != 0)
-    return 1;
+    return C_REST_ERROR_GENERIC;
   if (wc_HmacFinal(&hmac, hash) != 0)
-    return 1;
-  return 0;
+    return C_REST_ERROR_GENERIC;
+  return C_REST_OK;
 }
 
-int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
-                              size_t password_len, const unsigned char *salt,
-                              size_t salt_len, unsigned long iterations,
-                              size_t dk_len, unsigned char *out_key) {
+c_rest_error_t
+c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
+                          const unsigned char *salt, size_t salt_len,
+                          unsigned long iterations, size_t dk_len,
+                          unsigned char *out_key) {
   int ret = wc_PBKDF2(out_key, password, (int)password_len, salt, (int)salt_len,
                       (int)iterations, (int)dk_len, WC_HASH_TYPE_SHA256);
   return ret == 0 ? 0 : 1;
@@ -561,9 +572,9 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
 
 #else
 
-int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
-                       const unsigned char *data, size_t data_len,
-                       unsigned char hash[32]) {
+c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
+                                  const unsigned char *data, size_t data_len,
+                                  unsigned char hash[32]) {
   unsigned char k_ipad[64];
   unsigned char k_opad[64];
   unsigned char actual_key[64];
@@ -572,13 +583,13 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
   unsigned char *outer_buf;
   size_t i;
 
-  if (!key || !data || !hash) /* GCOVR_EXCL_LINE */
-    return 1;                 /* GCOVR_EXCL_LINE */
+  if (!key || !data || !hash)    /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   memset(actual_key, 0, sizeof(actual_key));
   if (key_len > 64) {                                 /* GCOVR_EXCL_LINE */
     if (c_rest_sha256(key, key_len, actual_key) != 0) /* GCOVR_EXCL_LINE */
-      return 1;                                       /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC;                    /* GCOVR_EXCL_LINE */
   } else {
     memcpy(actual_key, key, key_len);
   }
@@ -592,8 +603,8 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
     LOG_DEBUG("C_REST_MALLOC failed");
     inner_buf = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!inner_buf) /* GCOVR_EXCL_LINE */
-    return 1;     /* GCOVR_EXCL_LINE */
+  if (!inner_buf)                /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   memcpy(inner_buf, k_ipad, 64);
   memcpy(inner_buf + 64, data, data_len);
@@ -601,7 +612,7 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
   if (c_rest_sha256(inner_buf, 64 + data_len, inner_hash) !=
       0) {                            /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(inner_buf)); /* GCOVR_EXCL_LINE */
-    return 1;                         /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;      /* GCOVR_EXCL_LINE */
   }
   C_REST_FREE((void *)(inner_buf));
 
@@ -609,25 +620,26 @@ int c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
     LOG_DEBUG("C_REST_MALLOC failed");
     outer_buf = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!outer_buf) /* GCOVR_EXCL_LINE */
-    return 1;     /* GCOVR_EXCL_LINE */
+  if (!outer_buf)                /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   memcpy(outer_buf, k_opad, 64);
   memcpy(outer_buf + 64, inner_hash, 32);
 
   if (c_rest_sha256(outer_buf, 64 + 32, hash) != 0) { /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(outer_buf));                 /* GCOVR_EXCL_LINE */
-    return 1;                                         /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                      /* GCOVR_EXCL_LINE */
   }
   C_REST_FREE((void *)(outer_buf));
 
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
-                              size_t password_len, const unsigned char *salt,
-                              size_t salt_len, unsigned long iterations,
-                              size_t dk_len, unsigned char *out_key) {
+c_rest_error_t
+c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
+                          const unsigned char *salt, size_t salt_len,
+                          unsigned long iterations, size_t dk_len,
+                          unsigned char *out_key) {
   unsigned int i, k;
   unsigned char U[32];
   unsigned char T[32];
@@ -635,7 +647,7 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
   size_t generated_len = 0;
 
   if (!password || !salt || !out_key || iterations == 0) /* GCOVR_EXCL_LINE */
-    return 1;                                            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                         /* GCOVR_EXCL_LINE */
 
   while (generated_len < dk_len) {
     size_t to_copy =
@@ -653,8 +665,8 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
       LOG_DEBUG("C_REST_MALLOC failed");
       salt_plus_idx = NULL; /* GCOVR_EXCL_LINE */
     }
-    if (!salt_plus_idx) /* GCOVR_EXCL_LINE */
-      return 1;         /* GCOVR_EXCL_LINE */
+    if (!salt_plus_idx)            /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
     memcpy(salt_plus_idx, salt, salt_len);
     memcpy(salt_plus_idx + salt_len, block_idx_bytes, 4);
 
@@ -662,7 +674,7 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
                            salt_len + 4, /* GCOVR_EXCL_LINE */
                            U) != 0) {
       C_REST_FREE((void *)(salt_plus_idx)); /* GCOVR_EXCL_LINE */
-      return 1;                             /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC;          /* GCOVR_EXCL_LINE */
     }
     C_REST_FREE((void *)(salt_plus_idx));
 
@@ -670,8 +682,8 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
 
     for (i = 1; i < iterations; i++) {
       if (c_rest_hmac_sha256(password, password_len, U, 32, U) !=
-          0)      /* GCOVR_EXCL_LINE */
-        return 1; /* GCOVR_EXCL_LINE */
+          0)                         /* GCOVR_EXCL_LINE */
+        return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
       for (k = 0; k < 32; k++) {
         T[k] ^= U[k];
       }
@@ -682,34 +694,35 @@ int c_rest_pbkdf2_hmac_sha256(const unsigned char *password,
     block_index++;
   }
 
-  return 0;
+  return C_REST_OK;
 }
 
 #endif
 
-int c_rest_random_string_generate(size_t entropy_bytes, char **out_str) {
+c_rest_error_t c_rest_random_string_generate(size_t entropy_bytes,
+                                             char **out_str) {
   unsigned char *rand_buf;
   size_t out_len = 0;
 
   if (!out_str || entropy_bytes == 0) /* GCOVR_EXCL_LINE */
-    return 1;                         /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;      /* GCOVR_EXCL_LINE */
 
   if (C_REST_MALLOC(entropy_bytes, &rand_buf) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
     rand_buf = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!rand_buf) /* GCOVR_EXCL_LINE */
-    return 1;    /* GCOVR_EXCL_LINE */
+  if (!rand_buf)                 /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (c_rest_rand_bytes(rand_buf, entropy_bytes) != 0) { /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(rand_buf));                     /* GCOVR_EXCL_LINE */
-    return 1;                                            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                         /* GCOVR_EXCL_LINE */
   }
 
   if (c_rest_base64url_encode(rand_buf, entropy_bytes, NULL, &out_len) !=
       0) {                           /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(rand_buf)); /* GCOVR_EXCL_LINE */
-    return 1;                        /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;     /* GCOVR_EXCL_LINE */
   }
 
   if (C_REST_MALLOC(out_len + 1, out_str) != 0) { /* GCOVR_EXCL_LINE */
@@ -718,7 +731,7 @@ int c_rest_random_string_generate(size_t entropy_bytes, char **out_str) {
   }
   if (!*out_str) {                   /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(rand_buf)); /* GCOVR_EXCL_LINE */
-    return 1;                        /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;     /* GCOVR_EXCL_LINE */
   }
 
   if (c_rest_base64url_encode(rand_buf, entropy_bytes, *out_str,
@@ -726,22 +739,23 @@ int c_rest_random_string_generate(size_t entropy_bytes, char **out_str) {
       0) {
     C_REST_FREE((void *)(*out_str)); /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(rand_buf)); /* GCOVR_EXCL_LINE */
-    return 1;                        /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;     /* GCOVR_EXCL_LINE */
   }
   (*out_str)[out_len] = '\0';
 
   C_REST_FREE((void *)(rand_buf));
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_oauth2_generate_access_token(char **out_token) {
+c_rest_error_t c_rest_oauth2_generate_access_token(char **out_token) {
   /* 32 bytes of entropy corresponds to 256 bits, standard for access tokens.
      When base64url-encoded, it produces ~43 characters. */
   return c_rest_random_string_generate(32, out_token);
 }
 
-int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
-                          size_t secret_len, char **out_token) {
+c_rest_error_t c_rest_jwt_sign_hs256(const char *json_payload,
+                                     const unsigned char *secret,
+                                     size_t secret_len, char **out_token) {
   const char *header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
   char *encoded_header = NULL;
   size_t header_len = 0;
@@ -757,31 +771,31 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
   size_t real_to_sign_len = 0;
 
   if (!json_payload || !secret || !out_token) /* GCOVR_EXCL_LINE */
-    return 1;                                 /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;              /* GCOVR_EXCL_LINE */
 
   if (c_rest_base64url_encode((const unsigned char *)header,
                               strlen(header), /* GCOVR_EXCL_LINE */
                               NULL, &header_len) != 0)
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(header_len + 1, &encoded_header) !=
       0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
     encoded_header = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!encoded_header) /* GCOVR_EXCL_LINE */
-    return 1;          /* GCOVR_EXCL_LINE */
+  if (!encoded_header)           /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   if (c_rest_base64url_encode((const unsigned char *)header,
                               strlen(header), /* GCOVR_EXCL_LINE */
                               encoded_header, &header_len) != 0) {
     C_REST_FREE((void *)encoded_header); /* GCOVR_EXCL_LINE */
-    return 1;                            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;         /* GCOVR_EXCL_LINE */
   }
 
   if (c_rest_base64url_encode(
           (const unsigned char *)json_payload, /* GCOVR_EXCL_LINE */
           strlen(json_payload), NULL, &payload_len) != 0) {
     C_REST_FREE((void *)encoded_header); /* GCOVR_EXCL_LINE */
-    return 1;                            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;         /* GCOVR_EXCL_LINE */
   }
   if (C_REST_MALLOC(payload_len + 1, &encoded_payload) !=
       0) { /* GCOVR_EXCL_LINE */
@@ -790,14 +804,14 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
   }
   if (!encoded_payload) {                  /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(encoded_header)); /* GCOVR_EXCL_LINE */
-    return 1;                              /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;           /* GCOVR_EXCL_LINE */
   }
   if (c_rest_base64url_encode(
           (const unsigned char *)json_payload, /* GCOVR_EXCL_LINE */
           strlen(json_payload), encoded_payload, &payload_len) != 0) {
     C_REST_FREE((void *)encoded_header);  /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)encoded_payload); /* GCOVR_EXCL_LINE */
-    return 1;                             /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;          /* GCOVR_EXCL_LINE */
   }
 
   to_sign_alloc = strlen(encoded_header) + 1 + strlen(encoded_payload) + 1;
@@ -808,7 +822,7 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
   if (!to_sign) {                           /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(encoded_header));  /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(encoded_payload)); /* GCOVR_EXCL_LINE */
-    return 1;                               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;            /* GCOVR_EXCL_LINE */
   }
 
 #if defined(_MSC_VER)
@@ -829,7 +843,7 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
     C_REST_FREE((void *)(encoded_header));  /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(encoded_payload)); /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(to_sign));         /* GCOVR_EXCL_LINE */
-    return 1;                               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;            /* GCOVR_EXCL_LINE */
   }
 
   if (c_rest_base64url_encode(sig, 32, NULL, &sig_len) !=
@@ -837,7 +851,7 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
     C_REST_FREE((void *)encoded_header);  /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)encoded_payload); /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)to_sign);         /* GCOVR_EXCL_LINE */
-    return 1;                             /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;          /* GCOVR_EXCL_LINE */
   }
   if (C_REST_MALLOC(sig_len + 1, &encoded_sig) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
@@ -847,7 +861,7 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
     C_REST_FREE((void *)(encoded_header));  /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(encoded_payload)); /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(to_sign));         /* GCOVR_EXCL_LINE */
-    return 1;                               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;            /* GCOVR_EXCL_LINE */
   }
   if (c_rest_base64url_encode(sig, 32, encoded_sig, &sig_len) !=
       0) {                                /* GCOVR_EXCL_LINE */
@@ -855,7 +869,7 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
     C_REST_FREE((void *)encoded_payload); /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)to_sign);         /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)encoded_sig);     /* GCOVR_EXCL_LINE */
-    return 1;                             /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;          /* GCOVR_EXCL_LINE */
   }
 
   token_alloc = strlen(to_sign) + 1 + strlen(encoded_sig) + 1;
@@ -868,7 +882,7 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
     C_REST_FREE((void *)(encoded_payload)); /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(to_sign));         /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(encoded_sig));     /* GCOVR_EXCL_LINE */
-    return 1;                               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;            /* GCOVR_EXCL_LINE */
   }
 
 #if defined(_MSC_VER)
@@ -887,11 +901,12 @@ int c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
   C_REST_FREE((void *)(encoded_sig));
 
   *out_token = token;
-  return 0;
+  return C_REST_OK;
 }
 
-int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
-                            size_t secret_len, char **out_payload) {
+c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
+                                       const unsigned char *secret,
+                                       size_t secret_len, char **out_payload) {
   const char *dot1;
   const char *dot2;
   size_t to_sign_len;
@@ -905,22 +920,22 @@ int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
   size_t decoded_payload_len;
 
   if (!token || !secret || !out_payload) /* GCOVR_EXCL_LINE */
-    return 1;                            /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;         /* GCOVR_EXCL_LINE */
 
   dot1 = strchr(token, '.');
-  if (!dot1)  /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!dot1)                     /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   dot2 = strchr(dot1 + 1, '.');
-  if (!dot2)  /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!dot2)                     /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   to_sign_len = (size_t)(dot2 - token);
   if (C_REST_MALLOC(to_sign_len + 1, &to_sign) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
     to_sign = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!to_sign) /* GCOVR_EXCL_LINE */
-    return 1;   /* GCOVR_EXCL_LINE */
+  if (!to_sign)                  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   memcpy(to_sign, token, to_sign_len);
   to_sign[to_sign_len] = '\0';
 
@@ -930,30 +945,30 @@ int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
                          (const unsigned char *)to_sign, /* GCOVR_EXCL_LINE */
                          to_sign_len, expected_sig) != 0) {
     C_REST_FREE((void *)(to_sign)); /* GCOVR_EXCL_LINE */
-    return 1;                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
   }
   C_REST_FREE((void *)(to_sign));
 
   if (c_rest_base64url_encode(expected_sig, 32, NULL, /* GCOVR_EXCL_LINE */
                               &encoded_expected_sig_len) != 0)
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(encoded_expected_sig_len + 1, &encoded_expected_sig) !=
       0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
     encoded_expected_sig = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!encoded_expected_sig) /* GCOVR_EXCL_LINE */
-    return 1;                /* GCOVR_EXCL_LINE */
+  if (!encoded_expected_sig)     /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   if (c_rest_base64url_encode(expected_sig, 32,
                               encoded_expected_sig, /* GCOVR_EXCL_LINE */
                               &encoded_expected_sig_len) != 0) {
     C_REST_FREE((void *)encoded_expected_sig); /* GCOVR_EXCL_LINE */
-    return 1;                                  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;               /* GCOVR_EXCL_LINE */
   }
 
   if (strcmp(provided_sig, encoded_expected_sig) != 0) {
     C_REST_FREE((void *)(encoded_expected_sig));
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
   C_REST_FREE((void *)(encoded_expected_sig));
 
@@ -961,7 +976,7 @@ int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
   if (c_rest_base64url_decode(dot1 + 1, payload_b64_len,
                               NULL, /* GCOVR_EXCL_LINE */
                               &decoded_payload_len) != 0) {
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (C_REST_MALLOC(decoded_payload_len + 1, &decoded_payload) !=
@@ -969,27 +984,28 @@ int c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
     LOG_DEBUG("C_REST_MALLOC failed");
     decoded_payload = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!decoded_payload) /* GCOVR_EXCL_LINE */
-    return 1;           /* GCOVR_EXCL_LINE */
+  if (!decoded_payload)          /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (c_rest_base64url_decode(dot1 + 1, payload_b64_len,
                               decoded_payload, /* GCOVR_EXCL_LINE */
                               &decoded_payload_len) != 0) {
     C_REST_FREE((void *)(decoded_payload)); /* GCOVR_EXCL_LINE */
-    return 1;                               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;            /* GCOVR_EXCL_LINE */
   }
   decoded_payload[decoded_payload_len] = '\0';
 
   *out_payload = (char *)decoded_payload;
-  return 0;
+  return C_REST_OK;
 }
 
 #define C_REST_PBKDF2_ITERATIONS 100000UL
 #define C_REST_PBKDF2_SALT_LEN 16
 #define C_REST_PBKDF2_HASH_LEN 32
 
-int c_rest_hash_password(const char *password,
-                         enum c_rest_password_hash_alg alg, char **out_hash) {
+c_rest_error_t c_rest_hash_password(const char *password,
+                                    enum c_rest_password_hash_alg alg,
+                                    char **out_hash) {
   unsigned char salt[C_REST_PBKDF2_SALT_LEN];
   unsigned char hash[C_REST_PBKDF2_HASH_LEN];
   char *salt_b64 = NULL;
@@ -999,25 +1015,25 @@ int c_rest_hash_password(const char *password,
   size_t out_len = 0;
   int res = 1;
 
-  if (!password || !out_hash) { /* GCOVR_EXCL_LINE */
-    return 1;                   /* GCOVR_EXCL_LINE */
+  if (!password || !out_hash) {  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (alg != C_REST_HASH_ALG_PBKDF2_SHA256) { /* GCOVR_EXCL_LINE */
     /* Only PBKDF2 is implemented natively for now without external libs */
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (c_rest_rand_bytes(salt, C_REST_PBKDF2_SALT_LEN) !=
-      0) {    /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+      0) {                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (c_rest_pbkdf2_hmac_sha256(
           (const unsigned char *)password, /* GCOVR_EXCL_LINE */
           strlen(password), salt, C_REST_PBKDF2_SALT_LEN,
           C_REST_PBKDF2_ITERATIONS, C_REST_PBKDF2_HASH_LEN, hash) != 0) {
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   if (c_rest_base64_encode(salt, C_REST_PBKDF2_SALT_LEN, NULL,
@@ -1083,7 +1099,8 @@ cleanup:
   return res;
 }
 
-int c_rest_verify_password(const char *password, const char *hash_str) {
+c_rest_error_t c_rest_verify_password(const char *password,
+                                      const char *hash_str) {
   int iters = 0;
   char salt_b64[128];
   char hash_b64[128];
@@ -1094,13 +1111,13 @@ int c_rest_verify_password(const char *password, const char *hash_str) {
   size_t expected_hash_len = 0;
   int res = 1;
 
-  if (!password || !hash_str) { /* GCOVR_EXCL_LINE */
-    return 1;                   /* GCOVR_EXCL_LINE */
+  if (!password || !hash_str) {  /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   /* We only support PBKDF2 currently */
   if (strncmp(hash_str, "$pbkdf2-sha256$i=", 17) != 0) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 
   memset(salt_b64, 0, sizeof(salt_b64));
@@ -1110,26 +1127,26 @@ int c_rest_verify_password(const char *password, const char *hash_str) {
   if (sscanf_s(hash_str + 17, "%d$%127[^$]$%127s", &iters, salt_b64,
                (unsigned)sizeof(salt_b64), hash_b64,
                (unsigned)sizeof(hash_b64)) != 3) {
-    return 1;
+    return C_REST_ERROR_GENERIC;
   }
 #else
   if (sscanf(hash_str + 17, "%d$%127[^$]$%127s", &iters, salt_b64,
              hash_b64) != /* GCOVR_EXCL_LINE */
       3) {
-    return 1; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 #endif
 
   if (c_rest_base64_decode(salt_b64, strlen(salt_b64), NULL, &salt_len) !=
-      0) {    /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+      0) {                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   if (C_REST_MALLOC(salt_len, &salt) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
     salt = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!salt) { /* GCOVR_EXCL_LINE */
-    return 1;  /* GCOVR_EXCL_LINE */
+  if (!salt) {                   /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   if (c_rest_base64_decode(salt_b64, strlen(salt_b64), salt, &salt_len) !=
       0) {        /* GCOVR_EXCL_LINE */
