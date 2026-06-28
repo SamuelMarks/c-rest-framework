@@ -87,8 +87,13 @@ c_rest_error_t c_rest_strlcpy(char *dst, const char *src, size_t dsize,
     copy_len = dsize - 1;  /* GCOVR_EXCL_LINE */
   }
 
+#if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(dst, copy_len, src,
+                              copy_len); /* GCOVR_EXCL_LINE */
+#else
   memcpy(dst, src, copy_len); /* GCOVR_EXCL_LINE */
-  dst[copy_len] = '\0';       /* GCOVR_EXCL_LINE */
+#endif
+  dst[copy_len] = '\0'; /* GCOVR_EXCL_LINE */
 
   *out_len = src_len; /* GCOVR_EXCL_LINE */
   return C_REST_OK;   /* GCOVR_EXCL_LINE */
@@ -126,8 +131,13 @@ c_rest_error_t c_rest_strlcat(char *dst, const char *src, size_t dsize,
     copy_len = space_left;          /* GCOVR_EXCL_LINE */
   }
 
+#if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(dst + dst_len, copy_len, src,
+                              copy_len); /* GCOVR_EXCL_LINE */
+#else
   memcpy(dst + dst_len, src, copy_len); /* GCOVR_EXCL_LINE */
-  dst[dst_len + copy_len] = '\0';       /* GCOVR_EXCL_LINE */
+#endif
+  dst[dst_len + copy_len] = '\0'; /* GCOVR_EXCL_LINE */
 
   *out_len = dst_len + src_len; /* GCOVR_EXCL_LINE */
   return C_REST_OK;             /* GCOVR_EXCL_LINE */

@@ -91,7 +91,11 @@ static void sha1_transform(c_rest_uint32_t state[5],
   c_rest_uint32_t w[80];
   int i;
 
+  #if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(block, 64, buffer, 64);
+  #else
   memcpy(block, buffer, 64);
+  #endif
   for (i = 0; i < 16; i++) {
     w[i] = ((c_rest_uint32_t)buffer[i * 4] << 24) |
            ((c_rest_uint32_t)buffer[i * 4 + 1] << 16) |
@@ -591,7 +595,11 @@ c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
     if (c_rest_sha256(key, key_len, actual_key) != 0) /* GCOVR_EXCL_LINE */
       return C_REST_ERROR_GENERIC;                    /* GCOVR_EXCL_LINE */
   } else {
+#if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(actual_key, key_len, key, key_len);
+#else
     memcpy(actual_key, key, key_len);
+#endif
   }
 
   for (i = 0; i < 64; i++) {
@@ -606,8 +614,16 @@ c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
   if (!inner_buf)                /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
+#if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(inner_buf, 64, k_ipad, 64);
+#else
   memcpy(inner_buf, k_ipad, 64);
+#endif
+#if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(inner_buf + 64, data_len, data, data_len);
+#else
   memcpy(inner_buf + 64, data, data_len);
+#endif
 
   if (c_rest_sha256(inner_buf, 64 + data_len, inner_hash) !=
       0) {                            /* GCOVR_EXCL_LINE */
@@ -623,8 +639,16 @@ c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
   if (!outer_buf)                /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
+#if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(outer_buf, 64, k_opad, 64);
+#else
   memcpy(outer_buf, k_opad, 64);
+#endif
+#if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(outer_buf + 64, 32, inner_hash, 32);
+#else
   memcpy(outer_buf + 64, inner_hash, 32);
+#endif
 
   if (c_rest_sha256(outer_buf, 64 + 32, hash) != 0) { /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(outer_buf));                 /* GCOVR_EXCL_LINE */
@@ -667,8 +691,17 @@ c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
     }
     if (!salt_plus_idx)            /* GCOVR_EXCL_LINE */
       return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(salt_plus_idx, salt_len, salt, salt_len);
+#else
     memcpy(salt_plus_idx, salt, salt_len);
+#endif
+#if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(salt_plus_idx + salt_len, 4, block_idx_bytes,
+                                4);
+#else
     memcpy(salt_plus_idx + salt_len, block_idx_bytes, 4);
+#endif
 
     if (c_rest_hmac_sha256(password, password_len, salt_plus_idx,
                            salt_len + 4, /* GCOVR_EXCL_LINE */
@@ -678,7 +711,11 @@ c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
     }
     C_REST_FREE((void *)(salt_plus_idx));
 
+#if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(T, 32, U, 32);
+#else
     memcpy(T, U, 32);
+#endif
 
     for (i = 1; i < iterations; i++) {
       if (c_rest_hmac_sha256(password, password_len, U, 32, U) !=
@@ -689,7 +726,11 @@ c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
       }
     }
 
+#if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(out_key + generated_len, to_copy, T, to_copy);
+#else
     memcpy(out_key + generated_len, T, to_copy);
+#endif
     generated_len += to_copy;
     block_index++;
   }
@@ -936,7 +977,11 @@ c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
   }
   if (!to_sign)                  /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(to_sign, to_sign_len, token, to_sign_len);
+#else
   memcpy(to_sign, token, to_sign_len);
+#endif
   to_sign[to_sign_len] = '\0';
 
   provided_sig = dot2 + 1;

@@ -58,7 +58,11 @@ c_rest_error_t c_rest_string_append(c_rest_string *str, const char *data,
     str->data = new_data;          /* GCOVR_EXCL_LINE */
     str->capacity = new_cap;       /* GCOVR_EXCL_LINE */
   }
+#if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(str->data + str->length, len, data, len);
+#else
   memcpy(str->data + str->length, data, len);
+#endif
   str->length += len;
   str->data[str->length] = '\0';
   return C_REST_OK;

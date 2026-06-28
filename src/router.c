@@ -69,7 +69,11 @@ static int create_node(const char *segment, size_t len,
     C_REST_FREE((void *)(node)); /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
+  #if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(node->segment, len, segment, len);
+  #else
   memcpy(node->segment, segment, len);
+  #endif
   node->segment[len] = '\0';
 
   node->is_var = 0;
@@ -697,7 +701,11 @@ static int match_route(struct c_rest_route_node *node, const char *path,
 
             var->value = (char *)malloc(len + 1);
             if (var->value) { /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+              /* CDD_SAFE_CRT */ memcpy_s(var->value, len, path, len);
+#else
               memcpy(var->value, path, len);
+#endif
               var->value[len] = '\0';
             }
 

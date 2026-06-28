@@ -87,9 +87,17 @@ static int parse_cookies_if_needed(struct c_rest_request *req) { /* GCOVR_EXCL_L
       if (C_REST_MALLOC(key_len + 1, &cp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp->key = NULL; } /* GCOVR_EXCL_LINE */
       if (C_REST_MALLOC(val_len + 1, &cp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp->value = NULL; } /* GCOVR_EXCL_LINE */
       if (cp->key && cp->value) { /* GCOVR_EXCL_LINE */
+        #if defined(_MSC_VER)
+        /* CDD_SAFE_CRT */ memcpy_s(cp->key, key_len, p, key_len); /* GCOVR_EXCL_LINE */
+        #else
         memcpy(cp->key, p, key_len); /* GCOVR_EXCL_LINE */
+        #endif
         cp->key[key_len] = '\0'; /* GCOVR_EXCL_LINE */
+        #if defined(_MSC_VER)
+        /* CDD_SAFE_CRT */ memcpy_s(cp->value, val_len, eq + 1, val_len); /* GCOVR_EXCL_LINE */
+        #else
         memcpy(cp->value, eq + 1, val_len); /* GCOVR_EXCL_LINE */
+        #endif
         cp->value[val_len] = '\0'; /* GCOVR_EXCL_LINE */
 
         cp->next = req->cookies; /* GCOVR_EXCL_LINE */

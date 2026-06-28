@@ -62,7 +62,11 @@ static c_rest_error_t c_rest_sse_strdup(const char *s, char **out_str) {
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   copy = (char *)tmp;
+  #if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(copy, len + 1, s, len + 1);
+  #else
   memcpy(copy, s, len + 1);
+  #endif
   *out_str = copy;
   return C_REST_OK;
 }
@@ -156,7 +160,11 @@ c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **ou
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   *out_buf = (char *)tmp_out_buf;
+  #if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(*out_buf, data_len, s.data, data_len);
+  #else
   memcpy(*out_buf, s.data, data_len);
+  #endif
   (*out_buf)[data_len] = '\0';
   *out_len = data_len;
 
@@ -217,10 +225,18 @@ static int append_to_string(char **dest, const char *src, size_t len) {
   new_str = (char *)tmp_new_str;
 
   if (*dest) { /* GCOVR_EXCL_LINE */
+    #if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(new_str, old_len, *dest, old_len); /* GCOVR_EXCL_LINE */
+    #else
     memcpy(new_str, *dest, old_len); /* GCOVR_EXCL_LINE */
+    #endif
     C_REST_FREE(*dest); /* GCOVR_EXCL_LINE */
   }
+  #if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(new_str + old_len, len, src, len);
+  #else
   memcpy(new_str + old_len, src, len);
+  #endif
   new_str[old_len + len] = '\0';
 
   *dest = new_str;
@@ -255,12 +271,20 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
       }
       new_buf = (char *)tmp_new_buf;
       if (ctx->buffer) { /* GCOVR_EXCL_LINE */
+        #if defined(_MSC_VER)
+        /* CDD_SAFE_CRT */ memcpy_s(new_buf, ctx->buffer_len, ctx->buffer, ctx->buffer_len); /* GCOVR_EXCL_LINE */
+        #else
         memcpy(new_buf, ctx->buffer, ctx->buffer_len); /* GCOVR_EXCL_LINE */
+        #endif
         C_REST_FREE(ctx->buffer); /* GCOVR_EXCL_LINE */
       }
       ctx->buffer = new_buf;
     }
+    #if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(ctx->buffer + ctx->buffer_len, len, data, len);
+    #else
     memcpy(ctx->buffer + ctx->buffer_len, data, len);
+    #endif
     ctx->buffer_len += len;
   }
 
@@ -332,7 +356,11 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
                  memcmp(line_start, "retry", 5) == 0) { /* GCOVR_EXCL_LINE */
         char retry_str[32];
         size_t copy_len = value_len < 31 ? value_len : 31;
+        #if defined(_MSC_VER)
+        /* CDD_SAFE_CRT */ memcpy_s(retry_str, copy_len, value, copy_len);
+        #else
         memcpy(retry_str, value, copy_len);
+        #endif
         retry_str[copy_len] = '\0';
         ctx->current_event.retry = atoi(retry_str);
       }

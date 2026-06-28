@@ -272,9 +272,14 @@ static void on_method(c_rest_parser_context *pctx,
     LOG_DEBUG("C_REST_MALLOC failed");
     st->method = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (st->method) {                  /* GCOVR_EXCL_LINE */
+  if (st->method) { /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(st->method, len, method,
+                                len); /* GCOVR_EXCL_LINE */
+#else
     memcpy(st->method, method, len); /* GCOVR_EXCL_LINE */
-    st->method[len] = '\0';          /* GCOVR_EXCL_LINE */
+#endif
+    st->method[len] = '\0'; /* GCOVR_EXCL_LINE */
   }
 } /* GCOVR_EXCL_LINE */
 
@@ -286,9 +291,13 @@ static void on_url(c_rest_parser_context *pctx, const char *url,
     LOG_DEBUG("C_REST_MALLOC failed");
     st->url = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (st->url) {               /* GCOVR_EXCL_LINE */
+  if (st->url) { /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(st->url, len, url, len); /* GCOVR_EXCL_LINE */
+#else
     memcpy(st->url, url, len); /* GCOVR_EXCL_LINE */
-    st->url[len] = '\0';       /* GCOVR_EXCL_LINE */
+#endif
+    st->url[len] = '\0'; /* GCOVR_EXCL_LINE */
   }
 } /* GCOVR_EXCL_LINE */
 
@@ -311,13 +320,23 @@ static void on_header(c_rest_parser_context *pctx,
       LOG_DEBUG("C_REST_MALLOC failed");
       h->value = NULL; /* GCOVR_EXCL_LINE */
     }
-    if (h->key && h->value) {         /* GCOVR_EXCL_LINE */
-      memcpy(h->key, key, key_len);   /* GCOVR_EXCL_LINE */
-      h->key[key_len] = '\0';         /* GCOVR_EXCL_LINE */
+    if (h->key && h->value) { /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+      /* CDD_SAFE_CRT */ memcpy_s(h->key, key_len, key,
+                                  key_len); /* GCOVR_EXCL_LINE */
+#else
+      memcpy(h->key, key, key_len); /* GCOVR_EXCL_LINE */
+#endif
+      h->key[key_len] = '\0'; /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+      /* CDD_SAFE_CRT */ memcpy_s(h->value, val_len, val,
+                                  val_len); /* GCOVR_EXCL_LINE */
+#else
       memcpy(h->value, val, val_len); /* GCOVR_EXCL_LINE */
-      h->value[val_len] = '\0';       /* GCOVR_EXCL_LINE */
-      h->next = st->req.headers;      /* GCOVR_EXCL_LINE */
-      st->req.headers = h;            /* GCOVR_EXCL_LINE */
+#endif
+      h->value[val_len] = '\0';  /* GCOVR_EXCL_LINE */
+      h->next = st->req.headers; /* GCOVR_EXCL_LINE */
+      st->req.headers = h;       /* GCOVR_EXCL_LINE */
     } else {
       if (h->key)                        /* GCOVR_EXCL_LINE */
         C_REST_FREE((void *)(h->key));   /* GCOVR_EXCL_LINE */
@@ -338,11 +357,16 @@ static void on_body(c_rest_parser_context *pctx, const char *data,
       0) {
     LOG_DEBUG("C_REST_REALLOC failed");
   }
-  if (new_body) {                                   /* GCOVR_EXCL_LINE */
+  if (new_body) { /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(new_body + st->req.body_len, len, data,
+                                len); /* GCOVR_EXCL_LINE */
+#else
     memcpy(new_body + st->req.body_len, data, len); /* GCOVR_EXCL_LINE */
-    st->req.body = new_body;                        /* GCOVR_EXCL_LINE */
-    st->req.body_len += len;                        /* GCOVR_EXCL_LINE */
-    st->req.body[st->req.body_len] = '\0';          /* GCOVR_EXCL_LINE */
+#endif
+    st->req.body = new_body;               /* GCOVR_EXCL_LINE */
+    st->req.body_len += len;               /* GCOVR_EXCL_LINE */
+    st->req.body[st->req.body_len] = '\0'; /* GCOVR_EXCL_LINE */
   }
 } /* GCOVR_EXCL_LINE */
 

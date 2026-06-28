@@ -53,11 +53,7 @@ c_rest_error_t c_rest_response_set_header(struct c_rest_response *res, const cha
       if (c_rest_stricmp(h->key, key, &hcmp) == 0 && hcmp == 0) { /* GCOVR_EXCL_LINE */
         char *new_val;
 
-#ifdef _MSC_VER
-/* CDD_SAFE_CRT */ val_len = strnlen_s(value, sizeof(value)) + 1;
-#else
-/* CDD_SAFE_CRT */ val_len = strlen(value) + 1;
-#endif
+val_len = strlen(value) + 1;
 
         if (C_REST_MALLOC(val_len, &new_val) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_val = NULL; } /* GCOVR_EXCL_LINE */
         if (!new_val) { /* GCOVR_EXCL_LINE */
@@ -85,18 +81,10 @@ c_rest_error_t c_rest_response_set_header(struct c_rest_response *res, const cha
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
-#ifdef _MSC_VER
-/* CDD_SAFE_CRT */ SAFE_STRCPY(new_h->key, strnlen_s(key, sizeof(key)) + 1, key);
-#else
-/* CDD_SAFE_CRT */ SAFE_STRCPY(new_h->key, strlen(key) + 1, key);
-#endif
+SAFE_STRCPY(new_h->key, strlen(key) + 1, key);
 
 
-#ifdef _MSC_VER
-/* CDD_SAFE_CRT */ SAFE_STRCPY(new_h->value, strnlen_s(value, sizeof(value)) + 1, value);
-#else
-/* CDD_SAFE_CRT */ SAFE_STRCPY(new_h->value, strlen(value) + 1, value);
-#endif
+SAFE_STRCPY(new_h->value, strlen(value) + 1, value);
 
 
   new_h->next = res->headers;
@@ -189,7 +177,7 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
 #else
 
 #ifdef _MSC_VER
-/* CDD_SAFE_CRT */ offset += sprintf_s(header_buf + offset, sizeof(header_buf + offset), "%s: %s\r\n", h->key, h->value);
+/* CDD_SAFE_CRT */ offset += sprintf_s(header_buf + offset, sizeof(header_buf) - offset, "%s: %s\r\n", h->key, h->value);
 #else
 /* CDD_SAFE_CRT */ offset += sprintf(header_buf + offset, "%s: %s\r\n", h->key, h->value);
 #endif
@@ -243,11 +231,7 @@ c_rest_error_t c_rest_response_json(struct c_rest_response *res, const char *jso
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
-#ifdef _MSC_VER
-/* CDD_SAFE_CRT */ len = strnlen_s(json_str, sizeof(json_str));
-#else
-/* CDD_SAFE_CRT */ len = strlen(json_str);
-#endif
+len = strlen(json_str);
 
   c_rest_response_set_header(res, "Content-Type", "application/json");
 
@@ -355,11 +339,7 @@ c_rest_error_t c_rest_response_html(struct c_rest_response *res,
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
-#ifdef _MSC_VER
-  /* CDD_SAFE_CRT */ len = strnlen_s(html_str, sizeof(html_str));
-#else
-  /* CDD_SAFE_CRT */ len = strlen(html_str);
-#endif
+  len = strlen(html_str);
 
   c_rest_response_set_header(res, "Content-Type", "text/html");
 
@@ -497,20 +477,11 @@ c_rest_error_t c_rest_response_set_cookie(struct c_rest_response *res,
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
-#ifdef _MSC_VER
-  /* CDD_SAFE_CRT */ len =
-      strnlen_s(key, sizeof(key)) + strnlen_s(value, sizeof(value)) + 2;
-#else
-  /* CDD_SAFE_CRT */ len = strlen(key) + strlen(value) + 2;
-#endif
+  len = strlen(key) + strlen(value) + 2;
   /* key=value */
   if (attributes) {
 
-#ifdef _MSC_VER
-    /* CDD_SAFE_CRT */ len += strnlen_s(attributes, sizeof(attributes)) + 2;
-#else
-    /* CDD_SAFE_CRT */ len += strlen(attributes) + 2;
-#endif
+    len += strlen(attributes) + 2;
     /* ; attributes */
   }
 
@@ -532,8 +503,8 @@ c_rest_error_t c_rest_response_set_cookie(struct c_rest_response *res,
   if (attributes) {
 
 #ifdef _MSC_VER
-    /* CDD_SAFE_CRT */ sprintf_s(cookie_str, sizeof(cookie_str), "%s=%s; %s",
-                                 key, value, attributes);
+    /* CDD_SAFE_CRT */ sprintf_s(cookie_str, len, "%s=%s; %s", key, value,
+                                 attributes);
 #else
     /* CDD_SAFE_CRT */ sprintf(cookie_str, "%s=%s; %s", key, value, attributes);
 #endif
@@ -541,8 +512,7 @@ c_rest_error_t c_rest_response_set_cookie(struct c_rest_response *res,
   } else {
 
 #ifdef _MSC_VER
-    /* CDD_SAFE_CRT */ sprintf_s(cookie_str, sizeof(cookie_str), "%s=%s", key,
-                                 value);
+    /* CDD_SAFE_CRT */ sprintf_s(cookie_str, len, "%s=%s", key, value);
 #else
     /* CDD_SAFE_CRT */ sprintf(cookie_str, "%s=%s", key, value);
 #endif
@@ -706,7 +676,7 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
 #else
 
 #ifdef _MSC_VER
-    /* CDD_SAFE_CRT */ offset += sprintf_s(buf + offset, sizeof(buf + offset),
+    /* CDD_SAFE_CRT */ offset += sprintf_s(buf + offset, est_len - offset,
                                            "%s: %s\r\n", h->key, h->value);
 #else
     /* CDD_SAFE_CRT */ offset +=
@@ -725,7 +695,7 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
   if (res->body && res->body_len > 0) { /* GCOVR_EXCL_LINE */
 
 #ifdef _MSC_VER
-    /* CDD_SAFE_CRT */ memcpy_s(buf + offset, sizeof(buf + offset), res->body,
+    /* CDD_SAFE_CRT */ memcpy_s(buf + offset, est_len - offset, res->body,
                                 res->body_len);
 #else
     /* CDD_SAFE_CRT */ memcpy(buf + offset, res->body, res->body_len);

@@ -280,7 +280,12 @@ c_rest_error_t c_rest_client_request_sync(
       if (out->body_len > 0 && res->body) { /* GCOVR_EXCL_LINE */
         out->body = malloc(out->body_len);
         if (out->body) { /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+          /* CDD_SAFE_CRT */ memcpy_s(out->body, out->body_len, res->body,
+                                      out->body_len);
+#else
           memcpy(out->body, res->body, out->body_len);
+#endif
         }
       }
       *out_res = out;
@@ -483,14 +488,22 @@ c_rest_error_t c_rest_client_build_form_urlencoded(
     }
     if (ekey) { /* GCOVR_EXCL_LINE */
       size_t len = strlen(ekey);
+#if defined(_MSC_VER)
+      /* CDD_SAFE_CRT */ memcpy_s(buf + curr_pos, len, ekey, len);
+#else
       memcpy(buf + curr_pos, ekey, len);
+#endif
       curr_pos += len;
       C_REST_FREE((void *)(ekey));
     }
     buf[curr_pos++] = '=';
     if (eval) { /* GCOVR_EXCL_LINE */
       size_t len = strlen(eval);
+#if defined(_MSC_VER)
+      /* CDD_SAFE_CRT */ memcpy_s(buf + curr_pos, len, eval, len);
+#else
       memcpy(buf + curr_pos, eval, len);
+#endif
       curr_pos += len;
       C_REST_FREE((void *)(eval));
     }
@@ -571,21 +584,34 @@ c_rest_error_t c_rest_client_parse_form_urlencoded(
 
       ekey = (char *)malloc(key_len + 1);
       if (ekey) { /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+        /* CDD_SAFE_CRT */ memcpy_s(ekey, key_len, p, key_len);
+#else
         memcpy(ekey, p, key_len);
+#endif
         ekey[key_len] = '\0';
       }
 
       eval = (char *)malloc(val_len + 1);
       if (eval) { /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+        /* CDD_SAFE_CRT */ memcpy_s(eval, val_len, eq + 1, val_len);
+#else
         memcpy(eval, eq + 1, val_len);
+#endif
         eval[val_len] = '\0';
       }
     } else {
       key_len = (size_t)(amp - p);        /* GCOVR_EXCL_LINE */
       ekey = (char *)malloc(key_len + 1); /* GCOVR_EXCL_LINE */
       if (ekey) {                         /* GCOVR_EXCL_LINE */
-        memcpy(ekey, p, key_len);         /* GCOVR_EXCL_LINE */
-        ekey[key_len] = '\0';             /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+        /* CDD_SAFE_CRT */ memcpy_s(ekey, key_len, p,
+                                    key_len); /* GCOVR_EXCL_LINE */
+#else
+        memcpy(ekey, p, key_len); /* GCOVR_EXCL_LINE */
+#endif
+        ekey[key_len] = '\0'; /* GCOVR_EXCL_LINE */
       }
       eval = (char *)malloc(1); /* GCOVR_EXCL_LINE */
       if (eval) {               /* GCOVR_EXCL_LINE */
@@ -829,7 +855,11 @@ c_rest_client_response_parse_json(const struct c_rest_client_response *res,
     char *str = (char *)malloc(res->body_len + 1);
     if (!str)                      /* GCOVR_EXCL_LINE */
       return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+#if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(str, res->body_len, res->body, res->body_len);
+#else
     memcpy(str, res->body, res->body_len);
+#endif
     str[res->body_len] = '\0';
 
     *out_json = (void *)json_parse_string(str);
