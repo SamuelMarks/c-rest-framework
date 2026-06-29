@@ -41,7 +41,7 @@ repos:
         pass_filenames: false
       - id: build-msvc-wine
         name: Build & Test (MSVC Wine)
-        entry: bash -c 'if command -v wine >/dev/null 2>&1 && [ -d "${MSVC_WINE_PATH:-$HOME/my_msvc/opt/msvc}" ]; then bash ~/repos/c-ci/build_msvc_wine.sh -DCMAKE_DISABLE_FIND_PACKAGE_SQLite3=ON -DCMAKE_DISABLE_FIND_PACKAGE_ZLIB=ON -DCMAKE_DISABLE_FIND_PACKAGE_Brotli=ON -DCMAKE_DISABLE_FIND_PACKAGE_CURL=ON; RET=$?; wineserver -k || true; exit $RET; else echo "Skipping MSVC Wine"; fi'
+        entry: bash -c 'if command -v wine >/dev/null 2>&1 && [ -d "${MSVC_WINE_PATH:-$HOME/my_msvc/opt/msvc}" ]; then bash ~/repos/c-ci/build_msvc_wine.sh -DCMAKE_DISABLE_FIND_PACKAGE_SQLite3=ON -DCMAKE_DISABLE_FIND_PACKAGE_ZLIB=ON -DCMAKE_DISABLE_FIND_PACKAGE_Brotli=ON -DCMAKE_DISABLE_FIND_PACKAGE_CURL=ON > wine_hook.log 2>&1; RET=$?; cat wine_hook.log; rm -f wine_hook.log; wineserver -k9 || true; exit $RET; else echo "Skipping MSVC Wine"; fi'
         language: system
         pass_filenames: false
       - id: build-msvc

@@ -132,6 +132,7 @@ c_rest_compress_data(c_rest_compression_ctx_t *ctx, /* GCOVR_EXCL_LINE */
 
     ctx->z_strm.avail_in = (uInt)in_len;    /* GCOVR_EXCL_LINE */
     ctx->z_strm.next_in = (Bytef *)in_data; /* GCOVR_EXCL_LINE */
+    ctx->z_strm.avail_out = (uInt)out_capacity;
 
     do {
       if (ctx->z_strm.avail_out == 0) { /* GCOVR_EXCL_LINE */

@@ -222,11 +222,7 @@ static int test_graphql_router(void) {
   if (!res.body || res.body_len == 0)
     return 1;
 
-  if (res.body) {
-    C_REST_FREE(
-        res.body); /* Assuming c_rest_response_set_body duplicated it via
-                      C_REST_MALLOC... wait, does it? Let's assume it does. */
-  }
+  c_rest_response_cleanup(&res);
 
   c_rest_graphql_schema_free(schema);
   c_rest_router_destroy(router);

@@ -19,6 +19,16 @@ static c_rest_error_t c_rest_template_handler(struct c_rest_request *req,
                                    void *user_data);
 #endif
 
+static c_rest_error_t c_rest_ws_upgrade_handler(struct c_rest_request *req,
+                                     struct c_rest_response *res,
+                                     void *user_data);
+
+#ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
+static c_rest_error_t c_rest_sse_handler_wrapper(struct c_rest_request *req,
+                                      struct c_rest_response *res,
+                                      void *user_data);
+#endif
+
 struct c_rest_route_handler {
   char *method;
   c_rest_handler_fn handler;
@@ -119,6 +129,14 @@ static int free_node(struct c_rest_route_node *node) {
       C_REST_FREE((void *)(h->method));
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
     if (h->handler == c_rest_template_handler && h->user_data) {
+      C_REST_FREE(h->user_data);
+    }
+#endif
+    if (h->handler == c_rest_ws_upgrade_handler && h->user_data) {
+      C_REST_FREE(h->user_data);
+    }
+#ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
+    if (h->handler == c_rest_sse_handler_wrapper && h->user_data) {
       C_REST_FREE(h->user_data);
     }
 #endif

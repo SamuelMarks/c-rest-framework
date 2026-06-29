@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "c_rest_mem.h"
 /* clang-format on */
 
 int test_http23(void) {
@@ -67,11 +68,7 @@ int test_http23(void) {
     return 1;
   }
 
-  /* We used C_REST_MALLOC, so we must free */
-  /* Wait, test_http23.c doesn't have C_REST_FREE, we can just use
-   * c_rest_mem_free if available */
-  /* For simplicity, we can let it leak or try to free if we include
-   * c_rest_mem.h */
+  C_REST_FREE((void *)out_buf);
 
   res = c_rest_http23_ctx_destroy(ctx);
   if (res != C_REST_OK) {

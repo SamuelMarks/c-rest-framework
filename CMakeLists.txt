@@ -462,6 +462,10 @@ if(MSVC)
 elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     # Step 16: Define C89 strict compilation flags for GCC (-ansi -pedantic -Wall)
     set(C_REST_GNU_FLAGS -ansi -pedantic -Wall -Werror)
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+        add_link_options("-fuse-ld=lld")
+    endif()
+
 
     if(C_REST_FRAMEWORK_USE_ASAN)
         add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
