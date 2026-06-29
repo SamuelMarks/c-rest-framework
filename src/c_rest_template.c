@@ -77,10 +77,11 @@ c_rest_error_t c_rest_template_render(const struct c_rest_template_context *ctx,
             if (out_len + val_len + 1 > out_cap) {    /* GCOVR_EXCL_LINE */
               size_t new_cap = out_cap * 2 + val_len; /* GCOVR_EXCL_LINE */
               char *new_buf = NULL;                   /* GCOVR_EXCL_LINE */
-              if (C_REST_REALLOC(out_buf, new_cap, &new_buf) !=
-                  0) {                       /* GCOVR_EXCL_LINE */
-                C_REST_FREE(out_buf);        /* GCOVR_EXCL_LINE */
-                return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+              if (C_REST_REALLOC(out_buf, new_cap,
+                                 &new_buf) != /* GCOVR_EXCL_LINE */
+                  0) {                        /* GCOVR_EXCL_LINE */
+                C_REST_FREE(out_buf);         /* GCOVR_EXCL_LINE */
+                return C_REST_ERROR_GENERIC;  /* GCOVR_EXCL_LINE */
               }
               out_buf = new_buf; /* GCOVR_EXCL_LINE */
               out_cap = new_cap; /* GCOVR_EXCL_LINE */
@@ -103,10 +104,11 @@ c_rest_error_t c_rest_template_render(const struct c_rest_template_context *ctx,
           if (out_len + copy_len + 1 > out_cap) {    /* GCOVR_EXCL_LINE */
             size_t new_cap = out_cap * 2 + copy_len; /* GCOVR_EXCL_LINE */
             char *new_buf = NULL;                    /* GCOVR_EXCL_LINE */
-            if (C_REST_REALLOC(out_buf, new_cap, &new_buf) !=
-                0) {                       /* GCOVR_EXCL_LINE */
-              C_REST_FREE(out_buf);        /* GCOVR_EXCL_LINE */
-              return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+            if (C_REST_REALLOC(out_buf, new_cap,
+                               &new_buf) != /* GCOVR_EXCL_LINE */
+                0) {                        /* GCOVR_EXCL_LINE */
+              C_REST_FREE(out_buf);         /* GCOVR_EXCL_LINE */
+              return C_REST_ERROR_GENERIC;  /* GCOVR_EXCL_LINE */
             }
             out_buf = new_buf; /* GCOVR_EXCL_LINE */
             out_cap = new_cap; /* GCOVR_EXCL_LINE */
@@ -123,13 +125,13 @@ c_rest_error_t c_rest_template_render(const struct c_rest_template_context *ctx,
       }
     }
 
-    if (out_len + 2 > out_cap) {    /* GCOVR_EXCL_LINE */
-      size_t new_cap = out_cap * 2; /* GCOVR_EXCL_LINE */
-      char *new_buf = NULL;         /* GCOVR_EXCL_LINE */
-      if (C_REST_REALLOC(out_buf, new_cap, &new_buf) !=
-          0) {                       /* GCOVR_EXCL_LINE */
-        C_REST_FREE(out_buf);        /* GCOVR_EXCL_LINE */
-        return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+    if (out_len + 2 > out_cap) {                        /* GCOVR_EXCL_LINE */
+      size_t new_cap = out_cap * 2;                     /* GCOVR_EXCL_LINE */
+      char *new_buf = NULL;                             /* GCOVR_EXCL_LINE */
+      if (C_REST_REALLOC(out_buf, new_cap, &new_buf) != /* GCOVR_EXCL_LINE */
+          0) {                                          /* GCOVR_EXCL_LINE */
+        C_REST_FREE(out_buf);                           /* GCOVR_EXCL_LINE */
+        return C_REST_ERROR_GENERIC;                    /* GCOVR_EXCL_LINE */
       }
       out_buf = new_buf; /* GCOVR_EXCL_LINE */
       out_cap = new_cap; /* GCOVR_EXCL_LINE */

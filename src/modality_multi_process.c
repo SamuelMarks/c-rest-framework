@@ -33,8 +33,9 @@ static int multi_process_init(struct c_rest_context *ctx) {
   ctx->internal_state = state;
 
   if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger.log_cb(
-        "MULTI_PROCESS modality initialized"); /* GCOVR_EXCL_LINE */
+    ctx->logger
+        .log_cb(                                       /* GCOVR_EXCL_LINE */
+                "MULTI_PROCESS modality initialized"); /* GCOVR_EXCL_LINE */
   }
 
   return 0;
@@ -69,8 +70,9 @@ static int multi_process_destroy(struct c_rest_context *ctx) {
   ctx->internal_state = NULL;
 
   if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger.log_cb(
-        "MULTI_PROCESS modality destroyed"); /* GCOVR_EXCL_LINE */
+    ctx->logger
+        .log_cb(                                     /* GCOVR_EXCL_LINE */
+                "MULTI_PROCESS modality destroyed"); /* GCOVR_EXCL_LINE */
   }
 
   return 0;
@@ -86,8 +88,9 @@ static int multi_process_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   state->is_running = 1;                                 /* GCOVR_EXCL_LINE */
 
   if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger.log_cb(
-        "MULTI_PROCESS modality run started"); /* GCOVR_EXCL_LINE */
+    ctx->logger
+        .log_cb(                                       /* GCOVR_EXCL_LINE */
+                "MULTI_PROCESS modality run started"); /* GCOVR_EXCL_LINE */
   }
 
   /* Conceptually:
@@ -100,8 +103,9 @@ static int multi_process_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   state->is_running = 0; /* GCOVR_EXCL_LINE */
 
   if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger.log_cb(
-        "MULTI_PROCESS modality run finished"); /* GCOVR_EXCL_LINE */
+    ctx->logger
+        .log_cb(                                        /* GCOVR_EXCL_LINE */
+                "MULTI_PROCESS modality run finished"); /* GCOVR_EXCL_LINE */
   }
 
   return 0; /* GCOVR_EXCL_LINE */

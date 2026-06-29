@@ -7,13 +7,20 @@
 
 #include <stdio.h>
 #include <time.h>
+#if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__) || defined(_MSC_VER)
+void __stdcall Sleep(unsigned long dwMilliseconds);
+#else
+#include <unistd.h>
+#endif
 /* clang-format on */
 
 static void sleep_seconds(int seconds) {
-  time_t start = time(NULL);
-  while (time(NULL) - start < seconds) {
-    /* busy wait */
-  }
+#if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__) ||           \
+    defined(_MSC_VER)
+  Sleep((unsigned long)(seconds * 1000));
+#else
+  sleep(seconds);
+#endif
 }
 
 TEST test_hot_reload_init_destroy(void) {

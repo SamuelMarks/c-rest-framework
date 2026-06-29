@@ -38,3 +38,12 @@ int test_jwt_json_web_tokens_authentication_middleware(void);
 #endif /* __cplusplus */
 
 #endif /* C_REST_TEST_PROTOS_H */
+int test_endian(void);
+int test_hashmap(void);
+int test_list(void);
+int test_str_utils(void);
+int test_mem(void);
+int test_ts_queue(void);
+int test_log(void);
+int test_string(void);
+int test_pool(void);

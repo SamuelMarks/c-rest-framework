@@ -142,7 +142,7 @@ static int test_graphql_resolve_dummy(void) {
 }
 
 static int test_graphql_malformed(void) {
-  const char *query = "{ user { id ";
+  const char *query = "# This is a comment\n{ user { id ";
   struct c_rest_graphql_node *doc = NULL;
   int res;
 

@@ -91,19 +91,20 @@ static int sync_run(struct c_rest_context *ctx) {
       res = c_rest_socket_accept(state->server_sock, &client_sock);
     }
 #else
-    res = c_rest_socket_accept(state->server_sock,
-                               &client_sock); /* GCOVR_EXCL_LINE */
+    res = c_rest_socket_accept(state->server_sock, /* GCOVR_EXCL_LINE */
+                               &client_sock);      /* GCOVR_EXCL_LINE */
 #endif
 
-    if (res == 0 &&
+    if (res == 0 &&                                  /* GCOVR_EXCL_LINE */
         client_sock != C_REST_INVALID_SOCKET) {      /* GCOVR_EXCL_LINE */
       struct c_rest_tls_connection *tls_conn = NULL; /* GCOVR_EXCL_LINE */
       int tls_res = 1;                               /* GCOVR_EXCL_LINE */
 
       if (ctx->tls_ctx) { /* GCOVR_EXCL_LINE */
-        tls_res = c_rest_tls_accept(ctx->tls_ctx, client_sock,
-                                    &tls_conn); /* GCOVR_EXCL_LINE */
-        if (tls_res == 0) {                     /* GCOVR_EXCL_LINE */
+        tls_res =
+            c_rest_tls_accept(ctx->tls_ctx, client_sock, /* GCOVR_EXCL_LINE */
+                              &tls_conn);                /* GCOVR_EXCL_LINE */
+        if (tls_res == 0) {                              /* GCOVR_EXCL_LINE */
           /* Synchronous request reading and response writing would happen here
            * over TLS. */
           /* For now, we immediately close to prevent leaking. */

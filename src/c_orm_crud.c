@@ -16,9 +16,11 @@ c_rest_error_t c_rest_orm_crud_get_list(struct c_rest_request *req,
 
   if (!model || !req->db_conn) {          /* GCOVR_EXCL_LINE */
     c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    c_rest_response_json(
-        res, "{\"error\": \"Internal Server Error\"}"); /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;                        /* GCOVR_EXCL_LINE */
+    c_rest_response_json(                 /* GCOVR_EXCL_LINE */
+                         res,
+                         "{\"error\": \"Internal Server Error\"}"); /* GCOVR_EXCL_LINE
+                                                                     */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   /* Stub: SELECT * FROM model->table_name */
@@ -103,8 +105,8 @@ c_rest_orm_health_check(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
 
   if (req && req->db_conn) { /* GCOVR_EXCL_LINE */
     /* Stub: SELECT 1 to verify health */
-    c_rest_response_set_status(res, 200); /* GCOVR_EXCL_LINE */
-    c_rest_response_json(res,
+    c_rest_response_set_status(res, 200);              /* GCOVR_EXCL_LINE */
+    c_rest_response_json(res,                          /* GCOVR_EXCL_LINE */
                          "{\"status\": \"healthy\"}"); /* GCOVR_EXCL_LINE */
   } else {
     c_rest_response_set_status(res, 503); /* GCOVR_EXCL_LINE */
@@ -125,8 +127,9 @@ c_rest_orm_run_migrations(struct c_rest_context *ctx, /* GCOVR_EXCL_LINE */
   /* Stub: read files from migration_dir and apply them sequentially using c-orm
    */
   if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger.log_cb(
-        "Executing database migrations..."); /* GCOVR_EXCL_LINE */
+    ctx->logger
+        .log_cb(                                     /* GCOVR_EXCL_LINE */
+                "Executing database migrations..."); /* GCOVR_EXCL_LINE */
   }
 
   return C_REST_OK; /* GCOVR_EXCL_LINE */

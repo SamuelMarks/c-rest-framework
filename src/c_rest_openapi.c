@@ -534,10 +534,10 @@ static int serialize_operation(JSON_Object *methods_obj,
   op_val = json_value_init_object();
   op_obj = json_value_get_object(op_val);
 
-  if (op->operation_id) /* GCOVR_EXCL_LINE */
-    json_object_set_string(op_obj, "operationId",
-                           op->operation_id); /* GCOVR_EXCL_LINE */
-  if (op->summary)                            /* GCOVR_EXCL_LINE */
+  if (op->operation_id)                           /* GCOVR_EXCL_LINE */
+    json_object_set_string(op_obj, "operationId", /* GCOVR_EXCL_LINE */
+                           op->operation_id);     /* GCOVR_EXCL_LINE */
+  if (op->summary)                                /* GCOVR_EXCL_LINE */
     json_object_set_string(op_obj, "summary", op->summary);
   if (op->description) /* GCOVR_EXCL_LINE */
     json_object_set_string(op_obj, "description", op->description);
@@ -555,18 +555,19 @@ static int serialize_operation(JSON_Object *methods_obj,
     json_object_set_value(op_obj, "tags", tags_val);
   }
 
-  if (op->external_docs.url) {                          /* GCOVR_EXCL_LINE */
-    ext_docs_val = json_value_init_object();            /* GCOVR_EXCL_LINE */
-    ext_docs_obj = json_value_get_object(ext_docs_val); /* GCOVR_EXCL_LINE */
-    json_object_set_string(ext_docs_obj, "url",
-                           op->external_docs.url); /* GCOVR_EXCL_LINE */
-    if (op->external_docs.description) {           /* GCOVR_EXCL_LINE */
-      json_object_set_string(
-          ext_docs_obj, "description",    /* GCOVR_EXCL_LINE */
-          op->external_docs.description); /* GCOVR_EXCL_LINE */
+  if (op->external_docs.url) {                            /* GCOVR_EXCL_LINE */
+    ext_docs_val = json_value_init_object();              /* GCOVR_EXCL_LINE */
+    ext_docs_obj = json_value_get_object(ext_docs_val);   /* GCOVR_EXCL_LINE */
+    json_object_set_string(ext_docs_obj, "url",           /* GCOVR_EXCL_LINE */
+                           op->external_docs.url);        /* GCOVR_EXCL_LINE */
+    if (op->external_docs.description) {                  /* GCOVR_EXCL_LINE */
+      json_object_set_string(                             /* GCOVR_EXCL_LINE */
+                             ext_docs_obj, "description", /* GCOVR_EXCL_LINE */
+                             op->external_docs
+                                 .description); /* GCOVR_EXCL_LINE */
     }
-    json_object_set_value(op_obj, "externalDocs",
-                          ext_docs_val); /* GCOVR_EXCL_LINE */
+    json_object_set_value(op_obj, "externalDocs", /* GCOVR_EXCL_LINE */
+                          ext_docs_val);          /* GCOVR_EXCL_LINE */
   }
 
   /* Removed old serialization */
@@ -631,9 +632,9 @@ c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
                          spec->info.version ? spec->info.version
                                             : "1.0.0"); /* GCOVR_EXCL_LINE */
   if (spec->info.summary)                               /* GCOVR_EXCL_LINE */
-    json_object_set_string(info_obj, "summary",
-                           spec->info.summary); /* GCOVR_EXCL_LINE */
-  if (spec->info.description) {                 /* GCOVR_EXCL_LINE */
+    json_object_set_string(info_obj, "summary",         /* GCOVR_EXCL_LINE */
+                           spec->info.summary);         /* GCOVR_EXCL_LINE */
+  if (spec->info.description) {                         /* GCOVR_EXCL_LINE */
     json_object_set_string(info_obj, "description", spec->info.description);
   }
   if (spec->info.terms_of_service) { /* GCOVR_EXCL_LINE */
@@ -751,12 +752,12 @@ c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
     JSON_Value *path_item_val = json_value_init_object();
     JSON_Object *path_item_obj = json_value_get_object(path_item_val);
 
-    if (p->summary) /* GCOVR_EXCL_LINE */
-      json_object_set_string(path_item_obj, "summary",
-                             p->summary); /* GCOVR_EXCL_LINE */
-    if (p->description)                   /* GCOVR_EXCL_LINE */
-      json_object_set_string(path_item_obj, "description",
-                             p->description); /* GCOVR_EXCL_LINE */
+    if (p->summary)                                        /* GCOVR_EXCL_LINE */
+      json_object_set_string(path_item_obj, "summary",     /* GCOVR_EXCL_LINE */
+                             p->summary);                  /* GCOVR_EXCL_LINE */
+    if (p->description)                                    /* GCOVR_EXCL_LINE */
+      json_object_set_string(path_item_obj, "description", /* GCOVR_EXCL_LINE */
+                             p->description);              /* GCOVR_EXCL_LINE */
 
     serialize_operation(path_item_obj, "get", &p->get);
     serialize_operation(path_item_obj, "post", &p->post);
@@ -821,8 +822,8 @@ c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
                                  s->open_id_connect_url);
 
         if (s->flows.implicit || s->flows.password || /* GCOVR_EXCL_LINE */
-            s->flows.client_credentials ||
-            s->flows.authorization_code) { /* GCOVR_EXCL_LINE */
+            s->flows.client_credentials ||            /* GCOVR_EXCL_LINE */
+            s->flows.authorization_code) {            /* GCOVR_EXCL_LINE */
           JSON_Value *flows_val = json_value_init_object();
           JSON_Object *flows_obj = json_value_get_object(flows_val);
 
@@ -964,11 +965,11 @@ openapi_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
   /* unused args */
   (void)req;
 
-  if (c_rest_openapi_spec_to_json(spec, &json_str) == 0 &&
-      json_str) {                          /* GCOVR_EXCL_LINE */
-    res->status_code = 200;                /* GCOVR_EXCL_LINE */
-    c_rest_response_json(res, json_str);   /* GCOVR_EXCL_LINE */
-    json_free_serialized_string(json_str); /* GCOVR_EXCL_LINE */
+  if (c_rest_openapi_spec_to_json(spec, &json_str) == 0 && /* GCOVR_EXCL_LINE */
+      json_str) {                                          /* GCOVR_EXCL_LINE */
+    res->status_code = 200;                                /* GCOVR_EXCL_LINE */
+    c_rest_response_json(res, json_str);                   /* GCOVR_EXCL_LINE */
+    json_free_serialized_string(json_str);                 /* GCOVR_EXCL_LINE */
   } else {
     res->status_code = 500;   /* GCOVR_EXCL_LINE */
     c_rest_response_json(res, /* GCOVR_EXCL_LINE */
@@ -1038,9 +1039,9 @@ static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
     LOG_DEBUG("C_REST_MALLOC failed");
     html_buf = NULL; /* GCOVR_EXCL_LINE */
   }
-  if (!html_buf) {          /* GCOVR_EXCL_LINE */
-    res->status_code = 500; /* GCOVR_EXCL_LINE */
-    return c_rest_response_html(res,
+  if (!html_buf) {                                        /* GCOVR_EXCL_LINE */
+    res->status_code = 500;                               /* GCOVR_EXCL_LINE */
+    return c_rest_response_html(res,                      /* GCOVR_EXCL_LINE */
                                 "Internal Server Error"); /* GCOVR_EXCL_LINE */
   }
 

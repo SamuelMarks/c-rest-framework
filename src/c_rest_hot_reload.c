@@ -11,6 +11,13 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__) || defined(_MSC_VER)
+void __stdcall Sleep(unsigned long dwMilliseconds);
+#else
+#include <unistd.h>
+#endif
+/* clang-format on */
+
 typedef enum c_rest_hot_reload_state {
   C_REST_HOT_RELOAD_STATE_INIT = 0,
   C_REST_HOT_RELOAD_STATE_WATCHING,
@@ -77,10 +84,12 @@ static void sleep_seconds(c_rest_hot_reload_ctx_t *ctx, int seconds) {
     return;
   }
 #endif
-  time_t start = time(NULL);
-  while (time(NULL) - start < seconds) {
-    /* busy wait, ideally replaced by platform sleep */
-  }
+#if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__) ||           \
+    defined(_MSC_VER)
+  Sleep((unsigned long)(seconds * 1000));
+#else
+  sleep(seconds);
+#endif
 }
 
 static void watcher_thread_func(void *arg) {
@@ -92,8 +101,9 @@ static void watcher_thread_func(void *arg) {
 }
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
-c_rest_error_t c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *ctx,
-                                            cm_env_t env) {
+c_rest_error_t
+c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *ctx,
+                                        cm_env_t env) {
   if (!ctx)
     return C_REST_HOT_RELOAD_ERR_PARAM;
   ctx->cm_env = env;
@@ -102,7 +112,7 @@ c_rest_error_t c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *
 #endif
 
 c_rest_error_t c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
-                           struct c_rest_logger *logger) {
+                                      struct c_rest_logger *logger) {
   int err;
 
   if (!out_ctx) {
@@ -133,7 +143,7 @@ c_rest_error_t c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
 }
 
 c_rest_error_t c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx,
-                                const char *path) {
+                                           const char *path) {
   size_t path_len;
   char *path_copy;
   time_t current_mtime;
@@ -210,8 +220,8 @@ c_rest_error_t c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx,
 }
 
 c_rest_error_t c_rest_hot_reload_poll(c_rest_hot_reload_ctx_t *ctx,
-                           c_rest_hot_reload_callback_t on_reload,
-                           void *user_data) {
+                                      c_rest_hot_reload_callback_t on_reload,
+                                      void *user_data) {
   size_t i;
   int changed = 0;
   time_t current_mtime;
@@ -239,8 +249,8 @@ c_rest_error_t c_rest_hot_reload_poll(c_rest_hot_reload_ctx_t *ctx,
 }
 
 c_rest_error_t c_rest_hot_reload_start(c_rest_hot_reload_ctx_t *ctx,
-                            c_rest_hot_reload_callback_t on_reload,
-                            void *user_data) {
+                                       c_rest_hot_reload_callback_t on_reload,
+                                       void *user_data) {
   if (!ctx || !on_reload) {
     return C_REST_HOT_RELOAD_ERR_PARAM;
   }
@@ -320,8 +330,8 @@ c_rest_error_t c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
 #include "c_rest_sse.h"
 
 static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
-                                  struct c_rest_response *res,
-                                  void *user_data) {
+                                             struct c_rest_response *res,
+                                             void *user_data) {
   (void)user_data;
   struct c_rest_connection_context *conn_ctx = NULL;
   struct c_rest_hot_reload_ctx *hr_ctx = NULL;
@@ -381,7 +391,7 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
 }
 
 c_rest_error_t c_rest_hot_reload_register_routes(struct c_rest_router *router,
-                                      const char *path) {
+                                                 const char *path) {
   if (!router || !path) {
     return C_REST_HOT_RELOAD_ERR_PARAM;
   }

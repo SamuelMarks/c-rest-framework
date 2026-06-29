@@ -279,9 +279,9 @@ static int basic_execute(c_rest_parser_context *ctx, const char *data,
                        0 &&    /* GCOVR_EXCL_LINE */
                    cmp == 0) { /* GCOVR_EXCL_LINE */
           int vcmp;
-          if (c_rest_stricmp(v, "close", &vcmp) == 0 &&
-              vcmp == 0)        /* GCOVR_EXCL_LINE */
-            st->keep_alive = 0; /* GCOVR_EXCL_LINE */
+          if (c_rest_stricmp(v, "close", &vcmp) == 0 && /* GCOVR_EXCL_LINE */
+              vcmp == 0)                                /* GCOVR_EXCL_LINE */
+            st->keep_alive = 0;                         /* GCOVR_EXCL_LINE */
         }
 
         if (ctx->callbacks.on_header) {

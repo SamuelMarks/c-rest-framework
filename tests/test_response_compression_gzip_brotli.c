@@ -5,6 +5,7 @@
 #include "../include/c_rest_mem.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP)
 #include <zlib.h>
@@ -79,6 +80,29 @@ static int test_compression_gzip_basic(void) {
   C_REST_FREE(comp_data);
   return 0;
 }
+
+static int test_compression_gzip_large(void) {
+  size_t in_len = 200000;
+  char *test_data = malloc(in_len);
+  unsigned char *comp_data = NULL;
+  size_t comp_len = 0;
+  int res;
+  size_t i;
+
+  for (i = 0; i < in_len; i++)
+    test_data[i] = (char)(i % 256);
+
+  res = c_rest_compress_buffer(C_REST_COMPRESSION_GZIP,
+                               (const unsigned char *)test_data, in_len,
+                               &comp_data, &comp_len);
+  ASSERT_EQ(0, res);
+  ASSERT(comp_data != NULL);
+  ASSERT(comp_len > 0);
+
+  C_REST_FREE(comp_data);
+  free(test_data);
+  return 0;
+}
 #endif
 
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI)
@@ -110,6 +134,29 @@ static int test_compression_brotli_basic(void) {
   }
 
   C_REST_FREE(comp_data);
+  return 0;
+}
+
+static int test_compression_brotli_large(void) {
+  size_t in_len = 200000;
+  char *test_data = malloc(in_len);
+  unsigned char *comp_data = NULL;
+  size_t comp_len = 0;
+  int res;
+  size_t i;
+
+  for (i = 0; i < in_len; i++)
+    test_data[i] = (char)(i % 256);
+
+  res = c_rest_compress_buffer(C_REST_COMPRESSION_BROTLI,
+                               (const unsigned char *)test_data, in_len,
+                               &comp_data, &comp_len);
+  ASSERT_EQ(0, res);
+  ASSERT(comp_data != NULL);
+  ASSERT(comp_len > 0);
+
+  C_REST_FREE(comp_data);
+  free(test_data);
   return 0;
 }
 #endif
@@ -184,9 +231,13 @@ int test_response_compression_gzip_brotli(void) {
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP)
   if (test_compression_gzip_basic() != 0)
     return 1;
+  if (test_compression_gzip_large() != 0)
+    return 1;
 #endif
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI)
   if (test_compression_brotli_basic() != 0)
+    return 1;
+  if (test_compression_brotli_large() != 0)
     return 1;
 #endif
   return 0;

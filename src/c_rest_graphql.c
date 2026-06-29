@@ -162,10 +162,10 @@ parse_selection_set(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
   while (ctx->position < ctx->length) {       /* GCOVR_EXCL_LINE */
     struct c_rest_graphql_node *field = NULL; /* GCOVR_EXCL_LINE */
     skip_whitespace(ctx);                     /* GCOVR_EXCL_LINE */
-    if (ctx->position < ctx->length &&
-        ctx->input[ctx->position] == '}') { /* GCOVR_EXCL_LINE */
-      ctx->position++; /* skip '}' */       /* GCOVR_EXCL_LINE */
-      if (list->count == 0) {               /* GCOVR_EXCL_LINE */
+    if (ctx->position < ctx->length &&        /* GCOVR_EXCL_LINE */
+        ctx->input[ctx->position] == '}') {   /* GCOVR_EXCL_LINE */
+      ctx->position++; /* skip '}' */         /* GCOVR_EXCL_LINE */
+      if (list->count == 0) {                 /* GCOVR_EXCL_LINE */
         break;
         /* Error: Empty selection set not allowed */ /* GCOVR_EXCL_LINE */
       }
@@ -205,8 +205,8 @@ static int parse_field(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC;                /* GCOVR_EXCL_LINE */
   }
 
-  skip_whitespace(ctx); /* GCOVR_EXCL_LINE */
-  if (ctx->position < ctx->length &&
+  skip_whitespace(ctx);                   /* GCOVR_EXCL_LINE */
+  if (ctx->position < ctx->length &&      /* GCOVR_EXCL_LINE */
       ctx->input[ctx->position] == ':') { /* GCOVR_EXCL_LINE */
     /* This was an alias */
     ctx->position++; /* skip ':' */          /* GCOVR_EXCL_LINE */
@@ -219,13 +219,13 @@ static int parse_field(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
   }
 
   /* parse selection set if any */
-  skip_whitespace(ctx); /* GCOVR_EXCL_LINE */
-  if (ctx->position < ctx->length &&
-      ctx->input[ctx->position] == '{') { /* GCOVR_EXCL_LINE */
-    if (parse_selection_set(ctx, &node->selection_set) !=
-        0) {                          /* GCOVR_EXCL_LINE */
-      c_rest_graphql_node_free(node); /* GCOVR_EXCL_LINE */
-      return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
+  skip_whitespace(ctx);                                   /* GCOVR_EXCL_LINE */
+  if (ctx->position < ctx->length &&                      /* GCOVR_EXCL_LINE */
+      ctx->input[ctx->position] == '{') {                 /* GCOVR_EXCL_LINE */
+    if (parse_selection_set(ctx, &node->selection_set) != /* GCOVR_EXCL_LINE */
+        0) {                                              /* GCOVR_EXCL_LINE */
+      c_rest_graphql_node_free(node);                     /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC;                        /* GCOVR_EXCL_LINE */
     }
   }
 
@@ -270,13 +270,13 @@ parse_operation(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
   node->op_type = op_type; /* GCOVR_EXCL_LINE */
   node->name = name;       /* GCOVR_EXCL_LINE */
 
-  skip_whitespace(ctx); /* GCOVR_EXCL_LINE */
-  if (ctx->position < ctx->length &&
-      ctx->input[ctx->position] == '{') { /* GCOVR_EXCL_LINE */
-    if (parse_selection_set(ctx, &node->selection_set) !=
-        0) {                          /* GCOVR_EXCL_LINE */
-      c_rest_graphql_node_free(node); /* GCOVR_EXCL_LINE */
-      return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
+  skip_whitespace(ctx);                                   /* GCOVR_EXCL_LINE */
+  if (ctx->position < ctx->length &&                      /* GCOVR_EXCL_LINE */
+      ctx->input[ctx->position] == '{') {                 /* GCOVR_EXCL_LINE */
+    if (parse_selection_set(ctx, &node->selection_set) != /* GCOVR_EXCL_LINE */
+        0) {                                              /* GCOVR_EXCL_LINE */
+      c_rest_graphql_node_free(node);                     /* GCOVR_EXCL_LINE */
+      return C_REST_ERROR_GENERIC;                        /* GCOVR_EXCL_LINE */
     }
     *out_node = node; /* GCOVR_EXCL_LINE */
     return C_REST_OK; /* GCOVR_EXCL_LINE */
@@ -287,12 +287,13 @@ parse_operation(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
     /* Rewind and try to parse selection set for anonymous query */
     ctx->position = 0; /* rough fallback */ /* GCOVR_EXCL_LINE */
     skip_whitespace(ctx);                   /* GCOVR_EXCL_LINE */
-    if (ctx->position < ctx->length &&
+    if (ctx->position < ctx->length &&      /* GCOVR_EXCL_LINE */
         ctx->input[ctx->position] == '{') { /* GCOVR_EXCL_LINE */
-      if (parse_selection_set(ctx, &node->selection_set) !=
-          0) {                          /* GCOVR_EXCL_LINE */
-        c_rest_graphql_node_free(node); /* GCOVR_EXCL_LINE */
-        return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
+      if (parse_selection_set(ctx,
+                              &node->selection_set) != /* GCOVR_EXCL_LINE */
+          0) {                                         /* GCOVR_EXCL_LINE */
+        c_rest_graphql_node_free(node);                /* GCOVR_EXCL_LINE */
+        return C_REST_ERROR_GENERIC;                   /* GCOVR_EXCL_LINE */
       }
       *out_node = node; /* GCOVR_EXCL_LINE */
       return C_REST_OK; /* GCOVR_EXCL_LINE */

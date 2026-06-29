@@ -137,7 +137,7 @@ c_rest_websocket_parse_frame_header(/* GCOVR_EXCL_LINE */
     if (data_len < 4) {                                    /* GCOVR_EXCL_LINE */
       return C_REST_ERROR_GENERIC; /* Need 2 more bytes */ /* GCOVR_EXCL_LINE */
     }
-    ext_len_16 =
+    ext_len_16 =                                           /* GCOVR_EXCL_LINE */
         (unsigned short)((data[2] << 8) | data[3]);        /* GCOVR_EXCL_LINE */
     out_header->payload_length = ext_len_16;               /* GCOVR_EXCL_LINE */
     offset += 2;                                           /* GCOVR_EXCL_LINE */
@@ -150,16 +150,16 @@ c_rest_websocket_parse_frame_header(/* GCOVR_EXCL_LINE */
     /* For now, just grab the lower 32 bits if size_t is 32-bit, but properly
      * parse 64. */
     {
-      unsigned long high = /* GCOVR_EXCL_LINE */
-          ((unsigned long)data[2] << 24) |
+      unsigned long high =                 /* GCOVR_EXCL_LINE */
+          ((unsigned long)data[2] << 24) | /* GCOVR_EXCL_LINE */
           ((unsigned long)data[3] << 16) | /* GCOVR_EXCL_LINE */
-          ((unsigned long)data[4] << 8) |
-          ((unsigned long)data[5]); /* GCOVR_EXCL_LINE */
-      unsigned long low =           /* GCOVR_EXCL_LINE */
-          ((unsigned long)data[6] << 24) |
+          ((unsigned long)data[4] << 8) |  /* GCOVR_EXCL_LINE */
+          ((unsigned long)data[5]);        /* GCOVR_EXCL_LINE */
+      unsigned long low =                  /* GCOVR_EXCL_LINE */
+          ((unsigned long)data[6] << 24) | /* GCOVR_EXCL_LINE */
           ((unsigned long)data[7] << 16) | /* GCOVR_EXCL_LINE */
-          ((unsigned long)data[8] << 8) |
-          ((unsigned long)data[9]); /* GCOVR_EXCL_LINE */
+          ((unsigned long)data[8] << 8) |  /* GCOVR_EXCL_LINE */
+          ((unsigned long)data[9]);        /* GCOVR_EXCL_LINE */
 
       if (high != 0) { /* GCOVR_EXCL_LINE */
         /* We don't support > 4GB payloads on 32-bit systems, and we keep it
@@ -256,9 +256,10 @@ c_rest_websocket_serialize_frame_header(/* GCOVR_EXCL_LINE */
     out_data[offset++] = b2;                     /* GCOVR_EXCL_LINE */
     if (out_data_max < offset + 2)               /* GCOVR_EXCL_LINE */
       return C_REST_ERROR_GENERIC;               /* GCOVR_EXCL_LINE */
-    out_data[offset++] = (unsigned char)((header->payload_length >> 8) &
-                                         0xFF); /* GCOVR_EXCL_LINE */
     out_data[offset++] =
+        (unsigned char)((header->payload_length >> 8) & /* GCOVR_EXCL_LINE */
+                        0xFF);                          /* GCOVR_EXCL_LINE */
+    out_data[offset++] =                                /* GCOVR_EXCL_LINE */
         (unsigned char)(header->payload_length & 0xFF); /* GCOVR_EXCL_LINE */
   } else {
     /* Assume 32-bit payload for C89 safety */
@@ -270,13 +271,16 @@ c_rest_websocket_serialize_frame_header(/* GCOVR_EXCL_LINE */
     out_data[offset++] = 0;        /* GCOVR_EXCL_LINE */
     out_data[offset++] = 0;        /* GCOVR_EXCL_LINE */
     out_data[offset++] = 0;        /* GCOVR_EXCL_LINE */
-    out_data[offset++] = (unsigned char)((header->payload_length >> 24) &
-                                         0xFF); /* GCOVR_EXCL_LINE */
-    out_data[offset++] = (unsigned char)((header->payload_length >> 16) &
-                                         0xFF); /* GCOVR_EXCL_LINE */
-    out_data[offset++] = (unsigned char)((header->payload_length >> 8) &
-                                         0xFF); /* GCOVR_EXCL_LINE */
     out_data[offset++] =
+        (unsigned char)((header->payload_length >> 24) & /* GCOVR_EXCL_LINE */
+                        0xFF);                           /* GCOVR_EXCL_LINE */
+    out_data[offset++] =
+        (unsigned char)((header->payload_length >> 16) & /* GCOVR_EXCL_LINE */
+                        0xFF);                           /* GCOVR_EXCL_LINE */
+    out_data[offset++] =
+        (unsigned char)((header->payload_length >> 8) & /* GCOVR_EXCL_LINE */
+                        0xFF);                          /* GCOVR_EXCL_LINE */
+    out_data[offset++] =                                /* GCOVR_EXCL_LINE */
         (unsigned char)(header->payload_length & 0xFF); /* GCOVR_EXCL_LINE */
   }
 

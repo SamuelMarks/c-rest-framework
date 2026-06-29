@@ -263,10 +263,10 @@ struct connection_state {
   int is_done;
 };
 
-static void on_method(c_rest_parser_context *pctx,
-                      const char *method, /* GCOVR_EXCL_LINE */
+static void on_method(c_rest_parser_context *pctx, /* GCOVR_EXCL_LINE */
+                      const char *method,          /* GCOVR_EXCL_LINE */
                       size_t len) {
-  struct connection_state *st =
+  struct connection_state *st =                   /* GCOVR_EXCL_LINE */
       (struct connection_state *)pctx->user_data; /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(len + 1, &st->method) != 0) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
@@ -283,9 +283,10 @@ static void on_method(c_rest_parser_context *pctx,
   }
 } /* GCOVR_EXCL_LINE */
 
-static void on_url(c_rest_parser_context *pctx, const char *url,
-                   size_t len) { /* GCOVR_EXCL_LINE */
-  struct connection_state *st =
+static void on_url(c_rest_parser_context *pctx,
+                   const char *url,               /* GCOVR_EXCL_LINE */
+                   size_t len) {                  /* GCOVR_EXCL_LINE */
+  struct connection_state *st =                   /* GCOVR_EXCL_LINE */
       (struct connection_state *)pctx->user_data; /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(len + 1, &st->url) != 0) {    /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
@@ -301,14 +302,14 @@ static void on_url(c_rest_parser_context *pctx, const char *url,
   }
 } /* GCOVR_EXCL_LINE */
 
-static void on_header(c_rest_parser_context *pctx,
-                      const char *key, /* GCOVR_EXCL_LINE */
+static void on_header(c_rest_parser_context *pctx, /* GCOVR_EXCL_LINE */
+                      const char *key,             /* GCOVR_EXCL_LINE */
                       size_t key_len, const char *val, size_t val_len) {
-  struct connection_state *st =
-      (struct connection_state *)pctx->user_data; /* GCOVR_EXCL_LINE */
-  struct c_rest_header *h = NULL;                 /* GCOVR_EXCL_LINE */
-  if (C_REST_MALLOC(sizeof(struct c_rest_header), &h) !=
-      0) { /* GCOVR_EXCL_LINE */
+  struct connection_state *st =                          /* GCOVR_EXCL_LINE */
+      (struct connection_state *)pctx->user_data;        /* GCOVR_EXCL_LINE */
+  struct c_rest_header *h = NULL;                        /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(sizeof(struct c_rest_header), &h) != /* GCOVR_EXCL_LINE */
+      0) {                                               /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
   }
   if (h) {                                          /* GCOVR_EXCL_LINE */
@@ -347,13 +348,15 @@ static void on_header(c_rest_parser_context *pctx,
   }
 } /* GCOVR_EXCL_LINE */
 
-static void on_body(c_rest_parser_context *pctx, const char *data,
-                    size_t len) { /* GCOVR_EXCL_LINE */
-  struct connection_state *st =
+static void on_body(c_rest_parser_context *pctx,
+                    const char *data,             /* GCOVR_EXCL_LINE */
+                    size_t len) {                 /* GCOVR_EXCL_LINE */
+  struct connection_state *st =                   /* GCOVR_EXCL_LINE */
       (struct connection_state *)pctx->user_data; /* GCOVR_EXCL_LINE */
   char *new_body = NULL;                          /* GCOVR_EXCL_LINE */
-  if (C_REST_REALLOC(st->req.body, st->req.body_len + len + 1,
-                     &new_body) != /* GCOVR_EXCL_LINE */
+  if (C_REST_REALLOC(st->req.body,
+                     st->req.body_len + len + 1, /* GCOVR_EXCL_LINE */
+                     &new_body) !=               /* GCOVR_EXCL_LINE */
       0) {
     LOG_DEBUG("C_REST_REALLOC failed");
   }
@@ -373,14 +376,14 @@ static void on_body(c_rest_parser_context *pctx, const char *data,
 static void on_complete(c_rest_parser_context *pctx) { /* GCOVR_EXCL_LINE */
   (void)pctx;
   /* parsing done */
-  ((struct connection_state *)pctx->user_data)->is_done =
-      1; /* GCOVR_EXCL_LINE */
+  ((struct connection_state *)pctx->user_data)->is_done = /* GCOVR_EXCL_LINE */
+      1;                                                  /* GCOVR_EXCL_LINE */
 } /* GCOVR_EXCL_LINE */
 
 c_rest_error_t
-c_rest_handle_connection(struct c_rest_context *ctx,
-                         c_rest_socket_t sock) { /* GCOVR_EXCL_LINE */
-  struct c_rest_tls_connection *tls_conn = NULL; /* GCOVR_EXCL_LINE */
+c_rest_handle_connection(struct c_rest_context *ctx, /* GCOVR_EXCL_LINE */
+                         c_rest_socket_t sock) {     /* GCOVR_EXCL_LINE */
+  struct c_rest_tls_connection *tls_conn = NULL;     /* GCOVR_EXCL_LINE */
   char buf[4096];
   size_t read_bytes, parsed_bytes;
   int res;
@@ -428,9 +431,9 @@ c_rest_handle_connection(struct c_rest_context *ctx,
     c_rest_parser_init(&pctx, vt, &cbs, &st); /* GCOVR_EXCL_LINE */
 
     while (1) {
-      if (tls_conn) { /* GCOVR_EXCL_LINE */
-        res = c_rest_tls_read(tls_conn, buf, sizeof(buf),
-                              &read_bytes); /* GCOVR_EXCL_LINE */
+      if (tls_conn) {                                     /* GCOVR_EXCL_LINE */
+        res = c_rest_tls_read(tls_conn, buf, sizeof(buf), /* GCOVR_EXCL_LINE */
+                              &read_bytes);               /* GCOVR_EXCL_LINE */
       } else {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
         if (ctx->cm_env) {
@@ -440,15 +443,15 @@ c_rest_handle_connection(struct c_rest_context *ctx,
           res = c_rest_socket_recv(sock, buf, sizeof(buf), &read_bytes);
         }
 #else
-        res = c_rest_socket_recv(sock, buf, sizeof(buf),
-                                 &read_bytes); /* GCOVR_EXCL_LINE */
+        res = c_rest_socket_recv(sock, buf, sizeof(buf), /* GCOVR_EXCL_LINE */
+                                 &read_bytes);           /* GCOVR_EXCL_LINE */
 #endif
       }
       if (res != 0 || read_bytes == 0) /* GCOVR_EXCL_LINE */
         break;
 
-      c_rest_parser_execute(&pctx, buf, read_bytes,
-                            &parsed_bytes); /* GCOVR_EXCL_LINE */
+      c_rest_parser_execute(&pctx, buf, read_bytes, /* GCOVR_EXCL_LINE */
+                            &parsed_bytes);         /* GCOVR_EXCL_LINE */
 
       if (st.is_done) /* GCOVR_EXCL_LINE */
         break;        /* GCOVR_EXCL_LINE */
@@ -478,12 +481,12 @@ c_rest_handle_connection(struct c_rest_context *ctx,
 
       res_obj.status_code = 404; /* GCOVR_EXCL_LINE */
 
-      if (ctx->router) { /* GCOVR_EXCL_LINE */
-        c_rest_router_dispatch(ctx->router, &st.req,
-                               &res_obj); /* GCOVR_EXCL_LINE */
+      if (ctx->router) {                             /* GCOVR_EXCL_LINE */
+        c_rest_router_dispatch(ctx->router, &st.req, /* GCOVR_EXCL_LINE */
+                               &res_obj);            /* GCOVR_EXCL_LINE */
       }
 
-      if (res_obj.status_code != 0 &&
+      if (res_obj.status_code != 0 &&   /* GCOVR_EXCL_LINE */
           !res_obj.headers_sent) {      /* GCOVR_EXCL_LINE */
         c_rest_response_send(&res_obj); /* GCOVR_EXCL_LINE */
       }

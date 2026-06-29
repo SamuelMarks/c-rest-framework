@@ -18,14 +18,19 @@ c_rest_cors_middleware(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
   if (!req || !res)              /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
-  c_rest_response_set_header(res, "Access-Control-Allow-Origin",
-                             "*"); /* GCOVR_EXCL_LINE */
   c_rest_response_set_header(
-      res, "Access-Control-Allow-Methods", /* GCOVR_EXCL_LINE */
-      "GET, POST, PUT, DELETE, OPTIONS");
-  c_rest_response_set_header(
-      res, "Access-Control-Allow-Headers", /* GCOVR_EXCL_LINE */
-      "Content-Type, Authorization");
+      res, "Access-Control-Allow-Origin", /* GCOVR_EXCL_LINE */
+      "*");                               /* GCOVR_EXCL_LINE */
+  c_rest_response_set_header(             /* GCOVR_EXCL_LINE */
+                             res,
+                             "Access-Control-Allow-Methods", /* GCOVR_EXCL_LINE
+                                                              */
+                             "GET, POST, PUT, DELETE, OPTIONS");
+  c_rest_response_set_header(/* GCOVR_EXCL_LINE */
+                             res,
+                             "Access-Control-Allow-Headers", /* GCOVR_EXCL_LINE
+                                                              */
+                             "Content-Type, Authorization");
 
   if (strcmp(req->method, "OPTIONS") == 0) {         /* GCOVR_EXCL_LINE */
     res->status_code = 204;                          /* GCOVR_EXCL_LINE */
@@ -63,17 +68,19 @@ c_rest_hsts_middleware(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
                        struct c_rest_response *res, void *user_data) {
   (void)req;
   (void)user_data;
-  if (!res)                      /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
-  c_rest_response_set_header(res,
+  if (!res)                                               /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                          /* GCOVR_EXCL_LINE */
+  c_rest_response_set_header(res,                         /* GCOVR_EXCL_LINE */
                              "Strict-Transport-Security", /* GCOVR_EXCL_LINE */
                              "max-age=31536000; includeSubDomains");
   return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-c_rest_error_t c_rest_https_redirect_middleware(
-    struct c_rest_request *req, /* GCOVR_EXCL_LINE */
-    struct c_rest_response *res, void *user_data) {
+c_rest_error_t c_rest_https_redirect_middleware(/* GCOVR_EXCL_LINE */
+                                                struct c_rest_request
+                                                    *req, /* GCOVR_EXCL_LINE */
+                                                struct c_rest_response *res,
+                                                void *user_data) {
   (void)user_data;
   if (!res || !req)                          /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC;             /* GCOVR_EXCL_LINE */
@@ -81,14 +88,15 @@ c_rest_error_t c_rest_https_redirect_middleware(
     if (strcmp(req->scheme, "https") != 0) { /* GCOVR_EXCL_LINE */
       char url[1024];
       const char *host = NULL; /* GCOVR_EXCL_LINE */
-      if (c_rest_request_get_header(req, "Host", &host) != 0 ||
+      if (c_rest_request_get_header(req, "Host", &host) !=
+              0 ||          /* GCOVR_EXCL_LINE */
           !host)            /* GCOVR_EXCL_LINE */
         host = "localhost"; /* GCOVR_EXCL_LINE */
 #if defined(_MSC_VER)
       sprintf_s(url, sizeof(url), "https://%s%s", host,
                 req->path ? req->path : "/");
 #else
-      sprintf(url, "https://%s%s", host,
+      sprintf(url, "https://%s%s", host,    /* GCOVR_EXCL_LINE */
               req->path ? req->path : "/"); /* GCOVR_EXCL_LINE */
 #endif
       return c_rest_response_redirect(res, url, 301); /* GCOVR_EXCL_LINE */
@@ -114,10 +122,11 @@ c_rest_error_t c_rest_auth_middleware(struct c_rest_request *req,
 
   if (!user_data) {                       /* GCOVR_EXCL_LINE */
     c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    c_rest_response_html(
-        res,
-        "Internal Server Error: Missing auth verifier"); /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;                         /* GCOVR_EXCL_LINE */
+    c_rest_response_html(                 /* GCOVR_EXCL_LINE */
+                         res,
+                         "Internal Server Error: Missing auth verifier"); /* GCOVR_EXCL_LINE
+                                                                           */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   verifier = (struct c_rest_auth_verifier *)user_data;
@@ -198,10 +207,11 @@ c_rest_error_t c_rest_oauth2_middleware(struct c_rest_request *req,
 
   if (!user_data) {                       /* GCOVR_EXCL_LINE */
     c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    c_rest_response_html(
-        res,
-        "Internal Server Error: Missing OAuth2 verifier"); /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;                           /* GCOVR_EXCL_LINE */
+    c_rest_response_html(                 /* GCOVR_EXCL_LINE */
+                         res,
+                         "Internal Server Error: Missing OAuth2 verifier"); /* GCOVR_EXCL_LINE
+                                                                             */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   u.ptr = user_data;

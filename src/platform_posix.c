@@ -52,8 +52,8 @@ c_rest_socket_create(c_rest_socket_t *out_sock) { /* GCOVR_EXCL_LINE */
 #endif
 }
 
-c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock,
-                                  const char *host, /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock, /* GCOVR_EXCL_LINE */
+                                  const char *host,     /* GCOVR_EXCL_LINE */
                                   unsigned short port) {
 #if defined(__unix__) || defined(__APPLE__)
   struct sockaddr_in addr;
@@ -76,8 +76,8 @@ c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock,
 #endif
 }
 
-c_rest_error_t c_rest_socket_listen(c_rest_socket_t sock,
-                                    int backlog) { /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_socket_listen(c_rest_socket_t sock, /* GCOVR_EXCL_LINE */
+                                    int backlog) {        /* GCOVR_EXCL_LINE */
 #if defined(__unix__) || defined(__APPLE__)
   int s = (int)sock;             /* GCOVR_EXCL_LINE */
   int res = listen(s, backlog);  /* GCOVR_EXCL_LINE */
@@ -102,10 +102,10 @@ c_rest_socket_accept(c_rest_socket_t server_sock, /* GCOVR_EXCL_LINE */
   if (!out_client_sock)          /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
-  client = accept(s, (struct sockaddr *)&client_addr,
-                  &addr_len);    /* GCOVR_EXCL_LINE */
-  if (client < 0) {              /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  client = accept(s, (struct sockaddr *)&client_addr, /* GCOVR_EXCL_LINE */
+                  &addr_len);                         /* GCOVR_EXCL_LINE */
+  if (client < 0) {                                   /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;                      /* GCOVR_EXCL_LINE */
   }
 
   *out_client_sock = (c_rest_socket_t)client; /* GCOVR_EXCL_LINE */
@@ -116,8 +116,8 @@ c_rest_socket_accept(c_rest_socket_t server_sock, /* GCOVR_EXCL_LINE */
 }
 
 c_rest_error_t
-c_rest_socket_set_nonblocking(c_rest_socket_t sock,
-                              int nonblocking) { /* GCOVR_EXCL_LINE */
+c_rest_socket_set_nonblocking(c_rest_socket_t sock, /* GCOVR_EXCL_LINE */
+                              int nonblocking) {    /* GCOVR_EXCL_LINE */
 #if defined(__unix__) || defined(__APPLE__)
   int s = (int)sock;                /* GCOVR_EXCL_LINE */
   int flags = fcntl(s, F_GETFL, 0); /* GCOVR_EXCL_LINE */
@@ -165,9 +165,10 @@ static void *thread_wrapper(void *arg) { /* GCOVR_EXCL_LINE */
   return NULL;                           /* GCOVR_EXCL_LINE */
 }
 
-c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
-                                    c_rest_thread_fn func, /* GCOVR_EXCL_LINE */
-                                    void *arg) {
+c_rest_error_t
+c_rest_thread_create(c_rest_thread_t *out_thread, /* GCOVR_EXCL_LINE */
+                     c_rest_thread_fn func,       /* GCOVR_EXCL_LINE */
+                     void *arg) {
 #if defined(__unix__) || defined(__APPLE__)
   pthread_t thread;
   struct thread_wrapper_args *args;
@@ -175,8 +176,9 @@ c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
   if (!out_thread || !func)      /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
-  if (C_REST_MALLOC(sizeof(struct thread_wrapper_args), &(args)) !=
-      0) { /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(sizeof(struct thread_wrapper_args),
+                    &(args)) != /* GCOVR_EXCL_LINE */
+      0) {                      /* GCOVR_EXCL_LINE */
     LOG_DEBUG("C_REST_MALLOC failed");
     args = NULL; /* GCOVR_EXCL_LINE */
   }
@@ -186,7 +188,8 @@ c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
   args->func = func; /* GCOVR_EXCL_LINE */
   args->arg = arg;   /* GCOVR_EXCL_LINE */
 
-  if (pthread_create(&thread, NULL, thread_wrapper, args) !=
+  if (pthread_create(&thread, NULL, thread_wrapper,
+                     args) !=    /* GCOVR_EXCL_LINE */
       0) {                       /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(args)); /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
@@ -312,7 +315,7 @@ c_rest_cond_create(c_rest_cond_t *out_cond) { /* GCOVR_EXCL_LINE */
 #endif
 }
 
-c_rest_error_t c_rest_cond_wait(c_rest_cond_t c,
+c_rest_error_t c_rest_cond_wait(c_rest_cond_t c,    /* GCOVR_EXCL_LINE */
                                 c_rest_mutex_t m) { /* GCOVR_EXCL_LINE */
 #if defined(__unix__) || defined(__APPLE__)
   pthread_cond_t *cond = (pthread_cond_t *)c;    /* GCOVR_EXCL_LINE */
@@ -362,8 +365,8 @@ c_rest_error_t c_rest_cond_destroy(c_rest_cond_t c) { /* GCOVR_EXCL_LINE */
 }
 
 c_rest_error_t
-c_rest_process_create(c_rest_process_t *out_proc,
-                      const char *executable, /* GCOVR_EXCL_LINE */
+c_rest_process_create(c_rest_process_t *out_proc, /* GCOVR_EXCL_LINE */
+                      const char *executable,     /* GCOVR_EXCL_LINE */
                       char *const argv[]) {
 #if defined(__unix__) || defined(__APPLE__)
   pid_t pid;
@@ -387,8 +390,8 @@ c_rest_process_create(c_rest_process_t *out_proc,
 #endif
 }
 
-c_rest_error_t c_rest_process_wait(c_rest_process_t proc,
-                                   int *out_exit_code) { /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_process_wait(c_rest_process_t proc, /* GCOVR_EXCL_LINE */
+                                   int *out_exit_code) {  /* GCOVR_EXCL_LINE */
 #if defined(__unix__) || defined(__APPLE__)
   pid_t pid = (pid_t)proc; /* GCOVR_EXCL_LINE */
   int status;
@@ -401,7 +404,7 @@ c_rest_error_t c_rest_process_wait(c_rest_process_t proc,
     if (WIFEXITED(status)) {                /* GCOVR_EXCL_LINE */
       *out_exit_code = WEXITSTATUS(status); /* GCOVR_EXCL_LINE */
     } else {
-      *out_exit_code = 1;
+      *out_exit_code = 1;                     /* GCOVR_EXCL_LINE */
       /* Terminated by signal or otherwise */ /* GCOVR_EXCL_LINE */
     }
   }
@@ -420,8 +423,8 @@ c_rest_timer_get_ms(unsigned long *out_ms) { /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   /* Strict C89 lacks clock_gettime, but POSIX has it */
-  if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) { /* GCOVR_EXCL_LINE */
-    *out_ms = (unsigned long)(ts.tv_sec * 1000 +
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {    /* GCOVR_EXCL_LINE */
+    *out_ms = (unsigned long)(ts.tv_sec * 1000 +     /* GCOVR_EXCL_LINE */
                               ts.tv_nsec / 1000000); /* GCOVR_EXCL_LINE */
     return C_REST_OK;                                /* GCOVR_EXCL_LINE */
   }
@@ -431,7 +434,7 @@ c_rest_timer_get_ms(unsigned long *out_ms) { /* GCOVR_EXCL_LINE */
 #endif
 }
 
-c_rest_error_t c_rest_random_get(void *buffer,
+c_rest_error_t c_rest_random_get(void *buffer,  /* GCOVR_EXCL_LINE */
                                  size_t size) { /* GCOVR_EXCL_LINE */
   if (!buffer || size == 0)                     /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC;                /* GCOVR_EXCL_LINE */
@@ -453,7 +456,8 @@ c_rest_error_t c_rest_get_last_error(int *out_error) { /* GCOVR_EXCL_LINE */
   return C_REST_OK;                                    /* GCOVR_EXCL_LINE */
 }
 
-c_rest_error_t c_rest_socket_recv(c_rest_socket_t sock, void *buf,
+c_rest_error_t c_rest_socket_recv(c_rest_socket_t sock,
+                                  void *buf,  /* GCOVR_EXCL_LINE */
                                   size_t len, /* GCOVR_EXCL_LINE */
                                   size_t *out_read) {
   ssize_t ret;
@@ -468,8 +472,9 @@ c_rest_error_t c_rest_socket_recv(c_rest_socket_t sock, void *buf,
   return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 }
 
-c_rest_error_t c_rest_socket_send(c_rest_socket_t sock, const void *buf,
-                                  size_t len, /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_socket_send(c_rest_socket_t sock,
+                                  const void *buf, /* GCOVR_EXCL_LINE */
+                                  size_t len,      /* GCOVR_EXCL_LINE */
                                   size_t *out_written) {
   ssize_t ret;
   if (!buf || !out_written)           /* GCOVR_EXCL_LINE */

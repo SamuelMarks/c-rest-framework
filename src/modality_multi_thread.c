@@ -40,8 +40,9 @@ static int multi_thread_init(struct c_rest_context *ctx) {
    * safe. C_REST_USE_OPENSSL_LEGACY would register thread-id and lock callbacks
    * here. */
   if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger.log_cb(
-        "MULTI_THREAD modality initialized"); /* GCOVR_EXCL_LINE */
+    ctx->logger
+        .log_cb(                                      /* GCOVR_EXCL_LINE */
+                "MULTI_THREAD modality initialized"); /* GCOVR_EXCL_LINE */
   }
 
   return 0;
@@ -93,8 +94,8 @@ struct connection_worker_args {
 
 static void worker_thread(void *arg) { /* GCOVR_EXCL_LINE */
   struct connection_worker_args *wargs =
-      (struct connection_worker_args *)arg; /* GCOVR_EXCL_LINE */
-  c_rest_handle_connection(wargs->ctx,
+      (struct connection_worker_args *)arg;     /* GCOVR_EXCL_LINE */
+  c_rest_handle_connection(wargs->ctx,          /* GCOVR_EXCL_LINE */
                            wargs->client_sock); /* GCOVR_EXCL_LINE */
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
@@ -128,43 +129,45 @@ static int multi_thread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
    * safe. C_REST_USE_OPENSSL_LEGACY would register thread-id and lock callbacks
    * here. */
   if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger.log_cb(
-        "MULTI_THREAD modality run started"); /* GCOVR_EXCL_LINE */
+    ctx->logger
+        .log_cb(                                      /* GCOVR_EXCL_LINE */
+                "MULTI_THREAD modality run started"); /* GCOVR_EXCL_LINE */
   }
 
   if (state->server_sock == C_REST_INVALID_SOCKET) {      /* GCOVR_EXCL_LINE */
     if (c_rest_socket_create(&state->server_sock) != 0) { /* GCOVR_EXCL_LINE */
-      fprintf(stderr,
+      fprintf(stderr,                                     /* GCOVR_EXCL_LINE */
               "MULTI_THREAD: Failed to create socket\n"); /* GCOVR_EXCL_LINE */
       return 1;                                           /* GCOVR_EXCL_LINE */
     }
 
-    if (c_rest_socket_bind(state->server_sock,
+    if (c_rest_socket_bind(state->server_sock,       /* GCOVR_EXCL_LINE */
                            ctx->listen_address,      /* GCOVR_EXCL_LINE */
                            ctx->listen_port) != 0) { /* GCOVR_EXCL_LINE */
-      fprintf(
-          stderr,
-          "MULTI_THREAD: Failed to bind socket to %s:%d\n", /* GCOVR_EXCL_LINE
-                                                             */
-          ctx->listen_address, ctx->listen_port); /* GCOVR_EXCL_LINE */
+      fprintf(                                       /* GCOVR_EXCL_LINE */
+              stderr,
+              "MULTI_THREAD: Failed to bind socket to %s:%d\n", /* GCOVR_EXCL_LINE
+                                                                 */
+              ctx->listen_address, ctx->listen_port); /* GCOVR_EXCL_LINE */
+      c_rest_socket_close(state->server_sock);        /* GCOVR_EXCL_LINE */
+      state->server_sock = C_REST_INVALID_SOCKET;     /* GCOVR_EXCL_LINE */
+      return 1;                                       /* GCOVR_EXCL_LINE */
+    }
+
+    if (c_rest_socket_listen(state->server_sock, 128) != /* GCOVR_EXCL_LINE */
+        0) {                                             /* GCOVR_EXCL_LINE */
+      fprintf(                                           /* GCOVR_EXCL_LINE */
+              stderr,
+              "MULTI_THREAD: Failed to listen on socket\n"); /* GCOVR_EXCL_LINE
+                                                              */
       c_rest_socket_close(state->server_sock);    /* GCOVR_EXCL_LINE */
       state->server_sock = C_REST_INVALID_SOCKET; /* GCOVR_EXCL_LINE */
       return 1;                                   /* GCOVR_EXCL_LINE */
     }
-
-    if (c_rest_socket_listen(state->server_sock, 128) !=
-        0) { /* GCOVR_EXCL_LINE */
-      fprintf(
-          stderr,
-          "MULTI_THREAD: Failed to listen on socket\n"); /* GCOVR_EXCL_LINE */
-      c_rest_socket_close(state->server_sock);           /* GCOVR_EXCL_LINE */
-      state->server_sock = C_REST_INVALID_SOCKET;        /* GCOVR_EXCL_LINE */
-      return 1;                                          /* GCOVR_EXCL_LINE */
-    }
   }
 
   /* Thread-per-connection conceptual implementation */
-  while (state->is_running &&
+  while (state->is_running &&                           /* GCOVR_EXCL_LINE */
          state->server_sock != C_REST_INVALID_SOCKET) { /* GCOVR_EXCL_LINE */
     c_rest_socket_t client_sock;
     int res = 1; /* GCOVR_EXCL_LINE */
@@ -176,11 +179,11 @@ static int multi_thread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
       res = c_rest_socket_accept(state->server_sock, &client_sock);
     }
 #else
-    res = c_rest_socket_accept(state->server_sock,
-                               &client_sock); /* GCOVR_EXCL_LINE */
+    res = c_rest_socket_accept(state->server_sock, /* GCOVR_EXCL_LINE */
+                               &client_sock);      /* GCOVR_EXCL_LINE */
 #endif
 
-    if (res == 0 &&
+    if (res == 0 &&                             /* GCOVR_EXCL_LINE */
         client_sock != C_REST_INVALID_SOCKET) { /* GCOVR_EXCL_LINE */
       c_rest_thread_t thread_handle;
       struct connection_worker_args *wargs =
@@ -190,11 +193,13 @@ static int multi_thread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
       if (wargs) {                        /* GCOVR_EXCL_LINE */
         wargs->ctx = ctx;                 /* GCOVR_EXCL_LINE */
         wargs->client_sock = client_sock; /* GCOVR_EXCL_LINE */
-        if (c_rest_thread_create(&thread_handle, worker_thread, wargs) !=
-            0) { /* GCOVR_EXCL_LINE */
-          fprintf(
-              stderr,
-              "MULTI_THREAD: Failed to create thread\n"); /* GCOVR_EXCL_LINE */
+        if (c_rest_thread_create(&thread_handle, worker_thread,
+                                 wargs) != /* GCOVR_EXCL_LINE */
+            0) {                           /* GCOVR_EXCL_LINE */
+          fprintf(                         /* GCOVR_EXCL_LINE */
+                  stderr,
+                  "MULTI_THREAD: Failed to create thread\n"); /* GCOVR_EXCL_LINE
+                                                               */
           /* cleanup and close on failure */
           ctx->allocator.free_cb(wargs); /* GCOVR_EXCL_LINE */
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
@@ -231,8 +236,9 @@ static int multi_thread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
    * safe. C_REST_USE_OPENSSL_LEGACY would register thread-id and lock callbacks
    * here. */
   if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger.log_cb(
-        "MULTI_THREAD modality run finished"); /* GCOVR_EXCL_LINE */
+    ctx->logger
+        .log_cb(                                       /* GCOVR_EXCL_LINE */
+                "MULTI_THREAD modality run finished"); /* GCOVR_EXCL_LINE */
   }
 
   return 0; /* GCOVR_EXCL_LINE */

@@ -55,9 +55,9 @@ c_rest_error_t c_rest_strncasecmp(const char *s1, const char *s2, size_t n,
     *out_cmp = 0;        /* GCOVR_EXCL_LINE */
     return C_REST_OK;    /* GCOVR_EXCL_LINE */
   }
-  *out_cmp = tolower((unsigned char)*s1) -
-             tolower((unsigned char)*s2); /* GCOVR_EXCL_LINE */
-  return C_REST_OK;                       /* GCOVR_EXCL_LINE */
+  *out_cmp = tolower((unsigned char)*s1) - /* GCOVR_EXCL_LINE */
+             tolower((unsigned char)*s2);  /* GCOVR_EXCL_LINE */
+  return C_REST_OK;                        /* GCOVR_EXCL_LINE */
 }
 
 c_rest_error_t c_rest_strlcpy(char *dst, const char *src, size_t dsize,

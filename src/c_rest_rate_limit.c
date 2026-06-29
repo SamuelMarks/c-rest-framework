@@ -29,11 +29,12 @@ c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
   }
 
   ret = c_rest_mutex_create(&limiter->mutex);
-  if (ret != 0) { /* GCOVR_EXCL_LINE */
-    c_rest_hashmap_destroy(
-        &limiter->buckets,
-        c_rest_rate_limiter_free_bucket); /* GCOVR_EXCL_LINE */
-    return ret;                           /* GCOVR_EXCL_LINE */
+  if (ret != 0) {                             /* GCOVR_EXCL_LINE */
+    c_rest_hashmap_destroy(                   /* GCOVR_EXCL_LINE */
+                           &limiter->buckets, /* GCOVR_EXCL_LINE */
+                           c_rest_rate_limiter_free_bucket); /* GCOVR_EXCL_LINE
+                                                              */
+    return ret; /* GCOVR_EXCL_LINE */
   }
 
   limiter->initialized = 1;

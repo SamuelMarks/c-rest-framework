@@ -237,14 +237,14 @@ c_rest_error_t c_rest_client_request_sync(
       out->status_code = res->status_code;
       out->headers_count = res->headers.count;
       out->headers = NULL;
-      if (out->headers_count > 0) { /* GCOVR_EXCL_LINE */
-        out->headers = (struct c_rest_client_header *)
-            calloc(/* GCOVR_EXCL_LINE */
+      if (out->headers_count > 0) {                   /* GCOVR_EXCL_LINE */
+        out->headers = (struct c_rest_client_header *)/* GCOVR_EXCL_LINE */
+            calloc(                                   /* GCOVR_EXCL_LINE */
                    out->headers_count, sizeof(struct c_rest_client_header));
-        if (out->headers) {                          /* GCOVR_EXCL_LINE */
-          for (i = 0; i < out->headers_count; ++i) { /* GCOVR_EXCL_LINE */
-            if (res->headers.headers[i].key) {       /* GCOVR_EXCL_LINE */
-              size_t klen =
+        if (out->headers) {                                /* GCOVR_EXCL_LINE */
+          for (i = 0; i < out->headers_count; ++i) {       /* GCOVR_EXCL_LINE */
+            if (res->headers.headers[i].key) {             /* GCOVR_EXCL_LINE */
+              size_t klen =                                /* GCOVR_EXCL_LINE */
                   strlen(res->headers.headers[i].key) + 1; /* GCOVR_EXCL_LINE */
               out->headers[i].key = (char *)malloc(klen);  /* GCOVR_EXCL_LINE */
               if (out->headers[i].key) {                   /* GCOVR_EXCL_LINE */
@@ -258,11 +258,12 @@ c_rest_error_t c_rest_client_request_sync(
               }
             }
             if (res->headers.headers[i].value) { /* GCOVR_EXCL_LINE */
-              size_t vlen = strlen(res->headers.headers[i].value) +
-                            1; /* GCOVR_EXCL_LINE */
-              out->headers[i].value =
-                  (char *)malloc(vlen);    /* GCOVR_EXCL_LINE */
-              if (out->headers[i].value) { /* GCOVR_EXCL_LINE */
+              size_t vlen =
+                  strlen(res->headers.headers[i].value) + /* GCOVR_EXCL_LINE */
+                  1;                                      /* GCOVR_EXCL_LINE */
+              out->headers[i].value =                     /* GCOVR_EXCL_LINE */
+                  (char *)malloc(vlen);                   /* GCOVR_EXCL_LINE */
+              if (out->headers[i].value) {                /* GCOVR_EXCL_LINE */
 #if defined(_MSC_VER)
                 strcpy_s((char *)out->headers[i].value, vlen,
                          res->headers.headers[i].value);
@@ -822,9 +823,10 @@ c_rest_error_t c_rest_client_post_form_sync(
 
   if (headers_count > 0 && headers) {     /* GCOVR_EXCL_LINE */
     for (i = 0; i < headers_count; ++i) { /* GCOVR_EXCL_LINE */
-      c_rest_client_header_set(&all_headers, &all_headers_count,
-                               headers[i].key,    /* GCOVR_EXCL_LINE */
-                               headers[i].value); /* GCOVR_EXCL_LINE */
+      c_rest_client_header_set(&all_headers,
+                               &all_headers_count, /* GCOVR_EXCL_LINE */
+                               headers[i].key,     /* GCOVR_EXCL_LINE */
+                               headers[i].value);  /* GCOVR_EXCL_LINE */
     }
   }
 

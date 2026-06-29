@@ -136,6 +136,71 @@ int main(int argc, char **argv) {
   res = test_rate_limiting_throttling_middleware();
   if (res != 0)
     return res;
+
+  printf("Running test_endian...\n");
+  res = test_endian();
+  if (res != 0)
+    return res;
+
+  printf("Running test_hashmap...\n");
+  res = test_hashmap();
+  if (res != 0)
+    return res;
+
+  printf("Running test_list...\n");
+  res = test_list();
+  if (res != 0)
+    return res;
+
+  printf("Running test_str_utils...\n");
+  res = test_str_utils();
+  if (res != 0)
+    return res;
+
+  printf("Running test_mem...\n");
+  res = test_mem();
+  if (res != 0)
+    return res;
+
+  printf("Running test_ts_queue...\n");
+  res = test_ts_queue();
+  if (res != 0)
+    return res;
+
+  printf("Running test_log...\n");
+  res = test_log();
+  if (res != 0)
+    return res;
+
+  printf("Running test_string...\n");
+  res = test_string();
+  if (res != 0)
+    return res;
+
+  printf("Running test_pool...\n");
+  res = test_pool();
+  if (res != 0)
+    return res;
+
+#ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
+  printf("Running test_graphql...\n");
+  res = test_graphql();
+  if (res != 0)
+    return res;
+#endif
+
+#ifndef CDD_DOS
+  printf("Running test_http23...\n");
+  res = test_http23();
+  if (res != 0)
+    return res;
+
+  printf("Running test_websocket...\n");
+  res = test_websocket();
+  if (res != 0)
+    return res;
+#endif
+
 #endif
 
   printf("Running test_all_enums...\n");

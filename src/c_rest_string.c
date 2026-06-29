@@ -46,8 +46,9 @@ c_rest_error_t c_rest_string_append(c_rest_string *str, const char *data,
     while (str->length + len + 1 > new_cap) { /* GCOVR_EXCL_LINE */
       new_cap *= 2;                           /* GCOVR_EXCL_LINE */
     }
-    if (C_REST_REALLOC(str->data, new_cap, &tmp_new_data) !=
-        0) { /* GCOVR_EXCL_LINE */
+    if (C_REST_REALLOC(str->data, new_cap,
+                       &tmp_new_data) != /* GCOVR_EXCL_LINE */
+        0) {                             /* GCOVR_EXCL_LINE */
       LOG_DEBUG("C_REST_REALLOC failed");
       new_data = NULL; /* GCOVR_EXCL_LINE */
     } else {

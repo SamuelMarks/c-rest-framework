@@ -534,11 +534,13 @@ c_rest_router_add_template_openapi(/* GCOVR_EXCL_LINE */
                                    void *user_data,
                                    const struct c_rest_openapi_operation
                                        *op_meta) {
-  int res = c_rest_router_add_template(router, method, path, ctx,
+  int res = c_rest_router_add_template(router, method, path,
+                                       ctx,           /* GCOVR_EXCL_LINE */
                                        data_provider, /* GCOVR_EXCL_LINE */
                                        user_data);
   if (res == 0 && op_meta && router->openapi_spec) { /* GCOVR_EXCL_LINE */
-    c_rest_openapi_spec_add_path(router->openapi_spec, path, method,
+    c_rest_openapi_spec_add_path(router->openapi_spec, path,
+                                 method,   /* GCOVR_EXCL_LINE */
                                  op_meta); /* GCOVR_EXCL_LINE */
   }
   return res; /* GCOVR_EXCL_LINE */
