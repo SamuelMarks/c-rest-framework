@@ -8,7 +8,6 @@
 #include <string.h>
 #include "c_rest_mem.h"
 #include "c_rest_log.h"
-#include <sys/stat.h>
 #include <time.h>
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__) || defined(_MSC_VER)
@@ -49,6 +48,10 @@ static void hot_reload_log(c_rest_hot_reload_ctx_t *ctx, const char *msg) {
 
 static int get_file_mtime(c_rest_hot_reload_ctx_t *ctx, const char *path,
                           time_t *out_mtime) {
+  cfs_path p = {0};
+  cfs_file_time_type ftime = 0;
+  cfs_error_code ec = {0};
+
   (void)ctx;
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
   if (ctx && ctx->cm_env) {
@@ -59,19 +62,16 @@ static int get_file_mtime(c_rest_hot_reload_ctx_t *ctx, const char *path,
     }
   }
 #endif
-#if defined(_MSC_VER)
-  struct _stat64 st;
-  if (_stat64(path, &st) == 0) {
-    *out_mtime = st.st_mtime;
-    return C_REST_OK;
+
+  if (cfs_path_init_str(&p, path) == 0) {
+    if (cfs_last_write_time(&p, &ftime, &ec) == 0) {
+      *out_mtime = (time_t)ftime;
+      cfs_path_destroy(&p);
+      return C_REST_OK;
+    }
+    cfs_path_destroy(&p);
   }
-#else
-  struct stat st;
-  if (stat(path, &st) == 0) {
-    *out_mtime = st.st_mtime;
-    return C_REST_OK;
-  }
-#endif
+
   *out_mtime = 0;
   return C_REST_ERROR_GENERIC;
 }
