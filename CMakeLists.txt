@@ -711,6 +711,7 @@ c_rest_framework_strip_bad_flags(c-rest-framework COMPILE_OPTIONS)
 c_rest_framework_strip_bad_flags(c-rest-framework LINK_OPTIONS)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    include(CTest)
     enable_testing()
     add_subdirectory(tests)
     add_subdirectory(examples)

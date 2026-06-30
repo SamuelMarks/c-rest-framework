@@ -43,13 +43,9 @@ int test_mem(void) {
 
   c_rest_mem_tracker_print_leaks();
 
+  C_REST_FREE(ptr_leak);
+
   c_rest_mem_tracker_cleanup();
-  C_REST_FREE(
-      ptr_leak); /* Actually free it using normal free if tracker is dead, or
-                    maybe track doesn't matter anymore, just free it using
-                    C_REST_FREE before cleanup if we want, but wait, the tracker
-                    print is what we wanted to hit. So we free it AFTER print
-                    but BEFORE cleanup to keep it clean. */
 
   if (failed) {
     printf("test_mem failed\n");
