@@ -486,7 +486,6 @@ add_library(c-rest-framework
     src/modality_single_thread.c
     src/modality_async.c
     src/modality_multi_thread.c
-    src/modality_multi_process.c
     src/modality_greenthread.c
     src/modality_message_passing.c
     src/parser.c
@@ -520,6 +519,10 @@ add_library(c-rest-framework
     src/websocket.c
     src/c_rest_compression.c
 )
+
+if(NOT EMSCRIPTEN)
+    target_sources(c-rest-framework PRIVATE src/modality_multi_process.c)
+endif()
 
 if(C_REST_GNU_FLAGS)
     target_compile_options(c-rest-framework PRIVATE ${C_REST_GNU_FLAGS})
@@ -671,7 +674,11 @@ if(C_REST_FRAMEWORK_FETCH_CDD_C)
     add_definitions(-DC_REST_FRAMEWORK_USE_CDD_C)
 endif()
 
-if(WIN32)
+if(EMSCRIPTEN)
+    target_sources(c-rest-framework PRIVATE src/platform_posix.c)
+    target_compile_options(c-rest-framework PUBLIC -pthread)
+    target_link_options(c-rest-framework PUBLIC -pthread "-sUSE_PTHREADS=1" "-sASYNCIFY=1")
+elseif(WIN32)
     target_sources(c-rest-framework PRIVATE src/platform_win32.c)
     target_link_libraries(c-rest-framework PUBLIC ws2_32 advapi32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "DOS")

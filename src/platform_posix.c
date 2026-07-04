@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/types.h>
@@ -35,7 +35,7 @@ c_rest_error_t c_rest_platform_cleanup(void) { return C_REST_OK; }
 
 c_rest_error_t
 c_rest_socket_create(c_rest_socket_t *out_sock) { /* GCOVR_EXCL_LINE */
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   int sock;
   if (!out_sock)                 /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
@@ -55,7 +55,7 @@ c_rest_socket_create(c_rest_socket_t *out_sock) { /* GCOVR_EXCL_LINE */
 c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock, /* GCOVR_EXCL_LINE */
                                   const char *host,     /* GCOVR_EXCL_LINE */
                                   unsigned short port) {
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   struct sockaddr_in addr;
   int s = (int)sock; /* GCOVR_EXCL_LINE */
   int res;
@@ -78,7 +78,7 @@ c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock, /* GCOVR_EXCL_LINE */
 
 c_rest_error_t c_rest_socket_listen(c_rest_socket_t sock, /* GCOVR_EXCL_LINE */
                                     int backlog) {        /* GCOVR_EXCL_LINE */
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   int s = (int)sock;             /* GCOVR_EXCL_LINE */
   int res = listen(s, backlog);  /* GCOVR_EXCL_LINE */
   if (res < 0) {                 /* GCOVR_EXCL_LINE */
@@ -93,7 +93,7 @@ c_rest_error_t c_rest_socket_listen(c_rest_socket_t sock, /* GCOVR_EXCL_LINE */
 c_rest_error_t
 c_rest_socket_accept(c_rest_socket_t server_sock, /* GCOVR_EXCL_LINE */
                      c_rest_socket_t *out_client_sock) {
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   int s = (int)server_sock; /* GCOVR_EXCL_LINE */
   int client;
   struct sockaddr_in client_addr;
@@ -118,7 +118,7 @@ c_rest_socket_accept(c_rest_socket_t server_sock, /* GCOVR_EXCL_LINE */
 c_rest_error_t
 c_rest_socket_set_nonblocking(c_rest_socket_t sock, /* GCOVR_EXCL_LINE */
                               int nonblocking) {    /* GCOVR_EXCL_LINE */
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   int s = (int)sock;                /* GCOVR_EXCL_LINE */
   int flags = fcntl(s, F_GETFL, 0); /* GCOVR_EXCL_LINE */
   if (flags < 0)                    /* GCOVR_EXCL_LINE */
@@ -140,7 +140,7 @@ c_rest_socket_set_nonblocking(c_rest_socket_t sock, /* GCOVR_EXCL_LINE */
 }
 
 c_rest_error_t c_rest_socket_close(c_rest_socket_t sock) { /* GCOVR_EXCL_LINE */
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   int s = (int)sock;             /* GCOVR_EXCL_LINE */
   int res = close(s);            /* GCOVR_EXCL_LINE */
   if (res < 0) {                 /* GCOVR_EXCL_LINE */
@@ -169,7 +169,7 @@ c_rest_error_t
 c_rest_thread_create(c_rest_thread_t *out_thread, /* GCOVR_EXCL_LINE */
                      c_rest_thread_fn func,       /* GCOVR_EXCL_LINE */
                      void *arg) {
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pthread_t thread;
   struct thread_wrapper_args *args;
 
@@ -207,7 +207,7 @@ c_rest_thread_create(c_rest_thread_t *out_thread, /* GCOVR_EXCL_LINE */
 
 c_rest_error_t
 c_rest_thread_join(c_rest_thread_t thread) { /* GCOVR_EXCL_LINE */
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pthread_t t = (pthread_t)thread;  /* GCOVR_EXCL_LINE */
   if (pthread_join(t, NULL) != 0) { /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
@@ -219,7 +219,7 @@ c_rest_thread_join(c_rest_thread_t thread) { /* GCOVR_EXCL_LINE */
 }
 
 c_rest_error_t c_rest_mutex_create(c_rest_mutex_t *out_mutex) {
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pthread_mutex_t *m;
 
   if (!out_mutex)                /* GCOVR_EXCL_LINE */
@@ -245,7 +245,7 @@ c_rest_error_t c_rest_mutex_create(c_rest_mutex_t *out_mutex) {
 }
 
 c_rest_error_t c_rest_mutex_lock(c_rest_mutex_t mutex) {
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pthread_mutex_t *m = (pthread_mutex_t *)mutex;
   if (!m)                        /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
@@ -260,7 +260,7 @@ c_rest_error_t c_rest_mutex_lock(c_rest_mutex_t mutex) {
 }
 
 c_rest_error_t c_rest_mutex_unlock(c_rest_mutex_t mutex) {
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pthread_mutex_t *m = (pthread_mutex_t *)mutex;
   if (!m)                        /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
@@ -275,7 +275,7 @@ c_rest_error_t c_rest_mutex_unlock(c_rest_mutex_t mutex) {
 }
 
 c_rest_error_t c_rest_mutex_destroy(c_rest_mutex_t mutex) {
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pthread_mutex_t *m = (pthread_mutex_t *)mutex;
   if (!m)                        /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
@@ -290,7 +290,7 @@ c_rest_error_t c_rest_mutex_destroy(c_rest_mutex_t mutex) {
 
 c_rest_error_t
 c_rest_cond_create(c_rest_cond_t *out_cond) { /* GCOVR_EXCL_LINE */
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pthread_cond_t *cond;
 
   if (!out_cond)                 /* GCOVR_EXCL_LINE */
@@ -317,7 +317,7 @@ c_rest_cond_create(c_rest_cond_t *out_cond) { /* GCOVR_EXCL_LINE */
 
 c_rest_error_t c_rest_cond_wait(c_rest_cond_t c,    /* GCOVR_EXCL_LINE */
                                 c_rest_mutex_t m) { /* GCOVR_EXCL_LINE */
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pthread_cond_t *cond = (pthread_cond_t *)c;    /* GCOVR_EXCL_LINE */
   pthread_mutex_t *mutex = (pthread_mutex_t *)m; /* GCOVR_EXCL_LINE */
 
@@ -334,7 +334,7 @@ c_rest_error_t c_rest_cond_wait(c_rest_cond_t c,    /* GCOVR_EXCL_LINE */
 }
 
 c_rest_error_t c_rest_cond_signal(c_rest_cond_t c) { /* GCOVR_EXCL_LINE */
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pthread_cond_t *cond = (pthread_cond_t *)c; /* GCOVR_EXCL_LINE */
 
   if (!cond)                     /* GCOVR_EXCL_LINE */
@@ -350,7 +350,7 @@ c_rest_error_t c_rest_cond_signal(c_rest_cond_t c) { /* GCOVR_EXCL_LINE */
 }
 
 c_rest_error_t c_rest_cond_destroy(c_rest_cond_t c) { /* GCOVR_EXCL_LINE */
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pthread_cond_t *cond = (pthread_cond_t *)c; /* GCOVR_EXCL_LINE */
 
   if (!cond)                     /* GCOVR_EXCL_LINE */
@@ -368,7 +368,12 @@ c_rest_error_t
 c_rest_process_create(c_rest_process_t *out_proc, /* GCOVR_EXCL_LINE */
                       const char *executable,     /* GCOVR_EXCL_LINE */
                       char *const argv[]) {
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__EMSCRIPTEN__)
+  (void)out_proc;
+  (void)executable;
+  (void)argv;
+  return C_REST_ERROR_NOT_SUPPORTED;
+#elif defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pid_t pid;
 
   if (!out_proc || !executable)  /* GCOVR_EXCL_LINE */
@@ -392,7 +397,11 @@ c_rest_process_create(c_rest_process_t *out_proc, /* GCOVR_EXCL_LINE */
 
 c_rest_error_t c_rest_process_wait(c_rest_process_t proc, /* GCOVR_EXCL_LINE */
                                    int *out_exit_code) {  /* GCOVR_EXCL_LINE */
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__EMSCRIPTEN__)
+  (void)proc;
+  (void)out_exit_code;
+  return C_REST_ERROR_NOT_SUPPORTED;
+#elif defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pid_t pid = (pid_t)proc; /* GCOVR_EXCL_LINE */
   int status;
 
@@ -417,7 +426,7 @@ c_rest_error_t c_rest_process_wait(c_rest_process_t proc, /* GCOVR_EXCL_LINE */
 
 c_rest_error_t
 c_rest_timer_get_ms(unsigned long *out_ms) { /* GCOVR_EXCL_LINE */
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   struct timespec ts;
   if (!out_ms)                   /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */

@@ -9,3 +9,22 @@ on:
 jobs:
   build:
     uses: SamuelMarks/c-ci/.github/workflows/c-cmake-ci.yml@master
+
+  wasm_build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup emsdk
+      uses: mymindstorm/setup-emsdk@v14
+      with:
+        version: latest
+
+    - name: Configure CMake
+      run: emcmake cmake -B build-wasm -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build-wasm
+
+    - name: Test
+      run: node build-wasm/tests/c-rest-framework-tests.js

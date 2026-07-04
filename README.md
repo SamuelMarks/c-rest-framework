@@ -3,7 +3,7 @@ c-rest-framework
 
 [![License](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Doc Coverage](https://img.shields.io/badge/Doc_Coverage-100.0%25-green.svg)](#)
-[![Test Coverage](https://img.shields.io/badge/Test_Coverage-90.1%25-green.svg)](#)
+[![Test Coverage](https://img.shields.io/badge/Test_Coverage-97.2%25-green.svg)](#)
 [![CI](https://github.com/SamuelMarks/c-rest-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/SamuelMarks/c-rest-framework/actions/workflows/ci.yml)
 
 A highly portable, modality-driven REST framework written in strict C89 (ANSI C).
