@@ -31,9 +31,6 @@ static void on_complete(c_rest_parser_context *ctx) {
   complete_called = 1;
 }
 
-static int header_called = 0;
-static int body_called = 0;
-
 static void on_header(c_rest_parser_context *ctx, const char *key,
                       size_t key_len, const char *val, size_t val_len) {
   (void)ctx;
@@ -41,14 +38,12 @@ static void on_header(c_rest_parser_context *ctx, const char *key,
   (void)key_len;
   (void)val;
   (void)val_len;
-  header_called++;
 }
 
 static void on_body(c_rest_parser_context *ctx, const char *data, size_t len) {
   (void)ctx;
   (void)data;
   (void)len;
-  body_called++;
 }
 
 static void on_error(c_rest_parser_context *ctx, const char *msg) {

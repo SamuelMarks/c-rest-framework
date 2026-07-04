@@ -56,7 +56,9 @@ static int test_all_enums(void) {
 int test_multiplatform_integration(void);
 int test_parser(void);
 #ifndef CDD_DOS
+#if !defined(__EMSCRIPTEN__)
 int test_client(void);
+#endif
 #endif
 #ifndef CDD_DOS
 int test_multipart(void);
@@ -91,7 +93,9 @@ int test_time(void);
 #endif
 int test_tls_context(void);
 #ifndef CDD_DOS
+#if !defined(__EMSCRIPTEN__)
 int test_tls_integration(void);
+#endif
 #endif
 #ifndef CDD_DOS
 SUITE_EXTERN(oauth2_suite);
@@ -190,15 +194,19 @@ int main(int argc, char **argv) {
 #endif
 
 #ifndef CDD_DOS
+#if !defined(__EMSCRIPTEN__)
   printf("Running test_http23...\n");
   res = test_http23();
   if (res != 0)
     return res;
+#endif
 
+#if !defined(__EMSCRIPTEN__)
   printf("Running test_websocket...\n");
   res = test_websocket();
   if (res != 0)
     return res;
+#endif
 #endif
 
 #endif
@@ -219,10 +227,12 @@ int main(int argc, char **argv) {
     return res;
 
 #ifndef CDD_DOS
+#if !defined(__EMSCRIPTEN__)
   printf("Running test_client...\n");
   res = test_client();
   if (res != 0)
     return res;
+#endif
 #endif
 
 #ifndef CDD_DOS
@@ -278,10 +288,12 @@ int main(int argc, char **argv) {
     return res;
 
 #ifndef CDD_DOS
+#if !defined(__EMSCRIPTEN__)
   printf("Running test_tls_integration...\n");
   res = test_tls_integration();
   if (res != 0)
     return res;
+#endif
 #endif
 
 #ifndef CDD_DOS

@@ -49,7 +49,8 @@ if(NOT TARGET c-rest-framework)
         include(FetchContent)
         FetchContent_Declare(
             c-rest-framework
-            URL https://github.com/SamuelMarks/c-rest-framework/archive/refs/heads/master.zip
+            GIT_REPOSITORY https://github.com/SamuelMarks/c-rest-framework.git
+            GIT_TAG master
         )
         FetchContent_MakeAvailable(c-rest-framework)
     endif()
@@ -63,7 +64,8 @@ if(NOT TARGET c-orm)
         include(FetchContent)
         FetchContent_Declare(
             c-orm
-            URL https://github.com/SamuelMarks/c-orm/archive/refs/heads/master.zip
+            GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
+            GIT_TAG master
         )
         FetchContent_MakeAvailable(c-orm)
     endif()

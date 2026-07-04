@@ -250,7 +250,8 @@ if(C_REST_FRAMEWORK_FETCH_C_FS)
     else()
         FetchContent_Declare(
           cfs
-          URL https://github.com/SamuelMarks/c-fs/archive/refs/heads/master.zip
+          GIT_REPOSITORY https://github.com/SamuelMarks/c-fs.git
+        GIT_TAG master
         )
     endif()
     FetchContent_MakeAvailable(cfs)
@@ -282,7 +283,8 @@ if(C_REST_FRAMEWORK_FETCH_CAH)
     else()
         FetchContent_Declare(
           c_abstract_http
-          URL https://github.com/SamuelMarks/c-abstract-http/archive/refs/heads/master.zip
+          GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
+        GIT_TAG master
         )
     endif()
     FetchContent_MakeAvailable(c_abstract_http)
@@ -301,7 +303,8 @@ endif()
     else()
         FetchContent_Declare(
             c_str_span
-            URL https://github.com/SamuelMarks/c-str-span/archive/refs/heads/master.zip
+            GIT_REPOSITORY https://github.com/SamuelMarks/c-str-span.git
+        GIT_TAG master
         )
     endif()
     FetchContent_MakeAvailable(c_str_span)
@@ -317,7 +320,8 @@ if(C_REST_FRAMEWORK_FETCH_C_ORM)
     else()
         FetchContent_Declare(
           c_orm
-          URL https://github.com/SamuelMarks/c-orm/archive/refs/heads/master.zip
+          GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
+        GIT_TAG master
         )
     endif()
     FetchContent_MakeAvailable(c_orm)
@@ -358,7 +362,8 @@ macro(c_rest_framework_resolve_parson)
         else()
             FetchContent_Declare(
                 parson
-                URL https://github.com/SamuelMarks/parson/archive/refs/heads/master.zip
+                GIT_REPOSITORY https://github.com/SamuelMarks/parson.git
+        GIT_TAG master
             )
         endif()
         set(OLD_BSL ${BUILD_SHARED_LIBS})
@@ -371,6 +376,14 @@ macro(c_rest_framework_resolve_parson)
         target_sources(c-rest-framework PRIVATE ${parson_SOURCE_DIR}/parson.c)
         if(MSVC)
             set_source_files_properties(${parson_SOURCE_DIR}/parson.c PROPERTIES COMPILE_FLAGS "/wd4232")
+        elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR EMSCRIPTEN)
+            set_source_files_properties(${parson_SOURCE_DIR}/parson.c PROPERTIES COMPILE_FLAGS "-Wno-long-long -Wno-error")
+        endif()
+        if(TARGET parson)
+            c_rest_framework_strip_bad_flags(parson COMPILE_OPTIONS)
+            if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR EMSCRIPTEN)
+                target_compile_options(parson PRIVATE "-Wno-long-long" "-Wno-error")
+            endif()
         endif()
         target_include_directories(c-rest-framework PUBLIC ${parson_SOURCE_DIR})
         set(parson_RESOLVED ON)
@@ -636,7 +649,8 @@ if(C_REST_FRAMEWORK_FETCH_CDD_C)
     else()
         FetchContent_Declare(
           cdd_c
-          URL https://github.com/SamuelMarks/cdd-c/archive/refs/heads/master.zip
+          GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
+        GIT_TAG master
         )
     endif()
     FetchContent_MakeAvailable(cdd_c)
@@ -647,8 +661,7 @@ if(C_REST_FRAMEWORK_FETCH_CDD_C)
             find_package(OpenSSL QUIET)
             if (OpenSSL_FOUND)
                 target_link_libraries(c_cdd PUBLIC OpenSSL::SSL OpenSSL::Crypto)
-            else()
-                target_link_libraries(c_cdd PUBLIC ssl crypto)
+
             endif()
         endif()
     endif()
@@ -737,4 +750,9 @@ if(TARGET c_cdd AND MSVC)
 endif()
 if(MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd5286 /wd4201 /wd4100 /wd4189 /wd4232 /wd4244 /wd4267")
+endif()
+
+if(EMSCRIPTEN AND TARGET c-abstract-http)
+    target_include_directories(c-abstract-http PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/emscripten_compat)
+    target_sources(c-abstract-http PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/emscripten_compat/dummy_ucontext.c)
 endif()

@@ -21,7 +21,7 @@ jobs:
         version: latest
 
     - name: Configure CMake
-      run: emcmake cmake -B build-wasm -DCMAKE_BUILD_TYPE=Release
+      run: emcmake cmake -B build-wasm -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=ON -DCMAKE_DISABLE_FIND_PACKAGE_CURL=ON
 
     - name: Build
       run: cmake --build build-wasm

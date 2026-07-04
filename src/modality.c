@@ -11,7 +11,9 @@ extern const struct c_rest_modality_vtable sync_vtable;
 extern const struct c_rest_modality_vtable single_thread_vtable;
 extern const struct c_rest_modality_vtable async_vtable;
 extern const struct c_rest_modality_vtable multi_thread_vtable;
+#if !defined(__EMSCRIPTEN__) && !defined(CDD_DOS)
 extern const struct c_rest_modality_vtable multi_process_vtable;
+#endif
 extern const struct c_rest_modality_vtable greenthread_vtable;
 extern const struct c_rest_modality_vtable message_passing_vtable;
 
@@ -63,9 +65,11 @@ static int get_vtable(enum c_rest_modality_type type,
   case C_REST_MODALITY_MULTI_THREAD:
     *out_vtable = &multi_thread_vtable;
     return C_REST_OK;
+#if !defined(__EMSCRIPTEN__) && !defined(CDD_DOS)
   case C_REST_MODALITY_MULTI_PROCESS:
     *out_vtable = &multi_process_vtable;
     return C_REST_OK;
+#endif
   case C_REST_MODALITY_GREENTHREAD:
     *out_vtable = &greenthread_vtable;
     return C_REST_OK;

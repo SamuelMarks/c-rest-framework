@@ -11,7 +11,7 @@
 #elif defined(__APPLE__)
 #include <c_abstract_http/http_apple.h>
 #else
-#ifndef CDD_DOS
+#if !defined(CDD_DOS) && !defined(__EMSCRIPTEN__)
 #include <c_abstract_http/http_curl.h>
 #endif
 #endif
@@ -130,7 +130,7 @@ c_rest_error_t c_rest_client_init(c_rest_client_context **out_client) {
   }
   ctx->client.send = http_apple_send;
 #else
-#ifndef CDD_DOS
+#if !defined(CDD_DOS) && !defined(__EMSCRIPTEN__)
   if (http_curl_context_init(/* GCOVR_EXCL_LINE */
                              (struct HttpTransportContext **)&ctx->client
                                  .transport) != 0) {
@@ -167,7 +167,7 @@ c_rest_error_t c_rest_client_destroy(c_rest_client_context *client) {
 #elif defined(__APPLE__)
   http_apple_context_free(client->client.transport);
 #else
-#ifndef CDD_DOS
+#if !defined(CDD_DOS) && !defined(__EMSCRIPTEN__)
   http_curl_context_free(client->client.transport);
 #endif
 #endif
