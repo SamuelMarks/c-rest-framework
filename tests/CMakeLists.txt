@@ -64,6 +64,10 @@ add_executable(c-rest-framework-tests ${TEST_SRCS})
 target_include_directories(c-rest-framework-tests PRIVATE ../include ${CMAKE_CURRENT_SOURCE_DIR} ${greatest_SOURCE_DIR})
 target_link_libraries(c-rest-framework-tests PRIVATE c-rest-framework)
 
+if(EMSCRIPTEN)
+    target_link_options(c-rest-framework-tests PRIVATE "-sALLOW_MEMORY_GROWTH=1")
+endif()
+
 if(C_REST_GNU_FLAGS)
     target_compile_options(c-rest-framework-tests PRIVATE ${C_REST_GNU_FLAGS})
 endif()

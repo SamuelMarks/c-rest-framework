@@ -72,7 +72,9 @@ typedef unsigned long c_rest_uint32_t;
     typedef __int64 int64_t;
     typedef unsigned __int64 uint64_t;
 #else
+#if !defined(_MSC_VER) || _MSC_VER >= 1600
 #include <stdint.h>
+#endif
 #endif
 typedef uint32_t c_rest_uint32_t;
 #endif

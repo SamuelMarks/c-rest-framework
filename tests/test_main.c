@@ -39,6 +39,12 @@ static int test_all_enums(void) {
   struct c_rest_context *ctx = NULL;
 
   for (i = 0; i <= C_REST_MODALITY_MESSAGE_PASSING; ++i) {
+#if defined(__EMSCRIPTEN__) || defined(CDD_DOS)
+    if (i == C_REST_MODALITY_MULTI_PROCESS ||
+        i == C_REST_MODALITY_MULTI_THREAD) {
+      continue;
+    }
+#endif
     res = c_rest_init((enum c_rest_modality_type)i, &ctx);
     if (res != 0 || ctx == NULL) {
       printf("Failed to init enum %d\n", i);
