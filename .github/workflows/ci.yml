@@ -27,4 +27,4 @@ jobs:
       run: cmake --build build-wasm
 
     - name: Test
-      run: node build-wasm/tests/c-rest-framework-tests.js
+      run: node build-wasm/bin/c-rest-framework-tests.js
