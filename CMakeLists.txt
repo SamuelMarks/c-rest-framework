@@ -753,6 +753,5 @@ if(MSVC)
 endif()
 
 if(EMSCRIPTEN AND TARGET c-abstract-http)
-    target_include_directories(c-abstract-http PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/emscripten_compat)
-    target_sources(c-abstract-http PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/emscripten_compat/dummy_ucontext.c)
+    target_compile_definitions(c-abstract-http PRIVATE CDD_NO_UCONTEXT=1)
 endif()
