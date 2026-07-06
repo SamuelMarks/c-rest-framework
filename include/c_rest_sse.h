@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_sse.h
+ * @brief Header file for c_rest_sse.h
+ */
 #ifndef C_REST_SSE_H
 #define C_REST_SSE_H
 

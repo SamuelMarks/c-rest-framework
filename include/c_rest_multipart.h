@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_multipart.h
+ * @brief Header file for c_rest_multipart.h
+ */
 #ifndef C_REST_MULTIPART_H
 #define C_REST_MULTIPART_H
 /* clang-format off */
@@ -15,9 +19,9 @@ extern "C" {
 
 typedef struct c_rest_multipart_parser c_rest_multipart_parser;
 
-typedef int (*c_rest_multipart_cb)(c_rest_multipart_parser *parser);
-typedef int (*c_rest_multipart_data_cb)(c_rest_multipart_parser *parser,
-                                        const char *at, size_t length);
+typedef c_rest_error_t (*c_rest_multipart_cb)(c_rest_multipart_parser *parser);
+typedef c_rest_error_t (*c_rest_multipart_data_cb)(
+    c_rest_multipart_parser *parser, const char *at, size_t length);
 
 /** @brief Multipart callbacks */
 struct c_rest_multipart_callbacks {

@@ -209,7 +209,7 @@ c_rest_error_t c_rest_sse_context_destroy(struct c_rest_sse_context *ctx) {
   return C_REST_OK;
 }
 
-static int append_to_string(char **dest, const char *src, size_t len) {
+static c_rest_error_t append_to_string(char **dest, const char *src, size_t len) {
   size_t old_len;
   char *new_str;
   void *tmp_new_str;
@@ -334,24 +334,31 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
 
       if ((size_t)(colon - line_start) == 5 &&
           memcmp(line_start, "event", 5) == 0) {
+        c_rest_error_t rc;
         if (ctx->current_event.event) { /* GCOVR_EXCL_LINE */
           C_REST_FREE(ctx->current_event.event); /* GCOVR_EXCL_LINE */
           ctx->current_event.event = NULL; /* GCOVR_EXCL_LINE */
         }
-        append_to_string(&ctx->current_event.event, value, value_len);
+        rc = append_to_string(&ctx->current_event.event, value, value_len);
+        if (rc != C_REST_OK) return rc;
       } else if ((size_t)(colon - line_start) == 4 &&
                  memcmp(line_start, "data", 4) == 0) { /* GCOVR_EXCL_LINE */
+        c_rest_error_t rc;
         if (ctx->current_event.data) { /* GCOVR_EXCL_LINE */
-          append_to_string(&ctx->current_event.data, "\n", 1); /* GCOVR_EXCL_LINE */
+          rc = append_to_string(&ctx->current_event.data, "\n", 1); /* GCOVR_EXCL_LINE */
+          if (rc != C_REST_OK) return rc;
         }
-        append_to_string(&ctx->current_event.data, value, value_len);
+        rc = append_to_string(&ctx->current_event.data, value, value_len);
+        if (rc != C_REST_OK) return rc;
       } else if ((size_t)(colon - line_start) == 2 &&
                  memcmp(line_start, "id", 2) == 0) { /* GCOVR_EXCL_LINE */
+        c_rest_error_t rc;
         if (ctx->current_event.id) { /* GCOVR_EXCL_LINE */
           C_REST_FREE(ctx->current_event.id); /* GCOVR_EXCL_LINE */
           ctx->current_event.id = NULL; /* GCOVR_EXCL_LINE */
         }
-        append_to_string(&ctx->current_event.id, value, value_len);
+        rc = append_to_string(&ctx->current_event.id, value, value_len);
+        if (rc != C_REST_OK) return rc;
       } else if ((size_t)(colon - line_start) == 5 && /* GCOVR_EXCL_LINE */
                  memcmp(line_start, "retry", 5) == 0) { /* GCOVR_EXCL_LINE */
         char retry_str[32];
@@ -371,10 +378,13 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
         }
         c_rest_sse_strdup("", &ctx->current_event.event); /* GCOVR_EXCL_LINE */
       } else if (line_len == 4 && memcmp(line_start, "data", 4) == 0) { /* GCOVR_EXCL_LINE */
+        c_rest_error_t rc;
         if (ctx->current_event.data) { /* GCOVR_EXCL_LINE */
-          append_to_string(&ctx->current_event.data, "\n", 1); /* GCOVR_EXCL_LINE */
+          rc = append_to_string(&ctx->current_event.data, "\n", 1); /* GCOVR_EXCL_LINE */
+          if (rc != C_REST_OK) return rc;
         }
-        append_to_string(&ctx->current_event.data, "", 0); /* GCOVR_EXCL_LINE */
+        rc = append_to_string(&ctx->current_event.data, "", 0); /* GCOVR_EXCL_LINE */
+        if (rc != C_REST_OK) return rc;
       }
     }
 

@@ -18,8 +18,8 @@ static char *g_client_secret = NULL;
 static c_orm_db_t *g_db = NULL;
 static c_rest_client_context *g_client_ctx = NULL;
 
-int oauth2_client_init(const char *token_url, const char *client_id,
-                       const char *client_secret, c_orm_db_t *db) {
+c_rest_error_t oauth2_client_init(const char *token_url, const char *client_id,
+                                  const char *client_secret, c_orm_db_t *db) {
   if (token_url == NULL || client_id == NULL || client_secret == NULL) {
     return 1;
   }
@@ -53,8 +53,10 @@ int oauth2_client_init(const char *token_url, const char *client_id,
   return 0;
 }
 
-int oauth2_client_password_grant(const char *username, const char *password,
-                                 char **out_access_token, int *out_expires_in) {
+c_rest_error_t oauth2_client_password_grant(const char *username,
+                                            const char *password,
+                                            char **out_access_token,
+                                            int *out_expires_in) {
   struct c_rest_client_form_field fields[5];
   struct c_rest_client_header headers[1];
   struct c_rest_client_response *res = NULL;
@@ -152,7 +154,7 @@ int oauth2_client_password_grant(const char *username, const char *password,
   return 0;
 }
 
-int oauth2_client_cleanup(void) {
+c_rest_error_t oauth2_client_cleanup(void) {
   if (g_token_url) {
     free(g_token_url);
     g_token_url = NULL;

@@ -18,7 +18,7 @@
 #include <string.h>
 /* clang-format on */
 
-int oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
+c_rest_error_t oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
   struct c_rest_openapi_operation op_token;
   struct c_rest_openapi_operation op_login;
   struct c_rest_openapi_operation op_logout;

@@ -4,30 +4,32 @@ import os
 import glob
 import re
 
+
 def get_test_coverage():
     try:
-        with open('build/coverage_summary.json', 'r') as f:
+        with open("build/coverage_summary.json", "r") as f:
             data = json.load(f)
-            return data['line_percent']
+            return data["line_percent"]
     except Exception as e:
         print("Could not read test coverage:", e)
         return None
+
 
 def get_doc_coverage():
     total = 0
     documented = 0
     try:
         # We look through all xml files except index
-        for xml_file in glob.glob('xml/*.xml'):
-            if xml_file.endswith('index.xml'):
+        for xml_file in glob.glob("xml/*.xml"):
+            if xml_file.endswith("index.xml"):
                 continue
             tree = ET.parse(xml_file)
             root = tree.getroot()
-            for memberdef in root.findall('.//memberdef'):
+            for memberdef in root.findall(".//memberdef"):
                 # Ignore private or undocumented members that we don't care about if needed, but let's count all.
                 total += 1
-                brief = memberdef.find('briefdescription')
-                detail = memberdef.find('detaileddescription')
+                brief = memberdef.find("briefdescription")
+                detail = memberdef.find("detaileddescription")
 
                 has_doc = False
                 if brief is not None and len(list(brief)) > 0:
@@ -45,26 +47,40 @@ def get_doc_coverage():
         print("Could not calculate doc coverage:", e)
         return None
 
+
 def update_readme(test_cov, doc_cov):
-    if not os.path.exists('README.md'):
+    if not os.path.exists("README.md"):
         return
 
-    with open('README.md', 'r') as f:
+    with open("README.md", "r") as f:
         content = f.read()
 
     # Function to add shields if missing
     def ensure_shield(content, name, default_cov):
-        pattern = r'\[\!\[(?:%s)\]\(https://img\.shields\.io/badge/[^)]+\)\]\(#\)' % name
+        pattern = (
+            r"\[\!\[(?:%s)\]\(https://img\.shields\.io/badge/[^)]+\)\]\(#\)" % name
+        )
         if not re.search(pattern, content):
             # Insert after License shield
             # License shield regex: \[!\[License\]\(https://img\.shields\.io/badge/license-[^)]+\)\]\([^)]+\)
-            license_match = re.search(r'(\[\!\[License\]\(https://img\.shields\.io/badge/license-[^)]+\)\]\([^)]+\))', content)
+            license_match = re.search(
+                r"(\[\!\[License\]\(https://img\.shields\.io/badge/license-[^)]+\)\]\([^)]+\))",
+                content,
+            )
             if license_match:
-                color = "green" if default_cov >= 80 else ("yellow" if default_cov >= 60 else "red")
+                color = (
+                    "green"
+                    if default_cov >= 80
+                    else ("yellow" if default_cov >= 60 else "red")
+                )
                 cov_str = f"{default_cov:.1f}%"
                 safe_name = name.replace(" ", "_")
-                shield = f'\n[![{name}](https://img.shields.io/badge/{safe_name}-{cov_str.replace("%", "%25")}-{color}.svg)](#)'
-                content = content[:license_match.end()] + shield + content[license_match.end():]
+                shield = f"\n[![{name}](https://img.shields.io/badge/{safe_name}-{cov_str.replace('%', '%25')}-{color}.svg)](#)"
+                content = (
+                    content[: license_match.end()]
+                    + shield
+                    + content[license_match.end() :]
+                )
         return content
 
     if test_cov is not None:
@@ -72,9 +88,9 @@ def update_readme(test_cov, doc_cov):
         test_cov_str = f"{test_cov:.1f}%"
         color = "green" if test_cov >= 80 else ("yellow" if test_cov >= 60 else "red")
         content = re.sub(
-            r'\[\!\[Test Coverage\]\(https://img\.shields\.io/badge/Test_Coverage-[^%]+%25-[^.]+\.svg\)\]\(#\)',
-            f'[![Test Coverage](https://img.shields.io/badge/Test_Coverage-{test_cov_str.replace("%", "%25")}-{color}.svg)](#)',
-            content
+            r"\[\!\[Test Coverage\]\(https://img\.shields\.io/badge/Test_Coverage-[^%]+%25-[^.]+\.svg\)\]\(#\)",
+            f"[![Test Coverage](https://img.shields.io/badge/Test_Coverage-{test_cov_str.replace('%', '%25')}-{color}.svg)](#)",
+            content,
         )
 
     if doc_cov is not None:
@@ -82,17 +98,18 @@ def update_readme(test_cov, doc_cov):
         doc_cov_str = f"{doc_cov:.1f}%"
         color = "green" if doc_cov >= 80 else ("yellow" if doc_cov >= 60 else "red")
         content = re.sub(
-            r'\[\!\[Doc Coverage\]\(https://img\.shields\.io/badge/Doc_Coverage-[^%]+%25-[^.]+\.svg\)\]\(#\)',
-            f'[![Doc Coverage](https://img.shields.io/badge/Doc_Coverage-{doc_cov_str.replace("%", "%25")}-{color}.svg)](#)',
-            content
+            r"\[\!\[Doc Coverage\]\(https://img\.shields\.io/badge/Doc_Coverage-[^%]+%25-[^.]+\.svg\)\]\(#\)",
+            f"[![Doc Coverage](https://img.shields.io/badge/Doc_Coverage-{doc_cov_str.replace('%', '%25')}-{color}.svg)](#)",
+            content,
         )
 
-    with open('README.md', 'w') as f:
+    with open("README.md", "w") as f:
         f.write(content)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # run doxygen
-    os.system('doxygen Doxyfile > /dev/null 2>&1')
+    os.system("doxygen Doxyfile > /dev/null 2>&1")
 
     # generate test coverage summary (this assumes the project is already built with coverage and tests run)
     cmd = r"cd build && gcovr -r .. --filter '\.\./src/' --filter '\.\./include/' --json-summary coverage_summary.json > /dev/null 2>&1"

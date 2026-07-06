@@ -11,13 +11,13 @@ static const char *const wdays[] = {"Sun", "Mon", "Tue", "Wed",
 static const char *const months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-static int is_leap(int year, int *out_leap) {
+static c_rest_error_t is_leap(int year, int *out_leap) {
   *out_leap = (year % 4 == 0 &&
                (year % 100 != 0 || year % 400 == 0)); /* GCOVR_EXCL_LINE */
   return C_REST_OK;
 }
 
-static int portable_timegm(struct tm *tm, time_t *out_time) {
+static c_rest_error_t portable_timegm(struct tm *tm, time_t *out_time) {
   static const int days_before_month[2][12] = {
       {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334},
       {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335}};
@@ -34,11 +34,19 @@ static int portable_timegm(struct tm *tm, time_t *out_time) {
 
   for (y = 1970; y < year; y++) {
     int lp;
-    is_leap(y, &lp);
+    c_rest_error_t rc;
+    rc = is_leap(y, &lp);
+    if (rc != C_REST_OK)
+      return rc;
     days += 365 + lp;
   }
 
-  is_leap(year, &leap);
+  {
+    c_rest_error_t rc;
+    rc = is_leap(year, &leap);
+    if (rc != C_REST_OK)
+      return rc;
+  }
   days += days_before_month[leap][month];
   days += tm->tm_mday - 1;
 

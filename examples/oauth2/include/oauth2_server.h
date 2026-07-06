@@ -20,7 +20,7 @@ extern "C" {
  * @param db The c-orm database connection.
  * @return 0 on success, non-zero on failure.
  */
-int oauth2_server_init(c_rest_router *router, c_orm_db_t *db);
+c_rest_error_t oauth2_server_init(c_rest_router *router, c_orm_db_t *db);
 
 /**
  * @brief Token endpoint handler for OAuth2 (RFC 6749).

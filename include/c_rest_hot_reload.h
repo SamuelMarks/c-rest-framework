@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_hot_reload.h
+ * @brief Header file for c_rest_hot_reload.h
+ */
 #ifndef C_REST_HOT_RELOAD_H
 #define C_REST_HOT_RELOAD_H
 /* clang-format off */
@@ -26,7 +30,7 @@ extern "C" {
  */
 
 /**
- * \struct c_rest_hot_reload_ctx_t
+ * \typedef c_rest_hot_reload_ctx_t
  * \brief Opaque context for hot reloading and auto-restarting.
  */
 typedef struct c_rest_hot_reload_ctx c_rest_hot_reload_ctx_t;
@@ -40,11 +44,6 @@ typedef struct c_rest_hot_reload_ctx c_rest_hot_reload_ctx_t;
 typedef int (*c_rest_hot_reload_callback_t)(void *user_data);
 
 /**
- * \enum c_rest_error_t
- * \brief Error codes for hot reloading operations.
- */
-
-/**
  * \brief Initialize a new hot reload context.
  * \param out_ctx Pointer to the pointer that will receive the context.
  * \param logger Optional logger to use for debug tracing.
@@ -53,15 +52,14 @@ typedef int (*c_rest_hot_reload_callback_t)(void *user_data);
 c_rest_error_t c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
                                       struct c_rest_logger *logger);
 
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
 /**
  * \brief Set the multiplatform environment for hot reloading.
- * \param ctx
- * The hot reload context.
+ * \param ctx The hot reload context.
  * \param env The multiplatform environment.
  *
  * \return 0 on success, non-zero on failure.
  */
-#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
 c_rest_error_t
 c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *ctx,
                                         cm_env_t env);

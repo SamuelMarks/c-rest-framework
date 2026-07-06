@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_response.h
+ * @brief Header file for c_rest_response.h
+ */
 #ifndef C_REST_RESPONSE_H
 #define C_REST_RESPONSE_H
 /* clang-format off */

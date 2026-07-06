@@ -14,7 +14,7 @@
 #define SAFE_STRCPY(dest, size, src) strcpy(dest, src)
 #endif
 
-static int hash_string(const char *str, size_t *out_hash) {
+static c_rest_error_t hash_string(const char *str, size_t *out_hash) {
   size_t hash = 5381;
   int c;
   while ((c = *str++)) {
@@ -49,10 +49,13 @@ c_rest_error_t c_rest_hashmap_put(c_rest_hashmap *map, const char *key,
   size_t index, hash;
   c_rest_hashmap_entry *entry;
   c_rest_hashmap_entry *new_entry;
+  c_rest_error_t rc;
 
   if (!map || !key)              /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
-  hash_string(key, &hash);
+  rc = hash_string(key, &hash);
+  if (rc != C_REST_OK)
+    return rc;
   index = hash % map->capacity;
 
   entry = map->buckets[index];
@@ -94,11 +97,14 @@ c_rest_error_t c_rest_hashmap_get(c_rest_hashmap *map, const char *key,
                                   void **out_value) {
   size_t index, hash;
   c_rest_hashmap_entry *entry;
+  c_rest_error_t rc;
 
   if (!map || !key || !out_value) /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC;  /* GCOVR_EXCL_LINE */
 
-  hash_string(key, &hash);
+  rc = hash_string(key, &hash);
+  if (rc != C_REST_OK)
+    return rc;
   index = hash % map->capacity;
   entry = map->buckets[index];
   while (entry) {
@@ -116,11 +122,14 @@ c_rest_error_t c_rest_hashmap_remove(c_rest_hashmap *map,
   size_t index, hash;
   c_rest_hashmap_entry *entry;
   c_rest_hashmap_entry *prev = NULL; /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
 
   if (!map || !key)              /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
-  hash_string(key, &hash);       /* GCOVR_EXCL_LINE */
-  index = hash % map->capacity;  /* GCOVR_EXCL_LINE */
+  rc = hash_string(key, &hash);  /* GCOVR_EXCL_LINE */
+  if (rc != C_REST_OK)
+    return rc;
+  index = hash % map->capacity; /* GCOVR_EXCL_LINE */
 
   entry = map->buckets[index];          /* GCOVR_EXCL_LINE */
   while (entry) {                       /* GCOVR_EXCL_LINE */

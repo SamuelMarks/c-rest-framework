@@ -27,7 +27,7 @@ static c_rest_error_t handle_home(struct c_rest_request *req,
   return 0;
 }
 
-static int on_file_changed(void *user_data) {
+static c_rest_error_t on_file_changed(void *user_data) {
   (void)user_data;
   printf("File changed! Sending SSE event to clients...\n");
   return 0;

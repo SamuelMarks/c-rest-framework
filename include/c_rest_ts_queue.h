@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_ts_queue.h
+ * @brief Header file for c_rest_ts_queue.h
+ */
 #ifndef C_REST_TS_QUEUE_H
 #define C_REST_TS_QUEUE_H
 /* clang-format off */

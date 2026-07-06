@@ -18,7 +18,7 @@ struct multi_thread_state {
   int worker_count;
 };
 
-static int multi_thread_init(struct c_rest_context *ctx) {
+static c_rest_error_t multi_thread_init(struct c_rest_context *ctx) {
   struct multi_thread_state *state;
   if (!ctx)   /* GCOVR_EXCL_LINE */
     return 1; /* GCOVR_EXCL_LINE */
@@ -48,7 +48,7 @@ static int multi_thread_init(struct c_rest_context *ctx) {
   return 0;
 }
 
-static int multi_thread_destroy(struct c_rest_context *ctx) {
+static c_rest_error_t multi_thread_destroy(struct c_rest_context *ctx) {
   struct multi_thread_state *state;
 
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
@@ -92,7 +92,7 @@ struct connection_worker_args {
   c_rest_socket_t client_sock;
 };
 
-static void worker_thread(void *arg) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t worker_thread(void *arg) { /* GCOVR_EXCL_LINE */
   struct connection_worker_args *wargs =
       (struct connection_worker_args *)arg;     /* GCOVR_EXCL_LINE */
   c_rest_handle_connection(wargs->ctx,          /* GCOVR_EXCL_LINE */
@@ -113,9 +113,11 @@ static void worker_thread(void *arg) { /* GCOVR_EXCL_LINE */
   } else {
     C_REST_FREE((void *)(wargs)); /* GCOVR_EXCL_LINE */
   }
+  return C_REST_OK;
 } /* GCOVR_EXCL_LINE */
 
-static int multi_thread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t
+multi_thread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   struct multi_thread_state *state;
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
     return 1;                       /* GCOVR_EXCL_LINE */
@@ -244,7 +246,8 @@ static int multi_thread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   return 0; /* GCOVR_EXCL_LINE */
 }
 
-static int multi_thread_stop(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t
+multi_thread_stop(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   struct multi_thread_state *state;
 
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */

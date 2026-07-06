@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_pool.h
+ * @brief Header file for c_rest_pool.h
+ */
 #ifndef C_REST_POOL_H
 #define C_REST_POOL_H
 /* clang-format off */

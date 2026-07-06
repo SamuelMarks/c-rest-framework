@@ -20,7 +20,7 @@ struct greenthread_state {
   int is_running;
 };
 
-static int greenthread_init(struct c_rest_context *ctx) {
+static c_rest_error_t greenthread_init(struct c_rest_context *ctx) {
   struct greenthread_state *state;
   if (!ctx)   /* GCOVR_EXCL_LINE */
     return 1; /* GCOVR_EXCL_LINE */
@@ -44,7 +44,7 @@ static int greenthread_init(struct c_rest_context *ctx) {
   return 0;
 }
 
-static int greenthread_destroy(struct c_rest_context *ctx) {
+static c_rest_error_t greenthread_destroy(struct c_rest_context *ctx) {
   struct greenthread_state *state;
 
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
@@ -75,7 +75,8 @@ static int greenthread_destroy(struct c_rest_context *ctx) {
   return 0;
 }
 
-static int greenthread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t
+greenthread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   struct greenthread_state *state;
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
     return 1;                       /* GCOVR_EXCL_LINE */

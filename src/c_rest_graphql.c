@@ -15,12 +15,13 @@
 /**
  * @brief Allocates a new node.
  */
-static struct c_rest_graphql_node *
-alloc_node(enum c_rest_graphql_node_type type) { /* GCOVR_EXCL_LINE */
-  struct c_rest_graphql_node *node = NULL;       /* GCOVR_EXCL_LINE */
+static c_rest_error_t
+alloc_node(enum c_rest_graphql_node_type type,
+           struct c_rest_graphql_node **out_node) { /* GCOVR_EXCL_LINE */
+  struct c_rest_graphql_node *node = NULL;          /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node), &node) !=
-      0) {       /* GCOVR_EXCL_LINE */
-    return NULL; /* GCOVR_EXCL_LINE */
+      0) {                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
   node->type = type;                       /* GCOVR_EXCL_LINE */
   node->name = NULL;                       /* GCOVR_EXCL_LINE */
@@ -30,13 +31,14 @@ alloc_node(enum c_rest_graphql_node_type type) { /* GCOVR_EXCL_LINE */
   node->arguments = NULL;                  /* GCOVR_EXCL_LINE */
   node->selection_set = NULL;              /* GCOVR_EXCL_LINE */
   node->definitions = NULL;                /* GCOVR_EXCL_LINE */
-  return node;                             /* GCOVR_EXCL_LINE */
+  *out_node = node;
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
 /**
  * @brief Allocates a new node list.
  */
-static int
+static c_rest_error_t
 alloc_list(struct c_rest_graphql_node_list **out_list) { /* GCOVR_EXCL_LINE */
   struct c_rest_graphql_node_list *list = NULL;          /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node_list), &list) !=
@@ -53,7 +55,7 @@ alloc_list(struct c_rest_graphql_node_list **out_list) { /* GCOVR_EXCL_LINE */
 /**
  * @brief Appends a node to a list.
  */
-static int
+static c_rest_error_t
 list_append(struct c_rest_graphql_node_list *list, /* GCOVR_EXCL_LINE */
             struct c_rest_graphql_node *node) {
   if (list->count >= list->capacity) { /* GCOVR_EXCL_LINE */
@@ -79,7 +81,7 @@ list_append(struct c_rest_graphql_node_list *list, /* GCOVR_EXCL_LINE */
   return C_REST_OK;                  /* GCOVR_EXCL_LINE */
 }
 
-static void
+static c_rest_error_t
 skip_whitespace(struct c_rest_graphql_context *ctx) { /* GCOVR_EXCL_LINE */
   while (ctx->position < ctx->length) {               /* GCOVR_EXCL_LINE */
     char c = ctx->input[ctx->position];               /* GCOVR_EXCL_LINE */
@@ -96,10 +98,11 @@ skip_whitespace(struct c_rest_graphql_context *ctx) { /* GCOVR_EXCL_LINE */
       break; /* GCOVR_EXCL_LINE */
     }
   }
+  return C_REST_OK;
 } /* GCOVR_EXCL_LINE */
 
-static int parse_name(struct c_rest_graphql_context *ctx,
-                      char **out_name) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t parse_name(struct c_rest_graphql_context *ctx,
+                                 char **out_name) { /* GCOVR_EXCL_LINE */
   size_t start;
   size_t len;
   char *str;
@@ -140,10 +143,10 @@ static int parse_name(struct c_rest_graphql_context *ctx,
   return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-static int parse_field(struct c_rest_graphql_context *ctx,
-                       struct c_rest_graphql_node **out_node);
+static c_rest_error_t parse_field(struct c_rest_graphql_context *ctx,
+                                  struct c_rest_graphql_node **out_node);
 
-static int
+static c_rest_error_t
 parse_selection_set(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
                     struct c_rest_graphql_node_list **out_list) {
   struct c_rest_graphql_node_list *list = NULL; /* GCOVR_EXCL_LINE */
@@ -190,8 +193,9 @@ parse_selection_set(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
   return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 }
 
-static int parse_field(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
-                       struct c_rest_graphql_node **out_node) {
+static c_rest_error_t
+parse_field(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
+            struct c_rest_graphql_node **out_node) {
   char *name = NULL; /* GCOVR_EXCL_LINE */
   struct c_rest_graphql_node *node;
 
@@ -199,10 +203,10 @@ static int parse_field(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC;              /* GCOVR_EXCL_LINE */
   }
 
-  node = alloc_node(C_REST_GRAPHQL_NODE_FIELD); /* GCOVR_EXCL_LINE */
-  if (!node) {                                  /* GCOVR_EXCL_LINE */
-    C_REST_FREE(name);                          /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;                /* GCOVR_EXCL_LINE */
+  if (alloc_node(C_REST_GRAPHQL_NODE_FIELD, &node) != C_REST_OK ||
+      !node) {                   /* GCOVR_EXCL_LINE */
+    C_REST_FREE(name);           /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   skip_whitespace(ctx);                   /* GCOVR_EXCL_LINE */
@@ -233,7 +237,7 @@ static int parse_field(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
   return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-static int
+static c_rest_error_t
 parse_operation(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
                 struct c_rest_graphql_node **out_node) {
   struct c_rest_graphql_node *node;
@@ -260,11 +264,11 @@ parse_operation(struct c_rest_graphql_context *ctx, /* GCOVR_EXCL_LINE */
       name = NULL;                        /* GCOVR_EXCL_LINE */
   }
 
-  node = alloc_node(C_REST_GRAPHQL_NODE_OPERATION); /* GCOVR_EXCL_LINE */
-  if (!node) {                                      /* GCOVR_EXCL_LINE */
-    if (name)                                       /* GCOVR_EXCL_LINE */
-      C_REST_FREE(name);                            /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;                    /* GCOVR_EXCL_LINE */
+  if (alloc_node(C_REST_GRAPHQL_NODE_OPERATION, &node) != C_REST_OK ||
+      !node) {                   /* GCOVR_EXCL_LINE */
+    if (name)                    /* GCOVR_EXCL_LINE */
+      C_REST_FREE(name);         /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
   node->op_type = op_type; /* GCOVR_EXCL_LINE */
@@ -320,9 +324,9 @@ c_rest_error_t c_rest_graphql_parse(const char *query,
   ctx.error_message = NULL; /* GCOVR_EXCL_LINE */
   ctx.error_pos = -1;       /* GCOVR_EXCL_LINE */
 
-  doc = alloc_node(C_REST_GRAPHQL_NODE_DOCUMENT); /* GCOVR_EXCL_LINE */
-  if (!doc)                                       /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;                  /* GCOVR_EXCL_LINE */
+  if (alloc_node(C_REST_GRAPHQL_NODE_DOCUMENT, &doc) != C_REST_OK ||
+      !doc)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   if (alloc_list(&doc->definitions) != 0 ||
       !doc->definitions) {         /* GCOVR_EXCL_LINE */

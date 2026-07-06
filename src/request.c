@@ -42,7 +42,7 @@ c_rest_error_t c_rest_request_get_header(struct c_rest_request *req, const char 
   return C_REST_ERROR_GENERIC;
 }
 
-static int parse_cookies_if_needed(struct c_rest_request *req) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t parse_cookies_if_needed(struct c_rest_request *req) { /* GCOVR_EXCL_LINE */
   const char *cookie_str;
   const char *p;
   if (!req || req->cookies) { /* GCOVR_EXCL_LINE */
@@ -121,10 +121,12 @@ static int parse_cookies_if_needed(struct c_rest_request *req) { /* GCOVR_EXCL_L
 c_rest_error_t c_rest_request_get_cookie(struct c_rest_request *req, const char *key, /* GCOVR_EXCL_LINE */
                               const char **out_value) {
   struct c_rest_header *cp;
+  c_rest_error_t rc;
   if (!req || !key || !out_value) { /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
-  parse_cookies_if_needed(req); /* GCOVR_EXCL_LINE */
+  rc = parse_cookies_if_needed(req); /* GCOVR_EXCL_LINE */
+  if (rc != C_REST_OK) return rc;
   for (cp = req->cookies; cp != NULL; cp = cp->next) { /* GCOVR_EXCL_LINE */
     if (strcmp(cp->key, key) == 0) { /* GCOVR_EXCL_LINE */
       *out_value = cp->value; /* GCOVR_EXCL_LINE */
@@ -134,7 +136,7 @@ c_rest_error_t c_rest_request_get_cookie(struct c_rest_request *req, const char 
   return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 }
 
-static int parse_query_if_needed(struct c_rest_request *req) {
+static c_rest_error_t parse_query_if_needed(struct c_rest_request *req) {
   const char *p;
   if (!req || !req->query || req->query_params) { /* GCOVR_EXCL_LINE */
     return C_REST_OK; /* Already parsed or no query string */
@@ -205,11 +207,13 @@ c_rest_error_t c_rest_request_get_query(struct c_rest_request *req, const char *
                              const char **out_value) {
   struct c_rest_header *qp;
 
+  c_rest_error_t rc;
   if (!req || !key || !out_value) { /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
 
-  parse_query_if_needed(req);
+  rc = parse_query_if_needed(req);
+  if (rc != C_REST_OK) return rc;
 
   for (qp = req->query_params; qp != NULL; qp = qp->next) {
     if (strcmp(qp->key, key) == 0) {

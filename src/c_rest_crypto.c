@@ -82,7 +82,7 @@ typedef uint32_t c_rest_uint32_t;
 /* Fallback to custom SHA1 if no crypto backend is available */
 #define SHA1_ROTL(bits, word) (((word) << (bits)) | ((word) >> (32 - (bits))))
 
-static void sha1_transform(c_rest_uint32_t state[5],
+static c_rest_error_t sha1_transform(c_rest_uint32_t state[5],
                            const unsigned char buffer[64]) {
   c_rest_uint32_t a, b, c, d, e;
   typedef union {
@@ -144,6 +144,8 @@ static void sha1_transform(c_rest_uint32_t state[5],
   state[2] += c;
   state[3] += d;
   state[4] += e;
+
+  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
@@ -162,7 +164,9 @@ c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char 
   for (i = 0; i < len; i++) {
     buffer[count[0] % 64] = data[i];
     if ((count[0] % 64) == 63) { /* GCOVR_EXCL_LINE */
-      sha1_transform(state, buffer); /* GCOVR_EXCL_LINE */
+      c_rest_error_t rc;
+      rc = sha1_transform(state, buffer); /* GCOVR_EXCL_LINE */
+      if (rc != C_REST_OK) return rc;
     }
     count[0]++;
   }
@@ -189,14 +193,20 @@ c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char 
     for (i = 0; i < (size_t)pad_len; i++) {
       buffer[(count[0] + i) % 64] = pad[i];
       if (((count[0] + i) % 64) == 63) { /* GCOVR_EXCL_LINE */
-        sha1_transform(state, buffer); /* GCOVR_EXCL_LINE */
+        c_rest_error_t rc;
+        rc = sha1_transform(state, buffer); /* GCOVR_EXCL_LINE */
+        if (rc != C_REST_OK) return rc;
       }
     }
 
     for (i = 0; i < 8; i++) {
       buffer[56 + i] = len_bytes[i];
     }
-    sha1_transform(state, buffer);
+    {
+      c_rest_error_t rc;
+      rc = sha1_transform(state, buffer);
+      if (rc != C_REST_OK) return rc;
+    }
   }
 
   for (i = 0; i < 20; i++) {
@@ -229,7 +239,7 @@ static const c_rest_uint32_t sha256_k[64] = {
     0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
-static void sha256_transform(c_rest_uint32_t state[8],
+static c_rest_error_t sha256_transform(c_rest_uint32_t state[8],
                              const unsigned char buffer[64]) {
   c_rest_uint32_t a, b, c, d, e, f, g, h, t1, t2, m[64];
   int i, j;
@@ -275,6 +285,8 @@ static void sha256_transform(c_rest_uint32_t state[8],
   state[5] += f;
   state[6] += g;
   state[7] += h;
+
+  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
@@ -297,7 +309,9 @@ c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
   for (i = 0; i < len; i++) {
     buffer[count[0] % 64] = data[i];
     if ((count[0] % 64) == 63) {
-      sha256_transform(state, buffer);
+      c_rest_error_t rc;
+      rc = sha256_transform(state, buffer);
+      if (rc != C_REST_OK) return rc;
     }
     count[0]++;
   }
@@ -324,14 +338,20 @@ c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
     for (i = 0; i < (size_t)pad_len; i++) {
       buffer[(count[0] + i) % 64] = pad[i];
       if (((count[0] + i) % 64) == 63) {
-        sha256_transform(state, buffer);
+        c_rest_error_t rc;
+        rc = sha256_transform(state, buffer);
+        if (rc != C_REST_OK) return rc;
       }
     }
 
     for (i = 0; i < 8; i++) {
       buffer[56 + i] = len_bytes[i];
     }
-    sha256_transform(state, buffer);
+    {
+      c_rest_error_t rc;
+      rc = sha256_transform(state, buffer);
+      if (rc != C_REST_OK) return rc;
+    }
   }
 
   for (i = 0; i < 32; i++) {

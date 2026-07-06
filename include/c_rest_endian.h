@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_endian.h
+ * @brief Endianness conversion functions.
+ */
 #ifndef C_REST_ENDIAN_H
 #define C_REST_ENDIAN_H
 /* clang-format off */

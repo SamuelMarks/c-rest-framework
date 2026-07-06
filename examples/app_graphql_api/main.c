@@ -16,10 +16,13 @@
 #endif
 /* clang-format on */
 
-static void logger_cb(const char *msg) { printf("LOG: %s\n", msg); }
+static c_rest_error_t logger_cb(const char *msg) {
+  printf("LOG: %s\n", msg);
+  return C_REST_OK;
+}
 
-static int resolve_user(const char *field_name, char **out_json,
-                        size_t *out_len, void *user_data) {
+static c_rest_error_t resolve_user(const char *field_name, char **out_json,
+                                   size_t *out_len, void *user_data) {
   const char *res = "{\"id\": 1, \"name\": \"Alice\", \"role\": \"Admin\"}";
   size_t len = strlen(res);
 
@@ -35,8 +38,8 @@ static int resolve_user(const char *field_name, char **out_json,
   return 0;
 }
 
-static int resolve_posts(const char *field_name, char **out_json,
-                         size_t *out_len, void *user_data) {
+static c_rest_error_t resolve_posts(const char *field_name, char **out_json,
+                                    size_t *out_len, void *user_data) {
   const char *res = "[{\"id\": 101, \"title\": \"Hello GraphQL\"}, "
                     "{\"id\": 102, \"title\": \"C89 is strictly awesome\"}]";
   size_t len = strlen(res);

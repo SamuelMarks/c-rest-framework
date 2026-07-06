@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_websocket.h
+ * @brief Header file for c_rest_websocket.h
+ */
 #ifndef C_REST_WEBSOCKET_H
 #define C_REST_WEBSOCKET_H
 /* clang-format off */

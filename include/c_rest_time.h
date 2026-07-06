@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_time.h
+ * @brief Header file for c_rest_time.h
+ */
 #ifndef C_REST_TIME_H
 #define C_REST_TIME_H
 /* clang-format off */

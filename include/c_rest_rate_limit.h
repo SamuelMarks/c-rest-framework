@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_rate_limit.h
+ * @brief Header file for c_rest_rate_limit.h
+ */
 #ifndef C_REST_RATE_LIMIT_H
 #define C_REST_RATE_LIMIT_H
 /* clang-format off */

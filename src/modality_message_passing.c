@@ -13,7 +13,7 @@ struct message_passing_state {
   int is_running;
 };
 
-static int message_passing_init(struct c_rest_context *ctx) {
+static c_rest_error_t message_passing_init(struct c_rest_context *ctx) {
   struct message_passing_state *state;
   if (!ctx)   /* GCOVR_EXCL_LINE */
     return 1; /* GCOVR_EXCL_LINE */
@@ -37,7 +37,7 @@ static int message_passing_init(struct c_rest_context *ctx) {
   return 0;
 }
 
-static int message_passing_destroy(struct c_rest_context *ctx) {
+static c_rest_error_t message_passing_destroy(struct c_rest_context *ctx) {
   struct message_passing_state *state;
 
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
@@ -70,11 +70,11 @@ static int message_passing_destroy(struct c_rest_context *ctx) {
   return 0;
 }
 
-static int
+static c_rest_error_t
 message_passing_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   struct message_passing_state *state;
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
-    return 1;                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
 
   state =
       (struct message_passing_state *)ctx->internal_state; /* GCOVR_EXCL_LINE */
@@ -94,7 +94,7 @@ message_passing_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
                 "MESSAGE_PASSING modality run finished"); /* GCOVR_EXCL_LINE */
   }
 
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
 const struct c_rest_modality_vtable message_passing_vtable = {

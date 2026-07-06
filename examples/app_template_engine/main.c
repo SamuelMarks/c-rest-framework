@@ -11,10 +11,11 @@
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
 
-static int provide_template_data(struct c_rest_request *req,
-                                 const char ***out_keys,
-                                 const char ***out_values, size_t *out_count,
-                                 void *user_data) {
+static c_rest_error_t provide_template_data(struct c_rest_request *req,
+                                            const char ***out_keys,
+                                            const char ***out_values,
+                                            size_t *out_count,
+                                            void *user_data) {
   /* Hardcoded for example purposes, could fetch from DB using user_data */
   static const char *keys[] = {"title", "heading", "message"};
   static const char *values[] = {"My Webpage", "Welcome to C-REST",

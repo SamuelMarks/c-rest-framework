@@ -9,46 +9,46 @@
 
 #ifdef C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING
 
-static int on_part_begin(c_rest_multipart_parser *parser) {
+static c_rest_error_t on_part_begin(c_rest_multipart_parser *parser) {
   (void)parser;
   printf("Part begin\n");
   return 0;
 }
 
-static int on_header_field(c_rest_multipart_parser *parser, const char *at,
-                           size_t length) {
+static c_rest_error_t on_header_field(c_rest_multipart_parser *parser,
+                                      const char *at, size_t length) {
   (void)parser;
   printf("Header field: %.*s\n", (int)length, at);
   return 0;
 }
 
-static int on_header_value(c_rest_multipart_parser *parser, const char *at,
-                           size_t length) {
+static c_rest_error_t on_header_value(c_rest_multipart_parser *parser,
+                                      const char *at, size_t length) {
   (void)parser;
   printf("Header value: %.*s\n", (int)length, at);
   return 0;
 }
 
-static int on_headers_complete(c_rest_multipart_parser *parser) {
+static c_rest_error_t on_headers_complete(c_rest_multipart_parser *parser) {
   (void)parser;
   printf("Headers complete\n");
   return 0;
 }
 
-static int on_part_data(c_rest_multipart_parser *parser, const char *at,
-                        size_t length) {
+static c_rest_error_t on_part_data(c_rest_multipart_parser *parser,
+                                   const char *at, size_t length) {
   (void)parser;
   printf("Part data: %.*s\n", (int)length, at);
   return 0;
 }
 
-static int on_part_end(c_rest_multipart_parser *parser) {
+static c_rest_error_t on_part_end(c_rest_multipart_parser *parser) {
   (void)parser;
   printf("Part end\n");
   return 0;
 }
 
-static int on_body_end(c_rest_multipart_parser *parser) {
+static c_rest_error_t on_body_end(c_rest_multipart_parser *parser) {
   (void)parser;
   printf("Body end\n");
   return 0;

@@ -58,7 +58,7 @@ endif()
 
 # Fetch c-orm if not found
 if(NOT TARGET c-orm)
-    if(FALSE)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../c-orm")
         add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../c-orm" c-orm-build)
     else()
         include(FetchContent)

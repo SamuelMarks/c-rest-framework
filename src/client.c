@@ -34,8 +34,8 @@ struct c_rest_client_context {
   struct HttpClient client;
 };
 
-static int method_from_str(const char *method_str,
-                           enum HttpMethod *out_method) {
+static c_rest_error_t method_from_str(const char *method_str,
+                                      enum HttpMethod *out_method) {
   if (!method_str) {        /* GCOVR_EXCL_LINE */
     *out_method = HTTP_GET; /* GCOVR_EXCL_LINE */
     return C_REST_OK;       /* GCOVR_EXCL_LINE */
@@ -328,7 +328,7 @@ c_rest_error_t c_rest_client_request_async(
   return res;
 }
 
-static int hex_digit(int v, char *out_char) {
+static c_rest_error_t hex_digit(int v, char *out_char) {
   if (v >= 0 && v < 10) /* GCOVR_EXCL_LINE */
     *out_char = (char)('0' + v);
   else
@@ -358,8 +358,13 @@ c_rest_error_t c_rest_client_url_encode(const char *in_str, char **out_str) {
       out[j++] = '+';
     } else {
       char hd1, hd2;
-      hex_digit(c >> 4, &hd1);
-      hex_digit(c & 15, &hd2);
+      c_rest_error_t rc;
+      rc = hex_digit(c >> 4, &hd1);
+      if (rc != C_REST_OK)
+        return rc;
+      rc = hex_digit(c & 15, &hd2);
+      if (rc != C_REST_OK)
+        return rc;
       out[j++] = '%';
       out[j++] = hd1;
       out[j++] = hd2;
@@ -370,7 +375,7 @@ c_rest_error_t c_rest_client_url_encode(const char *in_str, char **out_str) {
   return C_REST_OK;
 }
 
-static int from_hex(char c, int *out_val) {
+static c_rest_error_t from_hex(char c, int *out_val) {
   if (c >= '0' && c <= '9') { /* GCOVR_EXCL_LINE */
     *out_val = c - '0';
     return C_REST_OK;
@@ -404,8 +409,8 @@ c_rest_error_t c_rest_client_url_decode(const char *in_str, char **out_str) {
       out[j++] = ' ';
     } else if (in_str[i] == '%' && i + 2 < len) { /* GCOVR_EXCL_LINE */
       int h1, h2;
-      if (from_hex(in_str[i + 1], &h1) == 0 && /* GCOVR_EXCL_LINE */
-          from_hex(in_str[i + 2], &h2) == 0) {
+      if (from_hex(in_str[i + 1], &h1) == C_REST_OK && /* GCOVR_EXCL_LINE */
+          from_hex(in_str[i + 2], &h2) == C_REST_OK) {
         out[j++] = (char)((h1 << 4) | h2);
         i += 2;
       } else {

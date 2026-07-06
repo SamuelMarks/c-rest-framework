@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_request.h
+ * @brief Header file for c_rest_request.h
+ */
 #ifndef C_REST_REQUEST_H
 #define C_REST_REQUEST_H
 /* clang-format off */

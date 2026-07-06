@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_hashmap.h
+ * @brief Header file for c_rest_hashmap.h
+ */
 #ifndef C_REST_HASHMAP_H
 #define C_REST_HASHMAP_H
 /* clang-format off */

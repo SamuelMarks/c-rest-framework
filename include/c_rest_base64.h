@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_base64.h
+ * @brief Base64 encoding and decoding.
+ */
 #ifndef C_REST_BASE64_H
 #define C_REST_BASE64_H
 

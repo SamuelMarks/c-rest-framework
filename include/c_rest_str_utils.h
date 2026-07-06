@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_str_utils.h
+ * @brief Header file for c_rest_str_utils.h
+ */
 #ifndef C_REST_STR_UTILS_H
 #define C_REST_STR_UTILS_H
 /* clang-format off */

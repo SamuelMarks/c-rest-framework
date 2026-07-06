@@ -1,3 +1,4 @@
+#include "c_rest_error.h"
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_request.h" /* For struct c_rest_header */
@@ -561,7 +562,7 @@ c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res) {
   return C_REST_OK;
 }
 
-static int get_status_text(int status_code, const char **out_text) {
+static c_rest_error_t get_status_text(int status_code, const char **out_text) {
   switch (status_code) { /* GCOVR_EXCL_LINE */
   case 200:
     *out_text = "OK";
@@ -620,6 +621,7 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
   size_t offset = 0;
   char cl_buf[32];
   const char *status_text;
+  c_rest_error_t rc;
 
   if (!res || !out_buf || !out_len) /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
@@ -658,8 +660,10 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
   if (!buf)                      /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
-  get_status_text(res->status_code ? res->status_code : 200,
-                  &status_text); /* GCOVR_EXCL_LINE */
+  rc = get_status_text(res->status_code ? res->status_code : 200,
+                       &status_text); /* GCOVR_EXCL_LINE */
+  if (rc != C_REST_OK)
+    return rc;
 
 #if defined(_MSC_VER)
   offset += sprintf_s(buf + offset, est_len - offset, "HTTP/1.1 %d %s\r\n",

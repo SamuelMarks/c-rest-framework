@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_client.h
+ * @brief HTTP client definitions.
+ */
 #ifndef C_REST_CLIENT_H
 #define C_REST_CLIENT_H
 /* clang-format off */
@@ -11,6 +15,9 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Opaque handle to an HTTP client context.
+ */
 typedef struct c_rest_client_context c_rest_client_context;
 
 /**

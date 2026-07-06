@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_tls.h
+ * @brief Header file for c_rest_tls.h
+ */
 #ifndef C_REST_TLS_H
 #define C_REST_TLS_H
 /* clang-format off */
@@ -103,7 +107,9 @@ c_rest_error_t c_rest_tls_load_ca_chain(struct c_rest_tls_context *ctx,
 c_rest_error_t c_rest_tls_set_alpn(struct c_rest_tls_context *ctx,
                                    const char *protocols);
 
+/** @brief Want read code for TLS. */
 #define C_REST_TLS_WANT_READ -2
+/** @brief Want write code for TLS. */
 #define C_REST_TLS_WANT_WRITE -3
 
 /**

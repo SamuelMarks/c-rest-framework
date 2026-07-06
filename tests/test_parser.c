@@ -11,44 +11,53 @@ static int method_called = 0;
 static int url_called = 0;
 static int complete_called = 0;
 
-static void on_method(c_rest_parser_context *ctx, const char *method,
-                      size_t len) {
+static c_rest_error_t on_method(c_rest_parser_context *ctx, const char *method,
+                                size_t len) {
   (void)ctx;
   (void)method;
   (void)len;
   method_called = 1;
+  return C_REST_OK;
 }
 
-static void on_url(c_rest_parser_context *ctx, const char *url, size_t len) {
+static c_rest_error_t on_url(c_rest_parser_context *ctx, const char *url,
+                             size_t len) {
   (void)ctx;
   (void)url;
   (void)len;
   url_called = 1;
+  return C_REST_OK;
 }
 
-static void on_complete(c_rest_parser_context *ctx) {
+static c_rest_error_t on_complete(c_rest_parser_context *ctx) {
   (void)ctx;
   complete_called = 1;
+  return C_REST_OK;
 }
 
-static void on_header(c_rest_parser_context *ctx, const char *key,
-                      size_t key_len, const char *val, size_t val_len) {
+static c_rest_error_t on_header(c_rest_parser_context *ctx, const char *key,
+                                size_t key_len, const char *val,
+                                size_t val_len) {
   (void)ctx;
   (void)key;
   (void)key_len;
   (void)val;
   (void)val_len;
+  return C_REST_OK;
 }
 
-static void on_body(c_rest_parser_context *ctx, const char *data, size_t len) {
+static c_rest_error_t on_body(c_rest_parser_context *ctx, const char *data,
+                              size_t len) {
   (void)ctx;
   (void)data;
   (void)len;
+  return C_REST_OK;
 }
 
-static void on_error(c_rest_parser_context *ctx, const char *msg) {
+static c_rest_error_t on_error(c_rest_parser_context *ctx, const char *msg) {
   (void)ctx;
   (void)msg;
+  return C_REST_OK;
 }
 
 static int test_parser_chunked(void) {

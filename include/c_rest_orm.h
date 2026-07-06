@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_orm.h
+ * @brief Header file for c_rest_orm.h
+ */
 #ifndef C_REST_ORM_H
 #define C_REST_ORM_H
 /* clang-format off */

@@ -17,12 +17,13 @@ void __stdcall Sleep(unsigned long dwMilliseconds);
 #endif
 /* clang-format on */
 
-static void sleep_ms(int milliseconds) {
+static c_rest_error_t sleep_ms(int milliseconds) {
 #if defined(_WIN32)
   Sleep((unsigned long)milliseconds);
 #else
   usleep(milliseconds * 1000);
 #endif
+  return C_REST_OK;
 }
 
 static c_rest_error_t my_sse_handler(struct c_rest_request *req,

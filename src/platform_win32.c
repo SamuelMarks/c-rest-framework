@@ -118,7 +118,7 @@ struct thread_wrapper_args {
   void *arg;
 };
 
-static unsigned __stdcall thread_wrapper(void *arg) {
+static c_rest_error_t __stdcall thread_wrapper(void *arg) {
   struct thread_wrapper_args *args = (struct thread_wrapper_args *)arg;
   args->func(args->arg);
   C_REST_FREE((void *)(args));
@@ -144,7 +144,9 @@ c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
   args->func = func;
   args->arg = arg;
 
-  hThread = (HANDLE)_beginthreadex(NULL, 0, thread_wrapper, args, 0, &threadID);
+  hThread = (HANDLE)_beginthreadex(
+      NULL, 0, (unsigned(__stdcall *)(void *))(void (*)(void))thread_wrapper,
+      args, 0, &threadID);
   if (!hThread) {
     C_REST_FREE((void *)(args));
     return C_REST_ERROR_GENERIC;

@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_list.h
+ * @brief Header file for c_rest_list.h
+ */
 #ifndef C_REST_LIST_H
 #define C_REST_LIST_H
 /* clang-format off */

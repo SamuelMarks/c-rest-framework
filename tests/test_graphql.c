@@ -83,7 +83,7 @@ static int test_graphql_parse_alias(void) {
   return 0;
 }
 
-static int dummy_resolver(const char *field_name, char **out_json,
+static c_rest_error_t dummy_resolver(const char *field_name, char **out_json,
                           size_t *out_len, void *user_data) {
   const char *res = "{\"id\": 1}";
   int *called = (int *)user_data;

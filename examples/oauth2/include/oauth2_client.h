@@ -20,8 +20,8 @@ extern "C" {
  * @param db c-orm database connection to store credentials locally (optional).
  * @return 0 on success, non-zero on failure.
  */
-int oauth2_client_init(const char *token_url, const char *client_id,
-                       const char *client_secret, c_orm_db_t *db);
+c_rest_error_t oauth2_client_init(const char *token_url, const char *client_id,
+                                  const char *client_secret, c_orm_db_t *db);
 
 /**
  * @brief Perform a password grant flow to retrieve a token.
@@ -33,14 +33,16 @@ int oauth2_client_init(const char *token_url, const char *client_id,
  * @param out_expires_in Pointer to store the expiration time in seconds.
  * @return 0 on success, non-zero on failure.
  */
-int oauth2_client_password_grant(const char *username, const char *password,
-                                 char **out_access_token, int *out_expires_in);
+c_rest_error_t oauth2_client_password_grant(const char *username,
+                                            const char *password,
+                                            char **out_access_token,
+                                            int *out_expires_in);
 
 /**
  * @brief Clean up the OAuth2 client.
  * @return 0 on success.
  */
-int oauth2_client_cleanup(void);
+c_rest_error_t oauth2_client_cleanup(void);
 
 #if defined(__cplusplus)
 }

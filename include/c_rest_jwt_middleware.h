@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_jwt_middleware.h
+ * @brief Header file for c_rest_jwt_middleware.h
+ */
 #ifndef C_REST_JWT_MIDDLEWARE_H
 #define C_REST_JWT_MIDDLEWARE_H
 /* clang-format off */
@@ -24,7 +28,8 @@ struct c_rest_jwt_middleware_config {
   /** @brief Secret buffer length */
   size_t secret_len;
   /** @brief Pointer to user verification callback */
-  int (*verify_payload)(const char *payload, void **out_auth_context);
+  c_rest_error_t (*verify_payload)(const char *payload,
+                                   void **out_auth_context);
 };
 
 /**
@@ -38,7 +43,7 @@ struct c_rest_jwt_middleware_config {
  */
 c_rest_error_t c_rest_jwt_middleware_config_init(
     struct c_rest_jwt_middleware_config *config, const unsigned char *secret,
-    size_t secret_len, int (*verify_payload)(const char *, void **));
+    size_t secret_len, c_rest_error_t (*verify_payload)(const char *, void **));
 
 /**
  * @brief Built-in JWT Authentication Middleware.

@@ -138,9 +138,10 @@ static int test_websocket_upgrade(void) {
 #include "c_rest_router.h"
 /* clang-format on */
 
-static int my_ws_on_message(struct c_rest_request *req,
-                            const unsigned char *payload, size_t payload_len,
-                            int is_binary, void *user_data) {
+static c_rest_error_t my_ws_on_message(struct c_rest_request *req,
+                                       const unsigned char *payload,
+                                       size_t payload_len, int is_binary,
+                                       void *user_data) {
   (void)req;
   (void)payload;
   (void)payload_len;
@@ -149,11 +150,12 @@ static int my_ws_on_message(struct c_rest_request *req,
   return 0;
 }
 
-static void my_ws_on_close(struct c_rest_request *req, int status_code,
-                           void *user_data) {
+static c_rest_error_t my_ws_on_close(struct c_rest_request *req,
+                                     int status_code, void *user_data) {
   (void)req;
   (void)status_code;
   (void)user_data;
+  return C_REST_OK;
 }
 
 static int test_websocket_router_registration(void) {

@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_compression.h
+ * @brief HTTP compression support.
+ */
 #ifndef C_REST_COMPRESSION_H
 #define C_REST_COMPRESSION_H
 /* clang-format off */

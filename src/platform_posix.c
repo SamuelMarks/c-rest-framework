@@ -157,12 +157,12 @@ struct thread_wrapper_args {
   void *arg;
 };
 
-static void *thread_wrapper(void *arg) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t thread_wrapper(void *arg) { /* GCOVR_EXCL_LINE */
   struct thread_wrapper_args *args =
       (struct thread_wrapper_args *)arg; /* GCOVR_EXCL_LINE */
   args->func(args->arg);                 /* GCOVR_EXCL_LINE */
   C_REST_FREE((void *)(args));           /* GCOVR_EXCL_LINE */
-  return NULL;                           /* GCOVR_EXCL_LINE */
+  return C_REST_OK;                      /* GCOVR_EXCL_LINE */
 }
 
 c_rest_error_t
@@ -188,7 +188,8 @@ c_rest_thread_create(c_rest_thread_t *out_thread, /* GCOVR_EXCL_LINE */
   args->func = func; /* GCOVR_EXCL_LINE */
   args->arg = arg;   /* GCOVR_EXCL_LINE */
 
-  if (pthread_create(&thread, NULL, thread_wrapper,
+  if (pthread_create(&thread, NULL,
+                     (void *(*)(void *))(void (*)(void))thread_wrapper,
                      args) !=    /* GCOVR_EXCL_LINE */
       0) {                       /* GCOVR_EXCL_LINE */
     C_REST_FREE((void *)(args)); /* GCOVR_EXCL_LINE */

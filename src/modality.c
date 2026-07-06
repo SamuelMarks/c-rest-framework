@@ -18,26 +18,26 @@ extern const struct c_rest_modality_vtable greenthread_vtable;
 extern const struct c_rest_modality_vtable message_passing_vtable;
 
 /* We will reuse a dummy vtable for the unimplemented modalities for now */
-static int dummy_init(struct c_rest_context *ctx) {
+static c_rest_error_t dummy_init(struct c_rest_context *ctx) {
   if (ctx && ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
     ctx->logger.log_cb("Initializing Dummy modality"); /* GCOVR_EXCL_LINE */
   }
   return C_REST_OK;
 }
 
-static int dummy_destroy(struct c_rest_context *ctx) {
+static c_rest_error_t dummy_destroy(struct c_rest_context *ctx) {
   if (ctx && ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
     ctx->logger.log_cb("Destroying Dummy modality"); /* GCOVR_EXCL_LINE */
   }
   return C_REST_OK;
 }
 
-static int dummy_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t dummy_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   (void)ctx;
   return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
-static int dummy_stop(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t dummy_stop(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   if (ctx && ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
     ctx->logger.log_cb("Stopping Dummy modality"); /* GCOVR_EXCL_LINE */
   }
@@ -47,7 +47,7 @@ static int dummy_stop(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
 static const struct c_rest_modality_vtable dummy_vtable = {
     dummy_init, dummy_destroy, dummy_run, dummy_stop};
 
-static int get_vtable(enum c_rest_modality_type type,
+static c_rest_error_t get_vtable(enum c_rest_modality_type type,
                       const struct c_rest_modality_vtable **out_vtable) {
   if (!out_vtable) /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
@@ -267,9 +267,10 @@ struct connection_state {
   int is_done;
 };
 
-static void on_method(c_rest_parser_context *pctx, /* GCOVR_EXCL_LINE */
-                      const char *method,          /* GCOVR_EXCL_LINE */
-                      size_t len) {
+static c_rest_error_t
+on_method(c_rest_parser_context *pctx, /* GCOVR_EXCL_LINE */
+          const char *method,          /* GCOVR_EXCL_LINE */
+          size_t len) {
   struct connection_state *st =                   /* GCOVR_EXCL_LINE */
       (struct connection_state *)pctx->user_data; /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(len + 1, &st->method) != 0) { /* GCOVR_EXCL_LINE */
@@ -285,11 +286,12 @@ static void on_method(c_rest_parser_context *pctx, /* GCOVR_EXCL_LINE */
 #endif
     st->method[len] = '\0'; /* GCOVR_EXCL_LINE */
   }
+  return C_REST_OK;
 } /* GCOVR_EXCL_LINE */
 
-static void on_url(c_rest_parser_context *pctx,
-                   const char *url,               /* GCOVR_EXCL_LINE */
-                   size_t len) {                  /* GCOVR_EXCL_LINE */
+static c_rest_error_t on_url(c_rest_parser_context *pctx,
+                             const char *url,     /* GCOVR_EXCL_LINE */
+                             size_t len) {        /* GCOVR_EXCL_LINE */
   struct connection_state *st =                   /* GCOVR_EXCL_LINE */
       (struct connection_state *)pctx->user_data; /* GCOVR_EXCL_LINE */
   if (C_REST_MALLOC(len + 1, &st->url) != 0) {    /* GCOVR_EXCL_LINE */
@@ -304,11 +306,13 @@ static void on_url(c_rest_parser_context *pctx,
 #endif
     st->url[len] = '\0'; /* GCOVR_EXCL_LINE */
   }
+  return C_REST_OK;
 } /* GCOVR_EXCL_LINE */
 
-static void on_header(c_rest_parser_context *pctx, /* GCOVR_EXCL_LINE */
-                      const char *key,             /* GCOVR_EXCL_LINE */
-                      size_t key_len, const char *val, size_t val_len) {
+static c_rest_error_t
+on_header(c_rest_parser_context *pctx, /* GCOVR_EXCL_LINE */
+          const char *key,             /* GCOVR_EXCL_LINE */
+          size_t key_len, const char *val, size_t val_len) {
   struct connection_state *st =                          /* GCOVR_EXCL_LINE */
       (struct connection_state *)pctx->user_data;        /* GCOVR_EXCL_LINE */
   struct c_rest_header *h = NULL;                        /* GCOVR_EXCL_LINE */
@@ -350,11 +354,12 @@ static void on_header(c_rest_parser_context *pctx, /* GCOVR_EXCL_LINE */
       C_REST_FREE((void *)(h));          /* GCOVR_EXCL_LINE */
     }
   }
+  return C_REST_OK;
 } /* GCOVR_EXCL_LINE */
 
-static void on_body(c_rest_parser_context *pctx,
-                    const char *data,             /* GCOVR_EXCL_LINE */
-                    size_t len) {                 /* GCOVR_EXCL_LINE */
+static c_rest_error_t on_body(c_rest_parser_context *pctx,
+                              const char *data,   /* GCOVR_EXCL_LINE */
+                              size_t len) {       /* GCOVR_EXCL_LINE */
   struct connection_state *st =                   /* GCOVR_EXCL_LINE */
       (struct connection_state *)pctx->user_data; /* GCOVR_EXCL_LINE */
   char *new_body = NULL;                          /* GCOVR_EXCL_LINE */
@@ -375,13 +380,16 @@ static void on_body(c_rest_parser_context *pctx,
     st->req.body_len += len;               /* GCOVR_EXCL_LINE */
     st->req.body[st->req.body_len] = '\0'; /* GCOVR_EXCL_LINE */
   }
+  return C_REST_OK;
 } /* GCOVR_EXCL_LINE */
 
-static void on_complete(c_rest_parser_context *pctx) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t
+on_complete(c_rest_parser_context *pctx) { /* GCOVR_EXCL_LINE */
   (void)pctx;
   /* parsing done */
   ((struct connection_state *)pctx->user_data)->is_done = /* GCOVR_EXCL_LINE */
       1;                                                  /* GCOVR_EXCL_LINE */
+  return C_REST_OK;
 } /* GCOVR_EXCL_LINE */
 
 c_rest_error_t

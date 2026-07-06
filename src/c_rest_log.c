@@ -5,7 +5,8 @@
 #include <stdarg.h>
 /* clang-format on */
 
-void c_rest_framework_log_debug(const char *fmt, ...) { /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_framework_log_debug(const char *fmt,
+                                          ...) { /* GCOVR_EXCL_LINE */
 #ifdef DEBUG
   va_list args;
   va_start(args, fmt);
@@ -15,4 +16,5 @@ void c_rest_framework_log_debug(const char *fmt, ...) { /* GCOVR_EXCL_LINE */
 #else
   (void)fmt;
 #endif
+  return C_REST_OK;
 } /* GCOVR_EXCL_LINE */

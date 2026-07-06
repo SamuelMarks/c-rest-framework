@@ -16,12 +16,13 @@
 
 static struct c_rest_context *g_ctx = NULL;
 
-static void handle_sigint(int sig) {
+static c_rest_error_t handle_sigint(int sig) {
   (void)sig;
   if (g_ctx) {
     printf("\nCaught SIGINT! Shutting down gracefully...\n");
     c_rest_stop(g_ctx);
   }
+  return C_REST_OK;
 }
 
 int main(int argc, char **argv) {
@@ -154,8 +155,8 @@ int main(int argc, char **argv) {
   c_rest_set_router(ctx, router);
 
   g_ctx = ctx;
-  signal(SIGINT, handle_sigint);
-  signal(SIGTERM, handle_sigint);
+  signal(SIGINT, (void (*)(int))(void (*)(void))handle_sigint);
+  signal(SIGTERM, (void (*)(int))(void (*)(void))handle_sigint);
 
   printf("Listening on %s:%d (HTTPS: %s)\n", listen_addr, listen_port,
          ctx->tls_ctx ? "yes" : "no");

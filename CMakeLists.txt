@@ -242,7 +242,7 @@ set(C_ABSTRACT_HTTP_USE_LIBFETCH ${C_REST_FRAMEWORK_USE_LIBFETCH} CACHE BOOL "" 
 
 if(C_REST_FRAMEWORK_FETCH_C_FS)
     set(CDD_DEPS "FETCHCONTENT" CACHE STRING "" FORCE)
-    if(FALSE)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-fs")
         FetchContent_Declare(
           cfs
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-fs"
@@ -274,27 +274,9 @@ endif()
 
 
 
-if(C_REST_FRAMEWORK_FETCH_CAH)
-    if(FALSE)
-        FetchContent_Declare(
-          c_abstract_http
-          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http"
-        )
-    else()
-        FetchContent_Declare(
-          c_abstract_http
-          GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
-        GIT_TAG master
-        )
-    endif()
-    FetchContent_MakeAvailable(c_abstract_http)
-    c_rest_framework_strip_bad_flags(c-abstract-http COMPILE_OPTIONS)
-    c_rest_framework_strip_bad_flags(c-abstract-http LINK_OPTIONS)
-    add_definitions(-DC_REST_FRAMEWORK_USE_REAL_CAH)
-endif()
 
 
-    if(FALSE)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-str-span")
         message(STATUS "Using local c_str_span from ${CMAKE_CURRENT_LIST_DIR}/../c-str-span")
         FetchContent_Declare(
             c_str_span
@@ -311,25 +293,6 @@ endif()
     c_rest_framework_strip_bad_flags(c_str_span_compiler_flags INTERFACE_COMPILE_OPTIONS)
     c_rest_framework_strip_bad_flags(c_str_span_compiler_flags INTERFACE_LINK_OPTIONS)
 
-if(C_REST_FRAMEWORK_FETCH_C_ORM)
-    if(FALSE)
-        FetchContent_Declare(
-          c_orm
-          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-orm"
-        )
-    else()
-        FetchContent_Declare(
-          c_orm
-          GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
-        GIT_TAG master
-        )
-    endif()
-    FetchContent_MakeAvailable(c_orm)
-    add_definitions(-DC_REST_FRAMEWORK_USE_REAL_C_ORM)
-
-    c_rest_framework_strip_bad_flags(c-orm_compiler_flags INTERFACE_COMPILE_OPTIONS)
-    c_rest_framework_strip_bad_flags(c-orm_compiler_flags INTERFACE_LINK_OPTIONS)
-endif()
 
 macro(c_rest_framework_resolve_parson)
     set(_VCPKG_APPLICABLE ON)
@@ -356,7 +319,7 @@ macro(c_rest_framework_resolve_parson)
 
     if(NOT parson_RESOLVED)
         message(STATUS "Fetching parson via FetchContent")
-        if(FALSE)
+        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../parson")
             message(STATUS "Using local parson")
             FetchContent_Declare(parson SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../parson")
         else()
@@ -384,6 +347,7 @@ macro(c_rest_framework_resolve_parson)
             if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR EMSCRIPTEN)
                 target_compile_options(parson PRIVATE "-Wno-long-long" "-Wno-error")
             endif()
+            target_include_directories(parson PUBLIC $<BUILD_INTERFACE:${parson_SOURCE_DIR}>)
         endif()
         target_include_directories(c-rest-framework PUBLIC ${parson_SOURCE_DIR})
         set(parson_RESOLVED ON)
@@ -641,7 +605,7 @@ c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
 c_rest_framework_resolve_parson()
 
 if(C_REST_FRAMEWORK_FETCH_CDD_C)
-    if(FALSE)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../cdd-c")
         FetchContent_Declare(
           cdd_c
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../cdd-c"
@@ -665,6 +629,45 @@ if(C_REST_FRAMEWORK_FETCH_CDD_C)
             endif()
         endif()
     endif()
+endif()
+
+if(C_REST_FRAMEWORK_FETCH_CAH)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http")
+        FetchContent_Declare(
+          c_abstract_http
+          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http"
+        )
+    else()
+        FetchContent_Declare(
+          c_abstract_http
+          GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
+        GIT_TAG master
+        )
+    endif()
+    FetchContent_MakeAvailable(c_abstract_http)
+    c_rest_framework_strip_bad_flags(c-abstract-http COMPILE_OPTIONS)
+    c_rest_framework_strip_bad_flags(c-abstract-http LINK_OPTIONS)
+    add_definitions(-DC_REST_FRAMEWORK_USE_REAL_CAH)
+endif()
+
+if(C_REST_FRAMEWORK_FETCH_C_ORM)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-orm")
+        FetchContent_Declare(
+          c_orm
+          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-orm"
+        )
+    else()
+        FetchContent_Declare(
+          c_orm
+          GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
+        GIT_TAG master
+        )
+    endif()
+    FetchContent_MakeAvailable(c_orm)
+    add_definitions(-DC_REST_FRAMEWORK_USE_REAL_C_ORM)
+
+    c_rest_framework_strip_bad_flags(c-orm_compiler_flags INTERFACE_COMPILE_OPTIONS)
+    c_rest_framework_strip_bad_flags(c-orm_compiler_flags INTERFACE_LINK_OPTIONS)
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_CAH)

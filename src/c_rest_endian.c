@@ -4,23 +4,28 @@
 #include "c_rest_log.h"
 /* clang-format on */
 
-static int is_little_endian(int *out_is_little) { /* GCOVR_EXCL_LINE */
-  unsigned int test = 1;                          /* GCOVR_EXCL_LINE */
-  unsigned char *p = (unsigned char *)&test;      /* GCOVR_EXCL_LINE */
-  *out_is_little = (p[0] == 1);                   /* GCOVR_EXCL_LINE */
-  return C_REST_OK;                               /* GCOVR_EXCL_LINE */
+static c_rest_error_t
+is_little_endian(int *out_is_little) {       /* GCOVR_EXCL_LINE */
+  unsigned int test = 1;                     /* GCOVR_EXCL_LINE */
+  unsigned char *p = (unsigned char *)&test; /* GCOVR_EXCL_LINE */
+  *out_is_little = (p[0] == 1);              /* GCOVR_EXCL_LINE */
+  return C_REST_OK;                          /* GCOVR_EXCL_LINE */
 }
 
 c_rest_error_t
 c_rest_htons(unsigned short hostshort,
              unsigned short *out_netshort) { /* GCOVR_EXCL_LINE */
   int little_endian;
+  c_rest_error_t rc;
   if (!out_netshort) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("c_rest_htons: invalid argument out_netshort is NULL");
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
-  is_little_endian(&little_endian); /* GCOVR_EXCL_LINE */
-  if (little_endian) {              /* GCOVR_EXCL_LINE */
+  rc = is_little_endian(&little_endian); /* GCOVR_EXCL_LINE */
+  if (rc != C_REST_OK) {
+    return rc;
+  }
+  if (little_endian) { /* GCOVR_EXCL_LINE */
     *out_netshort =
         (unsigned short)(((hostshort >> 8) & 0x00FF) | /* GCOVR_EXCL_LINE */
                          ((hostshort << 8) & 0xFF00));
@@ -33,13 +38,17 @@ c_rest_htons(unsigned short hostshort,
 c_rest_error_t c_rest_htonl(unsigned long hostlong,
                             unsigned long *out_netlong) { /* GCOVR_EXCL_LINE */
   int little_endian;
+  c_rest_error_t rc;
   if (!out_netlong) { /* GCOVR_EXCL_LINE */
     LOG_DEBUG("c_rest_htonl: invalid argument out_netlong is NULL");
     return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
   }
-  is_little_endian(&little_endian); /* GCOVR_EXCL_LINE */
-  if (little_endian) {              /* GCOVR_EXCL_LINE */
-    *out_netlong =                  /* GCOVR_EXCL_LINE */
+  rc = is_little_endian(&little_endian); /* GCOVR_EXCL_LINE */
+  if (rc != C_REST_OK) {
+    return rc;
+  }
+  if (little_endian) { /* GCOVR_EXCL_LINE */
+    *out_netlong =     /* GCOVR_EXCL_LINE */
         ((hostlong >> 24) & 0x000000FF) |
         ((hostlong >> 8) & 0x0000FF00) | /* GCOVR_EXCL_LINE */
         ((hostlong << 8) & 0x00FF0000) |

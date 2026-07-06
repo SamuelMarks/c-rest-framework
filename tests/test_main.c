@@ -10,7 +10,10 @@
 
 GREATEST_MAIN_DEFS();
 
-static void test_logger(const char *msg) { printf("LOG: %s\n", msg); }
+static enum c_rest_error test_logger(const char *msg) {
+  printf("LOG: %s\n", msg);
+  return C_REST_OK;
+}
 
 static int test_init_destroy(void) {
   struct c_rest_context *ctx = NULL;

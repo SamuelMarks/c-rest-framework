@@ -10,7 +10,10 @@
 #include <string.h>
 /* clang-format on */
 
-static void my_log_cb(const char *message) { printf("[APP] %s\n", message); }
+static c_rest_error_t my_log_cb(const char *message) {
+  printf("[APP] %s\n", message);
+  return C_REST_OK;
+}
 
 static c_rest_error_t handle_hello_world(struct c_rest_request *req,
                                          struct c_rest_response *res,

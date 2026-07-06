@@ -12,8 +12,8 @@
 
 #ifdef C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE
 
-static int mock_verify_payload_success(const char *payload,
-                                       void **out_auth_context) {
+static c_rest_error_t mock_verify_payload_success(const char *payload,
+                                                  void **out_auth_context) {
   if (strcmp(payload, "{\"sub\":\"12345\"}") == 0) {
     *out_auth_context = (void *)1;
     return 0;
@@ -21,8 +21,8 @@ static int mock_verify_payload_success(const char *payload,
   return 1;
 }
 
-static int mock_verify_payload_fail(const char *payload,
-                                    void **out_auth_context) {
+static c_rest_error_t mock_verify_payload_fail(const char *payload,
+                                               void **out_auth_context) {
   (void)payload;
   (void)out_auth_context;
   return 1;

@@ -5,7 +5,7 @@
 #include <time.h>
 /* clang-format on */
 
-static void c_rest_rate_limiter_free_bucket(void *bucket_ptr) {
+static void c_rest_rate_limiter_bucket_free(void *bucket_ptr) {
   if (bucket_ptr) { /* GCOVR_EXCL_LINE */
     C_REST_FREE(bucket_ptr);
   }
@@ -24,15 +24,15 @@ c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
   limiter->initialized = 0;
 
   ret = c_rest_hashmap_init(&limiter->buckets, max_entities);
-  if (ret != 0) { /* GCOVR_EXCL_LINE */
-    return ret;   /* GCOVR_EXCL_LINE */
+  if (ret != C_REST_OK) { /* GCOVR_EXCL_LINE */
+    return ret;           /* GCOVR_EXCL_LINE */
   }
 
   ret = c_rest_mutex_create(&limiter->mutex);
-  if (ret != 0) {                             /* GCOVR_EXCL_LINE */
+  if (ret != C_REST_OK) {                     /* GCOVR_EXCL_LINE */
     c_rest_hashmap_destroy(                   /* GCOVR_EXCL_LINE */
                            &limiter->buckets, /* GCOVR_EXCL_LINE */
-                           c_rest_rate_limiter_free_bucket); /* GCOVR_EXCL_LINE
+                           c_rest_rate_limiter_bucket_free); /* GCOVR_EXCL_LINE
                                                               */
     return ret; /* GCOVR_EXCL_LINE */
   }
@@ -121,7 +121,7 @@ c_rest_error_t c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter) {
     return ret;   /* GCOVR_EXCL_LINE */
   }
 
-  c_rest_hashmap_destroy(&limiter->buckets, c_rest_rate_limiter_free_bucket);
+  c_rest_hashmap_destroy(&limiter->buckets, c_rest_rate_limiter_bucket_free);
 
   ret = c_rest_mutex_unlock(limiter->mutex);
   if (ret != 0) { /* GCOVR_EXCL_LINE */

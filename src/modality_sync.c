@@ -13,7 +13,7 @@ struct sync_state {
   int is_running;
 };
 
-static int sync_init(struct c_rest_context *ctx) {
+static c_rest_error_t sync_init(struct c_rest_context *ctx) {
   struct sync_state *state;
   if (!ctx)   /* GCOVR_EXCL_LINE */
     return 1; /* GCOVR_EXCL_LINE */
@@ -35,7 +35,7 @@ static int sync_init(struct c_rest_context *ctx) {
   return 0;
 }
 
-static int sync_destroy(struct c_rest_context *ctx) {
+static c_rest_error_t sync_destroy(struct c_rest_context *ctx) {
   struct sync_state *state;
 
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
@@ -66,7 +66,7 @@ static int sync_destroy(struct c_rest_context *ctx) {
   return 0;
 }
 
-static int sync_run(struct c_rest_context *ctx) {
+static c_rest_error_t sync_run(struct c_rest_context *ctx) {
   struct sync_state *state;
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
     return 1;                       /* GCOVR_EXCL_LINE */

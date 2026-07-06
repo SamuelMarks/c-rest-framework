@@ -75,3 +75,23 @@ repos:
         language: python
         additional_dependencies: [gcovr]
         pass_filenames: false
+      - id: build-cdb
+        name: Build Compilation Database
+        entry: env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE cmake -S . -B build_cdb -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        language: system
+        pass_filenames: false
+      - id: test-cdb
+        name: Run Tests (CDB)
+        entry: bash -c "cmake --build build_cdb && ctest --test-dir build_cdb --output-on-failure"
+        language: system
+        pass_filenames: false
+      - id: check-signatures
+        name: Check Function Signatures
+        entry: python3 scripts/check_signatures.py
+        language: system
+        pass_filenames: false
+      - id: check-enum-returns
+        name: Check Enum Returns
+        entry: python3 scripts/check_enum_returns_clang.py -p build_cdb src include
+        language: system
+        pass_filenames: false

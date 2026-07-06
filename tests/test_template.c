@@ -111,10 +111,11 @@ static int test_c_rest_template_render_edge_cases(void) {
   return 0;
 }
 
-static int dummy_template_data_provider(struct c_rest_request *req,
-                                        const char ***out_keys,
-                                        const char ***out_values,
-                                        size_t *out_count, void *user_data) {
+static c_rest_error_t dummy_template_data_provider(struct c_rest_request *req,
+                                                   const char ***out_keys,
+                                                   const char ***out_values,
+                                                   size_t *out_count,
+                                                   void *user_data) {
   static const char *keys[] = {"user", "role"};
   static const char *values[] = {"Alice", "Admin"};
   (void)req;

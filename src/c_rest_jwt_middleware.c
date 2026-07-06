@@ -13,7 +13,8 @@
 
 c_rest_error_t c_rest_jwt_middleware_config_init(
     struct c_rest_jwt_middleware_config *config, const unsigned char *secret,
-    size_t secret_len, int (*verify_payload)(const char *, void **)) {
+    size_t secret_len,
+    c_rest_error_t (*verify_payload)(const char *, void **)) {
   if (!config || !secret || secret_len == 0) {
     return C_REST_ERROR_GENERIC;
   }

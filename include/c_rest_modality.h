@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_modality.h
+ * @brief Header file for c_rest_modality.h
+ */
 #ifndef C_REST_MODALITY_H
 #define C_REST_MODALITY_H
 /* clang-format off */
@@ -51,7 +55,7 @@ typedef void (*c_rest_free_fn)(void *ptr);
  * @brief Logging callback signature.
  * @param message The log message string.
  */
-typedef void (*c_rest_log_fn)(const char *message);
+typedef c_rest_error_t (*c_rest_log_fn)(const char *message);
 
 /**
  * @brief Represents the custom memory allocator callbacks.
@@ -86,7 +90,7 @@ struct c_rest_modality_vtable {
    * @return 0 on success, non-zero error code on failure.
    */
   /** @brief Initialization function */
-  int (*init)(struct c_rest_context *ctx);
+  c_rest_error_t (*init)(struct c_rest_context *ctx);
 
   /**
    * @brief Cleans up and destroys the underlying modality state.
@@ -94,21 +98,21 @@ struct c_rest_modality_vtable {
    * @return 0 on success, non-zero error code on failure.
    */
   /** @brief Destruction function */
-  int (*destroy)(struct c_rest_context *ctx);
+  c_rest_error_t (*destroy)(struct c_rest_context *ctx);
 
   /**
    * @brief Starts the underlying modality engine (e.g. event loop, threads).
    * @param ctx Pointer to the context struct.
    * @return 0 on success, non-zero error code on failure.
    */
-  int (*run)(struct c_rest_context *ctx);
+  c_rest_error_t (*run)(struct c_rest_context *ctx);
 
   /**
    * @brief Signals the underlying modality engine to stop execution.
    * @param ctx Pointer to the context struct.
    * @return 0 on success, non-zero error code on failure.
    */
-  int (*stop)(struct c_rest_context *ctx);
+  c_rest_error_t (*stop)(struct c_rest_context *ctx);
 };
 
 /**

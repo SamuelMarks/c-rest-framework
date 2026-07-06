@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_orm_middleware.h
+ * @brief Header file for c_rest_orm_middleware.h
+ */
 #ifndef C_REST_ORM_MIDDLEWARE_H
 #define C_REST_ORM_MIDDLEWARE_H
 /* clang-format off */

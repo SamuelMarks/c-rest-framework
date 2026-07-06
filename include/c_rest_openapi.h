@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_openapi.h
+ * @brief Header file for c_rest_openapi.h
+ */
 #ifndef C_REST_OPENAPI_H
 #define C_REST_OPENAPI_H
 /* clang-format off */
@@ -290,9 +294,27 @@ struct c_rest_openapi_spec {
   size_t n_security_schemes; /**< Number of security schemes */
 };
 
+/**
+ * @brief Initializes an OpenAPI spec object.
+ * @param out_spec Pointer to store the spec.
+ * @return 0 on success, error code otherwise.
+ */
 c_rest_error_t c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec);
+/**
+ * @brief Destroys an OpenAPI spec object.
+ * @param spec The spec object to destroy.
+ * @return 0 on success, error code otherwise.
+ */
 c_rest_error_t c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec);
 
+/**
+ * @brief Adds a path operation to the OpenAPI spec.
+ * @param spec The spec object.
+ * @param route The route path.
+ * @param method The HTTP method.
+ * @param op The operation object.
+ * @return 0 on success, error code otherwise.
+ */
 c_rest_error_t
 c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
                              const char *route, const char *method,

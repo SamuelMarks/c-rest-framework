@@ -1,3 +1,7 @@
+/**
+ * @file c_rest_crypto.h
+ * @brief Cryptographic utilities.
+ */
 #ifndef C_REST_CRYPTO_H
 #define C_REST_CRYPTO_H
 /* clang-format off */

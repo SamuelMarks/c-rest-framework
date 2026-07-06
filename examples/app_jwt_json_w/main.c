@@ -13,7 +13,8 @@
 
 #ifdef C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE
 
-static int my_verify_payload(const char *payload, void **out_auth_context) {
+static c_rest_error_t my_verify_payload(const char *payload,
+                                        void **out_auth_context) {
   /* Simple mock payload verifier. In real app, parse the JSON payload here */
   if (strstr(payload, "\"sub\":\"user123\"") != NULL) {
     *out_auth_context = (void *)1; /* User ID or struct */

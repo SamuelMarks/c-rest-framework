@@ -109,9 +109,10 @@ c_rest_error_t c_rest_graphql_node_free(struct c_rest_graphql_node *doc);
  * @param out_len Length of the result string.
  * @return 0 on success.
  */
-typedef int (*c_rest_graphql_resolver_fn)(const char *field_name,
-                                          char **out_json, size_t *out_len,
-                                          void *user_data);
+typedef c_rest_error_t (*c_rest_graphql_resolver_fn)(const char *field_name,
+                                                     char **out_json,
+                                                     size_t *out_len,
+                                                     void *user_data);
 
 struct c_rest_graphql_resolver_entry;
 

@@ -6,9 +6,17 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "c_rest_mem.h"
 #include "c_rest_log.h"
 #include <time.h>
+
+#ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
+#include "c_rest_request.h"
+#include "c_rest_response.h"
+#include "c_rest_router.h"
+#include "c_rest_sse.h"
+#else
+#include "c_rest_router.h"
+#endif
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__) || defined(_MSC_VER)
 void __stdcall Sleep(unsigned long dwMilliseconds);
@@ -40,14 +48,16 @@ struct c_rest_hot_reload_ctx {
 #endif
 };
 
-static void hot_reload_log(c_rest_hot_reload_ctx_t *ctx, const char *msg) {
+static c_rest_error_t hot_reload_log(c_rest_hot_reload_ctx_t *ctx,
+                                     const char *msg) {
   if (ctx && ctx->logger && ctx->logger->log_cb) {
     ctx->logger->log_cb(msg);
   }
+  return C_REST_OK;
 }
 
-static int get_file_mtime(c_rest_hot_reload_ctx_t *ctx, const char *path,
-                          time_t *out_mtime) {
+static c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
+                                     const char *path, time_t *out_mtime) {
   cfs_path p = {0};
   cfs_file_time_type ftime = 0;
   cfs_error_code ec = {0};
@@ -76,12 +86,12 @@ static int get_file_mtime(c_rest_hot_reload_ctx_t *ctx, const char *path,
   return C_REST_ERROR_GENERIC;
 }
 
-static void sleep_seconds(c_rest_hot_reload_ctx_t *ctx, int seconds) {
+static c_rest_error_t sleep_seconds(c_rest_hot_reload_ctx_t *ctx, int seconds) {
   (void)ctx;
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
   if (ctx && ctx->cm_env) {
     cm_thread_sleep_ms(ctx->cm_env, (unsigned long)(seconds * 1000));
-    return;
+    return C_REST_OK;
   }
 #endif
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__) ||           \
@@ -90,14 +100,19 @@ static void sleep_seconds(c_rest_hot_reload_ctx_t *ctx, int seconds) {
 #else
   sleep(seconds);
 #endif
+  return C_REST_OK;
 }
 
-static void watcher_thread_func(void *arg) {
+static c_rest_error_t watcher_thread_func(void *arg) {
   c_rest_hot_reload_ctx_t *ctx = (c_rest_hot_reload_ctx_t *)arg;
   while (ctx->state == C_REST_HOT_RELOAD_STATE_WATCHING) {
+    c_rest_error_t rc;
     c_rest_hot_reload_poll(ctx, ctx->on_reload, ctx->user_data);
-    sleep_seconds(ctx, 1);
+    rc = sleep_seconds(ctx, 1);
+    if (rc != C_REST_OK)
+      return rc;
   }
+  return C_REST_OK;
 }
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
@@ -208,7 +223,11 @@ c_rest_error_t c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx,
   strcpy(path_copy, path);
 #endif
 
-  get_file_mtime(ctx, path_copy, &current_mtime);
+  err = get_file_mtime(ctx, path_copy, &current_mtime);
+  if (err != C_REST_OK) {
+    C_REST_FREE(path_copy);
+    return err;
+  }
 
   ctx->watched_paths[ctx->watch_count] = path_copy;
   ctx->last_modified_times[ctx->watch_count] = current_mtime;
@@ -231,7 +250,8 @@ c_rest_error_t c_rest_hot_reload_poll(c_rest_hot_reload_ctx_t *ctx,
   }
 
   for (i = 0; i < ctx->watch_count; ++i) {
-    if (get_file_mtime(ctx, ctx->watched_paths[i], &current_mtime) == 0) {
+    if (get_file_mtime(ctx, ctx->watched_paths[i], &current_mtime) ==
+        C_REST_OK) {
       if (current_mtime != ctx->last_modified_times[i]) {
         ctx->last_modified_times[i] = current_mtime;
         changed = 1;
@@ -264,14 +284,14 @@ c_rest_error_t c_rest_hot_reload_start(c_rest_hot_reload_ctx_t *ctx,
   if (ctx->cm_env) {
     thread_err =
         cm_thread_create(ctx->cm_env, (cm_thread_t *)&ctx->watcher_thread,
-                         watcher_thread_func, ctx);
+                         (void (*)(void *))watcher_thread_func, ctx);
   } else {
-    thread_err =
-        c_rest_thread_create(&ctx->watcher_thread, watcher_thread_func, ctx);
+    thread_err = c_rest_thread_create(
+        &ctx->watcher_thread, (void (*)(void *))watcher_thread_func, ctx);
   }
 #else
-  thread_err =
-      c_rest_thread_create(&ctx->watcher_thread, watcher_thread_func, ctx);
+  thread_err = c_rest_thread_create(&ctx->watcher_thread,
+                                    (void (*)(void *))watcher_thread_func, ctx);
 #endif
 
   if (thread_err != 0) {
@@ -324,10 +344,6 @@ c_rest_error_t c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
 }
 
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
-#include "c_rest_request.h"
-#include "c_rest_response.h"
-#include "c_rest_router.h"
-#include "c_rest_sse.h"
 
 static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
                                              struct c_rest_response *res,
@@ -356,10 +372,13 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
   }
 
   while (hr_ctx->state == C_REST_HOT_RELOAD_STATE_WATCHING) {
+    c_rest_error_t rc;
     if (c_rest_sse_send_keepalive(res) != 0) {
       break; /* Connection closed */
     }
-    sleep_seconds(hr_ctx, 1);
+    rc = sleep_seconds(hr_ctx, 1);
+    if (rc != C_REST_OK)
+      return rc;
   }
 
   if (hr_ctx->state == C_REST_HOT_RELOAD_STATE_CHANGED) {
@@ -402,8 +421,6 @@ c_rest_error_t c_rest_hot_reload_register_routes(struct c_rest_router *router,
   return C_REST_HOT_RELOAD_SUCCESS;
 }
 #else
-#include "c_rest_router.h"
-/* clang-format on */
 c_rest_error_t c_rest_hot_reload_register_routes(struct c_rest_router *router,
                                                  const char *path) {
   (void)router;

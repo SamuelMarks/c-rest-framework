@@ -15,15 +15,15 @@ struct multi_process_state {
   int worker_count;
 };
 
-static int multi_process_init(struct c_rest_context *ctx) {
+static c_rest_error_t multi_process_init(struct c_rest_context *ctx) {
   struct multi_process_state *state;
-  if (!ctx)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!ctx)                      /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   state = (struct multi_process_state *)ctx->allocator.malloc_cb(
       sizeof(struct multi_process_state));
-  if (!state) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!state)                    /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   state->server_sock = C_REST_INVALID_SOCKET;
   state->is_running = 0;
@@ -38,14 +38,14 @@ static int multi_process_init(struct c_rest_context *ctx) {
                 "MULTI_PROCESS modality initialized"); /* GCOVR_EXCL_LINE */
   }
 
-  return 0;
+  return C_REST_OK;
 }
 
-static int multi_process_destroy(struct c_rest_context *ctx) {
+static c_rest_error_t multi_process_destroy(struct c_rest_context *ctx) {
   struct multi_process_state *state;
 
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
-    return 1;                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
 
   state = (struct multi_process_state *)ctx->internal_state;
 
@@ -75,13 +75,14 @@ static int multi_process_destroy(struct c_rest_context *ctx) {
                 "MULTI_PROCESS modality destroyed"); /* GCOVR_EXCL_LINE */
   }
 
-  return 0;
+  return C_REST_OK;
 }
 
-static int multi_process_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t
+multi_process_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   struct multi_process_state *state;
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
-    return 1;                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
 
   state =
       (struct multi_process_state *)ctx->internal_state; /* GCOVR_EXCL_LINE */
@@ -108,7 +109,7 @@ static int multi_process_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
                 "MULTI_PROCESS modality run finished"); /* GCOVR_EXCL_LINE */
   }
 
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
 const struct c_rest_modality_vtable multi_process_vtable = {

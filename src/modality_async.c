@@ -19,7 +19,7 @@ struct async_state {
   struct c_rest_event_loop *evloop;
 };
 
-static int async_init(struct c_rest_context *ctx) {
+static c_rest_error_t async_init(struct c_rest_context *ctx) {
   struct async_state *state;
   if (!ctx)   /* GCOVR_EXCL_LINE */
     return 1; /* GCOVR_EXCL_LINE */
@@ -49,7 +49,7 @@ static int async_init(struct c_rest_context *ctx) {
   return 0;
 }
 
-static int async_destroy(struct c_rest_context *ctx) {
+static c_rest_error_t async_destroy(struct c_rest_context *ctx) {
   struct async_state *state;
 
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
@@ -84,7 +84,8 @@ static int async_destroy(struct c_rest_context *ctx) {
   return 0;
 }
 
-static int async_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t
+async_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   struct async_state *state;
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
     return 1;                       /* GCOVR_EXCL_LINE */

@@ -330,7 +330,7 @@ c_rest_error_t c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
   return C_REST_OK;
 }
 
-static int copy_string(const char **dst, const char *src) {
+static c_rest_error_t copy_string(const char **dst, const char *src) {
   if (src) {
     if (C_REST_MALLOC(strlen(src) + 1, dst) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *dst = NULL; } /* GCOVR_EXCL_LINE */
     if (*dst) { /* GCOVR_EXCL_LINE */
@@ -339,18 +339,24 @@ static int copy_string(const char **dst, const char *src) {
 #else
       strcpy((char *)*dst, src);
 #endif
+    } else {
+        return C_REST_ERROR_OOM;
     }
   }
   return C_REST_OK;
 }
 
-static int copy_operation(struct c_rest_openapi_operation *dst,
+static c_rest_error_t copy_operation(struct c_rest_openapi_operation *dst,
                           const struct c_rest_openapi_operation *src) {
+  c_rest_error_t rc;
   size_t i;
 
-  copy_string(&dst->operation_id, src->operation_id);
-  copy_string(&dst->summary, src->summary);
-  copy_string(&dst->description, src->description);
+  rc = copy_string(&dst->operation_id, src->operation_id);
+  if (rc != C_REST_OK) return rc;
+  rc = copy_string(&dst->summary, src->summary);
+  if (rc != C_REST_OK) return rc;
+  rc = copy_string(&dst->description, src->description);
+  if (rc != C_REST_OK) return rc;
 
   if (src->n_tags > 0 && src->tags) { /* GCOVR_EXCL_LINE */
     if (C_REST_MALLOC(sizeof(char *) * src->n_tags, &dst->tags) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->tags = NULL; } /* GCOVR_EXCL_LINE */
@@ -358,7 +364,8 @@ static int copy_operation(struct c_rest_openapi_operation *dst,
       dst->n_tags = src->n_tags;
       for (i = 0; i < src->n_tags; i++) {
         dst->tags[i] = NULL;
-        copy_string(&dst->tags[i], src->tags[i]);
+        rc = copy_string(&dst->tags[i], src->tags[i]);
+        if (rc != C_REST_OK) return rc;
       }
     }
   }
@@ -369,8 +376,10 @@ static int copy_operation(struct c_rest_openapi_operation *dst,
   /* copy params done */
 
   dst->deprecated = src->deprecated;
-  copy_string(&dst->external_docs.description, src->external_docs.description);
-  copy_string(&dst->external_docs.url, src->external_docs.url);
+  rc = copy_string(&dst->external_docs.description, src->external_docs.description);
+  if (rc != C_REST_OK) return rc;
+  rc = copy_string(&dst->external_docs.url, src->external_docs.url);
+  if (rc != C_REST_OK) return rc;
 
   if (src->n_security > 0 && src->security) { /* GCOVR_EXCL_LINE */
     if (C_REST_MALLOC(sizeof(struct c_rest_openapi_security_requirement) * src->n_security, &(dst->security)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->security = NULL; } /* GCOVR_EXCL_LINE */
@@ -379,15 +388,17 @@ static int copy_operation(struct c_rest_openapi_operation *dst,
       for (i = 0; i < src->n_security; i++) {
         size_t k;
         dst->security[i].name = NULL;
-        copy_string(&dst->security[i].name, src->security[i].name);
+        rc = copy_string(&dst->security[i].name, src->security[i].name);
+        if (rc != C_REST_OK) return rc;
         dst->security[i].n_scopes = src->security[i].n_scopes;
         if (src->security[i].n_scopes > 0 && src->security[i].scopes) { /* GCOVR_EXCL_LINE */
           if (C_REST_MALLOC(sizeof(char *) * src->security[i].n_scopes, &(dst->security[i].scopes)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->security[i].scopes = NULL; } /* GCOVR_EXCL_LINE */
           if (dst->security[i].scopes) { /* GCOVR_EXCL_LINE */
             for (k = 0; k < src->security[i].n_scopes; k++) {
               dst->security[i].scopes[k] = NULL;
-              copy_string(&dst->security[i].scopes[k],
+              rc = copy_string(&dst->security[i].scopes[k],
                           src->security[i].scopes[k]);
+              if (rc != C_REST_OK) return rc;
             }
           }
         } else {
@@ -514,9 +525,9 @@ c_rest_error_t c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
 #include <stdio.h>
 /* clang-format on */
 
-static int serialize_operation(JSON_Object *methods_obj,
-                               const char *method_name,
-                               const struct c_rest_openapi_operation *op) {
+static c_rest_error_t
+serialize_operation(JSON_Object *methods_obj, const char *method_name,
+                    const struct c_rest_openapi_operation *op) {
   JSON_Value *op_val;
   JSON_Object *op_obj;
   JSON_Value *tags_val;
@@ -597,6 +608,7 @@ static int serialize_operation(JSON_Object *methods_obj,
 c_rest_error_t
 c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
                             char **out_json) {
+  c_rest_error_t rc;
   JSON_Value *root_val;
   JSON_Object *root_obj;
   JSON_Value *info_val;
@@ -759,15 +771,33 @@ c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
       json_object_set_string(path_item_obj, "description", /* GCOVR_EXCL_LINE */
                              p->description);              /* GCOVR_EXCL_LINE */
 
-    serialize_operation(path_item_obj, "get", &p->get);
-    serialize_operation(path_item_obj, "post", &p->post);
-    serialize_operation(path_item_obj, "put", &p->put);
-    serialize_operation(path_item_obj, "delete", &p->del);
-    serialize_operation(path_item_obj, "patch", &p->patch);
-    serialize_operation(path_item_obj, "options", &p->options);
-    serialize_operation(path_item_obj, "head", &p->head);
-    serialize_operation(path_item_obj, "trace", &p->trace);
-    serialize_operation(path_item_obj, "query", &p->query);
+    rc = serialize_operation(path_item_obj, "get", &p->get);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "post", &p->post);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "put", &p->put);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "delete", &p->del);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "patch", &p->patch);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "options", &p->options);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "head", &p->head);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "trace", &p->trace);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "query", &p->query);
+    if (rc != C_REST_OK)
+      return rc;
 
     json_object_set_value(paths_obj, p->route, path_item_val);
   }

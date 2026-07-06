@@ -14,7 +14,7 @@ struct single_thread_state {
   int is_running;
 };
 
-static int single_thread_init(struct c_rest_context *ctx) {
+static c_rest_error_t single_thread_init(struct c_rest_context *ctx) {
   struct single_thread_state *state;
   if (!ctx)   /* GCOVR_EXCL_LINE */
     return 1; /* GCOVR_EXCL_LINE */
@@ -38,7 +38,7 @@ static int single_thread_init(struct c_rest_context *ctx) {
   return 0;
 }
 
-static int single_thread_destroy(struct c_rest_context *ctx) {
+static c_rest_error_t single_thread_destroy(struct c_rest_context *ctx) {
   struct single_thread_state *state;
 
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
@@ -71,7 +71,8 @@ static int single_thread_destroy(struct c_rest_context *ctx) {
   return 0;
 }
 
-static int single_thread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t
+single_thread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   struct single_thread_state *state;
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
     return 1;                       /* GCOVR_EXCL_LINE */
@@ -164,13 +165,12 @@ static int single_thread_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
 
   return 0; /* GCOVR_EXCL_LINE */
 }
-
-static int
+static c_rest_error_t
 single_thread_stop(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
   struct single_thread_state *state;
 
   if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
-    return 1;                       /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
 
   state =
       (struct single_thread_state *)ctx->internal_state; /* GCOVR_EXCL_LINE */
@@ -193,7 +193,7 @@ single_thread_stop(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
     ctx->logger.log_cb("SINGLE_THREAD modality stopped"); /* GCOVR_EXCL_LINE */
   }
 
-  return 0; /* GCOVR_EXCL_LINE */
+  return C_REST_OK; /* GCOVR_EXCL_LINE */
 }
 
 const struct c_rest_modality_vtable single_thread_vtable = {
