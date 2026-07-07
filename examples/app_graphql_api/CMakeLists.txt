@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
 
 if(C_REST_FRAMEWORK_ENABLE_GRAPHQL)
     add_executable(app_graphql_api main.c)

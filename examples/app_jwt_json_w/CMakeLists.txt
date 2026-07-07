@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
 project(app_jwt_json_w C)
 
 add_executable(app_jwt_json_w main.c)
