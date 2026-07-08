@@ -72,7 +72,8 @@ int test_client(void) {
 
   res = c_rest_client_request_sync(client, "http://localhost", "GET", headers,
                                    1, NULL, 0, &sync_res);
-  (void)res;
+  if (res != C_REST_OK)
+    printf("Error: %d\n", res);
   if (sync_res) {
     c_rest_client_response_free(sync_res);
     printf("test_client Line 59\n");
@@ -81,7 +82,8 @@ int test_client(void) {
 
   res = c_rest_client_request_async(client, "http://localhost", "POST", NULL, 0,
                                     "test", 4, async_callback, NULL);
-  (void)res;
+  if (res != C_REST_OK)
+    printf("Error: %d\n", res);
 
   if (!async_called) {
     printf("Async callback was not invoked\n");
@@ -91,7 +93,8 @@ int test_client(void) {
   res = c_rest_proxy_request("http://localhost/proxy", NULL, NULL);
   printf("test_client Line 71\n");
   fflush(stdout);
-  (void)res;
+  if (res != C_REST_OK)
+    printf("Error: %d\n", res);
 
   /* Test URL encoding/decoding */
   if (c_rest_client_url_encode("test + & = ?", &encoded) != 0) {

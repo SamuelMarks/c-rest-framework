@@ -375,7 +375,7 @@ if(MSVC)
     # Step 17: Define strict compilation flags for MSVC (/W4 /WX- /Za)
     # We use /WX- to disable treating warnings as errors by default but use high warning level
     # Note: /Za strictly enforces ANSI C but might cause issues with Windows headers.
-    add_compile_options(/W4 /WX- /wd5286)
+    add_compile_options(/W4 /WX- /wd5286 /FS)
 
     # We apply /Za only to specific source files since windows.h is not ANSI compliant
     set_source_files_properties(
