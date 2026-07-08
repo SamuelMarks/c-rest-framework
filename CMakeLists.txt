@@ -2,7 +2,43 @@ cmake_minimum_required(VERSION 3.14)
 if(POLICY CMP0079)
   cmake_policy(SET CMP0079 NEW)
 endif()
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
+if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+    set(SAVE_IPO ${CMAKE_INTERPROCEDURAL_OPTIMIZATION})
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
+endif()
+
 project(c-rest-framework C)
+
+if(DEFINED SAVE_IPO)
+    if(CMAKE_CROSSCOMPILING_EMULATOR MATCHES "wine")
+        # Under wine LTO produces broken binaries, keeping it off
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
+        # MSVC-wine requires Microsoft's native archiver (lib.exe)
+        set(CMAKE_AR "lib.exe" CACHE FILEPATH "Archiver" FORCE)
+
+        # Override CMAKE_C_CREATE_STATIC_LIBRARY explicitly to remove ar options
+        set(CMAKE_C_CREATE_STATIC_LIBRARY "<CMAKE_AR> /nologo /OUT:<TARGET> <LINK_FLAGS> <OBJECTS>" CACHE STRING "Create static lib using lib.exe" FORCE)
+        set(CMAKE_CXX_CREATE_STATIC_LIBRARY "<CMAKE_AR> /nologo /OUT:<TARGET> <LINK_FLAGS> <OBJECTS>" CACHE STRING "Create static lib using lib.exe" FORCE)
+
+        # Override CMAKE_C_LINK_EXECUTABLE and DLL linking to use link.exe safely instead of ld
+        set(CMAKE_LINKER "link.exe" CACHE FILEPATH "Linker" FORCE)
+        set(CMAKE_C_LINK_EXECUTABLE "<CMAKE_LINKER> /nologo <OBJECTS> ${CMAKE_C_LINK_FLAGS} <LINK_FLAGS> <LINK_LIBRARIES> /out:<TARGET> /implib:<TARGET_IMPLIB> /pdb:<TARGET_PDB> /version:<TARGET_VERSION_MAJOR>.<TARGET_VERSION_MINOR>" CACHE STRING "" FORCE)
+        set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_LINKER> /nologo <OBJECTS> ${CMAKE_CXX_LINK_FLAGS} <LINK_FLAGS> <LINK_LIBRARIES> /out:<TARGET> /implib:<TARGET_IMPLIB> /pdb:<TARGET_PDB> /version:<TARGET_VERSION_MAJOR>.<TARGET_VERSION_MINOR>" CACHE STRING "" FORCE)
+        set(CMAKE_C_CREATE_SHARED_LIBRARY "<CMAKE_LINKER> /nologo <OBJECTS> ${CMAKE_C_LINK_FLAGS} <LINK_FLAGS> <LINK_LIBRARIES> /out:<TARGET> /implib:<TARGET_IMPLIB> /pdb:<TARGET_PDB> /dll /version:<TARGET_VERSION_MAJOR>.<TARGET_VERSION_MINOR>" CACHE STRING "" FORCE)
+        set(CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_LINKER> /nologo <OBJECTS> ${CMAKE_CXX_LINK_FLAGS} <LINK_FLAGS> <LINK_LIBRARIES> /out:<TARGET> /implib:<TARGET_IMPLIB> /pdb:<TARGET_PDB> /dll /version:<TARGET_VERSION_MAJOR>.<TARGET_VERSION_MINOR>" CACHE STRING "" FORCE)
+
+        # Avoid C2220 errors in unreferenced vars inside submodules
+        if(MSVC)
+            add_compile_options(/wd4189)
+        endif()
+    else()
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ${SAVE_IPO} CACHE BOOL "" FORCE)
+    endif()
+endif()
 
 include(CTest)
 
