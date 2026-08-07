@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "oauth2_server.h"
 
 #if defined(_MSC_VER)
@@ -10,7 +11,6 @@
 
 #include "c_orm_oauth2.h"
 #include "c_rest_string.h"
-#include "c_rest_mem.h"
 #include "c_rest_openapi.h"
 
 #include <stdio.h>
@@ -165,12 +165,22 @@ c_rest_error_t oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
                             oauth2_register_user_handler, (void *)db,
                             &op_users);
 
-  c_rest_router_get_openapi_spec(router, &spec);
+  (void)!c_rest_router_get_openapi_spec(router, &spec);
   if (spec) {
-    spec->info.title = (char *)"OAuth2 Example API";
-    spec->info.version = (char *)"1.0.0";
-    spec->info.description =
-        (char *)"A simple OAuth2 API example using c-rest-framework.";
+    spec->info.title =
+        (const char *)CRF_MALLOC(strlen("OAuth2 Example API") + 1);
+    C_REST_STRCPY((char *)spec->info.title, strlen("OAuth2 Example API") + 1,
+                  "OAuth2 Example API");
+
+    spec->info.version = (const char *)CRF_MALLOC(strlen("1.0.0") + 1);
+    C_REST_STRCPY((char *)spec->info.version, strlen("1.0.0") + 1, "1.0.0");
+
+    spec->info.description = (const char *)CRF_MALLOC(
+        strlen("A simple OAuth2 API example using c-rest-framework.") + 1);
+    C_REST_STRCPY(
+        (char *)spec->info.description,
+        strlen("A simple OAuth2 API example using c-rest-framework.") + 1,
+        "A simple OAuth2 API example using c-rest-framework.");
 
     c_rest_openapi_spec_add_component_schema(spec, "c_orm_oauth2_token_t",
                                              schema_token);
@@ -188,68 +198,70 @@ c_rest_error_t oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
     password_flow.n_scopes = 2;
     scheme.flows.password = &password_flow;
 
-    spec->security_schemes = (struct c_rest_openapi_security_scheme *)malloc(
-        sizeof(struct c_rest_openapi_security_scheme));
+    spec->security_schemes =
+        (struct c_rest_openapi_security_scheme *)CRF_MALLOC(
+            sizeof(struct c_rest_openapi_security_scheme));
     memset(spec->security_schemes, 0,
            sizeof(struct c_rest_openapi_security_scheme));
 
-    /* Important to copy strings since c_rest_openapi.c uses free() on them when
-     * tearing down */
-    spec->security_schemes[0].name_key = (char *)malloc(strlen("oauth2") + 1);
+    /* Important to copy strings since c_rest_openapi.c uses CRF_FREE() on them
+     * when tearing down */
+    spec->security_schemes[0].name_key =
+        (char *)CRF_MALLOC(strlen("oauth2") + 1);
     C_REST_STRCPY((char *)spec->security_schemes[0].name_key,
                   strlen("oauth2") + 1, "oauth2");
-    spec->security_schemes[0].type = (char *)malloc(strlen("oauth2") + 1);
+    spec->security_schemes[0].type = (char *)CRF_MALLOC(strlen("oauth2") + 1);
     C_REST_STRCPY((char *)spec->security_schemes[0].type, strlen("oauth2") + 1,
                   "oauth2");
     spec->security_schemes[0].description =
-        (char *)malloc(strlen("OAuth2 Password Grant") + 1);
+        (char *)CRF_MALLOC(strlen("OAuth2 Password Grant") + 1);
     C_REST_STRCPY((char *)spec->security_schemes[0].description,
                   strlen("OAuth2 Password Grant") + 1, "OAuth2 Password Grant");
 
     spec->security_schemes[0].flows.password =
-        (struct c_rest_openapi_oauth_flow *)malloc(
+        (struct c_rest_openapi_oauth_flow *)CRF_MALLOC(
             sizeof(struct c_rest_openapi_oauth_flow));
     memset(spec->security_schemes[0].flows.password, 0,
            sizeof(struct c_rest_openapi_oauth_flow));
     spec->security_schemes[0].flows.password->token_url =
-        (char *)malloc(strlen("/api/v0/oauth/token") + 1);
+        (char *)CRF_MALLOC(strlen("/api/v0/oauth/token") + 1);
     C_REST_STRCPY((char *)spec->security_schemes[0].flows.password->token_url,
                   strlen("/api/v0/oauth/token") + 1, "/api/v0/oauth/token");
     spec->security_schemes[0].flows.password->refresh_url =
-        (char *)malloc(strlen("/api/v0/oauth/token") + 1);
+        (char *)CRF_MALLOC(strlen("/api/v0/oauth/token") + 1);
     C_REST_STRCPY((char *)spec->security_schemes[0].flows.password->refresh_url,
                   strlen("/api/v0/oauth/token") + 1, "/api/v0/oauth/token");
 
     spec->security_schemes[0].flows.password->scopes_keys =
-        (const char **)malloc(sizeof(char *) * 2);
+        (const char **)CRF_MALLOC(sizeof(char *) * 2);
     spec->security_schemes[0].flows.password->scopes_values =
-        (const char **)malloc(sizeof(char *) * 2);
+        (const char **)CRF_MALLOC(sizeof(char *) * 2);
     spec->security_schemes[0].flows.password->scopes_keys[0] =
-        (char *)malloc(strlen(scope_keys[0]) + 1);
+        (char *)CRF_MALLOC(strlen(scope_keys[0]) + 1);
     C_REST_STRCPY(
         (char *)spec->security_schemes[0].flows.password->scopes_keys[0],
         strlen(scope_keys[0]) + 1, scope_keys[0]);
     spec->security_schemes[0].flows.password->scopes_values[0] =
-        (char *)malloc(strlen(scope_vals[0]) + 1);
+        (char *)CRF_MALLOC(strlen(scope_vals[0]) + 1);
     C_REST_STRCPY(
         (char *)spec->security_schemes[0].flows.password->scopes_values[0],
         strlen(scope_vals[0]) + 1, scope_vals[0]);
     spec->security_schemes[0].flows.password->scopes_keys[1] =
-        (char *)malloc(strlen(scope_keys[1]) + 1);
+        (char *)CRF_MALLOC(strlen(scope_keys[1]) + 1);
     C_REST_STRCPY(
         (char *)spec->security_schemes[0].flows.password->scopes_keys[1],
         strlen(scope_keys[1]) + 1, scope_keys[1]);
     spec->security_schemes[0].flows.password->scopes_values[1] =
-        (char *)malloc(strlen(scope_vals[1]) + 1);
+        (char *)CRF_MALLOC(strlen(scope_vals[1]) + 1);
     C_REST_STRCPY(
         (char *)spec->security_schemes[0].flows.password->scopes_values[1],
         strlen(scope_vals[1]) + 1, scope_vals[1]);
     spec->security_schemes[0].flows.password->n_scopes = 2;
     spec->n_security_schemes = 1;
 
-    spec->security = (struct c_rest_openapi_security_requirement *)malloc(
+    spec->security = (struct c_rest_openapi_security_requirement *)CRF_MALLOC(
         sizeof(struct c_rest_openapi_security_requirement));
-    spec->security[0].name = (char *)malloc(strlen("oauth2") + 1);
+    spec->security[0].name = (char *)CRF_MALLOC(strlen("oauth2") + 1);
     C_REST_STRCPY((char *)spec->security[0].name, strlen("oauth2") + 1,
                   "oauth2");
     spec->security[0].scopes = NULL;
@@ -293,14 +305,15 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
                */
   }
 
-  c_rest_request_get_form_param(req, "grant_type", &grant_type);
-  c_rest_request_get_form_param(req, "client_id", &client_id);
-  c_rest_request_get_form_param(req, "client_secret", &client_secret);
-  c_rest_request_get_form_param(req, "username", &username);
-  c_rest_request_get_form_param(req, "password", &password);
+  (void)!c_rest_request_get_form_param(req, "grant_type", &grant_type);
+  (void)!c_rest_request_get_form_param(req, "client_id", &client_id);
+  (void)!c_rest_request_get_form_param(req, "client_secret", &client_secret);
+  (void)!c_rest_request_get_form_param(req, "username", &username);
+  (void)!c_rest_request_get_form_param(req, "password", &password);
 
   if (grant_type == NULL) {
-    c_rest_response_oauth2_error(res, "invalid_request", "Missing grant_type");
+    (void)!c_rest_response_oauth2_error(res, "invalid_request",
+                                        "Missing grant_type");
     return 0;
   }
 
@@ -321,10 +334,10 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
 
   if (client_id == NULL || client_secret == NULL) {
     if (auth_user) {
-      free(auth_user);
+      CRF_FREE(auth_user);
     }
     if (auth_pass) {
-      free(auth_pass);
+      CRF_FREE(auth_pass);
     }
     c_rest_response_oauth2_error(res, "invalid_client",
                                  "Missing client credentials");
@@ -334,10 +347,10 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
   err = c_orm_oauth2_verify_client(db, client_id, client_secret, &is_valid);
   if (err != 0 || is_valid == 0) {
     if (auth_user) {
-      free(auth_user);
+      CRF_FREE(auth_user);
     }
     if (auth_pass) {
-      free(auth_pass);
+      CRF_FREE(auth_pass);
     }
     c_rest_response_oauth2_error(res, "invalid_client",
                                  "Invalid client credentials");
@@ -346,10 +359,10 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
 
   if (username == NULL || password == NULL) {
     if (auth_user) {
-      free(auth_user);
+      CRF_FREE(auth_user);
     }
     if (auth_pass) {
-      free(auth_pass);
+      CRF_FREE(auth_pass);
     }
     c_rest_response_oauth2_error(res, "invalid_grant",
                                  "Missing username or password");
@@ -359,10 +372,10 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
   err = c_orm_user_verify_credentials(db, username, password, &is_valid);
   if (err != 0 || is_valid == 0) {
     if (auth_user) {
-      free(auth_user);
+      CRF_FREE(auth_user);
     }
     if (auth_pass) {
-      free(auth_pass);
+      CRF_FREE(auth_pass);
     }
     c_rest_response_oauth2_error(res, "invalid_grant",
                                  "Invalid username or password");
@@ -370,21 +383,21 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
   }
 
   /* Generate simple token (in a real system, use secure random) */
-  token_str = (char *)malloc(64);
-  refresh_str = (char *)malloc(64);
+  token_str = (char *)CRF_MALLOC(64);
+  refresh_str = (char *)CRF_MALLOC(64);
 
   if (token_str == NULL || refresh_str == NULL) {
     if (token_str) {
-      free(token_str);
+      CRF_FREE(token_str);
     }
     if (refresh_str) {
-      free(refresh_str);
+      CRF_FREE(refresh_str);
     }
     if (auth_user) {
-      free(auth_user);
+      CRF_FREE(auth_user);
     }
     if (auth_pass) {
-      free(auth_pass);
+      CRF_FREE(auth_pass);
     }
     return 1;
   }
@@ -423,16 +436,16 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
   json_pairs[3].type = C_REST_JSON_TYPE_STRING;
   json_pairs[3].str_val = token.refresh_token;
 
-  c_rest_response_set_status(res, 200);
-  c_rest_response_json_dict(res, json_pairs, 4);
+  (void)!c_rest_response_set_status(res, 200);
+  (void)!c_rest_response_json_dict(res, json_pairs, 4);
 
-  free(token_str);
-  free(refresh_str);
+  CRF_FREE(token_str);
+  CRF_FREE(refresh_str);
   if (auth_user) {
-    free(auth_user);
+    CRF_FREE(auth_user);
   }
   if (auth_pass) {
-    free(auth_pass);
+    CRF_FREE(auth_pass);
   }
 
   return 0;
@@ -460,8 +473,8 @@ c_rest_error_t oauth2_login_handler(struct c_rest_request *req,
     return 0;
   }
 
-  c_rest_request_get_form_param(req, "username", &username);
-  c_rest_request_get_form_param(req, "password", &password);
+  (void)!c_rest_request_get_form_param(req, "username", &username);
+  (void)!c_rest_request_get_form_param(req, "password", &password);
 
   if (username == NULL || password == NULL) {
     c_rest_response_oauth2_error(res, "invalid_request",
@@ -471,17 +484,18 @@ c_rest_error_t oauth2_login_handler(struct c_rest_request *req,
 
   if (c_orm_user_verify_credentials(db, username, password, &is_valid) != 0 ||
       !is_valid) {
-    c_rest_response_oauth2_error(res, "invalid_grant", "Invalid credentials");
+    (void)!c_rest_response_oauth2_error(res, "invalid_grant",
+                                        "Invalid credentials");
     return 0;
   }
 
-  token_str = (char *)malloc(64);
-  refresh_str = (char *)malloc(64);
+  token_str = (char *)CRF_MALLOC(64);
+  refresh_str = (char *)CRF_MALLOC(64);
   if (!token_str || !refresh_str) {
     if (token_str)
-      free(token_str);
+      CRF_FREE(token_str);
     if (refresh_str)
-      free(refresh_str);
+      CRF_FREE(refresh_str);
     return 1;
   }
 
@@ -514,11 +528,11 @@ c_rest_error_t oauth2_login_handler(struct c_rest_request *req,
   json_pairs[3].type = C_REST_JSON_TYPE_STRING;
   json_pairs[3].str_val = token.refresh_token;
 
-  c_rest_response_set_status(res, 200);
-  c_rest_response_json_dict(res, json_pairs, 4);
+  (void)!c_rest_response_set_status(res, 200);
+  (void)!c_rest_response_json_dict(res, json_pairs, 4);
 
-  free(token_str);
-  free(refresh_str);
+  CRF_FREE(token_str);
+  CRF_FREE(refresh_str);
 
   return 0;
 }
@@ -531,22 +545,22 @@ c_rest_error_t oauth2_logout_handler(struct c_rest_request *req,
   struct c_rest_json_pair json_pair;
 
   if (c_rest_request_get_auth_bearer(req, &token_str) != 0 || !token_str) {
-    c_rest_response_set_status(res, 401);
+    (void)!c_rest_response_set_status(res, 401);
     json_pair.key = "error";
     json_pair.type = C_REST_JSON_TYPE_STRING;
     json_pair.str_val = "Missing Bearer token";
-    c_rest_response_json_dict(res, &json_pair, 1);
+    (void)!c_rest_response_json_dict(res, &json_pair, 1);
     return 0;
   }
 
   c_orm_oauth2_revoke_token(db, token_str);
-  free(token_str);
+  CRF_FREE(token_str);
 
-  c_rest_response_set_status(res, 200);
+  (void)!c_rest_response_set_status(res, 200);
   json_pair.key = "message";
   json_pair.type = C_REST_JSON_TYPE_STRING;
   json_pair.str_val = "Successfully logged out";
-  c_rest_response_json_dict(res, &json_pair, 1);
+  (void)!c_rest_response_json_dict(res, &json_pair, 1);
   return 0;
 }
 
@@ -559,43 +573,43 @@ c_rest_error_t oauth2_secret_handler(struct c_rest_request *req,
   struct c_rest_json_pair json_pair;
 
   if (c_rest_request_get_auth_bearer(req, &token_str) != 0 || !token_str) {
-    c_rest_response_set_status(res, 401);
+    (void)!c_rest_response_set_status(res, 401);
     json_pair.key = "error";
     json_pair.type = C_REST_JSON_TYPE_STRING;
     json_pair.str_val = "Unauthorized";
-    c_rest_response_json_dict(res, &json_pair, 1);
+    (void)!c_rest_response_json_dict(res, &json_pair, 1);
     return 0;
   }
 
   memset(&db_token, 0, sizeof(db_token));
   if (c_orm_oauth2_get_token(db, token_str, &db_token) != 0) {
-    c_rest_response_set_status(res, 401);
+    (void)!c_rest_response_set_status(res, 401);
     json_pair.key = "error";
     json_pair.type = C_REST_JSON_TYPE_STRING;
     json_pair.str_val = "Invalid or expired token";
-    c_rest_response_json_dict(res, &json_pair, 1);
-    free(token_str);
+    (void)!c_rest_response_json_dict(res, &json_pair, 1);
+    CRF_FREE(token_str);
     return 0;
   }
 
   if (db_token.access_token)
-    free(db_token.access_token);
+    CRF_FREE(db_token.access_token);
   if (db_token.refresh_token)
-    free(db_token.refresh_token);
+    CRF_FREE(db_token.refresh_token);
   if (db_token.token_type)
-    free(db_token.token_type);
+    CRF_FREE(db_token.token_type);
   if (db_token.user_id)
-    free(db_token.user_id);
+    CRF_FREE(db_token.user_id);
   if (db_token.scopes)
-    free(db_token.scopes);
+    CRF_FREE(db_token.scopes);
 
-  free(token_str);
+  CRF_FREE(token_str);
 
-  c_rest_response_set_status(res, 200);
+  (void)!c_rest_response_set_status(res, 200);
   json_pair.key = "secret_message";
   json_pair.type = C_REST_JSON_TYPE_STRING;
   json_pair.str_val = "You have accessed the protected route!";
-  c_rest_response_json_dict(res, &json_pair, 1);
+  (void)!c_rest_response_json_dict(res, &json_pair, 1);
   return 0;
 }
 
@@ -619,8 +633,8 @@ c_rest_error_t oauth2_register_client_handler(struct c_rest_request *req,
     return 0;
   }
 
-  c_rest_request_get_form_param(req, "client_id", &client_id);
-  c_rest_request_get_form_param(req, "client_secret", &client_secret);
+  (void)!c_rest_request_get_form_param(req, "client_id", &client_id);
+  (void)!c_rest_request_get_form_param(req, "client_secret", &client_secret);
 
   if (client_id == NULL || client_secret == NULL) {
     c_rest_response_oauth2_error(res, "invalid_request",
@@ -656,8 +670,8 @@ c_rest_error_t oauth2_register_client_handler(struct c_rest_request *req,
   pairs[1].type = C_REST_JSON_TYPE_STRING;
   pairs[1].str_val = client_secret;
 
-  c_rest_response_set_status(res, 201);
-  c_rest_response_json_dict(res, pairs, 2);
+  (void)!c_rest_response_set_status(res, 201);
+  (void)!c_rest_response_json_dict(res, pairs, 2);
 
   return 0;
 }
@@ -682,8 +696,8 @@ c_rest_error_t oauth2_register_user_handler(struct c_rest_request *req,
     return 0;
   }
 
-  c_rest_request_get_form_param(req, "username", &username);
-  c_rest_request_get_form_param(req, "password", &password);
+  (void)!c_rest_request_get_form_param(req, "username", &username);
+  (void)!c_rest_request_get_form_param(req, "password", &password);
 
   if (username == NULL || password == NULL) {
     c_rest_response_oauth2_error(res, "invalid_request",
@@ -715,8 +729,8 @@ c_rest_error_t oauth2_register_user_handler(struct c_rest_request *req,
   pairs[0].type = C_REST_JSON_TYPE_STRING;
   pairs[0].str_val = username;
 
-  c_rest_response_set_status(res, 201);
-  c_rest_response_json_dict(res, pairs, 1);
+  (void)!c_rest_response_set_status(res, 201);
+  (void)!c_rest_response_json_dict(res, pairs, 1);
 
   return 0;
 }

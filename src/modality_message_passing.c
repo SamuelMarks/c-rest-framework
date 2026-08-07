@@ -1,10 +1,10 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_modality.h"
 #include "c_rest_platform.h"
 
 #include <stdlib.h>
-#include "c_rest_mem.h"
 #include "c_rest_log.h"
 /* clang-format on */
 
@@ -14,87 +14,90 @@ struct message_passing_state {
 };
 
 static c_rest_error_t message_passing_init(struct c_rest_context *ctx) {
+  c_rest_error_t rc;
   struct message_passing_state *state;
-  if (!ctx)   /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!ctx)
+    return C_REST_ERROR_INVALID_ARG;
 
   state = (struct message_passing_state *)ctx->allocator.malloc_cb(
       sizeof(struct message_passing_state));
-  if (!state) /* GCOVR_EXCL_LINE */
-    return 1; /* GCOVR_EXCL_LINE */
+  if (!state)
+    return C_REST_ERROR_OOM;
 
   state->server_sock = C_REST_INVALID_SOCKET;
   state->is_running = 0;
 
   ctx->internal_state = state;
 
-  if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger
-        .log_cb(                                         /* GCOVR_EXCL_LINE */
-                "MESSAGE_PASSING modality initialized"); /* GCOVR_EXCL_LINE */
+  if (ctx->logger.log_cb) {
+    rc = ctx->logger.log_cb("MESSAGE_PASSING modality initialized");
+    if (rc != C_REST_OK)
+      return rc;
   }
-
-  return 0;
+  return C_REST_OK;
 }
 
 static c_rest_error_t message_passing_destroy(struct c_rest_context *ctx) {
+  c_rest_error_t rc;
   struct message_passing_state *state;
 
-  if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
-    return 1;                       /* GCOVR_EXCL_LINE */
+  if (!ctx || !ctx->internal_state)
+    return C_REST_ERROR_INVALID_ARG;
 
   state = (struct message_passing_state *)ctx->internal_state;
 
-  if (state->server_sock != C_REST_INVALID_SOCKET) { /* GCOVR_EXCL_LINE */
+  if (state->server_sock != C_REST_INVALID_SOCKET) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     if (ctx->cm_env) {
       cm_socket_close(ctx->cm_env, state->server_sock);
     } else {
-      c_rest_socket_close(state->server_sock);
+      rc = c_rest_socket_close(state->server_sock);
+      if (rc != C_REST_OK)
+        return rc;
     }
 #else
-    c_rest_socket_close(state->server_sock); /* GCOVR_EXCL_LINE */
+    rc = c_rest_socket_close(state->server_sock);
+    if (rc != C_REST_OK)
+      return rc;
 #endif
-    state->server_sock = C_REST_INVALID_SOCKET; /* GCOVR_EXCL_LINE */
+    state->server_sock = C_REST_INVALID_SOCKET;
   }
 
   ctx->allocator.free_cb(state);
   ctx->internal_state = NULL;
 
-  if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger
-        .log_cb(                                       /* GCOVR_EXCL_LINE */
-                "MESSAGE_PASSING modality destroyed"); /* GCOVR_EXCL_LINE */
+  if (ctx->logger.log_cb) {
+    rc = ctx->logger.log_cb("MESSAGE_PASSING modality destroyed");
+    if (rc != C_REST_OK)
+      return rc;
   }
-
-  return 0;
+  return C_REST_OK;
 }
 
-static c_rest_error_t
-message_passing_run(struct c_rest_context *ctx) { /* GCOVR_EXCL_LINE */
+static c_rest_error_t message_passing_run(struct c_rest_context *ctx) {
+  c_rest_error_t rc;
   struct message_passing_state *state;
-  if (!ctx || !ctx->internal_state) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
+  if (!ctx || !ctx->internal_state)
+    return C_REST_ERROR_GENERIC;
 
-  state =
-      (struct message_passing_state *)ctx->internal_state; /* GCOVR_EXCL_LINE */
-  state->is_running = 1;                                   /* GCOVR_EXCL_LINE */
+  state = (struct message_passing_state *)ctx->internal_state;
+  state->is_running = 1;
 
-  if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger
-        .log_cb(                                         /* GCOVR_EXCL_LINE */
-                "MESSAGE_PASSING modality run started"); /* GCOVR_EXCL_LINE */
+  if (ctx->logger.log_cb) {
+    rc = ctx->logger.log_cb("MESSAGE_PASSING modality run started");
+    if (rc != C_REST_OK)
+      return rc;
   }
 
-  state->is_running = 0; /* GCOVR_EXCL_LINE */
+  state->is_running = 0;
 
-  if (ctx->logger.log_cb) { /* GCOVR_EXCL_LINE */
-    ctx->logger
-        .log_cb(                                          /* GCOVR_EXCL_LINE */
-                "MESSAGE_PASSING modality run finished"); /* GCOVR_EXCL_LINE */
+  if (ctx->logger.log_cb) {
+    rc = ctx->logger.log_cb("MESSAGE_PASSING modality run finished");
+    if (rc != C_REST_OK)
+      return rc;
   }
 
-  return C_REST_OK; /* GCOVR_EXCL_LINE */
+  return C_REST_OK;
 }
 
 const struct c_rest_modality_vtable message_passing_vtable = {

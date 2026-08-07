@@ -11,9 +11,8 @@ static const char *const wdays[] = {"Sun", "Mon", "Tue", "Wed",
 static const char *const months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-static c_rest_error_t is_leap(int year, int *out_leap) {
-  *out_leap = (year % 4 == 0 &&
-               (year % 100 != 0 || year % 400 == 0)); /* GCOVR_EXCL_LINE */
+static c_rest_error_t is_leap(int year, int *out_is_leap) {
+  *out_is_leap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
   return C_REST_OK;
 }
 
@@ -27,26 +26,18 @@ static c_rest_error_t portable_timegm(struct tm *tm, time_t *out_time) {
   int days = 0;
   int y;
 
-  if (year < 1970) {             /* GCOVR_EXCL_LINE */
-    *out_time = (time_t)-1;      /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (year < 1970) {
+    *out_time = (time_t)-1;
+    return C_REST_ERROR_GENERIC;
   }
 
   for (y = 1970; y < year; y++) {
     int lp;
-    c_rest_error_t rc;
-    rc = is_leap(y, &lp);
-    if (rc != C_REST_OK)
-      return rc;
+    (void)is_leap(y, &lp);
     days += 365 + lp;
   }
 
-  {
-    c_rest_error_t rc;
-    rc = is_leap(year, &leap);
-    if (rc != C_REST_OK)
-      return rc;
-  }
+  (void)is_leap(year, &leap);
   days += days_before_month[leap][month];
   days += tm->tm_mday - 1;
 
@@ -68,12 +59,12 @@ c_rest_error_t c_rest_http_date_format(time_t t, char *out_str,
   }
   tm_info = &tm_buf;
 #else
-  if (!out_str || out_len < 30) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;  /* GCOVR_EXCL_LINE */
+  if (!out_str || out_len < 30) {
+    return C_REST_ERROR_GENERIC;
   }
   tm_info = gmtime(&t);
-  if (!tm_info) {                /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!tm_info) {
+    return C_REST_ERROR_GENERIC;
   }
 #endif
 
@@ -101,8 +92,8 @@ c_rest_error_t c_rest_http_date_parse(const char *date_str, time_t *out_t) {
   int i;
   int mon = -1;
 
-  if (!date_str || !out_t) {     /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!date_str || !out_t) {
+    return C_REST_ERROR_GENERIC;
   }
 
   memset(&tm_info, 0, sizeof(tm_info));
@@ -115,22 +106,21 @@ c_rest_error_t c_rest_http_date_parse(const char *date_str, time_t *out_t) {
     return C_REST_ERROR_GENERIC;
   }
 #else
-  if (sscanf(date_str, "%3s, %d %3s %d %d:%d:%d GMT", wday, &mday, month,
-             &year, /* GCOVR_EXCL_LINE */
+  if (sscanf(date_str, "%3s, %d %3s %d %d:%d:%d GMT", wday, &mday, month, &year,
              &hour, &min, &sec) != 7) {
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;
   }
 #endif
 
-  for (i = 0; i < 12; i++) { /* GCOVR_EXCL_LINE */
+  for (i = 0; i < 12; i++) {
     if (strcmp(month, months[i]) == 0) {
       mon = i;
       break;
     }
   }
 
-  if (mon == -1) {               /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (mon == -1) {
+    return C_REST_ERROR_GENERIC;
   }
 
   tm_info.tm_year = year - 1900;
@@ -141,8 +131,8 @@ c_rest_error_t c_rest_http_date_parse(const char *date_str, time_t *out_t) {
   tm_info.tm_sec = sec;
   tm_info.tm_isdst = 0; /* GMT */
 
-  if (portable_timegm(&tm_info, out_t) != 0) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;               /* GCOVR_EXCL_LINE */
+  if (portable_timegm(&tm_info, out_t) != 0) {
+    return C_REST_ERROR_GENERIC;
   }
 
   return C_REST_OK;

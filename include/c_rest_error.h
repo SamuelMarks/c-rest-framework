@@ -5,6 +5,10 @@
 #ifndef C_REST_ERROR_H
 #define C_REST_ERROR_H
 
+/* clang-format off */
+#include "c_rest_no_discard.h"
+/* clang-format on */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,7 +16,7 @@ extern "C" {
 /**
  * @brief Error codes returned by most functions in the framework.
  */
-typedef enum c_rest_error {
+typedef enum NO_DISCARD c_rest_error {
   /** @brief Success, no error. */
   C_REST_OK = 0,
   /** @brief Generic or unknown error. */

@@ -6,6 +6,7 @@
 #define C_REST_RESPONSE_H
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 
 #include <stddef.h>
 #include "c_rest_error.h"
@@ -219,7 +220,7 @@ c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res);
 /**
  * @brief Serialize a response to an allocated buffer.
  * @param res Response
- * @param out_buf Output buffer (must be free()d)
+ * @param out_buf Output buffer (must be CRF_FREE()d)
  * @param out_len Output length
  * @return 0 on success, 1 on failure
  */

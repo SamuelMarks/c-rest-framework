@@ -1,15 +1,41 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_sse.h"
 
 #include <stdlib.h>
 #include <string.h>
-#include "c_rest_mem.h"
 #include "c_rest_log.h"
 #include <stdio.h>
 
-#include "c_rest_mem.h"
 #include "c_rest_string.h"
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+int g_mock_sse_append_fail = -1;
+static c_rest_error_t mock_append_cstr(c_rest_string *s, const char *c) {
+  if (g_mock_sse_append_fail == 0) return C_REST_ERROR_GENERIC;
+  if (g_mock_sse_append_fail > 0) g_mock_sse_append_fail--;
+  return c_rest_string_append_cstr(s, c);
+}
+static c_rest_error_t mock_append(c_rest_string *s, const char *c, size_t l) {
+  if (g_mock_sse_append_fail == 0) return C_REST_ERROR_GENERIC;
+  if (g_mock_sse_append_fail > 0) g_mock_sse_append_fail--;
+  return c_rest_string_append(s, c, l);
+}
+static c_rest_error_t mock_string_destroy(c_rest_string *s) {
+  if (g_mock_sse_append_fail == -2) return C_REST_ERROR_GENERIC;
+  return c_rest_string_destroy(s);
+}
+#define c_rest_string_append_cstr mock_append_cstr
+#define c_rest_string_append mock_append
+#define c_rest_string_destroy mock_string_destroy
+
+#define INTERNAL_EVENT_DESTROY(ev) (g_mock_sse_append_fail == -3 ? C_REST_ERROR_GENERIC : c_rest_sse_event_destroy(ev))
+#define INTERNAL_EVENT_INIT(ev) (g_mock_sse_append_fail == -4 ? C_REST_ERROR_GENERIC : c_rest_sse_event_init(ev))
+#else
+#define INTERNAL_EVENT_DESTROY(ev) c_rest_sse_event_destroy(ev)
+#define INTERNAL_EVENT_INIT(ev) c_rest_sse_event_init(ev)
+#endif
 
 struct c_rest_sse_context {
   char *buffer;
@@ -19,8 +45,8 @@ struct c_rest_sse_context {
 };
 
 c_rest_error_t c_rest_sse_event_init(struct c_rest_sse_event *ev) {
-  if (!ev) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!ev) {
+    return C_REST_ERROR_GENERIC;
   }
   ev->id = NULL;
   ev->event = NULL;
@@ -30,8 +56,8 @@ c_rest_error_t c_rest_sse_event_init(struct c_rest_sse_event *ev) {
 }
 
 c_rest_error_t c_rest_sse_event_destroy(struct c_rest_sse_event *ev) {
-  if (!ev) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!ev) {
+    return C_REST_ERROR_GENERIC;
   }
   if (ev->id) {
     C_REST_FREE(ev->id);
@@ -53,13 +79,9 @@ static c_rest_error_t c_rest_sse_strdup(const char *s, char **out_str) {
   size_t len;
   char *copy;
   void *tmp;
-  if (!s) { /* GCOVR_EXCL_LINE */
-    *out_str = NULL; /* GCOVR_EXCL_LINE */
-    return C_REST_OK; /* GCOVR_EXCL_LINE */
-  }
   len = strlen(s);
-  if (C_REST_MALLOC(len + 1, &tmp) != 0) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(len + 1, &tmp) != 0) {
+    return C_REST_ERROR_GENERIC;
   }
   copy = (char *)tmp;
   #if defined(_MSC_VER)
@@ -72,33 +94,37 @@ static c_rest_error_t c_rest_sse_strdup(const char *s, char **out_str) {
 }
 c_rest_error_t c_rest_sse_event_clone(const struct c_rest_sse_event *src,
                            struct c_rest_sse_event *dest) {
-  if (!src || !dest) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  if (!src || !dest) {
+    return C_REST_ERROR_GENERIC;
   }
-  if (src->id) { /* GCOVR_EXCL_LINE */
-    if (c_rest_sse_strdup(src->id, &dest->id) != 0) goto err; /* GCOVR_EXCL_LINE */
+  if (src->id) {
+    rc = c_rest_sse_strdup(src->id, &dest->id);
+    if (rc != C_REST_OK) goto err;
   } else {
-    dest->id = NULL; /* GCOVR_EXCL_LINE */
-  }
-
-  if (src->event) { /* GCOVR_EXCL_LINE */
-    if (c_rest_sse_strdup(src->event, &dest->event) != 0) goto err; /* GCOVR_EXCL_LINE */
-  } else {
-    dest->event = NULL; /* GCOVR_EXCL_LINE */
+    dest->id = NULL;
   }
 
-  if (src->data) { /* GCOVR_EXCL_LINE */
-    if (c_rest_sse_strdup(src->data, &dest->data) != 0) goto err; /* GCOVR_EXCL_LINE */
+  if (src->event) {
+    rc = c_rest_sse_strdup(src->event, &dest->event);
+    if (rc != C_REST_OK) goto err;
   } else {
-    dest->data = NULL; /* GCOVR_EXCL_LINE */
+    dest->event = NULL;
+  }
+
+  if (src->data) {
+    rc = c_rest_sse_strdup(src->data, &dest->data);
+    if (rc != C_REST_OK) goto err;
+  } else {
+    dest->data = NULL;
   }
 
   dest->retry = src->retry;
   return C_REST_OK;
 
-err: /* GCOVR_EXCL_LINE */
-  c_rest_sse_event_destroy(dest); /* GCOVR_EXCL_LINE */
-  return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+err:
+  (void)!c_rest_sse_event_destroy(dest); /* Best effort destroy on error path */
+  return rc;
 }
 
 c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
@@ -109,25 +135,37 @@ c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **ou
   const char *nl;
   size_t data_len;
   void *tmp_out_buf;
+  c_rest_error_t rc;
 
-  if (!ev || !out_buf || !out_len) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!ev || !out_buf || !out_len) {
+    return C_REST_ERROR_GENERIC;
   }
 
-  if (c_rest_string_init(&s, 128) != 0) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  rc = c_rest_string_init(&s, 1);
+#else
+  rc = c_rest_string_init(&s, 128);
+#endif
+  if (rc != C_REST_OK) {
+    return rc;
   }
 
   if (ev->id) {
-    c_rest_string_append_cstr(&s, "id: ");
-    c_rest_string_append_cstr(&s, ev->id);
-    c_rest_string_append_cstr(&s, "\n");
+    rc = c_rest_string_append_cstr(&s, "id: ");
+    if (rc != C_REST_OK) goto err;
+    rc = c_rest_string_append_cstr(&s, ev->id);
+    if (rc != C_REST_OK) goto err;
+    rc = c_rest_string_append_cstr(&s, "\n");
+    if (rc != C_REST_OK) goto err;
   }
 
-  if (ev->event) { /* GCOVR_EXCL_LINE */
-    c_rest_string_append_cstr(&s, "event: ");
-    c_rest_string_append_cstr(&s, ev->event);
-    c_rest_string_append_cstr(&s, "\n");
+  if (ev->event) {
+    rc = c_rest_string_append_cstr(&s, "event: ");
+    if (rc != C_REST_OK) goto err;
+    rc = c_rest_string_append_cstr(&s, ev->event);
+    if (rc != C_REST_OK) goto err;
+    rc = c_rest_string_append_cstr(&s, "\n");
+    if (rc != C_REST_OK) goto err;
   }
 
   if (ev->retry >= 0) {
@@ -136,28 +174,36 @@ c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **ou
 #else
     sprintf(retry_buf, "retry: %d\n", ev->retry);
 #endif
-    c_rest_string_append_cstr(&s, retry_buf);
+    rc = c_rest_string_append_cstr(&s, retry_buf);
+    if (rc != C_REST_OK) goto err;
   }
 
   if (ev->data) {
     data_ptr = ev->data;
     while ((nl = strchr(data_ptr, '\n')) != NULL) {
-      c_rest_string_append_cstr(&s, "data: ");
-      c_rest_string_append(&s, data_ptr, (size_t)(nl - data_ptr));
-      c_rest_string_append_cstr(&s, "\n");
+      rc = c_rest_string_append_cstr(&s, "data: ");
+      if (rc != C_REST_OK) goto err;
+      rc = c_rest_string_append(&s, data_ptr, (size_t)(nl - data_ptr));
+      if (rc != C_REST_OK) goto err;
+      rc = c_rest_string_append_cstr(&s, "\n");
+      if (rc != C_REST_OK) goto err;
       data_ptr = nl + 1;
     }
-    c_rest_string_append_cstr(&s, "data: ");
-    c_rest_string_append_cstr(&s, data_ptr);
-    c_rest_string_append_cstr(&s, "\n");
+    rc = c_rest_string_append_cstr(&s, "data: ");
+    if (rc != C_REST_OK) goto err;
+    rc = c_rest_string_append_cstr(&s, data_ptr);
+    if (rc != C_REST_OK) goto err;
+    rc = c_rest_string_append_cstr(&s, "\n");
+    if (rc != C_REST_OK) goto err;
   }
 
-  c_rest_string_append_cstr(&s, "\n");
+  rc = c_rest_string_append_cstr(&s, "\n");
+  if (rc != C_REST_OK) goto err;
 
   data_len = s.length;
-  if (C_REST_MALLOC(data_len + 1, &tmp_out_buf) != 0) { /* GCOVR_EXCL_LINE */
-    c_rest_string_destroy(&s); /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(data_len + 1, &tmp_out_buf) != 0) {
+    rc = C_REST_ERROR_GENERIC;
+    goto err;
   }
   *out_buf = (char *)tmp_out_buf;
   #if defined(_MSC_VER)
@@ -168,20 +214,26 @@ c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **ou
   (*out_buf)[data_len] = '\0';
   *out_len = data_len;
 
-  c_rest_string_destroy(&s);
+  rc = c_rest_string_destroy(&s);
+  if (rc != C_REST_OK) return rc;
 
   return C_REST_OK;
+
+err:
+(void)!c_rest_string_destroy(&s);
+  return rc;
 }
 
 c_rest_error_t c_rest_sse_context_init(struct c_rest_sse_context **out_ctx) {
   struct c_rest_sse_context *ctx;
   void *tmp_ctx;
-  if (!out_ctx) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  if (!out_ctx) {
+    return C_REST_ERROR_GENERIC;
   }
 
-  if (C_REST_MALLOC(sizeof(struct c_rest_sse_context), &tmp_ctx) != 0) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(sizeof(struct c_rest_sse_context), &tmp_ctx) != 0) {
+    return C_REST_ERROR_GENERIC;
   }
   ctx = (struct c_rest_sse_context *)tmp_ctx;
 
@@ -195,43 +247,46 @@ c_rest_error_t c_rest_sse_context_init(struct c_rest_sse_context **out_ctx) {
 }
 
 c_rest_error_t c_rest_sse_context_destroy(struct c_rest_sse_context *ctx) {
-  if (!ctx) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  if (!ctx) {
+    return C_REST_ERROR_GENERIC;
   }
 
-  if (ctx->buffer) { /* GCOVR_EXCL_LINE */
+  if (ctx->buffer) {
     C_REST_FREE(ctx->buffer);
     ctx->buffer = NULL;
   }
-  c_rest_sse_event_destroy(&ctx->current_event);
+  rc = c_rest_sse_event_destroy(&ctx->current_event);
   C_REST_FREE(ctx);
-
-  return C_REST_OK;
+  return rc;
 }
 
-static c_rest_error_t append_to_string(char **dest, const char *src, size_t len) {
+static c_rest_error_t append_to_string(char **dest, const char *src,
+                                       size_t len) {
   size_t old_len;
   char *new_str;
   void *tmp_new_str;
 
-  if (!src || len == 0) { /* GCOVR_EXCL_LINE */
-    return C_REST_OK; /* GCOVR_EXCL_LINE */
+  if (len == 0) {
+    return C_REST_OK;
   }
 
-  old_len = *dest ? strlen(*dest) : 0; /* GCOVR_EXCL_LINE */
-  if (C_REST_MALLOC(old_len + len + 1, &tmp_new_str) != 0) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  old_len = *dest ? strlen(*dest) : 0;
+  if (C_REST_MALLOC(old_len + len + 1, &tmp_new_str) != 0) {
+    return C_REST_ERROR_GENERIC;
   }
   new_str = (char *)tmp_new_str;
 
-  if (*dest) { /* GCOVR_EXCL_LINE */
-    #if defined(_MSC_VER)
-    /* CDD_SAFE_CRT */ memcpy_s(new_str, old_len, *dest, old_len); /* GCOVR_EXCL_LINE */
-    #else
-    memcpy(new_str, *dest, old_len); /* GCOVR_EXCL_LINE */
-    #endif
-    C_REST_FREE(*dest); /* GCOVR_EXCL_LINE */
-  }
+
+    if (*dest) {
+      #if defined(_MSC_VER)
+      /* CDD_SAFE_CRT */ memcpy_s(new_str, old_len, *dest, old_len);
+      #else
+      memcpy(new_str, *dest, old_len);
+      #endif
+      C_REST_FREE(*dest);
+    }
+
   #if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(new_str + old_len, len, src, len);
   #else
@@ -255,29 +310,31 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
   int event_completed = 0;
   size_t processed = 0;
 
-  if (!ctx || !out_event) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!ctx || !out_event) {
+    return C_REST_ERROR_GENERIC;
   }
 
-  if (data && len > 0) { /* GCOVR_EXCL_LINE */
+  if (data && len > 0) {
     if (ctx->buffer_len + len > ctx->buffer_cap) {
       void *tmp_new_buf;
       ctx->buffer_cap = (ctx->buffer_len + len) * 2;
-      if (ctx->buffer_cap < 256) { /* GCOVR_EXCL_LINE */
+      if (ctx->buffer_cap < 256) {
         ctx->buffer_cap = 256;
       }
-      if (C_REST_MALLOC(ctx->buffer_cap, &tmp_new_buf) != 0) { /* GCOVR_EXCL_LINE */
-        return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+      if (C_REST_MALLOC(ctx->buffer_cap, &tmp_new_buf) != 0) {
+        return C_REST_ERROR_GENERIC;
       }
       new_buf = (char *)tmp_new_buf;
-      if (ctx->buffer) { /* GCOVR_EXCL_LINE */
+
+      if (ctx->buffer) {
         #if defined(_MSC_VER)
-        /* CDD_SAFE_CRT */ memcpy_s(new_buf, ctx->buffer_len, ctx->buffer, ctx->buffer_len); /* GCOVR_EXCL_LINE */
+        /* CDD_SAFE_CRT */ memcpy_s(new_buf, ctx->buffer_len, ctx->buffer, ctx->buffer_len);
         #else
-        memcpy(new_buf, ctx->buffer, ctx->buffer_len); /* GCOVR_EXCL_LINE */
+        memcpy(new_buf, ctx->buffer, ctx->buffer_len);
         #endif
-        C_REST_FREE(ctx->buffer); /* GCOVR_EXCL_LINE */
+        C_REST_FREE(ctx->buffer);
       }
+
       ctx->buffer = new_buf;
     }
     #if defined(_MSC_VER)
@@ -290,7 +347,7 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
 
   line_start = ctx->buffer;
 
-  while (line_start < ctx->buffer + ctx->buffer_len) { /* GCOVR_EXCL_LINE */
+  while (line_start < ctx->buffer + ctx->buffer_len) {
     line_end = (const char *)memchr(line_start, '\n',
                                     ctx->buffer + ctx->buffer_len - line_start);
     if (!line_end) {
@@ -298,36 +355,44 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
     }
 
     line_len = (size_t)(line_end - line_start);
-    if (line_len > 0 && line_start[line_len - 1] == '\r') { /* GCOVR_EXCL_LINE */
-      line_len--; /* GCOVR_EXCL_LINE */
+
+    if (line_len > 0 && line_start[line_len - 1] == '\r') {
+      line_len--;
     }
 
+
     if (line_len == 0) {
-      if (ctx->current_event.data || ctx->current_event.event || /* GCOVR_EXCL_LINE */
-          ctx->current_event.id || ctx->current_event.retry >= 0) { /* GCOVR_EXCL_LINE */
-        c_rest_sse_event_clone(&ctx->current_event, out_event);
-        c_rest_sse_event_destroy(&ctx->current_event);
-        c_rest_sse_event_init(&ctx->current_event);
+      if (ctx->current_event.data || ctx->current_event.event ||
+          ctx->current_event.id || ctx->current_event.retry >= 0) {
+        c_rest_error_t rc;
+        rc = c_rest_sse_event_clone(&ctx->current_event, out_event);
+        if (rc != C_REST_OK) return rc;
+
+        rc = INTERNAL_EVENT_DESTROY(&ctx->current_event);
+        if (rc != C_REST_OK) return rc;
+
+        rc = INTERNAL_EVENT_INIT(&ctx->current_event);
+        if (rc != C_REST_OK) return rc;
         event_completed = 1;
       }
       processed = (size_t)(line_end - ctx->buffer + 1);
       line_start = line_end + 1;
 
-      if (event_completed) { /* GCOVR_EXCL_LINE */
+      if (event_completed) {
         break;
       }
-      continue; /* GCOVR_EXCL_LINE */
+      continue;
     }
 
-    if (line_start[0] == ':') { /* GCOVR_EXCL_LINE */
-      line_start = line_end + 1; /* GCOVR_EXCL_LINE */
-      continue; /* GCOVR_EXCL_LINE */
+    if (line_start[0] == ':') {
+      line_start = line_end + 1;
+      continue;
     }
 
     colon = (const char *)memchr(line_start, ':', line_len);
-    if (colon) { /* GCOVR_EXCL_LINE */
+    if (colon) {
       value = colon + 1;
-      if (value < line_start + line_len && *value == ' ') { /* GCOVR_EXCL_LINE */
+      if (value < line_start + line_len && *value == ' ') {
         value++;
       }
       value_len = (size_t)(line_start + line_len - value);
@@ -335,34 +400,63 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
       if ((size_t)(colon - line_start) == 5 &&
           memcmp(line_start, "event", 5) == 0) {
         c_rest_error_t rc;
-        if (ctx->current_event.event) { /* GCOVR_EXCL_LINE */
-          C_REST_FREE(ctx->current_event.event); /* GCOVR_EXCL_LINE */
-          ctx->current_event.event = NULL; /* GCOVR_EXCL_LINE */
+
+        if (ctx->current_event.event) {
+          C_REST_FREE(ctx->current_event.event);
+          ctx->current_event.event = NULL;
         }
+
         rc = append_to_string(&ctx->current_event.event, value, value_len);
-        if (rc != C_REST_OK) return rc;
+
+        if (rc != C_REST_OK) {
+          return rc;
+        }
+
       } else if ((size_t)(colon - line_start) == 4 &&
-                 memcmp(line_start, "data", 4) == 0) { /* GCOVR_EXCL_LINE */
+                 memcmp(line_start, "data", 4) == 0) {
         c_rest_error_t rc;
-        if (ctx->current_event.data) { /* GCOVR_EXCL_LINE */
-          rc = append_to_string(&ctx->current_event.data, "\n", 1); /* GCOVR_EXCL_LINE */
-          if (rc != C_REST_OK) return rc;
+
+        if (ctx->current_event.data) {
+          rc = append_to_string(&ctx->current_event.data, "\n", 1);
+
+        if (rc != C_REST_OK) {
+          return rc;
         }
+
+        }
+
         rc = append_to_string(&ctx->current_event.data, value, value_len);
-        if (rc != C_REST_OK) return rc;
-      } else if ((size_t)(colon - line_start) == 2 &&
-                 memcmp(line_start, "id", 2) == 0) { /* GCOVR_EXCL_LINE */
-        c_rest_error_t rc;
-        if (ctx->current_event.id) { /* GCOVR_EXCL_LINE */
-          C_REST_FREE(ctx->current_event.id); /* GCOVR_EXCL_LINE */
-          ctx->current_event.id = NULL; /* GCOVR_EXCL_LINE */
+
+        if (rc != C_REST_OK) {
+          return rc;
         }
+
+      } else if ((size_t)(colon - line_start) == 2 &&
+                 memcmp(line_start, "id", 2) == 0) {
+        c_rest_error_t rc;
+
+        if (ctx->current_event.id) {
+          C_REST_FREE(ctx->current_event.id);
+          ctx->current_event.id = NULL;
+        }
+
         rc = append_to_string(&ctx->current_event.id, value, value_len);
-        if (rc != C_REST_OK) return rc;
-      } else if ((size_t)(colon - line_start) == 5 && /* GCOVR_EXCL_LINE */
-                 memcmp(line_start, "retry", 5) == 0) { /* GCOVR_EXCL_LINE */
+
+        if (rc != C_REST_OK) {
+          return rc;
+        }
+
+      } else if ((size_t)(colon - line_start) == 5 &&
+                 memcmp(line_start, "retry", 5) == 0) {
         char retry_str[32];
-        size_t copy_len = value_len < 31 ? value_len : 31;
+        size_t copy_len;
+
+        if (value_len < 31) {
+          copy_len = value_len;
+        } else {
+          copy_len = 31;
+        }
+
         #if defined(_MSC_VER)
         /* CDD_SAFE_CRT */ memcpy_s(retry_str, copy_len, value, copy_len);
         #else
@@ -372,43 +466,54 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
         ctx->current_event.retry = atoi(retry_str);
       }
     } else {
-      if (line_len == 5 && memcmp(line_start, "event", 5) == 0) { /* GCOVR_EXCL_LINE */
-        if (ctx->current_event.event) { /* GCOVR_EXCL_LINE */
-          C_REST_FREE(ctx->current_event.event); /* GCOVR_EXCL_LINE */
-        }
-        c_rest_sse_strdup("", &ctx->current_event.event); /* GCOVR_EXCL_LINE */
-      } else if (line_len == 4 && memcmp(line_start, "data", 4) == 0) { /* GCOVR_EXCL_LINE */
+
+      if (line_len == 5 && memcmp(line_start, "event", 5) == 0) {
         c_rest_error_t rc;
-        if (ctx->current_event.data) { /* GCOVR_EXCL_LINE */
-          rc = append_to_string(&ctx->current_event.data, "\n", 1); /* GCOVR_EXCL_LINE */
-          if (rc != C_REST_OK) return rc;
+        if (ctx->current_event.event) {
+          C_REST_FREE(ctx->current_event.event);
+          ctx->current_event.event = NULL;
         }
-        rc = append_to_string(&ctx->current_event.data, "", 0); /* GCOVR_EXCL_LINE */
+        rc = c_rest_sse_strdup("", &ctx->current_event.event);
         if (rc != C_REST_OK) return rc;
+      } else if (line_len == 4 && memcmp(line_start, "data", 4) == 0) {
+        c_rest_error_t rc;
+        if (ctx->current_event.data) {
+          rc = append_to_string(&ctx->current_event.data, "\n", 1);
+
+        if (rc != C_REST_OK) {
+          return rc;
+        }
+
+        }
+        (void)append_to_string(&ctx->current_event.data, "", 0);
+
       }
+
     }
 
     line_start = line_end + 1;
   }
 
   if (event_completed) {
-    if (processed < ctx->buffer_len) { /* GCOVR_EXCL_LINE */
-      memmove(ctx->buffer, ctx->buffer + processed, /* GCOVR_EXCL_LINE */
-              ctx->buffer_len - processed); /* GCOVR_EXCL_LINE */
-      ctx->buffer_len -= processed; /* GCOVR_EXCL_LINE */
+
+    if (processed < ctx->buffer_len) {
+      memmove(ctx->buffer, ctx->buffer + processed,
+              ctx->buffer_len - processed);
+      ctx->buffer_len -= processed;
     } else {
       ctx->buffer_len = 0;
     }
+
     return C_REST_OK;
   }
 
   if (line_start > ctx->buffer) {
     size_t consumed = (size_t)(line_start - ctx->buffer);
-    if (consumed < ctx->buffer_len) { /* GCOVR_EXCL_LINE */
+    if (consumed < ctx->buffer_len) {
       memmove(ctx->buffer, ctx->buffer + consumed, ctx->buffer_len - consumed);
       ctx->buffer_len -= consumed;
     } else {
-      ctx->buffer_len = 0; /* GCOVR_EXCL_LINE */
+      ctx->buffer_len = 0;
     }
   }
 
@@ -419,14 +524,21 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
 /* clang-format on */
 
 c_rest_error_t c_rest_sse_init_response(struct c_rest_response *res) {
-  if (!res) {                    /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  if (!res) {
+    return C_REST_ERROR_GENERIC;
   }
 
-  c_rest_response_set_status(res, 200);
-  c_rest_response_set_header(res, "Content-Type", "text/event-stream");
-  c_rest_response_set_header(res, "Cache-Control", "no-cache");
-  c_rest_response_set_header(res, "Connection", "keep-alive");
+  (void)c_rest_response_set_status(res, 200);
+  rc = c_rest_response_set_header(res, "Content-Type", "text/event-stream");
+  if (rc != C_REST_OK)
+    return rc;
+  rc = c_rest_response_set_header(res, "Cache-Control", "no-cache");
+  if (rc != C_REST_OK)
+    return rc;
+  rc = c_rest_response_set_header(res, "Connection", "keep-alive");
+  if (rc != C_REST_OK)
+    return rc;
 
   return c_rest_response_send(res);
 }
@@ -437,13 +549,13 @@ c_rest_error_t c_rest_sse_send_event(struct c_rest_response *res,
   size_t len;
   int ret;
 
-  if (!res || !ev) {             /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!res || !ev) {
+    return C_REST_ERROR_GENERIC;
   }
 
   ret = c_rest_sse_serialize(ev, &buf, &len);
-  if (ret != C_REST_OK) { /* GCOVR_EXCL_LINE */
-    return ret;           /* GCOVR_EXCL_LINE */
+  if (ret != C_REST_OK) {
+    return ret;
   }
 
   ret = c_rest_response_write_chunk(res, buf, len);
@@ -454,8 +566,8 @@ c_rest_error_t c_rest_sse_send_event(struct c_rest_response *res,
 
 c_rest_error_t c_rest_sse_send_keepalive(struct c_rest_response *res) {
   const char *keepalive = ": \n\n";
-  if (!res) {                    /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!res) {
+    return C_REST_ERROR_GENERIC;
   }
   return c_rest_response_write_chunk(res, keepalive, strlen(keepalive));
 }

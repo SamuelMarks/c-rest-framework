@@ -5,7 +5,13 @@
 #include <string.h>
 /* clang-format on */
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   c_rest_http23_ctx_t *ctx = NULL;
   int res;
   size_t consumed = 0;
@@ -31,14 +37,14 @@ int main(void) {
 
   res = c_rest_http23_is_request_ready(ctx, &is_ready);
   if (is_ready) {
-    c_rest_http23_get_request(ctx, &req);
+    (void)!c_rest_http23_get_request(ctx, &req);
     printf("Request Received: %s %s\n", req->method, req->path);
 
     memset(&res_obj, 0, sizeof(res_obj));
     res_obj.body = "Hello from HTTP/3!";
     res_obj.body_len = strlen(res_obj.body);
 
-    c_rest_http23_format_response(ctx, &res_obj, &out_buf, &out_len);
+    (void)!c_rest_http23_format_response(ctx, &res_obj, &out_buf, &out_len);
     printf("Generated Response Buffer (len=%u):\n%s\n", (unsigned int)out_len,
            out_buf);
 
@@ -48,7 +54,7 @@ int main(void) {
      * handling. */
   }
 
-  c_rest_http23_ctx_destroy(ctx);
+  (void)!c_rest_http23_ctx_destroy(ctx);
   printf("HTTP/2 & HTTP/3 Example Finished.\n");
   return 0;
 }

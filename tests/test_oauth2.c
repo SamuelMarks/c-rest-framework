@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "test_protos.h"
 #include "greatest.h"
 #include "c_rest_crypto.h"
@@ -36,7 +37,7 @@ TEST test_password_hashing(void) {
   res = c_rest_verify_password("my_secure_password", "invalid_hash_string");
   ASSERT_NEQ(0, res);
 
-  free(hash);
+  CRF_FREE(hash);
   PASS();
 }
 
@@ -60,8 +61,8 @@ TEST test_random_string_generation(void) {
    */
   ASSERT(strlen(rand_str1) >= 42);
 
-  free(rand_str1);
-  free(rand_str2);
+  CRF_FREE(rand_str1);
+  CRF_FREE(rand_str2);
   PASS();
 }
 
@@ -81,8 +82,8 @@ TEST test_oauth2_generate_access_token(void) {
   ASSERT(strcmp(token1, token2) != 0);
   ASSERT(strlen(token1) >= 42);
 
-  free(token1);
-  free(token2);
+  CRF_FREE(token1);
+  CRF_FREE(token2);
   PASS();
 }
 
@@ -111,7 +112,7 @@ TEST test_urlencoded_parser(void) {
   ASSERT_NEQ(0, res);
 
   req.body = NULL; /* so cleanup doesn't free string literal */
-  c_rest_request_cleanup(&req);
+  (void)!c_rest_request_cleanup(&req);
   PASS();
 }
 
@@ -135,11 +136,11 @@ TEST test_basic_auth_parser(void) {
   ASSERT_STR_EQ("admin", user);
   ASSERT_STR_EQ("secret", pass);
 
-  free(user);
-  free(pass);
+  CRF_FREE(user);
+  CRF_FREE(pass);
 
   req.headers = NULL;
-  c_rest_request_cleanup(&req);
+  (void)!c_rest_request_cleanup(&req);
   PASS();
 }
 
@@ -160,10 +161,10 @@ TEST test_bearer_token_parser(void) {
   ASSERT_EQ(0, res);
   ASSERT_STR_EQ("abcdef1234567890", token);
 
-  free(token);
+  CRF_FREE(token);
 
   req.headers = NULL;
-  c_rest_request_cleanup(&req);
+  (void)!c_rest_request_cleanup(&req);
   PASS();
 }
 
@@ -201,8 +202,8 @@ TEST test_auth_middleware(void) {
   ASSERT_EQ(1, ret);
   ASSERT_EQ(401, res.status_code);
 
-  c_rest_request_cleanup(&req);
-  c_rest_response_cleanup(&res);
+  (void)!c_rest_request_cleanup(&req);
+  (void)!c_rest_response_cleanup(&res);
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
 
@@ -219,8 +220,8 @@ TEST test_auth_middleware(void) {
     ASSERT_EQ(401, res.status_code);
 
     req.headers = NULL;
-    c_rest_request_cleanup(&req);
-    c_rest_response_cleanup(&res);
+    (void)!c_rest_request_cleanup(&req);
+    (void)!c_rest_response_cleanup(&res);
     memset(&req, 0, sizeof(req));
     memset(&res, 0, sizeof(res));
   }
@@ -238,8 +239,8 @@ TEST test_auth_middleware(void) {
     ASSERT_EQ((void *)0x1234, req.auth_context);
 
     req.headers = NULL;
-    c_rest_request_cleanup(&req);
-    c_rest_response_cleanup(&res);
+    (void)!c_rest_request_cleanup(&req);
+    (void)!c_rest_response_cleanup(&res);
     memset(&req, 0, sizeof(req));
     memset(&res, 0, sizeof(res));
   }
@@ -257,8 +258,8 @@ TEST test_auth_middleware(void) {
     ASSERT_EQ(401, res.status_code);
 
     req.headers = NULL;
-    c_rest_request_cleanup(&req);
-    c_rest_response_cleanup(&res);
+    (void)!c_rest_request_cleanup(&req);
+    (void)!c_rest_response_cleanup(&res);
     memset(&req, 0, sizeof(req));
     memset(&res, 0, sizeof(res));
   }
@@ -276,8 +277,8 @@ TEST test_auth_middleware(void) {
     ASSERT_EQ((void *)0x5678, req.auth_context);
 
     req.headers = NULL;
-    c_rest_request_cleanup(&req);
-    c_rest_response_cleanup(&res);
+    (void)!c_rest_request_cleanup(&req);
+    (void)!c_rest_response_cleanup(&res);
   }
   PASS();
 }

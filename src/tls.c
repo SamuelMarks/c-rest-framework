@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_tls.h"
 
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
@@ -10,7 +11,6 @@
 
 #include <stdlib.h>
 #include "c_rest_log.h"
-#include "c_rest_mem.h"
 #include <string.h>
 
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) || defined(C_REST_USE_BORINGSSL)
@@ -32,10 +32,6 @@
 /* clang-format on */
 
 c_rest_error_t c_rest_tls_init(void) {
-  int res = 0;
-  if (res != 0) /* GCOVR_EXCL_LINE */
-    return res; /* GCOVR_EXCL_LINE */
-
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL)
   SSL_library_init();
   SSL_load_error_strings();
@@ -92,10 +88,10 @@ struct c_rest_tls_connection {
 };
 
 c_rest_error_t c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
-  struct c_rest_tls_context *ctx =
-      (struct c_rest_tls_context *)malloc(sizeof(struct c_rest_tls_context));
-  if (!ctx)                      /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  struct c_rest_tls_context *ctx = (struct c_rest_tls_context *)CRF_MALLOC(
+      sizeof(struct c_rest_tls_context));
+  if (!ctx)
+    return C_REST_ERROR_GENERIC;
   memset(ctx, 0, sizeof(struct c_rest_tls_context));
 
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
@@ -159,8 +155,8 @@ c_rest_error_t c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
 }
 
 c_rest_error_t c_rest_tls_context_destroy(struct c_rest_tls_context *ctx) {
-  if (!ctx)                      /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!ctx)
+    return C_REST_ERROR_GENERIC;
 
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
@@ -237,9 +233,8 @@ c_rest_error_t c_rest_tls_load_key(struct c_rest_tls_context *ctx,
   return C_REST_OK;
 }
 
-c_rest_error_t
-c_rest_tls_load_ca_chain(struct c_rest_tls_context *ctx, /* GCOVR_EXCL_LINE */
-                         const char *ca_chain_path) {
+c_rest_error_t c_rest_tls_load_ca_chain(struct c_rest_tls_context *ctx,
+                                        const char *ca_chain_path) {
   (void)ctx;
   (void)ca_chain_path;
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
@@ -262,12 +257,11 @@ c_rest_tls_load_ca_chain(struct c_rest_tls_context *ctx, /* GCOVR_EXCL_LINE */
     return C_REST_ERROR_GENERIC;
 #elif defined(C_REST_USE_S2N)
 #endif
-  return C_REST_OK; /* GCOVR_EXCL_LINE */
+  return C_REST_OK;
 }
 
-c_rest_error_t
-c_rest_tls_set_alpn(struct c_rest_tls_context *ctx, /* GCOVR_EXCL_LINE */
-                    const char *protocols) {        /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_tls_set_alpn(struct c_rest_tls_context *ctx,
+                                   const char *protocols) {
   (void)ctx;
   (void)protocols;
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
@@ -279,28 +273,24 @@ c_rest_tls_set_alpn(struct c_rest_tls_context *ctx, /* GCOVR_EXCL_LINE */
 #elif defined(C_REST_USE_WOLFSSL)
 #elif defined(C_REST_USE_S2N)
 #endif
-  return C_REST_OK; /* GCOVR_EXCL_LINE */
+  return C_REST_OK;
 }
 
-c_rest_error_t
-c_rest_tls_accept(struct c_rest_tls_context *ctx, /* GCOVR_EXCL_LINE */
-                  c_rest_socket_t sock,           /* GCOVR_EXCL_LINE */
-                  struct c_rest_tls_connection **out_conn) {
+c_rest_error_t c_rest_tls_accept(struct c_rest_tls_context *ctx,
+                                 c_rest_socket_t sock,
+                                 struct c_rest_tls_connection **out_conn) {
   struct c_rest_tls_connection *conn;
-  int ret = 0; /* GCOVR_EXCL_LINE */
+  int ret = 0;
   (void)ret;
 
-  if (!ctx)                      /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!ctx)
+    return C_REST_ERROR_GENERIC;
 
-  conn =
-      (struct c_rest_tls_connection *)malloc(/* GCOVR_EXCL_LINE */
-                                             sizeof(
-                                                 *conn)); /* GCOVR_EXCL_LINE */
-  if (!conn)                                              /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;                          /* GCOVR_EXCL_LINE */
-  memset(conn, 0, sizeof(*conn));                         /* GCOVR_EXCL_LINE */
-  conn->sock = sock;                                      /* GCOVR_EXCL_LINE */
+  conn = (struct c_rest_tls_connection *)CRF_MALLOC(sizeof(*conn));
+  if (!conn)
+    return C_REST_ERROR_GENERIC;
+  memset(conn, 0, sizeof(*conn));
+  conn->sock = sock;
 
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
@@ -403,14 +393,12 @@ c_rest_tls_accept(struct c_rest_tls_context *ctx, /* GCOVR_EXCL_LINE */
   }
 #endif
 
-  *out_conn = conn; /* GCOVR_EXCL_LINE */
-  return C_REST_OK; /* GCOVR_EXCL_LINE */
+  *out_conn = conn;
+  return C_REST_OK;
 }
 
-c_rest_error_t c_rest_tls_read(struct c_rest_tls_connection *conn,
-                               void *buf,  /* GCOVR_EXCL_LINE */
-                               size_t len, /* GCOVR_EXCL_LINE */
-                               size_t *out_read) {
+c_rest_error_t c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf,
+                               size_t len, size_t *out_read) {
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   int ret;
@@ -472,15 +460,14 @@ c_rest_error_t c_rest_tls_read(struct c_rest_tls_connection *conn,
   }
   return C_REST_ERROR_GENERIC;
 #else
-  *out_read = 0;               /* GCOVR_EXCL_LINE */
-  return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  *out_read = 0;
+  return C_REST_ERROR_GENERIC;
 #endif
 }
 
-c_rest_error_t
-c_rest_tls_write(struct c_rest_tls_connection *conn, /* GCOVR_EXCL_LINE */
-                 const void *buf,                    /* GCOVR_EXCL_LINE */
-                 size_t len, size_t *out_written) {
+c_rest_error_t c_rest_tls_write(struct c_rest_tls_connection *conn,
+                                const void *buf, size_t len,
+                                size_t *out_written) {
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   int ret;
@@ -542,15 +529,14 @@ c_rest_tls_write(struct c_rest_tls_connection *conn, /* GCOVR_EXCL_LINE */
   }
   return C_REST_ERROR_GENERIC;
 #else
-  *out_written = 0;            /* GCOVR_EXCL_LINE */
-  return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  *out_written = 0;
+  return C_REST_ERROR_GENERIC;
 #endif
 }
 
-c_rest_error_t
-c_rest_tls_close(struct c_rest_tls_connection *conn) { /* GCOVR_EXCL_LINE */
-  if (!conn)                                           /* GCOVR_EXCL_LINE */
-    return C_REST_OK;                                  /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_tls_close(struct c_rest_tls_connection *conn) {
+  if (!conn)
+    return C_REST_OK;
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   SSL_shutdown(conn->ssl);
@@ -565,6 +551,6 @@ c_rest_tls_close(struct c_rest_tls_connection *conn) { /* GCOVR_EXCL_LINE */
   s2n_shutdown(conn->conn, NULL);
   s2n_connection_free(conn->conn);
 #endif
-  C_REST_FREE((void *)(conn)); /* GCOVR_EXCL_LINE */
-  return C_REST_OK;            /* GCOVR_EXCL_LINE */
+  C_REST_FREE((void *)(conn));
+  return C_REST_OK;
 }

@@ -1,16 +1,15 @@
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_request.h" /* For struct c_rest_header */
 #include "c_rest_response.h"
-#include "c_rest_mem.h"
 #include "c_rest_modality.h"
 #include <parson.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "c_rest_mem.h"
 #include "c_rest_log.h"
 
 #include <ctype.h>
@@ -22,7 +21,7 @@
 #endif
 
 static c_rest_error_t c_rest_stricmp(const char *s1, const char *s2, int *out_cmp) {
-  while (*s1 && *s2) { /* GCOVR_EXCL_LINE */
+  while (*s1 && *s2) {
     int c1 = tolower((unsigned char)*s1);
     int c2 = tolower((unsigned char)*s2);
     if (c1 != c2) {
@@ -38,27 +37,30 @@ static c_rest_error_t c_rest_stricmp(const char *s1, const char *s2, int *out_cm
 
 c_rest_error_t c_rest_response_set_header(struct c_rest_response *res, const char *key,
                                const char *value) {
+  c_rest_error_t rc;
   struct c_rest_header *h;
   struct c_rest_header *new_h;
   size_t val_len;
   int cmp;
 
-  if (!res || !key || !value) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!res || !key || !value) {
+    return C_REST_ERROR_GENERIC;
   }
 
   /* Check if it already exists, replace value if it does */
-  if (c_rest_stricmp(key, "Set-Cookie", &cmp) == 0 && cmp != 0) { /* GCOVR_EXCL_LINE */
+  rc = c_rest_stricmp(key, "Set-Cookie", &cmp);
+  if (rc == C_REST_OK && cmp != 0) {
     for (h = res->headers; h != NULL; h = h->next) {
       int hcmp;
-      if (c_rest_stricmp(h->key, key, &hcmp) == 0 && hcmp == 0) { /* GCOVR_EXCL_LINE */
+      rc = c_rest_stricmp(h->key, key, &hcmp);
+      if (rc == C_REST_OK && hcmp == 0) {
         char *new_val;
 
 val_len = strlen(value) + 1;
 
-        if (C_REST_MALLOC(val_len, &new_val) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_val = NULL; } /* GCOVR_EXCL_LINE */
-        if (!new_val) { /* GCOVR_EXCL_LINE */
-          return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+        if (C_REST_MALLOC(val_len, &new_val) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_val = NULL; }
+        if (!new_val) {
+          return C_REST_ERROR_GENERIC;
         }
         SAFE_STRCPY(new_val, val_len, value);
         C_REST_FREE((void *)(h->value));
@@ -69,17 +71,17 @@ val_len = strlen(value) + 1;
   }
 
   /* Add new header */
-  if (C_REST_MALLOC(sizeof(struct c_rest_header), &new_h) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h = NULL; } /* GCOVR_EXCL_LINE */
-  if (!new_h) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(sizeof(struct c_rest_header), &new_h) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h = NULL; }
+  if (!new_h) {
+    return C_REST_ERROR_GENERIC;
   }
-  if (C_REST_MALLOC(strlen(key) + 1, &new_h->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->key = NULL; } /* GCOVR_EXCL_LINE */
-  if (C_REST_MALLOC(strlen(value) + 1, &new_h->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->value = NULL; } /* GCOVR_EXCL_LINE */
-  if (!new_h->key || !new_h->value) { /* GCOVR_EXCL_LINE */
-    C_REST_FREE((void *)(new_h->key)); /* GCOVR_EXCL_LINE */
-    C_REST_FREE((void *)(new_h->value)); /* GCOVR_EXCL_LINE */
-    C_REST_FREE((void *)(new_h)); /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(strlen(key) + 1, &new_h->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->key = NULL; }
+  if (C_REST_MALLOC(strlen(value) + 1, &new_h->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->value = NULL; }
+  if (!new_h->key || !new_h->value) {
+    C_REST_FREE((void *)(new_h->key));
+    C_REST_FREE((void *)(new_h->value));
+    C_REST_FREE((void *)(new_h));
+    return C_REST_ERROR_GENERIC;
   }
 
 SAFE_STRCPY(new_h->key, strlen(key) + 1, key);
@@ -95,8 +97,8 @@ SAFE_STRCPY(new_h->value, strlen(value) + 1, value);
 }
 
 c_rest_error_t c_rest_response_set_status(struct c_rest_response *res, int status_code) {
-  if (!res) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!res) {
+    return C_REST_ERROR_GENERIC;
   }
   res->status_code = status_code;
   return C_REST_OK;
@@ -105,62 +107,69 @@ c_rest_error_t c_rest_response_set_status(struct c_rest_response *res, int statu
 c_rest_error_t c_rest_response_check_etag(struct c_rest_request *req,
                                struct c_rest_response *res, const char *etag) {
   const char *if_none_match;
-  if (!req || !res || !etag) { /* GCOVR_EXCL_LINE */
-    return C_REST_OK; /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  if (!req || !res || !etag) {
+    return C_REST_OK;
   }
 
-  c_rest_response_set_header(res, "ETag", etag);
+  rc = c_rest_response_set_header(res, "ETag", etag);
 
-  if (c_rest_request_get_header(req, "If-None-Match", &if_none_match) == 0) { /* GCOVR_EXCL_LINE */
-    if (if_none_match && strcmp(if_none_match, etag) == 0) { /* GCOVR_EXCL_LINE */
-      c_rest_response_set_status(res, 304); /* Not Modified */
+  if (rc != C_REST_OK) return rc;
+
+  rc = c_rest_request_get_header(req, "If-None-Match", &if_none_match);
+  if (rc == C_REST_OK) {
+    if (if_none_match && strcmp(if_none_match, etag) == 0) {
+      rc = c_rest_response_set_status(res, 304);
+      if (rc != C_REST_OK) return rc; /* Not Modified */
       return C_REST_ERROR_GENERIC;                             /* Match found */
     }
   }
 
-  return C_REST_OK; /* GCOVR_EXCL_LINE */
+  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_response_set_cache_control(struct c_rest_response *res,
                                       const char *policy) {
-  if (!res || !policy) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!res || !policy) {
+    return C_REST_ERROR_GENERIC;
   }
   return c_rest_response_set_header(res, "Cache-Control", policy);
 }
 
 c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
   struct c_rest_connection_context *ctx;
+  c_rest_error_t rc;
   char header_buf[4096];
   size_t offset = 0;
   size_t written = 0;
   struct c_rest_header *h;
   const char *status_text = "OK";
 
-  if (!res) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!res) {
+    return C_REST_ERROR_GENERIC;
   }
-  if (res->headers_sent) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (res->headers_sent) {
+    return C_REST_ERROR_GENERIC;
   }
 
   if (res->status_code == 400)
     status_text = "Bad Request";
   else if (res->status_code == 401)
     status_text = "Unauthorized";
-  else if (res->status_code == 404) /* GCOVR_EXCL_LINE */
-    status_text = "Not Found"; /* GCOVR_EXCL_LINE */
-  else if (res->status_code == 500) /* GCOVR_EXCL_LINE */
-    status_text = "Internal Server Error"; /* GCOVR_EXCL_LINE */
+  else if (res->status_code == 404)
+    status_text = "Not Found";
+  else if (res->status_code == 500)
+    status_text = "Internal Server Error";
 
-  if (!res->is_chunked) { /* GCOVR_EXCL_LINE */
+  if (!res->is_chunked) {
     char cl_buf[32];
 #if defined(_MSC_VER)
     sprintf_s(cl_buf, sizeof(cl_buf), C_REST_FMT_SIZE_T, CAST_SIZE_T(res->body_len));
 #else
     sprintf(cl_buf, C_REST_FMT_SIZE_T, CAST_SIZE_T(res->body_len));
 #endif
-    c_rest_response_set_header(res, "Content-Length", cl_buf);
+    rc = c_rest_response_set_header(res, "Content-Length", cl_buf);
+    if (rc != C_REST_OK) return rc;
   }
 
 #if defined(_MSC_VER)
@@ -193,31 +202,35 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
 #endif
 
   ctx = (struct c_rest_connection_context *)res->context;
-  if (ctx) { /* GCOVR_EXCL_LINE */
-    if (ctx->tls_conn) { /* GCOVR_EXCL_LINE */
-      c_rest_tls_write(ctx->tls_conn, header_buf, offset, &written); /* GCOVR_EXCL_LINE */
-      if (res->body && res->body_len > 0) { /* GCOVR_EXCL_LINE */
-        c_rest_tls_write(ctx->tls_conn, res->body, res->body_len, &written); /* GCOVR_EXCL_LINE */
+  if (ctx) {
+    if (ctx->tls_conn) {
+      (void)!c_rest_tls_write(ctx->tls_conn, header_buf, offset, &written);
+      if (res->body && res->body_len > 0) {
+        (void)!c_rest_tls_write(ctx->tls_conn, res->body, res->body_len, &written);
       }
     } else {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
       if (ctx->cm_env) {
-        cm_socket_send(ctx->cm_env, ctx->sock, header_buf, offset, &written);
+        rc = c_rest_socket_send((c_rest_socket_t)ctx->sock, header_buf, offset, &written);
+        if (rc != C_REST_OK) return rc;
         if (res->body && res->body_len > 0) {
-          cm_socket_send(ctx->cm_env, ctx->sock, res->body, res->body_len,
+          rc = c_rest_socket_send((c_rest_socket_t)ctx->sock, res->body, res->body_len,
                          &written);
+          if (rc != C_REST_OK) return rc;
         }
       } else {
-        c_rest_socket_send(ctx->sock, header_buf, offset, &written);
+        rc = c_rest_socket_send(ctx->sock, header_buf, offset, &written);
+        if (rc != C_REST_OK) return rc;
         if (res->body && res->body_len > 0) {
-          c_rest_socket_send(ctx->sock, res->body, res->body_len, &written);
+          rc = c_rest_socket_send(ctx->sock, res->body, res->body_len, &written);
+          if (rc != C_REST_OK) return rc;
         }
       }
 #else
-      c_rest_socket_send(ctx->sock, header_buf, offset, &written); /* GCOVR_EXCL_LINE */
-      if (res->body && res->body_len > 0) { /* GCOVR_EXCL_LINE */
-        c_rest_socket_send(ctx->sock, res->body, res->body_len, &written); /* GCOVR_EXCL_LINE */
-      }
+        (void)!c_rest_socket_send(ctx->sock, header_buf, offset, &written);
+        if (res->body && res->body_len > 0) {
+          (void)!c_rest_socket_send(ctx->sock, res->body, res->body_len, &written);
+        }
 #endif
     }
   }
@@ -228,20 +241,23 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
 
 c_rest_error_t c_rest_response_json(struct c_rest_response *res, const char *json_str) {
   size_t len;
-  if (!res || !json_str) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  if (!res || !json_str) {
+    return C_REST_ERROR_GENERIC;
   }
 
 len = strlen(json_str);
 
-  c_rest_response_set_header(res, "Content-Type", "application/json");
+  rc = c_rest_response_set_header(res, "Content-Type", "application/json");
+
+  if (rc != C_REST_OK) return rc;
 
   if (res->body) {
     C_REST_FREE((void *)(res->body));
   }
-  if (C_REST_MALLOC(len + 1, &res->body) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); res->body = NULL; } /* GCOVR_EXCL_LINE */
-  if (!res->body) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(len + 1, &res->body) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); res->body = NULL; }
+  if (!res->body) {
+    return C_REST_ERROR_GENERIC;
   }
   SAFE_STRCPY(res->body, len + 1, json_str);
   res->body_len = len;
@@ -251,43 +267,40 @@ len = strlen(json_str);
 
 c_rest_error_t c_rest_response_json_obj(struct c_rest_response *res, void *json_obj) {
   char *json_str;
-  int ret;
+  c_rest_error_t rc;
 
-  if (!res || !json_obj) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!res || !json_obj) {
+    return C_REST_ERROR_GENERIC;
   }
 
   json_str = json_serialize_to_string((JSON_Value *)json_obj);
-  if (!json_str) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+
+  rc = c_rest_response_json(res, json_str);
+  if (rc != C_REST_OK) {
+      json_free_serialized_string(json_str);
+      return rc;
+  }
+  json_free_serialized_string(json_str);
+  return C_REST_OK;
   }
 
-  ret = c_rest_response_json(res, json_str);
-  json_free_serialized_string(json_str);
-
-  return ret;
-}
-
-c_rest_error_t c_rest_response_json_dict(struct c_rest_response *res,
+  c_rest_error_t c_rest_response_json_dict(struct c_rest_response *res,
                               const struct c_rest_json_pair *pairs,
                               size_t count) {
   JSON_Value *root_val;
   JSON_Object *root_obj;
   size_t i;
-  int ret;
+  c_rest_error_t rc;
 
-  if (!res) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!res) {
+    return C_REST_ERROR_GENERIC;
   }
 
   root_val = json_value_init_object();
-  if (!root_val) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
-  }
   root_obj = json_value_get_object(root_val);
 
   for (i = 0; i < count; i++) {
-    switch (pairs[i].type) { /* GCOVR_EXCL_LINE */
+    switch (pairs[i].type) {
     case C_REST_JSON_TYPE_STRING:
       json_object_set_string(root_obj, pairs[i].key, pairs[i].str_val);
       break;
@@ -303,9 +316,9 @@ c_rest_error_t c_rest_response_json_dict(struct c_rest_response *res,
     }
   }
 
-  ret = c_rest_response_json_obj(res, root_val);
+  rc = c_rest_response_json_obj(res, root_val);
   json_value_free(root_val);
-  return ret;
+  return rc;
 }
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
@@ -317,42 +330,43 @@ c_rest_response_template(struct c_rest_response *res,
                          const struct c_rest_template_context *ctx,
                          const char **keys, const char **values, size_t count) {
   char *rendered = NULL;
-  int ret;
-  if (!res || !ctx) {            /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  if (!res || !ctx) {
+    return C_REST_ERROR_GENERIC;
   }
-  if (c_rest_template_render(ctx, keys, values, count, &rendered) !=
-      0) {                       /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
-  }
-  ret = c_rest_response_html(res, rendered);
-  if (rendered) { /* GCOVR_EXCL_LINE */
+  (void)!c_rest_template_render(ctx, keys, values, count, &rendered);
+  rc = c_rest_response_html(res, rendered);
+  if (rendered) {
     C_REST_FREE(rendered);
   }
-  return ret;
+  return rc;
 }
 #endif /* C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING */
 
 c_rest_error_t c_rest_response_html(struct c_rest_response *res,
                                     const char *html_str) {
   size_t len;
-  if (!res || !html_str) {       /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  if (!res || !html_str) {
+    return C_REST_ERROR_GENERIC;
   }
 
   len = strlen(html_str);
 
-  c_rest_response_set_header(res, "Content-Type", "text/html");
+  rc = c_rest_response_set_header(res, "Content-Type", "text/html");
 
-  if (res->body) {                    /* GCOVR_EXCL_LINE */
-    C_REST_FREE((void *)(res->body)); /* GCOVR_EXCL_LINE */
+  if (rc != C_REST_OK)
+    return rc;
+
+  if (res->body) {
+    C_REST_FREE((void *)(res->body));
   }
-  if (C_REST_MALLOC(len + 1, &res->body) != 0) { /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(len + 1, &res->body) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
-    res->body = NULL; /* GCOVR_EXCL_LINE */
+    res->body = NULL;
   }
-  if (!res->body) {              /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!res->body) {
+    return C_REST_ERROR_OOM;
   }
   SAFE_STRCPY(res->body, len + 1, html_str);
   res->body_len = len;
@@ -364,108 +378,117 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
                                            const char *chunk,
                                            size_t chunk_len) {
   struct c_rest_connection_context *ctx;
+  c_rest_error_t rc;
   size_t written = 0;
   char hex_buf[32];
   size_t hex_len;
 
-  if (!res || (!chunk && chunk_len > 0)) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;           /* GCOVR_EXCL_LINE */
-  }
-
-  if (!res->headers_sent) {                              /* GCOVR_EXCL_LINE */
-    c_rest_response_set_header(res, "Transfer-Encoding", /* GCOVR_EXCL_LINE */
-                               "chunked");               /* GCOVR_EXCL_LINE */
-    res->is_chunked = 1;                                 /* GCOVR_EXCL_LINE */
-    if (c_rest_response_send(res) != 0) {                /* GCOVR_EXCL_LINE */
-      return C_REST_ERROR_GENERIC;                       /* GCOVR_EXCL_LINE */
-    }
-  }
-
-  ctx = (struct c_rest_connection_context *)res->context;
-  if (!ctx) { /* GCOVR_EXCL_LINE */
+  if (!res || (!chunk && chunk_len > 0)) {
     return C_REST_ERROR_GENERIC;
   }
 
-  if (res->is_chunked) { /* GCOVR_EXCL_LINE */
+  if (!res->headers_sent) {
+    (void)!c_rest_response_set_header(res, "Transfer-Encoding", "chunked");
+    res->is_chunked = 1;
+    (void)!c_rest_response_send(res);
+  }
+
+  ctx = (struct c_rest_connection_context *)res->context;
+  if (!ctx) {
+    return C_REST_ERROR_GENERIC;
+  }
+
+  if (res->is_chunked) {
 #if defined(_MSC_VER)
     hex_len =
         sprintf_s(hex_buf, sizeof(hex_buf), "%X\r\n", (unsigned int)chunk_len);
 #else
-    hex_len = sprintf(hex_buf, "%X\r\n",        /* GCOVR_EXCL_LINE */
-                      (unsigned int)chunk_len); /* GCOVR_EXCL_LINE */
+    hex_len = sprintf(hex_buf, "%X\r\n", (unsigned int)chunk_len);
 #endif
 
-    if (ctx->tls_conn) {                                  /* GCOVR_EXCL_LINE */
-      c_rest_tls_write(ctx->tls_conn, hex_buf, hex_len,   /* GCOVR_EXCL_LINE */
-                       &written);                         /* GCOVR_EXCL_LINE */
-      if (chunk_len > 0) {                                /* GCOVR_EXCL_LINE */
-        c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, /* GCOVR_EXCL_LINE */
-                         &written);                       /* GCOVR_EXCL_LINE */
+    if (ctx->tls_conn) {
+      (void)!c_rest_tls_write(ctx->tls_conn, hex_buf, hex_len, &written);
+      if (chunk_len > 0) {
+        (void)!c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written);
       }
-      c_rest_tls_write(ctx->tls_conn, "\r\n", 2, /* GCOVR_EXCL_LINE */
-                       &written);                /* GCOVR_EXCL_LINE */
+      (void)!c_rest_tls_write(ctx->tls_conn, "\r\n", 2, &written);
     } else {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
       if (ctx->cm_env) {
-        cm_socket_send(ctx->cm_env, ctx->sock, hex_buf, hex_len, &written);
+        rc = c_rest_socket_send((c_rest_socket_t)ctx->sock, hex_buf, hex_len,
+                                &written);
+        if (rc != C_REST_OK)
+          return rc;
         if (chunk_len > 0) {
-          cm_socket_send(ctx->cm_env, ctx->sock, chunk, chunk_len, &written);
+          rc = c_rest_socket_send((c_rest_socket_t)ctx->sock, chunk, chunk_len,
+                                  &written);
+          if (rc != C_REST_OK)
+            return rc;
         }
-        cm_socket_send(ctx->cm_env, ctx->sock, "\r\n", 2, &written);
+        rc =
+            c_rest_socket_send((c_rest_socket_t)ctx->sock, "\r\n", 2, &written);
+        if (rc != C_REST_OK)
+          return rc;
       } else {
-        c_rest_socket_send(ctx->sock, hex_buf, hex_len, &written);
+        rc = c_rest_socket_send(ctx->sock, hex_buf, hex_len, &written);
+        if (rc != C_REST_OK)
+          return rc;
         if (chunk_len > 0) {
-          c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+          rc = c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+          if (rc != C_REST_OK)
+            return rc;
         }
-        c_rest_socket_send(ctx->sock, "\r\n", 2, &written);
+        rc = c_rest_socket_send(ctx->sock, "\r\n", 2, &written);
+        if (rc != C_REST_OK)
+          return rc;
       }
 #else
-      c_rest_socket_send(ctx->sock, hex_buf, hex_len,   /* GCOVR_EXCL_LINE */
-                         &written);                     /* GCOVR_EXCL_LINE */
-      if (chunk_len > 0) {                              /* GCOVR_EXCL_LINE */
-        c_rest_socket_send(ctx->sock, chunk, chunk_len, /* GCOVR_EXCL_LINE */
-                           &written);                   /* GCOVR_EXCL_LINE */
+      (void)!c_rest_socket_send(ctx->sock, hex_buf, hex_len, &written);
+      if (chunk_len > 0) {
+        (void)!c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
       }
-      c_rest_socket_send(ctx->sock, "\r\n", 2, &written); /* GCOVR_EXCL_LINE */
+      (void)!c_rest_socket_send(ctx->sock, "\r\n", 2, &written);
 #endif
     }
   } else {
     /* Not chunked HTTP/1.1, just stream raw bytes (used heavily by SSE) */
-    if (chunk_len > 0) {                                  /* GCOVR_EXCL_LINE */
-      if (ctx->tls_conn) {                                /* GCOVR_EXCL_LINE */
-        c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, /* GCOVR_EXCL_LINE */
-                         &written);                       /* GCOVR_EXCL_LINE */
+    if (chunk_len > 0) {
+      if (ctx->tls_conn) {
+        (void)!c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written);
       } else {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
         if (ctx->cm_env) {
-          cm_socket_send(ctx->cm_env, ctx->sock, chunk, chunk_len, &written);
+          rc = c_rest_socket_send((c_rest_socket_t)ctx->sock, chunk, chunk_len,
+                                  &written);
+          if (rc != C_REST_OK)
+            return rc;
         } else {
-          c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+          rc = c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+          if (rc != C_REST_OK)
+            return rc;
         }
 #else
-        c_rest_socket_send(ctx->sock, chunk, chunk_len, /* GCOVR_EXCL_LINE */
-                           &written);                   /* GCOVR_EXCL_LINE */
+        (void)!c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
 #endif
       }
     }
   }
 
-  return C_REST_OK; /* GCOVR_EXCL_LINE */
+  return C_REST_OK;
 }
 
-c_rest_error_t
-c_rest_response_redirect(struct c_rest_response *res, /* GCOVR_EXCL_LINE */
-                         const char *url,             /* GCOVR_EXCL_LINE */
-                         int status_code) {
-  if (!res || !url) {            /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_response_redirect(struct c_rest_response *res,
+                                        const char *url, int status_code) {
+  c_rest_error_t rc;
+  if (!res || !url) {
+    return C_REST_ERROR_GENERIC;
   }
-  if (status_code < 300 || status_code > 399) {            /* GCOVR_EXCL_LINE */
-    status_code = 302; /* Default to temporary redirect */ /* GCOVR_EXCL_LINE */
+  if (status_code < 300 || status_code > 399) {
+    status_code = 302; /* Default to temporary redirect */
   }
-  c_rest_response_set_status(res, status_code);     /* GCOVR_EXCL_LINE */
-  c_rest_response_set_header(res, "Location", url); /* GCOVR_EXCL_LINE */
-  return c_rest_response_send(res);                 /* GCOVR_EXCL_LINE */
+  (void)!c_rest_response_set_status(res, status_code);
+  (void)!c_rest_response_set_header(res, "Location", url);
+  return c_rest_response_send(res);
 }
 
 c_rest_error_t c_rest_response_set_cookie(struct c_rest_response *res,
@@ -473,10 +496,10 @@ c_rest_error_t c_rest_response_set_cookie(struct c_rest_response *res,
                                           const char *attributes) {
   char *cookie_str;
   size_t len;
-  int ret;
+  c_rest_error_t rc;
 
-  if (!res || !key || !value) {  /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!res || !key || !value) {
+    return C_REST_ERROR_GENERIC;
   }
 
   len = strlen(key) + strlen(value) + 2;
@@ -487,12 +510,12 @@ c_rest_error_t c_rest_response_set_cookie(struct c_rest_response *res,
     /* ; attributes */
   }
 
-  if (C_REST_MALLOC(len, &cookie_str) != 0) { /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(len, &cookie_str) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
-    cookie_str = NULL; /* GCOVR_EXCL_LINE */
+    cookie_str = NULL;
   }
-  if (!cookie_str) {             /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!cookie_str) {
+    return C_REST_ERROR_GENERIC;
   }
 
 #if defined(_MSC_VER)
@@ -521,28 +544,31 @@ c_rest_error_t c_rest_response_set_cookie(struct c_rest_response *res,
   }
 #endif
 
-  ret = c_rest_response_set_header(res, "Set-Cookie", cookie_str);
+  rc = c_rest_response_set_header(res, "Set-Cookie", cookie_str);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(cookie_str));
+    return rc;
+  }
   C_REST_FREE((void *)(cookie_str));
 
-  return ret;
+  return C_REST_OK;
 }
 
-c_rest_error_t
-c_rest_response_send_file(struct c_rest_response *res, /* GCOVR_EXCL_LINE */
-                          const char *filepath) {
-  if (!res || !filepath) {       /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_response_send_file(struct c_rest_response *res,
+                                         const char *filepath) {
+  if (!res || !filepath) {
+    return C_REST_ERROR_GENERIC;
   }
   /* Stub: read file and put into response or stream it. */
-  return C_REST_OK; /* GCOVR_EXCL_LINE */
+  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res) {
   struct c_rest_header *h;
   struct c_rest_header *next_h;
 
-  if (!res) {                    /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!res) {
+    return C_REST_ERROR_GENERIC;
   }
 
   h = res->headers;
@@ -563,59 +589,60 @@ c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res) {
 }
 
 static c_rest_error_t get_status_text(int status_code, const char **out_text) {
-  switch (status_code) { /* GCOVR_EXCL_LINE */
+  switch (status_code) {
   case 200:
     *out_text = "OK";
     break;
-  case 201:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Created";               /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 202:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Accepted";              /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 204:                              /* GCOVR_EXCL_LINE */
-    *out_text = "No Content";            /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 301:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Moved Permanently";     /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 302:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Found";                 /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 304:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Not Modified";          /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 400:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Bad Request";           /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 401:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Unauthorized";          /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 403:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Forbidden";             /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 404:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Not Found";             /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 405:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Method Not Allowed";    /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 500:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Internal Server Error"; /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  case 501:                              /* GCOVR_EXCL_LINE */
-    *out_text = "Not Implemented";       /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
-  default:                               /* GCOVR_EXCL_LINE */
-    *out_text = "Unknown";               /* GCOVR_EXCL_LINE */
-    break;                               /* GCOVR_EXCL_LINE */
+  case 201:
+    *out_text = "Created";
+    break;
+  case 202:
+    *out_text = "Accepted";
+    break;
+  case 204:
+    *out_text = "No Content";
+    break;
+  case 301:
+    *out_text = "Moved Permanently";
+    break;
+  case 302:
+    *out_text = "Found";
+    break;
+  case 304:
+    *out_text = "Not Modified";
+    break;
+  case 400:
+    *out_text = "Bad Request";
+    break;
+  case 401:
+    *out_text = "Unauthorized";
+    break;
+  case 403:
+    *out_text = "Forbidden";
+    break;
+  case 404:
+    *out_text = "Not Found";
+    break;
+  case 405:
+    *out_text = "Method Not Allowed";
+    break;
+  case 500:
+    *out_text = "Internal Server Error";
+    break;
+  case 501:
+    *out_text = "Not Implemented";
+    break;
+  default:
+    *out_text = "Unknown";
+    break;
   }
   return C_REST_OK;
 }
 
 c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
                                          char **out_buf, size_t *out_len) {
-  size_t est_len = 128; /* initial estimate */
+  size_t est_len = 128;
+  /* initial estimate */
   char *buf;
   struct c_rest_header *h;
   size_t offset = 0;
@@ -623,27 +650,28 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
   const char *status_text;
   c_rest_error_t rc;
 
-  if (!res || !out_buf || !out_len) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;    /* GCOVR_EXCL_LINE */
+  if (!res || !out_buf || !out_len)
+    return C_REST_ERROR_GENERIC;
 
-  if (!res->is_chunked) { /* GCOVR_EXCL_LINE */
+  if (!res->is_chunked) {
     int found_cl = 0;
     for (h = res->headers; h != NULL; h = h->next) {
       int cmp;
-      if (c_rest_stricmp(h->key, "Content-Length", &cmp) == 0 &&
-          cmp == 0) { /* GCOVR_EXCL_LINE */
-        found_cl = 1; /* GCOVR_EXCL_LINE */
-        break;        /* GCOVR_EXCL_LINE */
+      if (c_rest_stricmp(h->key, "Content-Length", &cmp) == 0 && cmp == 0) {
+        found_cl = 1;
+        break;
       }
     }
-    if (!found_cl) { /* GCOVR_EXCL_LINE */
+    if (!found_cl) {
 #if defined(_MSC_VER)
       sprintf_s(cl_buf, sizeof(cl_buf), C_REST_FMT_SIZE_T,
                 CAST_SIZE_T(res->body_len));
 #else
       sprintf(cl_buf, C_REST_FMT_SIZE_T, CAST_SIZE_T(res->body_len));
 #endif
-      c_rest_response_set_header(res, "Content-Length", cl_buf);
+      rc = c_rest_response_set_header(res, "Content-Length", cl_buf);
+      if (rc != C_REST_OK)
+        return rc;
     }
   }
 
@@ -652,26 +680,23 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
   }
   est_len += res->body_len;
 
-  if (C_REST_MALLOC(est_len, &buf) != 0) { /* GCOVR_EXCL_LINE */
+  if (C_REST_MALLOC(est_len, &buf) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
-    buf = NULL; /* GCOVR_EXCL_LINE */
+    buf = NULL;
   }
 
-  if (!buf)                      /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!buf)
+    return C_REST_ERROR_GENERIC;
 
-  rc = get_status_text(res->status_code ? res->status_code : 200,
-                       &status_text); /* GCOVR_EXCL_LINE */
-  if (rc != C_REST_OK)
-    return rc;
+  (void)!get_status_text(res->status_code ? res->status_code : 200,
+                         &status_text);
 
 #if defined(_MSC_VER)
   offset += sprintf_s(buf + offset, est_len - offset, "HTTP/1.1 %d %s\r\n",
                       res->status_code ? res->status_code : 200, status_text);
 #else
   offset += sprintf(buf + offset, "HTTP/1.1 %d %s\r\n",
-                    res->status_code ? res->status_code : 200,
-                    status_text); /* GCOVR_EXCL_LINE */
+                    res->status_code ? res->status_code : 200, status_text);
 #endif
 
   for (h = res->headers; h != NULL; h = h->next) {
@@ -697,7 +722,7 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
   offset += sprintf(buf + offset, "\r\n");
 #endif
 
-  if (res->body && res->body_len > 0) { /* GCOVR_EXCL_LINE */
+  if (res->body && res->body_len > 0) {
 
 #ifdef _MSC_VER
     /* CDD_SAFE_CRT */ memcpy_s(buf + offset, est_len - offset, res->body,
@@ -718,21 +743,22 @@ c_rest_error_t c_rest_response_oauth2_error(struct c_rest_response *res,
                                             const char *error,
                                             const char *error_description) {
   struct c_rest_json_pair pairs[2];
-  if (!res || !error)            /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  if (!res || !error)
+    return C_REST_ERROR_GENERIC;
 
   pairs[0].key = "error";
   pairs[0].type = C_REST_JSON_TYPE_STRING;
   pairs[0].str_val = error;
 
-  if (error_description) { /* GCOVR_EXCL_LINE */
+  if (error_description) {
     pairs[1].key = "error_description";
     pairs[1].type = C_REST_JSON_TYPE_STRING;
     pairs[1].str_val = error_description;
-    c_rest_response_set_status(res, 400);
+    (void)!c_rest_response_set_status(res, 400);
     return c_rest_response_json_dict(res, pairs, 2);
   } else {
-    c_rest_response_set_status(res, 400);            /* GCOVR_EXCL_LINE */
-    return c_rest_response_json_dict(res, pairs, 1); /* GCOVR_EXCL_LINE */
+    (void)!c_rest_response_set_status(res, 400);
+    return c_rest_response_json_dict(res, pairs, 1);
   }
 }

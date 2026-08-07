@@ -1,8 +1,8 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "oauth2_client.h"
 #include "c_rest_client.h"
-#include "c_rest_mem.h"
 #include "c_rest_string.h"
 
 #include "parson.h"
@@ -24,9 +24,9 @@ c_rest_error_t oauth2_client_init(const char *token_url, const char *client_id,
     return 1;
   }
 
-  g_token_url = (char *)malloc(strlen(token_url) + 1);
-  g_client_id = (char *)malloc(strlen(client_id) + 1);
-  g_client_secret = (char *)malloc(strlen(client_secret) + 1);
+  g_token_url = (char *)CRF_MALLOC(strlen(token_url) + 1);
+  g_client_id = (char *)CRF_MALLOC(strlen(client_id) + 1);
+  g_client_secret = (char *)CRF_MALLOC(strlen(client_secret) + 1);
 
   if (!g_token_url || !g_client_id || !g_client_secret) {
     oauth2_client_cleanup();
@@ -88,7 +88,8 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
 
   /* Basic auth header as an alternative or additional requirement depending on
    * server */
-  c_rest_client_build_auth_basic(g_client_id, g_client_secret, &auth_header);
+  (void)!c_rest_client_build_auth_basic(g_client_id, g_client_secret,
+                                        &auth_header);
 
   headers[0].key = "Authorization";
   headers[0].value = auth_header ? auth_header : "";
@@ -97,30 +98,30 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
                                      auth_header ? 1 : 0, fields, 5, &res);
 
   if (auth_header) {
-    free(auth_header);
+    CRF_FREE(auth_header);
   }
 
   if (err != 0 || res == NULL) {
     if (res)
-      c_rest_client_response_free(res);
+      (void)!c_rest_client_response_free(res);
     return 1;
   }
 
   if (res->status_code != 200) {
-    c_rest_client_response_free(res);
+    (void)!c_rest_client_response_free(res);
     return 1;
   }
 
   if (c_rest_client_response_parse_json(res, (void **)&json_val) != 0 ||
       json_val == NULL) {
-    c_rest_client_response_free(res);
+    (void)!c_rest_client_response_free(res);
     return 1;
   }
 
   json_obj = json_value_get_object(json_val);
   if (json_obj == NULL) {
     json_value_free(json_val);
-    c_rest_client_response_free(res);
+    (void)!c_rest_client_response_free(res);
     return 1;
   }
 
@@ -129,14 +130,14 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
 
   if (access_token == NULL) {
     json_value_free(json_val);
-    c_rest_client_response_free(res);
+    (void)!c_rest_client_response_free(res);
     return 1;
   }
 
-  *out_access_token = (char *)malloc(strlen(access_token) + 1);
+  *out_access_token = (char *)CRF_MALLOC(strlen(access_token) + 1);
   if (*out_access_token == NULL) {
     json_value_free(json_val);
-    c_rest_client_response_free(res);
+    (void)!c_rest_client_response_free(res);
     return 1;
   }
 
@@ -149,26 +150,26 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
   *out_expires_in = expires_in;
 
   json_value_free(json_val);
-  c_rest_client_response_free(res);
+  (void)!c_rest_client_response_free(res);
 
   return 0;
 }
 
 c_rest_error_t oauth2_client_cleanup(void) {
   if (g_token_url) {
-    free(g_token_url);
+    CRF_FREE(g_token_url);
     g_token_url = NULL;
   }
   if (g_client_id) {
-    free(g_client_id);
+    CRF_FREE(g_client_id);
     g_client_id = NULL;
   }
   if (g_client_secret) {
-    free(g_client_secret);
+    CRF_FREE(g_client_secret);
     g_client_secret = NULL;
   }
   if (g_client_ctx) {
-    c_rest_client_destroy(g_client_ctx);
+    (void)!c_rest_client_destroy(g_client_ctx);
     g_client_ctx = NULL;
   }
   return 0;

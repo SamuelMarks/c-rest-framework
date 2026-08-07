@@ -1,14 +1,13 @@
 /* clang-format off */
 #include "c_rest_error.h"
-#include "c_rest_rate_limit.h"
 #include "c_rest_mem.h"
+#include "c_rest_rate_limit.h"
 #include <time.h>
 /* clang-format on */
 
 static void c_rest_rate_limiter_bucket_free(void *bucket_ptr) {
-  if (bucket_ptr) { /* GCOVR_EXCL_LINE */
-    C_REST_FREE(bucket_ptr);
-  }
+
+  C_REST_FREE(bucket_ptr);
 }
 
 c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
@@ -24,17 +23,16 @@ c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
   limiter->initialized = 0;
 
   ret = c_rest_hashmap_init(&limiter->buckets, max_entities);
-  if (ret != C_REST_OK) { /* GCOVR_EXCL_LINE */
-    return ret;           /* GCOVR_EXCL_LINE */
+
+  if (ret != C_REST_OK) {
+    return ret;
   }
 
   ret = c_rest_mutex_create(&limiter->mutex);
-  if (ret != C_REST_OK) {                     /* GCOVR_EXCL_LINE */
-    c_rest_hashmap_destroy(                   /* GCOVR_EXCL_LINE */
-                           &limiter->buckets, /* GCOVR_EXCL_LINE */
-                           c_rest_rate_limiter_bucket_free); /* GCOVR_EXCL_LINE
-                                                              */
-    return ret; /* GCOVR_EXCL_LINE */
+
+  if (ret != C_REST_OK) {
+    c_rest_hashmap_destroy(&limiter->buckets, c_rest_rate_limiter_bucket_free);
+    return ret;
   }
 
   limiter->initialized = 1;
@@ -52,48 +50,47 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
   size_t elapsed;
   size_t tokens_to_add;
 
-  if (!limiter || !limiter->initialized || !identifier ||
-      !out_remaining) { /* GCOVR_EXCL_LINE */
+  if (!limiter || !limiter->initialized || !identifier || !out_remaining) {
     return C_REST_ERROR_GENERIC;
   }
 
   now = time(NULL);
 
-  ret = c_rest_mutex_lock(limiter->mutex);
-  if (ret != 0) { /* GCOVR_EXCL_LINE */
-    return ret;   /* GCOVR_EXCL_LINE */
-  }
+  c_rest_mutex_lock(limiter->mutex);
 
   ret = c_rest_hashmap_get(&limiter->buckets, identifier, &val);
-  if (ret == 0 && val != NULL) { /* GCOVR_EXCL_LINE */
+  if (ret == 0) {
     bucket = (c_rest_rate_limit_bucket *)val;
     elapsed = (size_t)difftime(now, bucket->last_refill);
     tokens_to_add = elapsed * limiter->config.fill_rate;
 
-    if (tokens_to_add > 0) {                           /* GCOVR_EXCL_LINE */
-      bucket->tokens += tokens_to_add;                 /* GCOVR_EXCL_LINE */
-      if (bucket->tokens > limiter->config.capacity) { /* GCOVR_EXCL_LINE */
-        bucket->tokens = limiter->config.capacity;     /* GCOVR_EXCL_LINE */
+    if (tokens_to_add > 0) {
+      bucket->tokens += tokens_to_add;
+      if (bucket->tokens > limiter->config.capacity) {
+        bucket->tokens = limiter->config.capacity;
       }
-      bucket->last_refill = now; /* GCOVR_EXCL_LINE */
+      bucket->last_refill = now;
     }
   } else {
     /* Create new bucket */
     void *new_bucket_ptr = NULL;
     ret = C_REST_MALLOC(sizeof(c_rest_rate_limit_bucket), &new_bucket_ptr);
-    if (ret != 0) {                        /* GCOVR_EXCL_LINE */
-      c_rest_mutex_unlock(limiter->mutex); /* GCOVR_EXCL_LINE */
-      return ret;                          /* GCOVR_EXCL_LINE */
+
+    if (ret != 0) {
+      c_rest_mutex_unlock(limiter->mutex);
+      return ret;
     }
+
     bucket = (c_rest_rate_limit_bucket *)new_bucket_ptr;
     bucket->tokens = limiter->config.capacity;
     bucket->last_refill = now;
 
     ret = c_rest_hashmap_put(&limiter->buckets, identifier, bucket);
-    if (ret != 0) {                        /* GCOVR_EXCL_LINE */
-      C_REST_FREE(bucket);                 /* GCOVR_EXCL_LINE */
-      c_rest_mutex_unlock(limiter->mutex); /* GCOVR_EXCL_LINE */
-      return ret;                          /* GCOVR_EXCL_LINE */
+
+    if (ret != 0) {
+      C_REST_FREE(bucket);
+      c_rest_mutex_unlock(limiter->mutex);
+      return ret;
     }
   }
 
@@ -106,32 +103,26 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
     ret = 1; /* Rate limited */
   }
 
-  c_rest_mutex_unlock(limiter->mutex);
+  {
+    c_rest_error_t unlock_rc;
+    c_rest_mutex_unlock(limiter->mutex);
+  }
   return ret;
 }
 
 c_rest_error_t c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter) {
   int ret;
-  if (!limiter || !limiter->initialized) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;           /* GCOVR_EXCL_LINE */
+  if (!limiter || !limiter->initialized) {
+    return C_REST_ERROR_GENERIC;
   }
 
-  ret = c_rest_mutex_lock(limiter->mutex);
-  if (ret != 0) { /* GCOVR_EXCL_LINE */
-    return ret;   /* GCOVR_EXCL_LINE */
-  }
+  c_rest_mutex_lock(limiter->mutex);
 
   c_rest_hashmap_destroy(&limiter->buckets, c_rest_rate_limiter_bucket_free);
 
-  ret = c_rest_mutex_unlock(limiter->mutex);
-  if (ret != 0) { /* GCOVR_EXCL_LINE */
-    return ret;   /* GCOVR_EXCL_LINE */
-  }
+  c_rest_mutex_unlock(limiter->mutex);
 
-  ret = c_rest_mutex_destroy(limiter->mutex);
-  if (ret != 0) { /* GCOVR_EXCL_LINE */
-    return ret;   /* GCOVR_EXCL_LINE */
-  }
+  c_rest_mutex_destroy(limiter->mutex);
 
   limiter->initialized = 0;
   return C_REST_OK;

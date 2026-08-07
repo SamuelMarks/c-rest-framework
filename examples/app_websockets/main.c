@@ -7,6 +7,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+
 #include <string.h>
 /* clang-format on */
 
@@ -35,7 +37,13 @@ static c_rest_error_t my_ws_on_close(struct c_rest_request *req,
   return C_REST_OK;
 }
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   int res;
@@ -43,6 +51,8 @@ int main(void) {
   printf("Starting WebSocket Server Example...\n");
 
   /* 1. Initialize context */
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   res = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
   if (res != 0) {
     printf("Failed to init context\n");
@@ -53,7 +63,7 @@ int main(void) {
   res = c_rest_router_init(&router);
   if (res != 0) {
     printf("Failed to init router\n");
-    c_rest_destroy(ctx);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
@@ -62,8 +72,8 @@ int main(void) {
                                     my_ws_on_close, NULL);
   if (res != 0) {
     printf("Failed to add WebSocket route\n");
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    (void)!c_rest_router_destroy(router);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
@@ -72,11 +82,11 @@ int main(void) {
 
   /* 4. Run the server loop (simulated by modality for now) */
   printf("Server listening on ws://localhost:8080/ws\n");
-  c_rest_run(ctx);
+  (void)!c_rest_run(ctx);
 
   /* 5. Cleanup */
-  c_rest_router_destroy(router);
-  c_rest_destroy(ctx);
+  (void)!c_rest_router_destroy(router);
+  (void)!c_rest_destroy(ctx);
 
   printf("Server stopped.\n");
   return 0;

@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_request.h"
 #include "c_rest_response.h"
 #include "c_rest_router.h"
@@ -10,7 +11,6 @@
 
 #include <stdlib.h>
 #include "c_rest_log.h"
-#include "c_rest_mem.h"
 #include <string.h>
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
@@ -67,17 +67,15 @@ static c_rest_error_t create_node(const char *segment, size_t len,
                        struct c_rest_route_node **out_node) {
   struct c_rest_route_node *node;
 
-  if (!out_node) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
-  node = (struct c_rest_route_node *)malloc(sizeof(struct c_rest_route_node));
-  if (!node) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
-  node->segment = (char *)malloc(len + 1);
-  if (!node->segment) { /* GCOVR_EXCL_LINE */
-    C_REST_FREE((void *)(node)); /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  node = (struct c_rest_route_node *)CRF_MALLOC(sizeof(struct c_rest_route_node));
+  if (!node) return C_REST_ERROR_GENERIC;
+
+  node->segment = (char *)CRF_MALLOC(len + 1);
+  if (!node->segment) {
+    C_REST_FREE((void *)(node));
+    return C_REST_ERROR_GENERIC;
   }
   #if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(node->segment, len, segment, len);
@@ -92,16 +90,16 @@ static c_rest_error_t create_node(const char *segment, size_t len,
 
   if (len > 0 && node->segment[0] == ':') {
     node->is_var = 1;
-    node->var_name = (char *)malloc(len);
-    if (node->var_name) { /* GCOVR_EXCL_LINE */
+    node->var_name = (char *)CRF_MALLOC(len);
+    if (node->var_name) {
 #if defined(_MSC_VER)
       strcpy_s(node->var_name, len, node->segment + 1);
 #else
       strcpy(node->var_name, node->segment + 1);
 #endif
     }
-  } else if (len > 0 && node->segment[0] == '*') { /* GCOVR_EXCL_LINE */
-    node->is_wildcard = 1; /* GCOVR_EXCL_LINE */
+  } else if (len > 0 && node->segment[0] == '*') {
+    node->is_wildcard = 1;
   }
 
   node->children = NULL;
@@ -114,10 +112,10 @@ static c_rest_error_t create_node(const char *segment, size_t len,
 
 static c_rest_error_t free_node(struct c_rest_route_node *node) {
   struct c_rest_route_handler *h;
-  if (!node)
-    return C_REST_ERROR_GENERIC;
+  c_rest_error_t rc;
 
-  if (node->segment) /* GCOVR_EXCL_LINE */
+
+  if (node->segment)
     C_REST_FREE((void *)(node->segment));
   if (node->var_name)
     C_REST_FREE((void *)(node->var_name));
@@ -125,7 +123,7 @@ static c_rest_error_t free_node(struct c_rest_route_node *node) {
   h = node->handlers;
   while (h) {
     struct c_rest_route_handler *next_h = h->next;
-    if (h->method) /* GCOVR_EXCL_LINE */
+    if (h->method)
       C_REST_FREE((void *)(h->method));
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
     if (h->handler == c_rest_template_handler && h->user_data) {
@@ -144,29 +142,37 @@ static c_rest_error_t free_node(struct c_rest_route_node *node) {
     h = next_h;
   }
 
-  free_node(node->children);
-  free_node(node->next);
+  if (node->children) {
+    rc = free_node(node->children);
+    if (rc != C_REST_OK) return rc;
+  }
+  if (node->next) {
+    rc = free_node(node->next);
+    if (rc != C_REST_OK) return rc;
+  }
   C_REST_FREE((void *)(node));
   return C_REST_OK;
 }
 c_rest_error_t c_rest_router_init(c_rest_router **out_router) {
   struct c_rest_router *router;
+  c_rest_error_t rc;
 
-  if (!out_router) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!out_router)
+    return C_REST_ERROR_GENERIC;
 
-  router = (struct c_rest_router *)malloc(sizeof(struct c_rest_router));
-  if (!router) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  router = (struct c_rest_router *)CRF_MALLOC(sizeof(struct c_rest_router));
+  if (!router)
+    return C_REST_ERROR_GENERIC;
 
-  if (create_node("", 0, &router->root) != 0) { /* GCOVR_EXCL_LINE */
-    C_REST_FREE((void *)(router)); /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (create_node("", 0, &router->root) != 0) {
+    C_REST_FREE((void *)(router));
+    return C_REST_ERROR_GENERIC;
   }
   router->middlewares = NULL;
   router->post_middlewares = NULL;
   router->openapi_spec = NULL;
-  c_rest_openapi_spec_init(&router->openapi_spec);
+  rc = c_rest_openapi_spec_init(&router->openapi_spec);
+  if (rc != C_REST_OK) return rc;
 
   *out_router = router;
   return C_REST_OK;
@@ -174,16 +180,20 @@ c_rest_error_t c_rest_router_init(c_rest_router **out_router) {
 
 c_rest_error_t c_rest_router_destroy(c_rest_router *router) {
   struct c_rest_middleware_chain *m;
+  c_rest_error_t rc;
 
-  if (!router) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!router)
+    return C_REST_ERROR_GENERIC;
 
-  free_node(router->root);
+  if (router->root) {
+    rc = free_node(router->root);
+    if (rc != C_REST_OK) return rc;
+  }
 
   m = router->middlewares;
   while (m) {
     struct c_rest_middleware_chain *next_m = m->next;
-    if (m->path_prefix) /* GCOVR_EXCL_LINE */
+    if (m->path_prefix)
       C_REST_FREE((void *)(m->path_prefix));
     C_REST_FREE((void *)(m));
     m = next_m;
@@ -192,14 +202,15 @@ c_rest_error_t c_rest_router_destroy(c_rest_router *router) {
   m = router->post_middlewares;
   while (m) {
     struct c_rest_middleware_chain *next_m = m->next;
-    if (m->path_prefix) /* GCOVR_EXCL_LINE */
+    if (m->path_prefix)
       C_REST_FREE((void *)(m->path_prefix));
     C_REST_FREE((void *)(m));
     m = next_m;
   }
 
-  if (router->openapi_spec) { /* GCOVR_EXCL_LINE */
-    c_rest_openapi_spec_destroy(router->openapi_spec);
+  if (router->openapi_spec) {
+    rc = c_rest_openapi_spec_destroy(router->openapi_spec);
+    if (rc != C_REST_OK) return rc;
   }
 
   C_REST_FREE((void *)(router));
@@ -212,22 +223,21 @@ static c_rest_error_t find_or_add_child(struct c_rest_route_node *parent,
   struct c_rest_route_node *child;
   struct c_rest_route_node *new_node;
 
-  if (!parent || !out_child) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+
 
   child = parent->children;
 
   while (child) {
-    if (strlen(child->segment) == len && /* GCOVR_EXCL_LINE */
-        strncmp(child->segment, segment, len) == 0) { /* GCOVR_EXCL_LINE */
-      *out_child = child; /* GCOVR_EXCL_LINE */
-      return C_REST_OK; /* GCOVR_EXCL_LINE */
+    if (strlen(child->segment) == len &&
+        strncmp(child->segment, segment, len) == 0) {
+      *out_child = child;
+      return C_REST_OK;
     }
     child = child->next;
   }
 
-  if (create_node(segment, len, &new_node) != C_REST_OK) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (create_node(segment, len, &new_node) != C_REST_OK)
+    return C_REST_ERROR_GENERIC;
 
   new_node->next = parent->children;
   parent->children = new_node;
@@ -243,16 +253,16 @@ c_rest_error_t c_rest_router_add(c_rest_router *router, const char *method,
   struct c_rest_route_node *curr;
   struct c_rest_route_handler *h;
 
-  if (!router || !router->root || !method || !path || !handler) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!router || !router->root || !method || !path || !handler)
+    return C_REST_ERROR_GENERIC;
 
   curr = router->root;
   p = path;
 
-  if (*p == '/') /* GCOVR_EXCL_LINE */
+  if (*p == '/')
     p++;
 
-  while (*p) { /* GCOVR_EXCL_LINE */
+  while (*p) {
     const char *next_slash = strchr(p, '/');
     size_t len;
     struct c_rest_route_node *child;
@@ -263,9 +273,9 @@ c_rest_error_t c_rest_router_add(c_rest_router *router, const char *method,
       len = strlen(p);
     }
 
-    if (len > 0) { /* GCOVR_EXCL_LINE */
-      if (find_or_add_child(curr, p, len, &child) != C_REST_OK) /* GCOVR_EXCL_LINE */
-        return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+    if (len > 0) {
+      if (find_or_add_child(curr, p, len, &child) != C_REST_OK)
+        return C_REST_ERROR_GENERIC;
       curr = child;
     }
 
@@ -276,15 +286,15 @@ c_rest_error_t c_rest_router_add(c_rest_router *router, const char *method,
     }
   }
 
-  h = (struct c_rest_route_handler *)malloc(
+  h = (struct c_rest_route_handler *)CRF_MALLOC(
       sizeof(struct c_rest_route_handler));
-  if (!h) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!h)
+    return C_REST_ERROR_GENERIC;
 
-  h->method = (char *)malloc(strlen(method) + 1);
-  if (!h->method) { /* GCOVR_EXCL_LINE */
-    C_REST_FREE((void *)(h)); /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  h->method = (char *)CRF_MALLOC(strlen(method) + 1);
+  if (!h->method) {
+    C_REST_FREE((void *)(h));
+    return C_REST_ERROR_GENERIC;
   }
 #if defined(_MSC_VER)
   strcpy_s(h->method, strlen(method) + 1, method);
@@ -304,9 +314,11 @@ c_rest_error_t c_rest_router_add_openapi(c_rest_router *router, const char *meth
                               const char *path, c_rest_handler_fn handler,
                               void *user_data,
                               const struct c_rest_openapi_operation *op_meta) {
-  int res = c_rest_router_add(router, method, path, handler, user_data);
-  if (res == 0 && op_meta && router->openapi_spec) { /* GCOVR_EXCL_LINE */
-    c_rest_openapi_spec_add_path(router->openapi_spec, path, method, op_meta);
+  c_rest_error_t rc;
+  c_rest_error_t res = c_rest_router_add(router, method, path, handler, user_data);
+  if (res == C_REST_OK && op_meta && router->openapi_spec) {
+    rc = c_rest_openapi_spec_add_path(router->openapi_spec, path, method, op_meta);
+    if (rc != C_REST_OK) return rc;
   }
   return res;
 }
@@ -319,48 +331,51 @@ struct c_rest_ws_route_data {
   void *user_data;
 };
 
-static c_rest_error_t c_rest_ws_upgrade_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
+static c_rest_error_t c_rest_ws_upgrade_handler(struct c_rest_request *req,
                                      struct c_rest_response *res,
                                      void *user_data) {
-  int ret;
+  c_rest_error_t ret;
   (void)user_data; /* Used later by connection logic to call on_message */
-  ret = c_rest_websocket_upgrade(req, res); /* GCOVR_EXCL_LINE */
-  return ret; /* GCOVR_EXCL_LINE */
+  ret = c_rest_websocket_upgrade(req, res);
+  if (ret != C_REST_OK) return ret;
+  return C_REST_OK;
 }
 
-c_rest_error_t c_rest_router_add_websocket(c_rest_router *router, const char *path, /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_websocket(c_rest_router *router, const char *path,
                                 c_rest_websocket_on_message_fn on_message,
                                 c_rest_websocket_on_close_fn on_close,
                                 void *user_data) {
   struct c_rest_ws_route_data *ws_data;
 
-  if (!router || !path) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!router || !path)
+    return C_REST_ERROR_GENERIC;
 
-  ws_data = (struct c_rest_ws_route_data *)malloc( /* GCOVR_EXCL_LINE */
+  ws_data = (struct c_rest_ws_route_data *)CRF_MALLOC(
       sizeof(struct c_rest_ws_route_data));
-  if (!ws_data) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!ws_data)
+    return C_REST_ERROR_GENERIC;
 
-  ws_data->on_message = on_message; /* GCOVR_EXCL_LINE */
-  ws_data->on_close = on_close; /* GCOVR_EXCL_LINE */
-  ws_data->user_data = user_data; /* GCOVR_EXCL_LINE */
+  ws_data->on_message = on_message;
+  ws_data->on_close = on_close;
+  ws_data->user_data = user_data;
 
-  return c_rest_router_add(router, "GET", path, c_rest_ws_upgrade_handler, /* GCOVR_EXCL_LINE */
+  return c_rest_router_add(router, "GET", path, c_rest_ws_upgrade_handler,
                            ws_data);
 }
 
-c_rest_error_t c_rest_router_add_websocket_openapi( /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_websocket_openapi(
     c_rest_router *router, const char *path,
     c_rest_websocket_on_message_fn on_message,
     c_rest_websocket_on_close_fn on_close, void *user_data,
     const struct c_rest_openapi_operation *op_meta) {
-  int res = c_rest_router_add_websocket(router, path, on_message, on_close, /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  c_rest_error_t res = c_rest_router_add_websocket(router, path, on_message, on_close,
                                         user_data);
-  if (res == 0 && op_meta && router->openapi_spec) { /* GCOVR_EXCL_LINE */
-    c_rest_openapi_spec_add_path(router->openapi_spec, path, "GET", op_meta); /* GCOVR_EXCL_LINE */
+  if (res == C_REST_OK && op_meta && router->openapi_spec) {
+    rc = c_rest_openapi_spec_add_path(router->openapi_spec, path, "GET", op_meta);
+    if (rc != C_REST_OK) return rc;
   }
-  return res; /* GCOVR_EXCL_LINE */
+  return res;
 }
 
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
@@ -369,110 +384,110 @@ struct c_rest_sse_route_data {
   void *user_data;
 };
 
-static c_rest_error_t c_rest_sse_handler_wrapper(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
+static c_rest_error_t c_rest_sse_handler_wrapper(struct c_rest_request *req,
                                       struct c_rest_response *res,
                                       void *user_data) {
-  struct c_rest_sse_route_data *sse_data = /* GCOVR_EXCL_LINE */
+  struct c_rest_sse_route_data *sse_data =
       (struct c_rest_sse_route_data *)user_data;
-  int ret;
+  c_rest_error_t rc = C_REST_OK;
 
-  ret = c_rest_sse_init_response(res); /* GCOVR_EXCL_LINE */
-  if (ret != 0) { /* GCOVR_EXCL_LINE */
-    return ret; /* GCOVR_EXCL_LINE */
+  (void)!c_rest_sse_init_response(res);
+
+  if (sse_data && sse_data->handler) {
+    rc = sse_data->handler(req, res, sse_data->user_data);
   }
 
-  if (sse_data && sse_data->handler) { /* GCOVR_EXCL_LINE */
-    return sse_data->handler(req, res, sse_data->user_data); /* GCOVR_EXCL_LINE */
-  }
-  return C_REST_OK; /* GCOVR_EXCL_LINE */
+  return rc;
 }
 
-c_rest_error_t c_rest_router_add_sse(c_rest_router *router, const char *path, /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_sse(c_rest_router *router, const char *path,
                           c_rest_handler_fn handler, void *user_data) {
   struct c_rest_sse_route_data *sse_data;
 
-  if (!router || !path) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!router || !path)
+    return C_REST_ERROR_GENERIC;
 
-  sse_data = (struct c_rest_sse_route_data *)malloc( /* GCOVR_EXCL_LINE */
+  sse_data = (struct c_rest_sse_route_data *)CRF_MALLOC(
       sizeof(struct c_rest_sse_route_data));
-  if (!sse_data) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!sse_data)
+    return C_REST_ERROR_GENERIC;
 
-  sse_data->handler = handler; /* GCOVR_EXCL_LINE */
-  sse_data->user_data = user_data; /* GCOVR_EXCL_LINE */
+  sse_data->handler = handler;
+  sse_data->user_data = user_data;
 
-  return c_rest_router_add(router, "GET", path, c_rest_sse_handler_wrapper, /* GCOVR_EXCL_LINE */
+  return c_rest_router_add(router, "GET", path, c_rest_sse_handler_wrapper,
                            sse_data);
 }
 
-c_rest_error_t c_rest_router_add_sse_openapi( /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_sse_openapi(
     c_rest_router *router, const char *path, c_rest_handler_fn handler,
     void *user_data, const struct c_rest_openapi_operation *op_meta) {
-  int res = c_rest_router_add_sse(router, path, handler, user_data); /* GCOVR_EXCL_LINE */
-  if (res == 0 && op_meta && router->openapi_spec) { /* GCOVR_EXCL_LINE */
-    c_rest_openapi_spec_add_path(router->openapi_spec, path, "GET", op_meta); /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  int res = c_rest_router_add_sse(router, path, handler, user_data);
+  if (res == 0 && op_meta && router->openapi_spec) {
+    rc = c_rest_openapi_spec_add_path(router->openapi_spec, path, "GET", op_meta);
+    if (rc != C_REST_OK) return rc;
   }
-  return res; /* GCOVR_EXCL_LINE */
+  return res;
 }
 #endif
 
 #ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
 #include "c_rest_graphql.h"
 
-static c_rest_error_t c_rest_graphql_handler(struct c_rest_request *req, /* GCOVR_EXCL_LINE */
+static c_rest_error_t c_rest_graphql_handler(struct c_rest_request *req,
                                   struct c_rest_response *res,
                                   void *user_data) {
-  struct c_rest_graphql_schema *schema = /* GCOVR_EXCL_LINE */
+  struct c_rest_graphql_schema *schema =
       (struct c_rest_graphql_schema *)user_data;
-  struct c_rest_graphql_node *doc = NULL; /* GCOVR_EXCL_LINE */
-  char *json = NULL; /* GCOVR_EXCL_LINE */
-  size_t len = 0; /* GCOVR_EXCL_LINE */
+  struct c_rest_graphql_node *doc = NULL;
+  char *json = NULL;
+  size_t len = 0;
   int ret;
+  c_rest_error_t rc;
 
-  if (!req->body) { /* GCOVR_EXCL_LINE */
-    c_rest_response_set_status(res, 400); /* GCOVR_EXCL_LINE */
-    return C_REST_OK; /* GCOVR_EXCL_LINE */
+  if (!req->body) {
+    (void)!c_rest_response_set_status(res, 400);
+    return C_REST_OK;
   }
 
-  ret = c_rest_graphql_parse((const char *)req->body, req->body_len, &doc); /* GCOVR_EXCL_LINE */
-  if (ret != 0) { /* GCOVR_EXCL_LINE */
-    c_rest_response_set_status(res, 400); /* GCOVR_EXCL_LINE */
-    return C_REST_OK; /* GCOVR_EXCL_LINE */
+  ret = c_rest_graphql_parse((const char *)req->body, req->body_len, &doc);
+  if (ret != 0) {
+    (void)!c_rest_response_set_status(res, 400);
+    return C_REST_OK;
   }
 
-  ret = c_rest_graphql_resolve(doc, schema, &json, &len); /* GCOVR_EXCL_LINE */
-  c_rest_graphql_node_free(doc); /* GCOVR_EXCL_LINE */
+  ret = c_rest_graphql_resolve(doc, schema, &json, &len);
+  (void)!c_rest_graphql_node_free(doc);
 
-  if (ret != 0) { /* GCOVR_EXCL_LINE */
-    c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    return C_REST_OK; /* GCOVR_EXCL_LINE */
-  }
 
-  c_rest_response_set_status(res, 200); /* GCOVR_EXCL_LINE */
-  c_rest_response_json(res, json); /* GCOVR_EXCL_LINE */
-  C_REST_FREE((void *)(json)); /* GCOVR_EXCL_LINE */
-  return C_REST_OK; /* GCOVR_EXCL_LINE */
+
+  (void)!c_rest_response_set_status(res, 200);
+  c_rest_response_json(res, json);
+  C_REST_FREE((void *)(json));
+  return C_REST_OK;
 }
 
-c_rest_error_t c_rest_router_add_graphql(c_rest_router *router, const char *path, /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_graphql(c_rest_router *router, const char *path,
                               struct c_rest_graphql_schema *schema) {
-  if (!router || !path || !schema) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!router || !path || !schema)
+    return C_REST_ERROR_GENERIC;
 
-  return c_rest_router_add(router, "POST", path, c_rest_graphql_handler, /* GCOVR_EXCL_LINE */
+  return c_rest_router_add(router, "POST", path, c_rest_graphql_handler,
                            schema);
 }
 
-c_rest_error_t c_rest_router_add_graphql_openapi( /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_graphql_openapi(
     c_rest_router *router, const char *path,
     struct c_rest_graphql_schema *schema,
     const struct c_rest_openapi_operation *op_meta) {
-  int res = c_rest_router_add_graphql(router, path, schema); /* GCOVR_EXCL_LINE */
-  if (res == 0 && op_meta && router->openapi_spec) { /* GCOVR_EXCL_LINE */
-    c_rest_openapi_spec_add_path(router->openapi_spec, path, "POST", op_meta); /* GCOVR_EXCL_LINE */
+  c_rest_error_t rc;
+  int res = c_rest_router_add_graphql(router, path, schema);
+  if (res == 0 && op_meta && router->openapi_spec) {
+    rc = c_rest_openapi_spec_add_path(router->openapi_spec, path, "POST", op_meta);
+    if (rc != C_REST_OK) return rc;
   }
-  return res; /* GCOVR_EXCL_LINE */
+  return res;
 }
 #endif
 
@@ -494,28 +509,22 @@ static c_rest_error_t c_rest_template_handler(struct c_rest_request *req,
   const char **keys = NULL;
   const char **values = NULL;
   size_t count = 0;
-  int ret = 0;
+  c_rest_error_t rc;
 
-  if (!route_data || !route_data->ctx ||
-      !route_data->data_provider) {       /* GCOVR_EXCL_LINE */
-    c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    return C_REST_OK;                     /* GCOVR_EXCL_LINE */
+  rc = route_data->data_provider(req, &keys, &values, &count,
+                                 route_data->user_data);
+  if (rc != C_REST_OK) {
+    (void)!c_rest_response_set_status(res, 500);
+    return rc;
   }
 
-  ret = route_data->data_provider(req, &keys, &values, &count,
-                                  route_data->user_data);
-  if (ret != 0) {                         /* GCOVR_EXCL_LINE */
-    c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    return C_REST_OK;                     /* GCOVR_EXCL_LINE */
+  rc = c_rest_response_template(res, route_data->ctx, keys, values, count);
+  if (rc != C_REST_OK) {
+    (void)!c_rest_response_set_status(res, 500);
+    return rc;
   }
 
-  ret = c_rest_response_template(res, route_data->ctx, keys, values, count);
-  if (ret != 0) {                         /* GCOVR_EXCL_LINE */
-    c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    return C_REST_OK;                     /* GCOVR_EXCL_LINE */
-  }
-
-  c_rest_response_set_status(res, 200);
+  (void)!c_rest_response_set_status(res, 200);
   return C_REST_OK;
 }
 
@@ -525,14 +534,14 @@ c_rest_error_t c_rest_router_add_template(
     c_rest_template_data_fn data_provider, void *user_data) {
   struct c_rest_template_route_data *route_data;
 
-  if (!router || !path || !ctx || !data_provider) { /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;                    /* GCOVR_EXCL_LINE */
+  if (!router || !path || !ctx || !data_provider) {
+    return C_REST_ERROR_GENERIC;
   }
 
-  route_data = (struct c_rest_template_route_data *)malloc(
+  route_data = (struct c_rest_template_route_data *)CRF_MALLOC(
       sizeof(struct c_rest_template_route_data));
-  if (!route_data) {             /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!route_data) {
+    return C_REST_ERROR_GENERIC;
   }
 
   route_data->ctx = ctx;
@@ -543,33 +552,27 @@ c_rest_error_t c_rest_router_add_template(
                            route_data);
 }
 
-c_rest_error_t
-c_rest_router_add_template_openapi(/* GCOVR_EXCL_LINE */
-                                   c_rest_router *router, const char *method,
-                                   const char *path,
-                                   const struct c_rest_template_context *ctx,
-                                   c_rest_template_data_fn data_provider,
-                                   void *user_data,
-                                   const struct c_rest_openapi_operation
-                                       *op_meta) {
-  int res = c_rest_router_add_template(router, method, path,
-                                       ctx,           /* GCOVR_EXCL_LINE */
-                                       data_provider, /* GCOVR_EXCL_LINE */
+c_rest_error_t c_rest_router_add_template_openapi(
+    c_rest_router *router, const char *method, const char *path,
+    const struct c_rest_template_context *ctx,
+    c_rest_template_data_fn data_provider, void *user_data,
+    const struct c_rest_openapi_operation *op_meta) {
+  c_rest_error_t rc;
+  int res = c_rest_router_add_template(router, method, path, ctx, data_provider,
                                        user_data);
-  if (res == 0 && op_meta && router->openapi_spec) { /* GCOVR_EXCL_LINE */
-    c_rest_openapi_spec_add_path(router->openapi_spec, path,
-                                 method,   /* GCOVR_EXCL_LINE */
-                                 op_meta); /* GCOVR_EXCL_LINE */
+  if (res == 0 && op_meta && router->openapi_spec) {
+    (void)!c_rest_openapi_spec_add_path(router->openapi_spec, path, method,
+                                        op_meta);
   }
-  return res; /* GCOVR_EXCL_LINE */
+  return res;
 }
 #endif
 
 c_rest_error_t
 c_rest_router_get_openapi_spec(c_rest_router *router,
                                struct c_rest_openapi_spec **out_spec) {
-  if (!router || !out_spec)      /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!router || !out_spec)
+    return C_REST_ERROR_GENERIC;
   *out_spec = router->openapi_spec;
   return C_REST_OK;
 }
@@ -580,19 +583,19 @@ c_rest_error_t c_rest_router_use(c_rest_router *router, const char *path_prefix,
   struct c_rest_middleware_chain *m;
   struct c_rest_middleware_chain *tail;
 
-  if (!router || !middleware)    /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!router || !middleware)
+    return C_REST_ERROR_GENERIC;
 
-  m = (struct c_rest_middleware_chain *)malloc(
+  m = (struct c_rest_middleware_chain *)CRF_MALLOC(
       sizeof(struct c_rest_middleware_chain));
-  if (!m)                        /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!m)
+    return C_REST_ERROR_GENERIC;
 
-  if (path_prefix) { /* GCOVR_EXCL_LINE */
-    m->path_prefix = (char *)malloc(strlen(path_prefix) + 1);
-    if (!m->path_prefix) {         /* GCOVR_EXCL_LINE */
-      C_REST_FREE((void *)(m));    /* GCOVR_EXCL_LINE */
-      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (path_prefix) {
+    m->path_prefix = (char *)CRF_MALLOC(strlen(path_prefix) + 1);
+    if (!m->path_prefix) {
+      C_REST_FREE((void *)(m));
+      return C_REST_ERROR_GENERIC;
     }
 #if defined(_MSC_VER)
     strcpy_s(m->path_prefix, strlen(path_prefix) + 1, path_prefix);
@@ -600,21 +603,21 @@ c_rest_error_t c_rest_router_use(c_rest_router *router, const char *path_prefix,
     strcpy(m->path_prefix, path_prefix);
 #endif
   } else {
-    m->path_prefix = NULL; /* GCOVR_EXCL_LINE */
+    m->path_prefix = NULL;
   }
 
   m->middleware = middleware;
   m->user_data = user_data;
   m->next = NULL;
 
-  if (!router->middlewares) { /* GCOVR_EXCL_LINE */
+  if (!router->middlewares) {
     router->middlewares = m;
   } else {
-    tail = router->middlewares; /* GCOVR_EXCL_LINE */
-    while (tail->next) {        /* GCOVR_EXCL_LINE */
-      tail = tail->next;        /* GCOVR_EXCL_LINE */
+    tail = router->middlewares;
+    while (tail->next) {
+      tail = tail->next;
     }
-    tail->next = m; /* GCOVR_EXCL_LINE */
+    tail->next = m;
   }
 
   return C_REST_OK;
@@ -627,19 +630,19 @@ c_rest_error_t c_rest_router_use_post(c_rest_router *router,
   struct c_rest_middleware_chain *m;
   struct c_rest_middleware_chain *tail;
 
-  if (!router || !middleware)    /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!router || !middleware)
+    return C_REST_ERROR_GENERIC;
 
-  m = (struct c_rest_middleware_chain *)malloc(
+  m = (struct c_rest_middleware_chain *)CRF_MALLOC(
       sizeof(struct c_rest_middleware_chain));
-  if (!m)                        /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!m)
+    return C_REST_ERROR_GENERIC;
 
-  if (path_prefix) { /* GCOVR_EXCL_LINE */
-    m->path_prefix = (char *)malloc(strlen(path_prefix) + 1);
-    if (!m->path_prefix) {         /* GCOVR_EXCL_LINE */
-      C_REST_FREE((void *)(m));    /* GCOVR_EXCL_LINE */
-      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (path_prefix) {
+    m->path_prefix = (char *)CRF_MALLOC(strlen(path_prefix) + 1);
+    if (!m->path_prefix) {
+      C_REST_FREE((void *)(m));
+      return C_REST_ERROR_GENERIC;
     }
 #if defined(_MSC_VER)
     strcpy_s(m->path_prefix, strlen(path_prefix) + 1, path_prefix);
@@ -647,21 +650,21 @@ c_rest_error_t c_rest_router_use_post(c_rest_router *router,
     strcpy(m->path_prefix, path_prefix);
 #endif
   } else {
-    m->path_prefix = NULL; /* GCOVR_EXCL_LINE */
+    m->path_prefix = NULL;
   }
 
   m->middleware = middleware;
   m->user_data = user_data;
   m->next = NULL;
 
-  if (!router->post_middlewares) { /* GCOVR_EXCL_LINE */
+  if (!router->post_middlewares) {
     router->post_middlewares = m;
   } else {
-    tail = router->post_middlewares; /* GCOVR_EXCL_LINE */
-    while (tail->next) {             /* GCOVR_EXCL_LINE */
-      tail = tail->next;             /* GCOVR_EXCL_LINE */
+    tail = router->post_middlewares;
+    while (tail->next) {
+      tail = tail->next;
     }
-    tail->next = m; /* GCOVR_EXCL_LINE */
+    tail->next = m;
   }
 
   return C_REST_OK;
@@ -675,9 +678,6 @@ static c_rest_error_t match_route(struct c_rest_route_node *node,
   struct c_rest_route_node *child;
   struct c_rest_route_node *matched = NULL;
   c_rest_error_t res;
-
-  if (!node || !out_node)        /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
 
   while (*path == '/')
     path++;
@@ -696,22 +696,21 @@ static c_rest_error_t match_route(struct c_rest_route_node *node,
 
   child = node->children;
   while (child) {
-    if (child->is_wildcard) { /* GCOVR_EXCL_LINE */
-      *out_node = child;      /* GCOVR_EXCL_LINE */
-      return C_REST_OK;       /* GCOVR_EXCL_LINE */
+    if (child->is_wildcard) {
+      *out_node = child;
+      return C_REST_OK;
     }
 
-    if (child->is_var ||
-        (strlen(child->segment) == len &&
-         strncmp(child->segment, path, len) == 0)) { /* GCOVR_EXCL_LINE */
+    if (child->is_var || (strlen(child->segment) == len &&
+                          strncmp(child->segment, path, len) == 0)) {
       res = match_route(child, next_slash ? next_slash + 1 : "", req, &matched);
-      if (res == C_REST_OK && matched) { /* GCOVR_EXCL_LINE */
-        if (child->is_var && req) {      /* GCOVR_EXCL_LINE */
-          struct c_rest_path_var *var =
-              (struct c_rest_path_var *)malloc(sizeof(struct c_rest_path_var));
-          if (var) { /* GCOVR_EXCL_LINE */
-            var->name = (char *)malloc(strlen(child->var_name) + 1);
-            if (var->name) { /* GCOVR_EXCL_LINE */
+      if (res == C_REST_OK && matched) {
+        if (child->is_var && req) {
+          struct c_rest_path_var *var = (struct c_rest_path_var *)CRF_MALLOC(
+              sizeof(struct c_rest_path_var));
+          if (var) {
+            var->name = (char *)CRF_MALLOC(strlen(child->var_name) + 1);
+            if (var->name) {
 #if defined(_MSC_VER)
               strcpy_s(var->name, strlen(child->var_name) + 1, child->var_name);
 #else
@@ -719,8 +718,8 @@ static c_rest_error_t match_route(struct c_rest_route_node *node,
 #endif
             }
 
-            var->value = (char *)malloc(len + 1);
-            if (var->value) { /* GCOVR_EXCL_LINE */
+            var->value = (char *)CRF_MALLOC(len + 1);
+            if (var->value) {
 #if defined(_MSC_VER)
               /* CDD_SAFE_CRT */ memcpy_s(var->value, len, path, len);
 #else
@@ -750,24 +749,23 @@ c_rest_error_t c_rest_router_dispatch(c_rest_router *router,
   struct c_rest_middleware_chain *m;
   struct c_rest_route_node *matched_node = NULL;
   struct c_rest_route_handler *h;
-  int middleware_res;
+  c_rest_error_t middleware_res;
   c_rest_error_t match_res;
 
-  if (!router || !req || !res)   /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!router || !req || !res)
+    return C_REST_ERROR_GENERIC;
 
   req->path_vars = NULL;
 
   /* 1. Execute middleware chain */
   m = router->middlewares;
   while (m) {
-    if (!m->path_prefix || /* GCOVR_EXCL_LINE */
-        strncmp(req->path, m->path_prefix, strlen(m->path_prefix)) ==
-            0) { /* GCOVR_EXCL_LINE */
+    if (!m->path_prefix ||
+        strncmp(req->path, m->path_prefix, strlen(m->path_prefix)) == 0) {
       middleware_res = m->middleware(req, res, m->user_data);
-      if (middleware_res != 0) { /* GCOVR_EXCL_LINE */
-        /* Middleware short-circuited */
-        return C_REST_OK; /* GCOVR_EXCL_LINE */
+      if (middleware_res != C_REST_OK) {
+        /* Middleware short-circuited or failed */
+        return middleware_res;
       }
     }
     m = m->next;
@@ -775,9 +773,9 @@ c_rest_error_t c_rest_router_dispatch(c_rest_router *router,
 
   /* 2. Resolve Route */
   match_res = match_route(router->root, req->path, req, &matched_node);
-  if (match_res != C_REST_OK || !matched_node) { /* GCOVR_EXCL_LINE */
+  if (match_res != C_REST_OK || !matched_node) {
     /* 404 Not Found */
-    res->status_code = 404;
+    (void)!c_rest_response_set_status(res, 404);
     return C_REST_OK;
   }
 
@@ -785,7 +783,9 @@ c_rest_error_t c_rest_router_dispatch(c_rest_router *router,
   h = matched_node->handlers;
   while (h) {
     if (strcmp(h->method, req->method) == 0) {
-      h->handler(req, res, h->user_data);
+      match_res = h->handler(req, res, h->user_data);
+      if (match_res != C_REST_OK)
+        return match_res;
       break;
     }
     h = h->next;
@@ -799,10 +799,11 @@ c_rest_error_t c_rest_router_dispatch(c_rest_router *router,
   /* 4. Execute post-middleware chain */
   m = router->post_middlewares;
   while (m) {
-    if (!m->path_prefix || /* GCOVR_EXCL_LINE */
-        strncmp(req->path, m->path_prefix, strlen(m->path_prefix)) ==
-            0) { /* GCOVR_EXCL_LINE */
-      m->middleware(req, res, m->user_data);
+    if (!m->path_prefix ||
+        strncmp(req->path, m->path_prefix, strlen(m->path_prefix)) == 0) {
+      middleware_res = m->middleware(req, res, m->user_data);
+      if (middleware_res != C_REST_OK)
+        return (c_rest_error_t)middleware_res;
     }
     m = m->next;
   }

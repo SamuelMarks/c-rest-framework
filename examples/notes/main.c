@@ -24,8 +24,8 @@ static c_rest_error_t custom_404_handler(struct c_rest_request *req,
                                          void *user_data) {
   (void)req;
   (void)user_data;
-  c_rest_response_set_status(res, 404);
-  c_rest_response_json(res, "{\"error\": \"Not Found\"}");
+  (void)!c_rest_response_set_status(res, 404);
+  (void)!c_rest_response_json(res, "{\"error\": \"Not Found\"}");
   return 0;
 }
 
@@ -33,13 +33,21 @@ static c_rest_error_t custom_404_handler(struct c_rest_request *req,
  * @brief Application entry point.
  * @return Exit status code.
  */
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   int res;
 
   printf("Initializing Notes App...\n");
 
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   res = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
   if (res != 0) {
     printf("Failed to init context\n");
@@ -53,7 +61,7 @@ int main(void) {
   res = c_rest_router_init(&router);
   if (res != 0) {
     printf("Failed to init router\n");
-    c_rest_destroy(ctx);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
@@ -68,7 +76,7 @@ int main(void) {
                          c_rest_orm_transaction_end_middleware, ctx);
 
   /* Auto-generate CRUD endpoints using the c_rest_orm_crud handlers */
-  c_rest_set_router(ctx, router);
+  (void)!c_rest_set_router(ctx, router);
   c_rest_router_add(router, "GET", "/api/v0/notes", c_rest_orm_crud_get_list,
                     &note_model);
   c_rest_router_add(router, "POST", "/api/v0/notes", c_rest_orm_crud_create,
@@ -81,7 +89,7 @@ int main(void) {
                     c_rest_orm_crud_delete, &note_model);
 
   /* Fallback handler */
-  c_rest_router_add(router, "GET", "/*", custom_404_handler, NULL);
+  (void)!c_rest_router_add(router, "GET", "/*", custom_404_handler, NULL);
 
   /* In a real application, you would attach the router to the context
    * and start the framework:
@@ -92,7 +100,7 @@ int main(void) {
 
   printf("App configured successfully. (Mock Run)\n");
 
-  c_rest_router_destroy(router);
-  c_rest_destroy(ctx);
+  (void)!c_rest_router_destroy(router);
+  (void)!c_rest_destroy(ctx);
   return 0;
 }

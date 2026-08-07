@@ -10,6 +10,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+
 #include <string.h>
 #include <signal.h>
 /* clang-format on */
@@ -20,9 +22,14 @@ static c_rest_error_t handle_sigint(int sig) {
   (void)sig;
   if (g_ctx) {
     printf("\nCaught SIGINT! Shutting down gracefully...\n");
-    c_rest_stop(g_ctx);
+    (void)!c_rest_stop(g_ctx);
   }
   return C_REST_OK;
+}
+
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
 }
 
 int main(int argc, char **argv) {
@@ -93,6 +100,8 @@ int main(int argc, char **argv) {
   modality = C_REST_MODALITY_SINGLE_THREAD;
 #endif
 
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   if (c_rest_init(modality, &ctx) != 0) {
     printf("Failed to init rest context\n");
     return 1;
@@ -110,7 +119,7 @@ int main(int argc, char **argv) {
         ctx->tls_ctx = tls_ctx;
       } else {
         printf("Failed to load TLS cert/key.\n");
-        c_rest_tls_context_destroy(tls_ctx);
+        (void)!c_rest_tls_context_destroy(tls_ctx);
         tls_ctx = NULL;
       }
     } else {
@@ -121,8 +130,8 @@ int main(int argc, char **argv) {
   if (c_rest_router_init(&router) != 0) {
     printf("Failed to init router\n");
     if (tls_ctx)
-      c_rest_tls_context_destroy(tls_ctx);
-    c_rest_destroy(ctx);
+      (void)!c_rest_tls_context_destroy(tls_ctx);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
@@ -130,10 +139,10 @@ int main(int argc, char **argv) {
    * db_url */
   if (c_orm_sqlite_connect(db_url, &db) != 0) {
     printf("Failed to connect to SQLite\n");
-    c_rest_router_destroy(router);
+    (void)!c_rest_router_destroy(router);
     if (tls_ctx)
-      c_rest_tls_context_destroy(tls_ctx);
-    c_rest_destroy(ctx);
+      (void)!c_rest_tls_context_destroy(tls_ctx);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
@@ -142,17 +151,18 @@ int main(int argc, char **argv) {
 
   if (oauth2_server_init(router, db) != 0) {
     printf("Failed to init oauth2 server\n");
-    c_rest_router_destroy(router);
+    (void)!c_rest_router_destroy(router);
     if (tls_ctx)
-      c_rest_tls_context_destroy(tls_ctx);
-    c_rest_destroy(ctx);
+      (void)!c_rest_tls_context_destroy(tls_ctx);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
-  c_rest_enable_openapi(router, "/api/v0/openapi.json");
-  c_rest_enable_swagger_ui(router, "/api/v0/docs", "/api/v0/openapi.json");
+  (void)!c_rest_enable_openapi(router, "/api/v0/openapi.json");
+  (void)!c_rest_enable_swagger_ui(router, "/api/v0/docs",
+                                  "/api/v0/openapi.json");
 
-  c_rest_set_router(ctx, router);
+  (void)!c_rest_set_router(ctx, router);
 
   g_ctx = ctx;
   signal(SIGINT, (void (*)(int))(void (*)(void))handle_sigint);
@@ -168,11 +178,11 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Server failed to run (error code: %d)\n", run_res);
   }
 
-  c_rest_router_destroy(router);
+  (void)!c_rest_router_destroy(router);
   if (ctx->tls_ctx) {
-    c_rest_tls_context_destroy(ctx->tls_ctx);
+    (void)!c_rest_tls_context_destroy(ctx->tls_ctx);
   }
-  c_rest_destroy(ctx);
+  (void)!c_rest_destroy(ctx);
 
   return run_res != 0 ? 1 : 0;
 }

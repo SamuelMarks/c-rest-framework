@@ -18,6 +18,7 @@ def main():
                 path = os.path.join(root, file)
                 if (
                     "build" in path
+                    or "CMake" in path
                     or ".git" in path
                     or "_deps" in path
                     or "emsdk" in path

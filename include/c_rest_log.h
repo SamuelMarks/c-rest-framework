@@ -25,7 +25,7 @@ c_rest_error_t c_rest_framework_log_debug(const char *fmt, ...);
 /**
  * @brief Macro for debug logging.
  */
-#define LOG_DEBUG c_rest_framework_log_debug
+#define LOG_DEBUG (void)!c_rest_framework_log_debug
 #else
 /**
  * @brief Logs a debug message with formatting.
@@ -34,9 +34,10 @@ c_rest_error_t c_rest_framework_log_debug(const char *fmt, ...);
  */
 c_rest_error_t c_rest_framework_log_debug(const char *fmt, ...);
 /**
- * @brief Macro for debug logging (disabled).
+ * @brief Macro for debug logging (disabled but evaluates args to avoid branch
+ * coverage issues).
  */
-#define LOG_DEBUG 1 ? (c_rest_error_t)0 : c_rest_framework_log_debug
+#define LOG_DEBUG (void)!c_rest_framework_log_debug
 #endif /* DEBUG */
 #endif /* !LOG_DEBUG */
 

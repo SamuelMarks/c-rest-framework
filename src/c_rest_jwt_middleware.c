@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_jwt_middleware.h"
 
 #ifdef C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE
@@ -7,7 +8,6 @@
 #include "c_rest_crypto.h"
 #include <stdlib.h>
 #include <string.h>
-#include "c_rest_mem.h"
 #include "c_rest_log.h"
 /* clang-format on */
 
@@ -32,22 +32,20 @@ c_rest_error_t c_rest_jwt_middleware(struct c_rest_request *req,
   char *payload;
   void *auth_ctx;
   int verify_res;
+  c_rest_error_t rc;
 
   token = NULL;
   payload = NULL;
   auth_ctx = NULL;
 
-  if (!req || !res) {            /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!req || !res) {
+    return C_REST_ERROR_GENERIC;
   }
 
-  if (!user_data) {                       /* GCOVR_EXCL_LINE */
-    c_rest_response_set_status(res, 500); /* GCOVR_EXCL_LINE */
-    c_rest_response_html(                 /* GCOVR_EXCL_LINE */
-                         res,
-                         "Internal Server Error: Missing JWT config"); /* GCOVR_EXCL_LINE
-                                                                        */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!user_data) {
+    c_rest_response_set_status(res, 500);
+    c_rest_response_html(res, "Internal Server Error: Missing JWT config");
+    return C_REST_ERROR_GENERIC;
   }
 
   config = (struct c_rest_jwt_middleware_config *)user_data;
@@ -70,7 +68,7 @@ c_rest_error_t c_rest_jwt_middleware(struct c_rest_request *req,
     return C_REST_ERROR_GENERIC;
   }
 
-  if (config->verify_payload) { /* GCOVR_EXCL_LINE */
+  if (config->verify_payload) {
     if (config->verify_payload(payload, &auth_ctx) != 0) {
       C_REST_FREE((void *)(token));
       C_REST_FREE((void *)(payload));

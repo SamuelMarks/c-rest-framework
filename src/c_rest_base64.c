@@ -22,8 +22,8 @@ static c_rest_error_t encode_internal(const unsigned char *src, size_t src_len,
   size_t val;
   size_t pad_len;
 
-  if (!dst_len)                  /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!dst_len)
+    return C_REST_ERROR_GENERIC;
   if (!dst) {
     if (use_padding) {
       *dst_len = out_len + 1;
@@ -36,8 +36,7 @@ static c_rest_error_t encode_internal(const unsigned char *src, size_t src_len,
   }
 
   for (i = 0; i < src_len;) {
-    unsigned int octet_a =
-        i < src_len ? (unsigned char)src[i++] : 0; /* GCOVR_EXCL_LINE */
+    unsigned int octet_a = (unsigned char)src[i++];
     unsigned int octet_b = i < src_len ? (unsigned char)src[i++] : 0;
     unsigned int octet_c = i < src_len ? (unsigned char)src[i++] : 0;
 
@@ -74,35 +73,36 @@ static c_rest_error_t get_val(unsigned char c, int is_url,
     *out_val = c - 'A';
     return C_REST_OK;
   }
-  if (c >= 'a' && c <= 'z') { /* GCOVR_EXCL_LINE */
+  if (c >= 'a' && c <= 'z') {
     *out_val = c - 'a' + 26;
     return C_REST_OK;
   }
-  if (c >= '0' && c <= '9') { /* GCOVR_EXCL_LINE */
+  if (c >= '0' && c <= '9') {
     *out_val = c - '0' + 52;
     return C_REST_OK;
   }
-  if (!is_url) {    /* GCOVR_EXCL_LINE */
-    if (c == '+') { /* GCOVR_EXCL_LINE */
+  if (!is_url) {
+    if (c == '+') {
       *out_val = 62;
       return C_REST_OK;
     }
-    if (c == '/') {     /* GCOVR_EXCL_LINE */
-      *out_val = 63;    /* GCOVR_EXCL_LINE */
-      return C_REST_OK; /* GCOVR_EXCL_LINE */
-    }
-  } else {
-    if (c == '-') {     /* GCOVR_EXCL_LINE */
-      *out_val = 62;    /* GCOVR_EXCL_LINE */
-      return C_REST_OK; /* GCOVR_EXCL_LINE */
-    }
-    if (c == '_') {     /* GCOVR_EXCL_LINE */
-      *out_val = 63;    /* GCOVR_EXCL_LINE */
-      return C_REST_OK; /* GCOVR_EXCL_LINE */
+    if (c == '/') {
+      *out_val = 63;
+      return C_REST_OK;
     }
   }
-  *out_val = 0;     /* GCOVR_EXCL_LINE */
-  return C_REST_OK; /* GCOVR_EXCL_LINE */
+  if (is_url) {
+    if (c == '-') {
+      *out_val = 62;
+      return C_REST_OK;
+    }
+    if (c == '_') {
+      *out_val = 63;
+      return C_REST_OK;
+    }
+  }
+  *out_val = 0;
+  return C_REST_ERROR_PARSE;
 }
 
 static c_rest_error_t decode_internal(const char *src, size_t src_len,
@@ -114,15 +114,15 @@ static c_rest_error_t decode_internal(const char *src, size_t src_len,
   size_t out_len;
   size_t pad_len = 0;
 
-  if (!src || !dst_len)          /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!src || !dst_len)
+    return C_REST_ERROR_GENERIC;
 
-  if (!is_url && in_len % 4 != 0) /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;  /* GCOVR_EXCL_LINE */
+  if (!is_url && in_len % 4 != 0)
+    return C_REST_ERROR_GENERIC;
 
-  if (in_len > 0 && src[in_len - 1] == '=') { /* GCOVR_EXCL_LINE */
+  if (in_len > 0 && src[in_len - 1] == '=') {
     pad_len++;
-    if (in_len > 1 && src[in_len - 2] == '=') /* GCOVR_EXCL_LINE */
+    if (in_len > 1 && src[in_len - 2] == '=')
       pad_len++;
   } else if (is_url) {
     pad_len = (4 - (in_len % 4)) % 4;
@@ -134,35 +134,38 @@ static c_rest_error_t decode_internal(const char *src, size_t src_len,
     *dst_len = out_len;
     return C_REST_OK;
   }
-  if (*dst_len < out_len)        /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (*dst_len < out_len)
+    return C_REST_ERROR_GENERIC;
 
   for (i = 0, j = 0; i < in_len;) {
     unsigned char val_a = 0, val_b = 0, val_c = 0, val_d = 0;
     unsigned int sextet_a = 0, sextet_b = 0, sextet_c = 0, sextet_d = 0;
     unsigned long triple;
+    c_rest_error_t rc;
 
-    if (1) {             /* GCOVR_EXCL_LINE */
-      if (src[i] == '=') /* GCOVR_EXCL_LINE */
-        i++;             /* GCOVR_EXCL_LINE */
-      else {
-        get_val(src[i++], is_url, &val_a);
-        sextet_a = val_a;
-      }
+    if (src[i] == '=')
+      return C_REST_ERROR_PARSE;
+    else {
+      rc = get_val(src[i++], is_url, &val_a);
+      if (rc != C_REST_OK)
+        return rc;
+      sextet_a = val_a;
     }
-    if (1) {             /* GCOVR_EXCL_LINE */
-      if (src[i] == '=') /* GCOVR_EXCL_LINE */
-        i++;             /* GCOVR_EXCL_LINE */
-      else {
-        get_val(src[i++], is_url, &val_b);
-        sextet_b = val_b;
-      }
+    if (i >= in_len || src[i] == '=')
+      return C_REST_ERROR_PARSE;
+    else {
+      rc = get_val(src[i++], is_url, &val_b);
+      if (rc != C_REST_OK)
+        return rc;
+      sextet_b = val_b;
     }
     if (i < in_len) {
       if (src[i] == '=')
         i++;
       else {
-        get_val(src[i++], is_url, &val_c);
+        rc = get_val(src[i++], is_url, &val_c);
+        if (rc != C_REST_OK)
+          return rc;
         sextet_c = val_c;
       }
     }
@@ -170,7 +173,9 @@ static c_rest_error_t decode_internal(const char *src, size_t src_len,
       if (src[i] == '=')
         i++;
       else {
-        get_val(src[i++], is_url, &val_d);
+        rc = get_val(src[i++], is_url, &val_d);
+        if (rc != C_REST_OK)
+          return rc;
         sextet_d = val_d;
       }
     }
@@ -178,8 +183,7 @@ static c_rest_error_t decode_internal(const char *src, size_t src_len,
     triple = ((unsigned long)sextet_a << 18) + ((unsigned long)sextet_b << 12) +
              ((unsigned long)sextet_c << 6) + sextet_d;
 
-    if (j < out_len) /* GCOVR_EXCL_LINE */
-      dst[j++] = (unsigned char)((triple >> 16) & 0xFF);
+    dst[j++] = (unsigned char)((triple >> 16) & 0xFF);
     if (j < out_len)
       dst[j++] = (unsigned char)((triple >> 8) & 0xFF);
     if (j < out_len)

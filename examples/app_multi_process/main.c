@@ -7,6 +7,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+
 /* clang-format on */
 
 static c_rest_error_t my_log_cb(const char *message) {
@@ -19,17 +21,25 @@ static c_rest_error_t handle_work(struct c_rest_request *req,
                                   void *user_data) {
   (void)req;
   (void)user_data;
-  c_rest_response_json(res, "{\"worker_id\": 1, \"status\": \"done\"}");
+  (void)!c_rest_response_json(res, "{\"worker_id\": 1, \"status\": \"done\"}");
   return 0;
 }
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   int rc;
 
   printf("Initializing Multi-Process Prefork Application...\n");
 
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   rc = c_rest_init(C_REST_MODALITY_MULTI_PROCESS, &ctx);
   if (rc != 0) {
     fprintf(stderr, "Failed to initialize framework.\n");
@@ -41,12 +51,12 @@ int main(void) {
   rc = c_rest_router_init(&router);
   if (rc != 0) {
     fprintf(stderr, "Failed to initialize router.\n");
-    c_rest_destroy(ctx);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
-  c_rest_set_router(ctx, router);
-  c_rest_router_add(router, "GET", "/api/v0/work", handle_work, NULL);
+  (void)!c_rest_set_router(ctx, router);
+  (void)!c_rest_router_add(router, "GET", "/api/v0/work", handle_work, NULL);
 
   printf("Forking workers and starting master loop...\n");
   rc = c_rest_run(ctx);
@@ -55,8 +65,8 @@ int main(void) {
   }
 
   printf("Shutting down...\n");
-  c_rest_router_destroy(router);
-  c_rest_destroy(ctx);
+  (void)!c_rest_router_destroy(router);
+  (void)!c_rest_destroy(ctx);
 
   return 0;
 }

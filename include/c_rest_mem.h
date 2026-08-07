@@ -9,7 +9,59 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 /* clang-format on */
+
+#ifndef CRF_MALLOC
+#ifdef C_REST_TESTING_MALLOC_HOOK
+extern void *(*g_crf_malloc_hook)(size_t);
+void *test_c_rest_internal_malloc(size_t size);
+#define CRF_MALLOC test_c_rest_internal_malloc
+#else
+#define CRF_MALLOC malloc
+#endif
+#endif
+
+#ifndef CRF_CALLOC
+#ifdef C_REST_TESTING_MALLOC_HOOK
+extern void *(*g_crf_calloc_hook)(size_t, size_t);
+void *test_c_rest_internal_calloc(size_t count, size_t size);
+#define CRF_CALLOC test_c_rest_internal_calloc
+#else
+#define CRF_CALLOC calloc
+#endif
+#endif
+
+#ifndef CRF_REALLOC
+#ifdef C_REST_TESTING_MALLOC_HOOK
+extern void *(*g_crf_realloc_hook)(void *, size_t);
+void *test_c_rest_internal_realloc(void *ptr, size_t size);
+#define CRF_REALLOC test_c_rest_internal_realloc
+#else
+#define CRF_REALLOC realloc
+#endif
+#endif
+
+#ifndef CRF_FREE
+#define CRF_FREE free
+#endif
+
+#ifndef CRF_STRDUP
+#ifdef C_REST_TESTING_MALLOC_HOOK
+extern char *(*g_crf_strdup_hook)(const char *);
+#ifdef _MSC_VER
+#define CRF_STRDUP(s) (g_crf_strdup_hook ? g_crf_strdup_hook(s) : _strdup(s))
+#else
+#define CRF_STRDUP(s) (g_crf_strdup_hook ? g_crf_strdup_hook(s) : strdup(s))
+#endif
+#else
+#ifdef _MSC_VER
+#define CRF_STRDUP _strdup
+#else
+#define CRF_STRDUP strdup
+#endif
+#endif
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,6 +110,18 @@ c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size, const char *file,
                                   int line, void *out_ptr);
 
 /**
+ * @brief Duplicate a string, optionally tracking the allocation.
+ * @param str The string to duplicate.
+ * @param file The source file name where the allocation occurred.
+ * @param line The line number where the allocation occurred.
+ * @param out_str Pointer to where the newly allocated string pointer will be
+ * stored.
+ * @return C_REST_OK on success, or an error code on failure.
+ */
+c_rest_error_t c_rest_mem_strdup(const char *str, const char *file, int line,
+                                 char **out_str);
+
+/**
  * @brief Free allocated memory.
  * @param ptr A pointer to the memory to free.
  * @return C_REST_OK on success, or an error code on failure.
@@ -91,17 +155,15 @@ c_rest_error_t c_rest_mem_tracker_cleanup(void);
 #else
 /** @brief Macro to allocate memory without tracking. */
 #define C_REST_MALLOC(size, out_ptr)                                           \
-  ((*((void **)(out_ptr))) = malloc(size), (*((void **)(out_ptr))) ? 0 : 1)
+  (((*((void **)(out_ptr))) = CRF_MALLOC(size)) == NULL)
 /** @brief Macro to allocate zero-initialized memory without tracking. */
 #define C_REST_CALLOC(count, size, out_ptr)                                    \
-  ((*((void **)(out_ptr))) = calloc(count, size),                              \
-   (*((void **)(out_ptr))) ? 0 : 1)
+  (((*((void **)(out_ptr))) = CRF_CALLOC(count, size)) == NULL)
 /** @brief Macro to reallocate memory without tracking. */
 #define C_REST_REALLOC(ptr, size, out_ptr)                                     \
-  ((*((void **)(out_ptr))) = realloc(ptr, size),                               \
-   (*((void **)(out_ptr))) ? 0 : 1)
+  (((*((void **)(out_ptr))) = CRF_REALLOC(ptr, size)) == NULL)
 /** @brief Macro to free memory without tracking. */
-#define C_REST_FREE(ptr) (free(ptr), 0)
+#define C_REST_FREE(ptr) (CRF_FREE(ptr), 0)
 #endif
 
 #ifdef __cplusplus

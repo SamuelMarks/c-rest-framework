@@ -1,10 +1,10 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_string.h"
 
 #include <stdlib.h>
 #include <string.h>
-#include "c_rest_mem.h"
 #include "c_rest_log.h"
 /* clang-format on */
 
@@ -16,18 +16,18 @@
 
 c_rest_error_t c_rest_string_init(c_rest_string *str, size_t initial_capacity) {
   void *tmp_data;
-  if (!str)                                              /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;                         /* GCOVR_EXCL_LINE */
-  if (initial_capacity == 0)                             /* GCOVR_EXCL_LINE */
-    initial_capacity = 16;                               /* GCOVR_EXCL_LINE */
-  if (C_REST_MALLOC(initial_capacity, &tmp_data) != 0) { /* GCOVR_EXCL_LINE */
+  if (!str)
+    return C_REST_ERROR_GENERIC;
+  if (initial_capacity == 0)
+    initial_capacity = 16;
+  if (C_REST_MALLOC(initial_capacity, &tmp_data)) {
     LOG_DEBUG("C_REST_MALLOC failed");
-    str->data = NULL; /* GCOVR_EXCL_LINE */
+    str->data = NULL;
   } else {
     str->data = (char *)tmp_data;
   }
-  if (!str->data)                /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!str->data)
+    return C_REST_ERROR_GENERIC;
   str->data[0] = '\0';
   str->length = 0;
   str->capacity = initial_capacity;
@@ -36,49 +36,61 @@ c_rest_error_t c_rest_string_init(c_rest_string *str, size_t initial_capacity) {
 
 c_rest_error_t c_rest_string_append(c_rest_string *str, const char *data,
                                     size_t len) {
-  if (!str || !data || len == 0)               /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC;               /* GCOVR_EXCL_LINE */
-  if (str->length + len + 1 > str->capacity) { /* GCOVR_EXCL_LINE */
-    size_t new_cap =
-        str->capacity > 0 ? str->capacity * 2 : 16; /* GCOVR_EXCL_LINE */
-    char *new_data;
-    void *tmp_new_data;
-    while (str->length + len + 1 > new_cap) { /* GCOVR_EXCL_LINE */
-      new_cap *= 2;                           /* GCOVR_EXCL_LINE */
-    }
-    if (C_REST_REALLOC(str->data, new_cap,
-                       &tmp_new_data) != /* GCOVR_EXCL_LINE */
-        0) {                             /* GCOVR_EXCL_LINE */
-      LOG_DEBUG("C_REST_REALLOC failed");
-      new_data = NULL; /* GCOVR_EXCL_LINE */
-    } else {
-      new_data = (char *)tmp_new_data; /* GCOVR_EXCL_LINE */
-    }
-    if (!new_data)                 /* GCOVR_EXCL_LINE */
-      return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
-    str->data = new_data;          /* GCOVR_EXCL_LINE */
-    str->capacity = new_cap;       /* GCOVR_EXCL_LINE */
+  if (!str || !data || len == 0)
+    return C_REST_ERROR_GENERIC;
+
+  /* Check for integer overflow */
+  if (len > ((size_t)-1) - str->length - 1) {
+    return C_REST_ERROR_GENERIC;
   }
-#if defined(_MSC_VER)
-  /* CDD_SAFE_CRT */ memcpy_s(str->data + str->length, len, data, len);
-#else
-  memcpy(str->data + str->length, data, len);
-#endif
+
+  if (str->length + len >= str->capacity) {
+    size_t new_cap = str->capacity == 0 ? 16 : str->capacity;
+    char *new_data;
+    void *tmp_new_data = NULL;
+
+    while (str->length + len + 1 > new_cap) {
+      if (new_cap >= ((size_t)-1) / 2) {
+        new_cap = (size_t)-1;
+        break;
+      }
+      new_cap *= 2;
+    }
+
+    if (C_REST_REALLOC(str->data, new_cap, &tmp_new_data)) {
+      LOG_DEBUG("C_REST_REALLOC failed");
+      new_data = NULL;
+    } else {
+      new_data = (char *)tmp_new_data;
+    }
+    if (!new_data)
+      return C_REST_ERROR_GENERIC;
+    str->data = new_data;
+    str->capacity = new_cap;
+  }
+
+  {
+    size_t i;
+    for (i = 0; i < len; ++i) {
+      str->data[str->length + i] = data[i];
+    }
+  }
+
   str->length += len;
   str->data[str->length] = '\0';
   return C_REST_OK;
 }
 
 c_rest_error_t c_rest_string_append_cstr(c_rest_string *str, const char *cstr) {
-  if (!cstr)                     /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!cstr)
+    return C_REST_ERROR_GENERIC;
   return c_rest_string_append(str, cstr, strlen(cstr));
 }
 
 c_rest_error_t c_rest_string_destroy(c_rest_string *str) {
-  if (!str)                      /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
-  if (str->data)                 /* GCOVR_EXCL_LINE */
+  if (!str)
+    return C_REST_ERROR_GENERIC;
+  if (str->data)
     C_REST_FREE((void *)(str->data));
   str->data = NULL;
   str->length = 0;

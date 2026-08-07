@@ -114,12 +114,17 @@ int test_oauth2(void) {
 }
 #endif
 #ifndef CDD_DOS
+int test_platform(void);
 int test_openapi(void);
+int test_middleware_suite(void);
+int test_modality(void);
 int test_rate_limiting_throttling_middleware(void);
 #endif
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
 int test_server_sent_events_sse(void);
 #endif
+
+SUITE_EXTERN(examples_suite);
 
 int main(int argc, char **argv) {
   int res = 0;
@@ -127,12 +132,14 @@ int main(int argc, char **argv) {
   (void)argv;
   GREATEST_INIT();
 
+  fflush(stdout);
   printf("Running test_init_destroy...\n");
   res = test_init_destroy();
   if (res != 0)
     return res;
 
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
+  fflush(stdout);
   printf("Running test_server_sent_events_sse...\n");
   res = test_server_sent_events_sse();
   if (res != 0)
@@ -140,62 +147,97 @@ int main(int argc, char **argv) {
 #endif
 
 #ifndef CDD_DOS
+  fflush(stdout);
   printf("Running test_openapi...\n");
   res = test_openapi();
   if (res != 0)
     return res;
 
+  fflush(stdout);
+  printf("Running test_middleware...\n");
+  res = test_middleware_suite();
+  if (res != 0)
+    return res;
+
+  fflush(stdout);
+  printf("Running test_modality...\n");
+  res = test_modality();
+  if (res != 0) {
+    printf("test_modality failed at %d\n", res);
+    return res;
+  }
+
+  fflush(stdout);
+  printf("Running test_platform...\n");
+  fflush(stdout);
+  res = test_platform();
+  if (res != 0) {
+    printf("test_platform failed at %d\n", res);
+    return res;
+  }
+
+  fflush(stdout);
   printf("Running test_rate_limiting_throttling_middleware...\n");
   res = test_rate_limiting_throttling_middleware();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_endian...\n");
   res = test_endian();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_hashmap...\n");
   res = test_hashmap();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_list...\n");
   res = test_list();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_str_utils...\n");
   res = test_str_utils();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_mem...\n");
   res = test_mem();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_ts_queue...\n");
   res = test_ts_queue();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_log...\n");
   res = test_log();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_string...\n");
   res = test_string();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_pool...\n");
   res = test_pool();
   if (res != 0)
     return res;
 
 #ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
+  fflush(stdout);
   printf("Running test_graphql...\n");
   res = test_graphql();
   if (res != 0)
@@ -204,6 +246,7 @@ int main(int argc, char **argv) {
 
 #ifndef CDD_DOS
 #if !defined(__EMSCRIPTEN__)
+  fflush(stdout);
   printf("Running test_http23...\n");
   res = test_http23();
   if (res != 0)
@@ -211,6 +254,7 @@ int main(int argc, char **argv) {
 #endif
 
 #if !defined(__EMSCRIPTEN__)
+  fflush(stdout);
   printf("Running test_websocket...\n");
   res = test_websocket();
   if (res != 0)
@@ -220,16 +264,19 @@ int main(int argc, char **argv) {
 
 #endif
 
+  fflush(stdout);
   printf("Running test_all_enums...\n");
   res = test_all_enums();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_multiplatform_integration...\n");
   res = test_multiplatform_integration();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_parser...\n");
   res = test_parser();
   if (res != 0)
@@ -237,6 +284,7 @@ int main(int argc, char **argv) {
 
 #ifndef CDD_DOS
 #if !defined(__EMSCRIPTEN__)
+  fflush(stdout);
   printf("Running test_client...\n");
   res = test_client();
   if (res != 0)
@@ -245,9 +293,11 @@ int main(int argc, char **argv) {
 #endif
 
 #ifndef CDD_DOS
+  fflush(stdout);
   printf("Running test_multipart...\n");
   res = test_multipart();
   if (res == 0) {
+    fflush(stdout);
     printf("Running test_full_multipart_form_streaming...\n");
     res = test_full_multipart_form_streaming();
   }
@@ -255,17 +305,20 @@ int main(int argc, char **argv) {
     return res;
 #endif
 
+  fflush(stdout);
   printf("Running test_router...\n");
   res = test_router();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_request_response...\n");
   res = test_request_response();
   if (res != 0)
     return res;
 
 #ifndef CDD_DOS
+  fflush(stdout);
   printf("Running test_orm_integration...\n");
   res = test_orm_integration();
   if (res != 0)
@@ -273,6 +326,7 @@ int main(int argc, char **argv) {
 #endif
 
 #ifndef CDD_DOS
+  fflush(stdout);
   printf("Running test_crypto...\n");
   res = test_crypto();
   if (res != 0)
@@ -280,17 +334,20 @@ int main(int argc, char **argv) {
 #endif
 
 #ifndef CDD_DOS
+  fflush(stdout);
   printf("Running test_time...\n");
   res = test_time();
   if (res != 0)
     return res;
 #endif
 
+  fflush(stdout);
   printf("Running test_tls_context...\n");
   res = test_tls_context();
   if (res != 0)
     return res;
 
+  fflush(stdout);
   printf("Running test_base64...\n");
   res = test_base64();
   if (res != 0)
@@ -298,6 +355,7 @@ int main(int argc, char **argv) {
 
 #ifndef CDD_DOS
 #if !defined(__EMSCRIPTEN__)
+  fflush(stdout);
   printf("Running test_tls_integration...\n");
   res = test_tls_integration();
   if (res != 0)
@@ -306,6 +364,7 @@ int main(int argc, char **argv) {
 #endif
 
 #ifndef CDD_DOS
+  fflush(stdout);
   printf("Running test_oauth2...\n");
   res = test_oauth2();
   if (res != 0)
@@ -313,6 +372,7 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE
+  fflush(stdout);
   printf("Running test_jwt_json_web_tokens_authentication_middleware...\n");
   res = test_jwt_json_web_tokens_authentication_middleware();
   if (res != 0)
@@ -320,6 +380,7 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
+  fflush(stdout);
   printf("Running test_template...\n");
   res = test_template();
   if (res != 0)
@@ -327,6 +388,7 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART
+  fflush(stdout);
   printf("Running test_hot_reload...\n");
   res = test_hot_reload();
   if (res != 0)
@@ -334,11 +396,14 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI
+  fflush(stdout);
   printf("Running test_response_compression_gzip_brotli...\n");
   res = test_response_compression_gzip_brotli();
   if (res != 0)
     return res;
 #endif
+
+  RUN_SUITE(examples_suite);
 
   GREATEST_PRINT_REPORT();
   printf("All tests passed.\n");

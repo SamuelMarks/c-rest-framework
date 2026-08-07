@@ -52,12 +52,16 @@ c_rest_error_t cm_socket_listen(cm_env_t env, cm_socket_t sock, int backlog) {
   return C_REST_OK;
 }
 
+int g_accept_calls = 0;
 c_rest_error_t cm_socket_accept(cm_env_t env, cm_socket_t server,
                                 cm_socket_t *out_client) {
   (void)env;
   (void)server;
-  *out_client = (cm_socket_t)3;
-  return C_REST_OK;
+  if (g_accept_calls++ < 1) {
+    *out_client = (cm_socket_t)3;
+    return C_REST_OK;
+  }
+  return C_REST_ERROR_GENERIC;
 }
 
 c_rest_error_t cm_socket_close(cm_env_t env, cm_socket_t sock) {
@@ -74,8 +78,11 @@ c_rest_error_t cm_socket_set_nonblocking(cm_env_t env, cm_socket_t sock,
   return C_REST_OK;
 }
 
+int g_mock_cm_thread_fail = 0;
 c_rest_error_t cm_thread_create(cm_env_t env, cm_thread_t *out_thread,
                                 void (*func)(void *), void *arg) {
+  if (g_mock_cm_thread_fail)
+    return C_REST_ERROR_GENERIC;
   (void)env;
   (void)func;
   (void)arg;
@@ -83,7 +90,10 @@ c_rest_error_t cm_thread_create(cm_env_t env, cm_thread_t *out_thread,
   return C_REST_OK;
 }
 
+int g_mock_cm_join_fail = 0;
 c_rest_error_t cm_thread_join(cm_env_t env, cm_thread_t thread) {
+  if (g_mock_cm_join_fail)
+    return C_REST_ERROR_GENERIC;
   (void)env;
   (void)thread;
   return C_REST_OK;
@@ -95,8 +105,11 @@ c_rest_error_t cm_thread_sleep_ms(cm_env_t env, unsigned long ms) {
   return C_REST_OK;
 }
 
+int g_mock_cm_file_fail = 0;
 c_rest_error_t cm_file_get_mtime(cm_env_t env, const char *path,
                                  unsigned long *out_mtime) {
+  if (g_mock_cm_file_fail)
+    return C_REST_ERROR_GENERIC;
   (void)env;
   (void)path;
   *out_mtime = 123456789;

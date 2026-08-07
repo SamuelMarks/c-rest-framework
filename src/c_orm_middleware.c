@@ -15,11 +15,11 @@ c_rest_error_t c_rest_orm_transaction_start_middleware(
   struct c_rest_context *ctx = (struct c_rest_context *)user_data;
   (void)res;
 
-  if (!req || !ctx) {            /* GCOVR_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* GCOVR_EXCL_LINE */
+  if (!req || !ctx) {
+    return C_REST_ERROR_GENERIC;
   }
 
-  if (ctx->db_pool) { /* GCOVR_EXCL_LINE */
+  if (ctx->db_pool) {
     /* Mock: Assign a dummy pointer to db_conn and pretend to start transaction
      */
     req->db_conn = (struct c_orm_connection *)1;
@@ -32,12 +32,12 @@ c_rest_error_t c_rest_orm_transaction_end_middleware(
     struct c_rest_request *req, struct c_rest_response *res, void *user_data) {
   (void)user_data;
 
-  if (!req || !req->db_conn) { /* GCOVR_EXCL_LINE */
-    return C_REST_OK;          /* GCOVR_EXCL_LINE */
+  if (!req || !req->db_conn) {
+    return C_REST_OK;
   }
 
   /* Mock: if status >= 400 rollback, else commit, then return to pool */
-  if (res && res->status_code >= 400) { /* GCOVR_EXCL_LINE */
+  if (res && res->status_code >= 400) {
     /* Rollback mock */
   } else {
     /* Commit mock */

@@ -12,11 +12,17 @@ static c_rest_error_t hello_handler(struct c_rest_request *req,
                                     void *user_data) {
   (void)req;
   (void)user_data;
-  c_rest_response_html(res, "<h1>Hello Secure World!</h1>");
+  (void)!c_rest_response_html(res, "<h1>Hello Secure World!</h1>");
   return 0;
 }
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   struct c_rest_context *ctx = NULL;
   struct c_rest_tls_context *tls_ctx = NULL;
   c_rest_router *router = NULL;
@@ -39,17 +45,19 @@ int main(void) {
     printf("Warning: Could not load server.crt/server.key.\n");
   }
 
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   res = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
   if (res != 0) {
     printf("Failed to initialize framework.\n");
-    c_rest_tls_context_destroy(tls_ctx);
+    (void)!c_rest_tls_context_destroy(tls_ctx);
     return 1;
   }
   ctx->tls_ctx = tls_ctx;
 
-  c_rest_router_init(&router);
-  c_rest_set_router(ctx, router);
-  c_rest_router_add(router, "GET", "/api/v0/", hello_handler, NULL);
+  (void)!c_rest_router_init(&router);
+  (void)!c_rest_set_router(ctx, router);
+  (void)!c_rest_router_add(router, "GET", "/api/v0/", hello_handler, NULL);
 
   /* In an actual implementation, a router should be bound to ctx.
    * e.g., ctx->router = router;
@@ -58,9 +66,9 @@ int main(void) {
   printf("Starting secure server on port 443... (Simulation)\n");
   /* c_rest_run(ctx); */
 
-  c_rest_destroy(ctx);
-  c_rest_tls_context_destroy(tls_ctx);
-  c_rest_router_destroy(router);
+  (void)!c_rest_destroy(ctx);
+  (void)!c_rest_tls_context_destroy(tls_ctx);
+  (void)!c_rest_router_destroy(router);
 
   return 0;
 }

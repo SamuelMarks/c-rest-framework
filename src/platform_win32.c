@@ -1,11 +1,11 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_platform.h"
 
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <stdlib.h>
 #include <string.h>
-#include "c_rest_mem.h"
 #include "c_rest_log.h"
 #include <stdio.h>
 #include <winsock2.h>
@@ -119,10 +119,11 @@ struct thread_wrapper_args {
 };
 
 static c_rest_error_t __stdcall thread_wrapper(void *arg) {
+  c_rest_error_t rc;
   struct thread_wrapper_args *args = (struct thread_wrapper_args *)arg;
-  args->func(args->arg);
+  rc = args->func(args->arg);
   C_REST_FREE((void *)(args));
-  return C_REST_OK;
+  return rc;
 }
 
 c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
@@ -272,7 +273,9 @@ c_rest_error_t c_rest_cond_wait(c_rest_cond_t c, c_rest_mutex_t m) {
   cond->waiters_count++;
   LeaveCriticalSection(&cond->waiters_count_lock);
 
-  c_rest_mutex_unlock(m);
+  rc = c_rest_mutex_unlock(m);
+  if (rc != C_REST_OK)
+    return rc;
 
   wait_res = WaitForMultipleObjects(2, cond->events, FALSE, INFINITE);
 
@@ -285,7 +288,9 @@ c_rest_error_t c_rest_cond_wait(c_rest_cond_t c, c_rest_mutex_t m) {
     ResetEvent(cond->events[1]);
   }
 
-  c_rest_mutex_lock(m);
+  rc = c_rest_mutex_lock(m);
+  if (rc != C_REST_OK)
+    return rc;
 
   return C_REST_OK;
 }

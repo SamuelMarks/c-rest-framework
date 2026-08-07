@@ -97,18 +97,10 @@ option(C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION "Integrate with c-multiplatfor
 option(C_REST_FRAMEWORK_FETCH_CAH "Fetch c-abstract-http from GitHub" ON)
 option(C_REST_FRAMEWORK_FETCH_C_ORM "Fetch c-orm from GitHub" OFF)
 option(C_REST_FRAMEWORK_FETCH_C_FS "Fetch c-fs from GitHub" ON)
-option(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART "Enable Hot-Reloading / Auto-Restart" OFF)
+option(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART "Enable Hot-Reloading / Auto-Restart" ON)
 option(C_REST_FRAMEWORK_FETCH_CDD_C "Fetch cdd-c from GitHub" ON)
 option(C_REST_FRAMEWORK_ENABLE_GRAPHQL "Enable GraphQL API Parsing & Resolving module" ON)
 option(C_REST_FRAMEWORK_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING "Enable Server-Side Template Engine" ON)
-
-option(C89STRINGUTILS_BUILD_TESTING "Build c89stringutils tests" OFF)
-option(C_ABSTRACT_HTTP_BUILD_TESTING "Build c-abstract-http tests" OFF)
-option(C_CDD_BUILD_TESTING "Build cdd tests" OFF)
-option(C_FS_BUILD_TESTING "Build cfs tests" OFF)
-option(C_ORM_BUILD_TESTING "Build c-orm tests" OFF)
-option(C_ORM_BUILD_TESTS "Build c-orm tests" OFF)
-option(C_STR_SPAN_BUILD_TESTING "Build c-str-span tests" OFF)
 
 option(C_REST_ENABLE_RATE_LIMITING_THROTTLING_MIDDLEWARE "Enable Rate Limiting / Throttling Middleware" ON)
 option(C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE "Enable JWT Authentication Middleware" ON)
@@ -136,18 +128,9 @@ macro(c_rest_framework_strip_bad_flags tgt prop)
     if(TARGET ${tgt})
         get_target_property(_opts ${tgt} ${prop})
         if(_opts)
-            list(REMOVE_ITEM _opts "-Werror" "-fprofile-arcs" "-ftest-coverage" "--coverage")
+            list(REMOVE_ITEM _opts "-Werror")
             set(_new_opts "")
             foreach(_opt IN LISTS _opts)
-                string(REPLACE "-fprofile-arcs;" "" _opt "${_opt}")
-                string(REPLACE ";-fprofile-arcs" "" _opt "${_opt}")
-                string(REPLACE "-fprofile-arcs" "" _opt "${_opt}")
-                string(REPLACE "-ftest-coverage;" "" _opt "${_opt}")
-                string(REPLACE ";-ftest-coverage" "" _opt "${_opt}")
-                string(REPLACE "-ftest-coverage" "" _opt "${_opt}")
-                string(REPLACE "--coverage;" "" _opt "${_opt}")
-                string(REPLACE ";--coverage" "" _opt "${_opt}")
-                string(REPLACE "--coverage" "" _opt "${_opt}")
                 list(APPEND _new_opts "${_opt}")
             endforeach()
             set_target_properties(${tgt} PROPERTIES ${prop} "${_new_opts}")
@@ -227,7 +210,6 @@ macro(c_rest_framework_apply_crypto tgt scope)
         target_link_libraries(${tgt} ${scope} wolfssl)
         target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_WOLFSSL)
     elseif(C_REST_FRAMEWORK_USE_S2N)
-        set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
         c_rest_framework_resolve_dependency(s2n https://github.com/aws/s2n-tls/archive/refs/heads/main.zip)
         target_link_libraries(${tgt} ${scope} s2n::s2n)
         target_compile_definitions(${tgt} ${scope} C_REST_HAS_TLS C_REST_USE_S2N)
@@ -278,7 +260,7 @@ set(C_ABSTRACT_HTTP_USE_LIBFETCH ${C_REST_FRAMEWORK_USE_LIBFETCH} CACHE BOOL "" 
 
 if(C_REST_FRAMEWORK_FETCH_C_FS)
     set(CDD_DEPS "FETCHCONTENT" CACHE STRING "" FORCE)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-fs")
+    if(FALSE)
         FetchContent_Declare(
           cfs
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-fs"
@@ -312,7 +294,7 @@ endif()
 
 
 
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-str-span")
+    if(FALSE)
         message(STATUS "Using local c_str_span from ${CMAKE_CURRENT_LIST_DIR}/../c-str-span")
         FetchContent_Declare(
             c_str_span
@@ -493,6 +475,10 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     endif()
 endif()
 
+if(BUILD_TESTING)
+    add_definitions(-DC_REST_TESTING_MALLOC_HOOK)
+endif()
+
 add_library(c-rest-framework
     src/modality.c
     src/modality_sync.c
@@ -581,10 +567,7 @@ if(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
             set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
             set(ZLIB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
             set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
-            set(BUILD_TESTING_OLD ${BUILD_TESTING})
-            set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
             FetchContent_MakeAvailable(zlib)
-            set(BUILD_TESTING ${BUILD_TESTING_OLD} CACHE BOOL "" FORCE)
             if(MSVC AND MSVC_VERSION LESS 1600)
                 if(TARGET zlib)
                     target_compile_definitions(zlib PRIVATE EWOULDBLOCK=140)
@@ -617,10 +600,7 @@ if(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
                 URL https://github.com/google/brotli/archive/refs/heads/master.zip
             )
             set(BROTLI_DISABLE_TESTS ON CACHE BOOL "" FORCE)
-            set(BUILD_TESTING_OLD ${BUILD_TESTING})
-            set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
             FetchContent_MakeAvailable(brotli)
-            set(BUILD_TESTING ${BUILD_TESTING_OLD} CACHE BOOL "" FORCE)
 
             if(TARGET brotlienc-static)
                 target_link_libraries(c-rest-framework PUBLIC brotlienc-static brotlidec-static brotlicommon-static)
@@ -641,7 +621,7 @@ c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
 c_rest_framework_resolve_parson()
 
 if(C_REST_FRAMEWORK_FETCH_CDD_C)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../cdd-c")
+    if(FALSE)
         FetchContent_Declare(
           cdd_c
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../cdd-c"
@@ -650,10 +630,13 @@ if(C_REST_FRAMEWORK_FETCH_CDD_C)
         FetchContent_Declare(
           cdd_c
           GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
-        GIT_TAG master
+          GIT_TAG master
         )
     endif()
     FetchContent_MakeAvailable(cdd_c)
+    if (TARGET c_cdd)
+        target_compile_definitions(c_cdd PUBLIC CDD_BUILD_TESTS)
+    endif()
     c_rest_framework_strip_bad_flags(c_cdd_compiler_flags INTERFACE_COMPILE_OPTIONS)
     c_rest_framework_strip_bad_flags(c_cdd_compiler_flags INTERFACE_LINK_OPTIONS)
     if (TARGET c_cdd)
@@ -668,7 +651,7 @@ if(C_REST_FRAMEWORK_FETCH_CDD_C)
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_CAH)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http")
+    if(FALSE)
         FetchContent_Declare(
           c_abstract_http
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http"
@@ -680,14 +663,17 @@ if(C_REST_FRAMEWORK_FETCH_CAH)
         GIT_TAG master
         )
     endif()
+    set(OLD_BSL_CAH ${BUILD_SHARED_LIBS})
+    set(BUILD_SHARED_LIBS OFF)
     FetchContent_MakeAvailable(c_abstract_http)
+    set(BUILD_SHARED_LIBS ${OLD_BSL_CAH})
     c_rest_framework_strip_bad_flags(c-abstract-http COMPILE_OPTIONS)
     c_rest_framework_strip_bad_flags(c-abstract-http LINK_OPTIONS)
     add_definitions(-DC_REST_FRAMEWORK_USE_REAL_CAH)
 endif()
 
 if(C_REST_FRAMEWORK_FETCH_C_ORM)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../c-orm")
+    if(FALSE)
         FetchContent_Declare(
           c_orm
           SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-orm"
@@ -739,6 +725,13 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "DOS")
     add_compile_definitions(CDD_DOS=1)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} option stack=32k")
     target_sources(c-rest-framework PRIVATE src/platform_dos.c)
+    find_library(WATT32_LIBRARY NAMES wattcp wattcpwf wattcpwf_s PATHS /dev/env/DJDIR/lib $ENV{WATCOM}/lib286/dos $ENV{WATCOM}/lib386/dos)
+    if(WATT32_LIBRARY)
+        target_link_libraries(c-rest-framework PUBLIC ${WATT32_LIBRARY})
+        target_compile_definitions(c-rest-framework PUBLIC C_REST_WATT32=1)
+    else()
+        message(WARNING "WATT-32 library not found. Network functions will return C_REST_ERROR_NOT_SUPPORTED on DOS.")
+    endif()
 else()
     target_sources(c-rest-framework PRIVATE src/platform_posix.c)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
@@ -771,9 +764,15 @@ c_rest_framework_strip_bad_flags(c-abstract-http LINK_OPTIONS)
 c_rest_framework_strip_bad_flags(c-rest-framework COMPILE_OPTIONS)
 c_rest_framework_strip_bad_flags(c-rest-framework LINK_OPTIONS)
 
+message("CMAKE_PROJECT_NAME=${CMAKE_PROJECT_NAME} PROJECT_NAME=${PROJECT_NAME}")
+message("BUILD_TESTING=${BUILD_TESTING}")
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    enable_testing()
-    add_subdirectory(tests)
+    set(BUILD_TESTING ON CACHE BOOL "" FORCE)
+    if(BUILD_TESTING)
+        enable_testing()
+        message("ADDING TESTS")
+        add_subdirectory(tests)
+    endif()
     add_subdirectory(examples)
 endif()
 if(TARGET c_cdd AND MSVC)
@@ -793,4 +792,7 @@ endif()
 
 if(EMSCRIPTEN AND TARGET c-abstract-http)
     target_compile_definitions(c-abstract-http PRIVATE CDD_NO_UCONTEXT=1)
+endif()
+if(BUILD_TESTING)
+    target_compile_definitions(c-rest-framework PRIVATE C_REST_TESTING_ENDIAN_HOOK)
 endif()

@@ -7,6 +7,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+
 #include <string.h>
 /* clang-format on */
 
@@ -20,7 +22,8 @@ static c_rest_error_t handle_hello_world(struct c_rest_request *req,
                                          void *user_data) {
   (void)req;
   (void)user_data;
-  c_rest_response_json(res, "{\"message\": \"Hello from Async Node Style!\"}");
+  (void)!c_rest_response_json(
+      res, "{\"message\": \"Hello from Async Node Style!\"}");
   return 0;
 }
 
@@ -44,17 +47,25 @@ static c_rest_error_t handle_echo(struct c_rest_request *req,
   sprintf(buf, "{\"echo\": \"Hello %s\"}", name);
 #endif
 
-  c_rest_response_json(res, buf);
+  (void)!c_rest_response_json(res, buf);
   return 0;
 }
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   int rc;
 
   printf("Initializing Node-style Async Application...\n");
 
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   rc = c_rest_init(C_REST_MODALITY_ASYNC, &ctx);
   if (rc != 0) {
     fprintf(stderr, "Failed to initialize framework.\n");
@@ -66,13 +77,14 @@ int main(void) {
   rc = c_rest_router_init(&router);
   if (rc != 0) {
     fprintf(stderr, "Failed to initialize router.\n");
-    c_rest_destroy(ctx);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
-  c_rest_set_router(ctx, router);
-  c_rest_router_add(router, "GET", "/api/v0/hello", handle_hello_world, NULL);
-  c_rest_router_add(router, "GET", "/api/v0/echo", handle_echo, NULL);
+  (void)!c_rest_set_router(ctx, router);
+  (void)!c_rest_router_add(router, "GET", "/api/v0/hello", handle_hello_world,
+                           NULL);
+  (void)!c_rest_router_add(router, "GET", "/api/v0/echo", handle_echo, NULL);
 
   /* In a real app, router is hooked into ctx here */
 
@@ -83,8 +95,8 @@ int main(void) {
   }
 
   printf("Shutting down...\n");
-  c_rest_router_destroy(router);
-  c_rest_destroy(ctx);
+  (void)!c_rest_router_destroy(router);
+  (void)!c_rest_destroy(ctx);
 
   return 0;
 }

@@ -8,6 +8,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+
 #include <string.h>
 /* clang-format on */
 
@@ -16,11 +18,18 @@ static c_rest_error_t handle_hello_world(struct c_rest_request *req,
                                          void *user_data) {
   (void)req;
   (void)user_data;
-  c_rest_response_json(res, "{\"message\": \"Hello from OpenAPI Example!\"}");
+  (void)!c_rest_response_json(res,
+                              "{\"message\": \"Hello from OpenAPI Example!\"}");
   return 0;
 }
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   struct c_rest_router *router = NULL;
   struct c_rest_openapi_spec *spec = NULL;
   struct c_rest_openapi_operation op;
@@ -32,11 +41,11 @@ int main(void) {
   struct c_rest_openapi_media_type res_mt_hello;
   const char *res_keys_hello[] = {"application/json"};
 
-  c_rest_router_init(&router);
-  c_rest_enable_openapi(router, "/openapi.json");
-  c_rest_enable_swagger_ui(router, "/docs", "/openapi.json");
+  (void)!c_rest_router_init(&router);
+  (void)!c_rest_enable_openapi(router, "/openapi.json");
+  (void)!c_rest_enable_swagger_ui(router, "/docs", "/openapi.json");
 
-  c_rest_router_get_openapi_spec(router, &spec);
+  (void)!c_rest_router_get_openapi_spec(router, &spec);
 
   if (spec) {
     c_rest_openapi_spec_add_component_schema(
@@ -45,8 +54,9 @@ int main(void) {
         "\"string\"}}}");
   }
 
-  c_rest_enable_openapi(router, "/api/v0/openapi.json");
-  c_rest_enable_swagger_ui(router, "/api/v0/docs", "/api/v0/openapi.json");
+  (void)!c_rest_enable_openapi(router, "/api/v0/openapi.json");
+  (void)!c_rest_enable_swagger_ui(router, "/api/v0/docs",
+                                  "/api/v0/openapi.json");
 
   memset(&op, 0, sizeof(op));
   op.operation_id = "helloWorld";
@@ -71,14 +81,16 @@ int main(void) {
 
   /* Note: c_rest_init logic omitted to keep it small, but let's assume ctx is
    * used */
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   rc = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
   if (rc == 0 && ctx) {
-    c_rest_set_router(ctx, router);
+    (void)!c_rest_set_router(ctx, router);
 
     /* Normally we would c_rest_run(ctx) here but it blocks */
-    c_rest_destroy(ctx);
+    (void)!c_rest_destroy(ctx);
   }
 
-  c_rest_router_destroy(router);
+  (void)!c_rest_router_destroy(router);
   return 0;
 }

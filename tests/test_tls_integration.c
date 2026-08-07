@@ -5,65 +5,84 @@
 #include "c_rest_platform.h"
 #include "c_rest_tls.h"
 #include <stdio.h>
+#include <stdlib.h>
 /* clang-format on */
 
 int test_tls_integration(void);
+
+static int g_malloc_fail_after = -1;
+static void *fail_malloc_n(size_t size) {
+  void *res = NULL;
+  int should_fail = 0;
+
+  if (g_malloc_fail_after == 0) {
+    should_fail = 1;
+  }
+  if (g_malloc_fail_after >= 0) {
+    g_malloc_fail_after--;
+  }
+
+  res = malloc(size);
+  if (should_fail) {
+    free(res);
+    res = NULL;
+  }
+  return res;
+}
 
 int test_tls_integration(void) {
   struct c_rest_context *ctx = NULL;
   struct c_rest_tls_context *tls_ctx = NULL;
   int res;
+  int failed = 0;
+  const char *msgs[2];
+  extern void *(*g_crf_malloc_hook)(size_t);
+  int i;
 
-  printf("Running TLS Integration test...\n");
+  res = c_rest_tls_init();
+  failed += (res != C_REST_OK);
 
-  if (c_rest_tls_init() != 0) {
-    printf("No TLS backend available, skipping.\n");
-    return 0;
+  /* Test malloc failures */
+  g_crf_malloc_hook = fail_malloc_n;
+  for (i = 0; i < 5; i++) {
+    g_malloc_fail_after = i;
+    res = c_rest_tls_context_init(&tls_ctx);
+    if (res == C_REST_OK) {
+      c_rest_tls_context_destroy(tls_ctx);
+    }
+  }
+  g_crf_malloc_hook = NULL;
+
+  res = c_rest_tls_context_init(&tls_ctx);
+  failed += (res != C_REST_OK);
+
+  if (res == C_REST_OK) {
+    res = c_rest_tls_load_cert(tls_ctx, "tests/certs/server.crt");
+    res = c_rest_tls_load_key(tls_ctx, "tests/certs/server.key");
+
+    res = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
+    failed += (res != C_REST_OK);
+    if (res == C_REST_OK) {
+      ctx->tls_ctx = tls_ctx;
+      res = c_rest_destroy(ctx);
+      failed += (res != C_REST_OK);
+    }
+
+    res = c_rest_init(C_REST_MODALITY_ASYNC, &ctx);
+    failed += (res != C_REST_OK);
+    if (res == C_REST_OK) {
+      ctx->tls_ctx = tls_ctx;
+      res = c_rest_destroy(ctx);
+      failed += (res != C_REST_OK);
+    }
+
+    res = c_rest_tls_context_destroy(tls_ctx);
+    failed += (res != C_REST_OK);
   }
 
-  if (c_rest_tls_context_init(&tls_ctx) != 0) {
-    printf("TLS context init failed, skipping.\n");
-    return 0;
-  }
+  msgs[0] = "test_tls_integration passed\n";
+  msgs[1] = "test_tls_integration failed\n";
+  printf("%s", msgs[failed != 0]);
 
-  /* Try to load certs. If it fails, that's fine, we still test the context
-   * attachment */
-  c_rest_tls_load_cert(tls_ctx, "tests/certs/server.crt");
-  c_rest_tls_load_key(tls_ctx, "tests/certs/server.key");
-
-  res = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
-  if (res != 0) {
-    printf("Failed to init SYNC modality\n");
-    c_rest_tls_context_destroy(tls_ctx);
-    return 1;
-  }
-
-  /* Attach TLS context */
-  ctx->tls_ctx = tls_ctx;
-
-  /* We do not actually call c_rest_run because it would block forever
-   * listening. But we simulate a clean destroy of the TLS-attached context. */
-  res = c_rest_destroy(ctx);
-  if (res != 0) {
-    printf("Failed to destroy SYNC modality\n");
-    return 1;
-  }
-
-  res = c_rest_init(C_REST_MODALITY_ASYNC, &ctx);
-  if (res != 0) {
-    printf("Failed to init ASYNC modality\n");
-    return 1;
-  }
-  ctx->tls_ctx = tls_ctx;
-
-  res = c_rest_destroy(ctx);
-  if (res != 0) {
-    printf("Failed to destroy ASYNC modality\n");
-    return 1;
-  }
-
-  /* Destroy the TLS context after the framework is destroyed */
-  c_rest_tls_context_destroy(tls_ctx);
-
-  return 0;
+  return failed;
 }

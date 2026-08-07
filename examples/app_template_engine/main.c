@@ -7,6 +7,8 @@
 #include "c_rest_template.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+
 /* clang-format on */
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
@@ -31,12 +33,20 @@ static c_rest_error_t provide_template_data(struct c_rest_request *req,
   return 0;
 }
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   struct c_rest_template_context tpl_ctx;
 
   /* Initialize framework context in Single Thread mode */
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   if (c_rest_init(C_REST_MODALITY_SINGLE_THREAD, &ctx) != 0) {
     printf("Failed to init framework\n");
     return 1;
@@ -45,7 +55,7 @@ int main(void) {
   /* Initialize Router */
   if (c_rest_router_init(&router) != 0) {
     printf("Failed to init router\n");
-    c_rest_destroy(ctx);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
@@ -55,31 +65,37 @@ int main(void) {
           "<html><head><title>{{title}}</title></head>"
           "<body><h1>{{heading}}</h1><p>{{message}}</p></body></html>") != 0) {
     printf("Failed to init template\n");
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    (void)!c_rest_router_destroy(router);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
   /* Register Template Route */
-  c_rest_router_add_template(router, "GET", "/", &tpl_ctx,
-                             provide_template_data, NULL);
+  (void)!c_rest_router_add_template(router, "GET", "/", &tpl_ctx,
+                                    provide_template_data, NULL);
 
   /* Run Server */
   printf("Starting server at http://127.0.0.1:8080/\n");
-  c_rest_set_router(ctx, router);
+  (void)!c_rest_set_router(ctx, router);
   /* c_rest_run(ctx); Uncomment to block and run server */
 
   /* Cleanup */
-  c_rest_template_destroy(&tpl_ctx);
-  c_rest_router_destroy(router);
-  c_rest_destroy(ctx);
+  (void)!c_rest_template_destroy(&tpl_ctx);
+  (void)!c_rest_router_destroy(router);
+  (void)!c_rest_destroy(ctx);
 
   return 0;
 }
 
 #else
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   printf("Server-Side Template Engine is disabled.\n");
   return 0;
 }

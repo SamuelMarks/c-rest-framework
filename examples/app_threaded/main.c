@@ -7,6 +7,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+
 /* clang-format on */
 
 static c_rest_error_t my_log_cb(const char *message) {
@@ -20,17 +22,25 @@ static c_rest_error_t handle_db_query(struct c_rest_request *req,
   (void)req;
   (void)user_data;
   /* Simulate a blocking DB query */
-  c_rest_response_json(res, "{\"status\": \"success\", \"rows\": 42}");
+  (void)!c_rest_response_json(res, "{\"status\": \"success\", \"rows\": 42}");
   return 0;
 }
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   int rc;
 
   printf("Initializing Threaded Synchronous Application...\n");
 
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   rc = c_rest_init(C_REST_MODALITY_MULTI_THREAD, &ctx);
   if (rc != 0) {
     fprintf(stderr, "Failed to initialize framework.\n");
@@ -42,12 +52,13 @@ int main(void) {
   rc = c_rest_router_init(&router);
   if (rc != 0) {
     fprintf(stderr, "Failed to initialize router.\n");
-    c_rest_destroy(ctx);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
-  c_rest_set_router(ctx, router);
-  c_rest_router_add(router, "GET", "/api/v0/db/query", handle_db_query, NULL);
+  (void)!c_rest_set_router(ctx, router);
+  (void)!c_rest_router_add(router, "GET", "/api/v0/db/query", handle_db_query,
+                           NULL);
 
   printf("Starting framework thread pool...\n");
   rc = c_rest_run(ctx);
@@ -56,8 +67,8 @@ int main(void) {
   }
 
   printf("Shutting down...\n");
-  c_rest_router_destroy(router);
-  c_rest_destroy(ctx);
+  (void)!c_rest_router_destroy(router);
+  (void)!c_rest_destroy(ctx);
 
   return 0;
 }

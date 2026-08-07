@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_modality.h"
 #include "c_rest_jwt_middleware.h"
 #include "c_rest_crypto.h"
@@ -9,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
+
 /* clang-format on */
 
 #ifdef C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE
@@ -52,17 +55,23 @@ static c_rest_error_t generate_token_handler(struct c_rest_request *req,
 #else
     sprintf(response_buf, "Your token is: %s", token);
 #endif
-    c_rest_response_html(res, response_buf);
-    free(token);
+    (void)!c_rest_response_html(res, response_buf);
+    CRF_FREE(token);
   } else {
-    c_rest_response_set_status(res, 500);
-    c_rest_response_html(res, "Failed to generate token");
+    (void)!c_rest_response_set_status(res, 500);
+    (void)!c_rest_response_html(res, "Failed to generate token");
   }
 
   return 0;
 }
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   struct c_rest_context *ctx = NULL;
   struct c_rest_router *router = NULL;
   struct c_rest_jwt_middleware_config jwt_config;
@@ -70,6 +79,8 @@ int main(void) {
   int res;
 
   printf("Initializing c-rest-framework...\n");
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   res = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
   if (res != 0) {
     printf("Failed to initialize framework.\n");
@@ -79,7 +90,7 @@ int main(void) {
   res = c_rest_router_init(&router);
   if (res != 0) {
     printf("Failed to initialize router.\n");
-    c_rest_destroy(ctx);
+    (void)!c_rest_destroy(ctx);
     return 1;
   }
 
@@ -92,8 +103,10 @@ int main(void) {
                     (void *)secret);
 
   /* Add middleware to the protected route */
-  c_rest_router_use(router, "/protected", c_rest_jwt_middleware, &jwt_config);
-  c_rest_router_add(router, "GET", "/protected", protected_route_handler, NULL);
+  (void)!c_rest_router_use(router, "/protected", c_rest_jwt_middleware,
+                           &jwt_config);
+  (void)!c_rest_router_add(router, "GET", "/protected", protected_route_handler,
+                           NULL);
 
   /* Attach router to context */
   ctx->router = router;
@@ -103,14 +116,20 @@ int main(void) {
   printf("Run the application and navigate to /token to get a token, then pass "
          "it to /protected as a Bearer token.\n");
 
-  c_rest_router_destroy(router);
-  c_rest_destroy(ctx);
+  (void)!c_rest_router_destroy(router);
+  (void)!c_rest_destroy(ctx);
   return 0;
 }
 
 #else
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   printf("JWT Middleware is not enabled. Compile with "
          "-DC_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE=ON\n");
   return 0;

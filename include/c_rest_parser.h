@@ -155,7 +155,8 @@ c_rest_error_t c_rest_parser_destroy(c_rest_parser_context *ctx);
  * @param ctx Context
  * @return 1 if complete, 0 otherwise
  */
-c_rest_error_t c_rest_parser_is_complete(c_rest_parser_context *ctx);
+c_rest_error_t c_rest_parser_is_complete(c_rest_parser_context *ctx,
+                                         int *out_complete);
 
 /* Specific parser backends */
 /**

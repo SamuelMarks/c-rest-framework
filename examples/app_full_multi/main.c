@@ -80,7 +80,7 @@ static c_rest_error_t upload_handler(struct c_rest_request *req,
         printf("[Multipart] Failed to parse multipart data.\n");
       }
     }
-    c_rest_multipart_parser_destroy(parser);
+    (void)!c_rest_multipart_parser_destroy(parser);
   }
 
   res->status_code = 200;
@@ -89,25 +89,33 @@ static c_rest_error_t upload_handler(struct c_rest_request *req,
   return 0;
 }
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
 
   printf("Initializing Full Multipart Form Streaming App...\n");
 
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   if (c_rest_init(C_REST_MODALITY_SYNC, &ctx) != 0) {
     return 1;
   }
 
-  c_rest_router_init(&router);
-  c_rest_router_add(router, "POST", "/upload", upload_handler, NULL);
-  c_rest_set_router(ctx, router);
+  (void)!c_rest_router_init(&router);
+  (void)!c_rest_router_add(router, "POST", "/upload", upload_handler, NULL);
+  (void)!c_rest_set_router(ctx, router);
 
   /* Uncomment to run server */
   /* c_rest_run(ctx); */
 
-  c_rest_router_destroy(router);
-  c_rest_destroy(ctx);
+  (void)!c_rest_router_destroy(router);
+  (void)!c_rest_destroy(ctx);
   printf("Done.\n");
   return 0;
 }

@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_graphql.h"
 #include "c_rest_router.h"
 #include "c_rest_modality.h"
@@ -29,7 +30,7 @@ static c_rest_error_t resolve_user(const char *field_name, char **out_json,
   (void)field_name;
   (void)user_data;
 
-  *out_json = (char *)malloc(len + 1);
+  *out_json = (char *)CRF_MALLOC(len + 1);
   if (!*out_json)
     return -1;
 
@@ -47,7 +48,7 @@ static c_rest_error_t resolve_posts(const char *field_name, char **out_json,
   (void)field_name;
   (void)user_data;
 
-  *out_json = (char *)malloc(len + 1);
+  *out_json = (char *)CRF_MALLOC(len + 1);
   if (!*out_json)
     return -1;
 
@@ -56,7 +57,13 @@ static c_rest_error_t resolve_posts(const char *field_name, char **out_json,
   return 0;
 }
 
+static void sig_handler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
 int main(void) {
+
   struct c_rest_context *ctx = NULL;
   struct c_rest_router *router = NULL;
   struct c_rest_graphql_schema *schema = NULL;
@@ -70,6 +77,8 @@ int main(void) {
 #endif
 
   printf("Initializing modality context...\n");
+  signal(SIGTERM, sig_handler);
+  signal(SIGINT, sig_handler);
   res = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
   if (res != 0) {
     printf("Failed to init modality context\n");
@@ -85,7 +94,7 @@ int main(void) {
     return 1;
   }
 
-  c_rest_router_use(router, NULL, c_rest_cors_middleware, NULL);
+  (void)!c_rest_router_use(router, NULL, c_rest_cors_middleware, NULL);
 
   /* Set up GraphQL schema */
   printf("Setting up GraphQL schema...\n");
@@ -94,11 +103,12 @@ int main(void) {
     return 1;
   }
 
-  c_rest_graphql_schema_add_resolver(schema, "user", resolve_user, NULL);
-  c_rest_graphql_schema_add_resolver(schema, "posts", resolve_posts, NULL);
+  (void)!c_rest_graphql_schema_add_resolver(schema, "user", resolve_user, NULL);
+  (void)!c_rest_graphql_schema_add_resolver(schema, "posts", resolve_posts,
+                                            NULL);
 
   /* Register GraphQL route */
-  c_rest_router_add_graphql(router, "/graphql", schema);
+  (void)!c_rest_router_add_graphql(router, "/graphql", schema);
 
   printf("Starting server on http://localhost:8080/graphql\n");
   printf("Try sending a POST request to /graphql with a body like:\n");
@@ -110,9 +120,9 @@ int main(void) {
     printf("Server failed to start or crashed.\n");
   }
 
-  c_rest_graphql_schema_free(schema);
-  c_rest_router_destroy(router);
-  c_rest_destroy(ctx);
+  (void)!c_rest_graphql_schema_free(schema);
+  (void)!c_rest_router_destroy(router);
+  (void)!c_rest_destroy(ctx);
 
 #if defined(_WIN32)
   WSACleanup();

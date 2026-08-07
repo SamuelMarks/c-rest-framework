@@ -36,7 +36,7 @@ int main(void) {
 
   /* This is just to trigger the mock DB pool creation inside c_rest_run
      if that is how c-orm mock works in test mode */
-  c_rest_run(ctx);
+  (void)!c_rest_run(ctx);
 
   ret = c_rest_router_init(&router);
   if (ret != 0)
@@ -66,8 +66,8 @@ int main(void) {
   if (res.status_code != 200)
     return 1;
 
-  c_rest_request_cleanup(&req);
-  c_rest_response_cleanup(&res);
+  (void)!c_rest_request_cleanup(&req);
+  (void)!c_rest_response_cleanup(&res);
 
   /* Simulate POST /api/v0/notes */
   memset(&req, 0, sizeof(req));
@@ -89,11 +89,11 @@ int main(void) {
 
   /* Since req.body was statically allocated, avoid double free */
   req.body = NULL;
-  c_rest_request_cleanup(&req);
-  c_rest_response_cleanup(&res);
+  (void)!c_rest_request_cleanup(&req);
+  (void)!c_rest_response_cleanup(&res);
 
-  c_rest_router_destroy(router);
-  c_rest_destroy(ctx);
+  (void)!c_rest_router_destroy(router);
+  (void)!c_rest_destroy(ctx);
 
   printf("All notes app tests passed.\n");
   return 0;
