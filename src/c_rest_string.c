@@ -36,6 +36,11 @@ c_rest_error_t c_rest_string_init(c_rest_string *str, size_t initial_capacity) {
 
 c_rest_error_t c_rest_string_append(c_rest_string *str, const char *data,
                                     size_t len) {
+  size_t i;
+  size_t new_cap;
+  char *new_data;
+  void *tmp_new_data = NULL;
+
   if (!str || !data || len == 0)
     return C_REST_ERROR_GENERIC;
 
@@ -44,38 +49,39 @@ c_rest_error_t c_rest_string_append(c_rest_string *str, const char *data,
     return C_REST_ERROR_GENERIC;
   }
 
-  if (str->length + len >= str->capacity) {
-    size_t new_cap = str->capacity == 0 ? 16 : str->capacity;
-    char *new_data;
-    void *tmp_new_data = NULL;
-
-    while (str->length + len + 1 > new_cap) {
-      if (new_cap >= ((size_t)-1) / 2) {
-        new_cap = (size_t)-1;
-        break;
-      }
-      new_cap *= 2;
-    }
-
-    if (C_REST_REALLOC(str->data, new_cap, &tmp_new_data)) {
-      LOG_DEBUG("C_REST_REALLOC failed");
-      new_data = NULL;
-    } else {
-      new_data = (char *)tmp_new_data;
-    }
-    if (!new_data)
-      return C_REST_ERROR_GENERIC;
-    str->data = new_data;
-    str->capacity = new_cap;
-  }
-
-  {
-    size_t i;
+  if (str->length + len < str->capacity) {
     for (i = 0; i < len; ++i) {
       str->data[str->length + i] = data[i];
     }
+    str->length += len;
+    str->data[str->length] = '\0';
+    return C_REST_OK;
   }
 
+  new_cap = str->capacity == 0 ? 16 : str->capacity;
+
+  while (str->length + len + 1 > new_cap) {
+    if (new_cap >= ((size_t)-1) / 2) {
+      new_cap = (size_t)-1;
+      break;
+    }
+    new_cap *= 2;
+  }
+
+  if (C_REST_REALLOC(str->data, new_cap, &tmp_new_data)) {
+    LOG_DEBUG("C_REST_REALLOC failed");
+    new_data = NULL;
+  } else {
+    new_data = (char *)tmp_new_data;
+  }
+  if (!new_data)
+    return C_REST_ERROR_GENERIC;
+  str->data = new_data;
+  str->capacity = new_cap;
+
+  for (i = 0; i < len; ++i) {
+    str->data[str->length + i] = data[i];
+  }
   str->length += len;
   str->data[str->length] = '\0';
   return C_REST_OK;

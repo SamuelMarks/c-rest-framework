@@ -4,6 +4,9 @@
 #include "test_protos.h"
 #include "c_rest_request.h"
 #include "c_rest_response.h"
+#include "c_rest_template.h"
+#include "c_rest_request.h"
+#include "c_rest_modality.h"
 #include "parson.h"
 
 #include <stdio.h>
@@ -61,6 +64,156 @@ static void test_coverage(void) {
   rc = c_rest_response_check_etag(NULL, NULL, "a");
   rc = c_rest_response_set_cache_control(NULL, "a");
   rc = c_rest_response_serialize(NULL, NULL, NULL);
+
+  {
+    struct c_rest_response r = {0};
+    c_rest_response_oauth2_error(&r, NULL, NULL);
+  }
+  {
+    struct c_rest_response r2 = {0};
+    c_rest_response_oauth2_error(&r2, NULL, NULL);
+    c_rest_response_oauth2_error(NULL, "error", NULL);
+    c_rest_response_oauth2_error(&r2, "error", NULL);
+  }
+
+  {
+    struct c_rest_response r = {0};
+    struct c_rest_connection_context c = {0};
+    r.context = &c;
+    r.body = "x";
+    r.body_len = 0;
+    c.tls_conn = (void *)1;
+    c_rest_response_send(&r);
+    c.tls_conn = NULL;
+    r.headers_sent = 0;
+    c_rest_response_send(&r);
+
+    r.body = NULL;
+    r.body_len = 0;
+    r.headers_sent = 0;
+    c.tls_conn = (void *)1;
+    c_rest_response_send(&r);
+  }
+
+  {
+    struct c_rest_response res_n = {0};
+    char *ob = NULL;
+    size_t ol;
+    c_rest_response_serialize(&res_n, &ob, &ol);
+    if (ob)
+      C_REST_FREE(ob);
+  }
+
+  {
+    struct c_rest_response res_b = {0};
+    char *ob = NULL;
+    size_t ol;
+    res_b.body = "x";
+    res_b.body_len = 0;
+    c_rest_response_serialize(&res_b, &ob, &ol);
+    if (ob)
+      C_REST_FREE(ob);
+  }
+
+  {
+    int codes[] = {200, 201, 202, 204, 301, 302, 304, 400,
+                   401, 403, 404, 405, 500, 501, 503, 999};
+    for (i = 0; i < 16; i++) {
+      struct c_rest_response r = {0};
+      char *ob = NULL;
+      size_t ol;
+      r.status_code = codes[i];
+      c_rest_response_serialize(&r, &ob, &ol);
+      if (ob)
+        C_REST_FREE(ob);
+    }
+  }
+
+  {
+    struct c_rest_response res_t = {0};
+    struct c_rest_template_context ctx_t = {0};
+    extern int g_fail_malloc_at;
+    extern void *(*g_crf_malloc_hook)(size_t);
+    extern void *fail_malloc_n(size_t);
+    g_crf_malloc_hook = fail_malloc_n;
+    g_fail_malloc_at = 1;
+    c_rest_response_template(&res_t, &ctx_t, NULL, NULL, 0);
+    g_fail_malloc_at = 0;
+    g_crf_malloc_hook = NULL;
+  }
+
+  {
+    struct c_rest_request req_e = {0};
+    struct c_rest_response res_e = {0};
+
+    struct c_rest_header h = {0};
+    h.key = "If-None-Match";
+    h.value = "etag1";
+    req_e.headers = &h;
+    c_rest_response_check_etag(&req_e, &res_e, "etag2");
+
+    /* c_rest_request_cleanup(&req_e); */
+  }
+
+  {
+    struct c_rest_response res_c = {0};
+    struct c_rest_connection_context ctx = {0};
+    res_c.context = &ctx;
+    res_c.headers_sent = 1;
+    res_c.is_chunked = 1;
+    c_rest_response_write_chunk(&res_c, NULL, 0);
+    res_c.is_chunked = 0;
+    c_rest_response_write_chunk(&res_c, NULL, 0);
+  }
+  {
+    struct c_rest_response res_c = {0};
+    struct c_rest_connection_context ctx = {0};
+    res_c.context = &ctx;
+    res_c.headers_sent = 1;
+    res_c.is_chunked = 1;
+    ctx.tls_conn = (void *)1;
+    c_rest_response_write_chunk(&res_c, NULL, 0);
+  }
+
+  {
+    struct c_rest_response res_c = {0};
+    res_c.body = "test";
+    res_c.body_len = 0;
+    /* To test body_len == 0 but body != NULL, although c_rest_response_send
+     * handles this. */
+  }
+
+  c_rest_response_send_file(NULL, "file");
+  {
+    struct c_rest_response res_f = {0};
+    c_rest_response_send_file(&res_f, NULL);
+  }
+
+  c_rest_response_redirect(NULL, "/url", 302);
+  {
+    struct c_rest_response res_r = {0};
+    c_rest_response_redirect(&res_r, NULL, 302);
+  }
+
+  {
+    struct c_rest_response res_chk = {0};
+    char *ob = NULL;
+    size_t ol;
+    res_chk.is_chunked = 1;
+    c_rest_response_serialize(&res_chk, &ob, &ol);
+    if (ob)
+      C_REST_FREE(ob);
+  }
+
+  {
+    struct c_rest_response res_zero = {0};
+    char *ob = NULL;
+    size_t ol;
+    c_rest_response_serialize(&res_zero, &ob, &ol);
+    if (ob)
+      C_REST_FREE(ob);
+  }
+
   (void)rc;
 
   c_rest_response_send(NULL);
@@ -202,24 +355,139 @@ static void test_coverage(void) {
     memset(&req2_ex, 0, sizeof(req2_ex));
     req2_ex.query = "a=%XX";
     c_rest_request_get_query(&req2_ex, "a", &val);
+    c_rest_request_cleanup(&req2_ex);
+
     memset(&req2_ex, 0, sizeof(req2_ex));
     req2_ex.query = "%XX=1";
     c_rest_request_get_query(&req2_ex, "a", &val);
+    c_rest_request_cleanup(&req2_ex);
+
     memset(&req2_ex, 0, sizeof(req2_ex));
     req2_ex.query = "%XX";
     c_rest_request_get_query(&req2_ex, "a", &val);
+    c_rest_request_cleanup(&req2_ex);
+
     memset(&req2_ex, 0, sizeof(req2_ex));
     req2_ex.body = "a=%XX";
     req2_ex.body_len = 5;
     c_rest_request_parse_urlencoded(&req2_ex);
+    req2_ex.body = NULL;
+    c_rest_request_cleanup(&req2_ex);
+
     memset(&req2_ex, 0, sizeof(req2_ex));
     req2_ex.body = "%XX=1";
     req2_ex.body_len = 5;
     c_rest_request_parse_urlencoded(&req2_ex);
+    req2_ex.body = NULL;
+    c_rest_request_cleanup(&req2_ex);
+
     memset(&req2_ex, 0, sizeof(req2_ex));
     req2_ex.body = "%XX";
     req2_ex.body_len = 3;
     c_rest_request_parse_urlencoded(&req2_ex);
+    req2_ex.body = NULL;
+    c_rest_request_cleanup(&req2_ex);
+
+    /* Cookie with no equals */
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.headers = &h;
+    h.key = "Cookie";
+    h.value = "no_equals; invalid=cookie; no_equals2; another=val";
+    h.next = NULL;
+    c_rest_request_get_cookie(&req2_ex, "a", &val);
+    req2_ex.headers = NULL;
+    c_rest_request_cleanup(&req2_ex);
+
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.headers = &h;
+    h.key = "Cookie";
+    h.value = ";";
+    h.next = NULL;
+    c_rest_request_get_cookie(&req2_ex, "a", &val);
+    req2_ex.headers = NULL;
+    c_rest_request_cleanup(&req2_ex);
+
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.headers = &h;
+    h.key = "Cookie";
+    h.value = "no_eq_no_semi";
+    h.next = NULL;
+    c_rest_request_get_cookie(&req2_ex, "a", &val);
+    req2_ex.headers = NULL;
+    c_rest_request_cleanup(&req2_ex);
+
+    /* Query double parse / already parsed */
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.query = "a=1";
+    c_rest_request_get_query(&req2_ex, "a", &val);
+    c_rest_request_get_query(&req2_ex, "b",
+                             &val); /* Hits already parsed branch */
+    c_rest_request_cleanup(&req2_ex);
+
+    /* Empty query */
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.query = "";
+    c_rest_request_get_query(&req2_ex, "a", &val);
+    c_rest_request_cleanup(&req2_ex);
+
+    /* NULL query */
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.query = NULL;
+    c_rest_request_get_query(&req2_ex, "a", &val);
+    c_rest_request_cleanup(&req2_ex);
+
+    /* Query with no equals */
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.query = "no_equals";
+    c_rest_request_get_query(&req2_ex, "a", &val);
+    c_rest_request_cleanup(&req2_ex);
+
+    /* Query with eq > amp */
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.query = "a&b=1";
+    c_rest_request_get_query(&req2_ex, "a", &val);
+    c_rest_request_cleanup(&req2_ex);
+
+    /* Form no equals */
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.body = "no_equals";
+    req2_ex.body_len = 9;
+    c_rest_request_get_form_param(&req2_ex, "a", &val);
+    req2_ex.body = NULL;
+    c_rest_request_cleanup(&req2_ex);
+
+    /* Form with eq > amp */
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.body = "a&b=1";
+    req2_ex.body_len = 5;
+    c_rest_request_get_form_param(&req2_ex, "a", &val);
+    req2_ex.body = NULL;
+    c_rest_request_cleanup(&req2_ex);
+
+    /* Form while (*p) false immediately */
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.body = "\0";
+    req2_ex.body_len = 1;
+    c_rest_request_get_form_param(&req2_ex, "a", &val);
+    req2_ex.body = NULL;
+    c_rest_request_cleanup(&req2_ex);
+
+    /* Empty form */
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.body = "";
+    req2_ex.body_len = 0;
+    c_rest_request_get_form_param(&req2_ex, "a", &val);
+    req2_ex.body = NULL;
+    c_rest_request_cleanup(&req2_ex);
+
+    /* Empty JSON */
+    {
+      void *json_obj;
+      memset(&req2_ex, 0, sizeof(req2_ex));
+      req2_ex.body = "";
+      req2_ex.body_len = 0;
+      c_rest_request_parse_json(&req2_ex, &json_obj);
+    }
 
     memset(&req2_ex, 0, sizeof(req2_ex));
     memset(&res2_ex, 0, sizeof(res2_ex));
@@ -229,6 +497,26 @@ static void test_coverage(void) {
     req2_ex.headers = &h;
     c_rest_response_check_etag(&req2_ex, &res2_ex, "my-etag");
     c_rest_response_check_etag(&req2_ex, &res2_ex, "other-etag");
+
+    {
+      int k_oom;
+      extern void *(*g_crf_malloc_hook)(size_t);
+      extern int g_fail_malloc_at;
+
+      /* To hit branch 112, fail the first allocation
+       * (c_rest_response_set_header) */
+      g_crf_malloc_hook = fail_malloc_n;
+      g_fail_malloc_at = 1;
+      c_rest_response_check_etag(&req2_ex, &res2_ex, "my-etag-oom");
+
+      /* To hit branch 118, fail the set_status if it allocates, but it doesn't.
+       * Wait, status doesn't allocate. Is there any allocation inside
+       * set_status? No. Let's just run it with fail_malloc_at = 1 to see if we
+       * hit it */
+      g_crf_malloc_hook = NULL;
+      g_fail_malloc_at = -1;
+    }
+
     req2_ex.headers = NULL;
     c_rest_request_cleanup(&req2_ex);
     c_rest_response_cleanup(&res2_ex);
@@ -246,6 +534,24 @@ static void test_coverage(void) {
     c_rest_response_set_status(&res2_ex, 500);
     c_rest_response_send(&res2_ex);
     c_rest_response_send(&res2_ex);
+
+    {
+      struct c_rest_connection_context conn_ctx;
+      memset(&conn_ctx, 0, sizeof(conn_ctx));
+      memset(&res2_ex, 0, sizeof(res2_ex));
+      res2_ex.context = &conn_ctx;
+      res2_ex.body = "body";
+      res2_ex.body_len = 4;
+      c_rest_response_send(&res2_ex);
+
+      memset(&res2_ex, 0, sizeof(res2_ex));
+      conn_ctx.tls_conn = (struct c_rest_tls_connection *)1; /* dummy ptr */
+      res2_ex.context = &conn_ctx;
+      res2_ex.body = "body";
+      res2_ex.body_len = 4;
+      c_rest_response_send(&res2_ex);
+      res2_ex.body = NULL; /* prevent cleanup */
+    }
   }
 
   /* request.c coverage extras */
@@ -276,9 +582,12 @@ static void test_coverage(void) {
     c_rest_request_get_form_param(&r, "a", NULL);
 
     c_rest_request_read_body(&r, NULL, &len);
+    out = NULL;
     c_rest_request_read_body(&r, &out, NULL);
+    c_rest_request_read_body(NULL, &out, &len);
 
     c_rest_request_parse_json(&r, NULL);
+    c_rest_request_parse_json(NULL, &json_obj);
 
     c_rest_request_get_auth_bearer(&r, NULL);
     c_rest_request_get_auth_basic(NULL, &out, &out);
@@ -728,6 +1037,46 @@ int test_request_response(void) {
   }
 
   {
+    int i;
+    extern void *(*g_crf_malloc_hook)(size_t);
+    extern int g_fail_malloc_at;
+
+    for (i = 0; i <= 3; i++) {
+      struct c_rest_request req_ex3;
+      const char *val_ex3;
+
+      memset(&req_ex3, 0, sizeof(req_ex3));
+      req_ex3.query = "key1=value1&key2=value2";
+
+      g_crf_malloc_hook = fail_malloc_n;
+      g_fail_malloc_at = i;
+      c_rest_request_get_query(&req_ex3, "key2", &val_ex3);
+
+      g_crf_malloc_hook = NULL;
+      g_fail_malloc_at = -1;
+      c_rest_request_cleanup(&req_ex3);
+    }
+
+    for (i = 0; i <= 3; i++) {
+      struct c_rest_request req_ex3;
+      const char *val_ex3;
+
+      memset(&req_ex3, 0, sizeof(req_ex3));
+      req_ex3.body = "key1=value1&key2=value2";
+      req_ex3.body_len = strlen(req_ex3.body);
+
+      g_crf_malloc_hook = fail_malloc_n;
+      g_fail_malloc_at = i;
+      c_rest_request_get_form_param(&req_ex3, "key2", &val_ex3);
+
+      g_crf_malloc_hook = NULL;
+      g_fail_malloc_at = -1;
+      req_ex3.body = NULL;
+      c_rest_request_cleanup(&req_ex3);
+    }
+  }
+
+  {
     struct c_rest_request req3;
     struct c_rest_header *dyn_h;
     memset(&req3, 0, sizeof(req3));
@@ -890,11 +1239,14 @@ int test_request_response(void) {
         {"access_token", C_REST_JSON_TYPE_STRING, "test_token_123", 0, 0},
         {"expires_in", C_REST_JSON_TYPE_NUMBER, NULL, 3600.0, 0},
         {"is_active", C_REST_JSON_TYPE_BOOLEAN, NULL, 0, 1},
-        {"refresh_token", C_REST_JSON_TYPE_NULL, NULL, 0, 0}};
+        {"refresh_token", C_REST_JSON_TYPE_NULL, NULL, 0, 0},
+        {"invalid", (enum c_rest_json_val_type)99, NULL, 0, 0}};
 
     res.headers_sent = 0; /* Reset state */
-    failed += (c_rest_response_json_dict(&res, pairs, 4) != 0);
-    failed += (strstr(res.body, "\"access_token\":\"test_token_123\"") == NULL);
+    failed += (c_rest_response_json_dict(&res, pairs, 5) != 0);
+    failed += !res.body ||
+              (strstr(res.body, "\"access_token\":\"test_token_123\"") == NULL);
+    (void)!c_rest_response_cleanup(&res);
   }
 
   /* Test URL Encoded Parsing */
@@ -956,11 +1308,13 @@ int test_request_response(void) {
     (void)!c_rest_response_set_header(&ser_res, "Content-Type", "text/plain");
 
     ser_res.body = (char *)CRF_MALLOC(12);
+    if (ser_res.body) {
 #if defined(_MSC_VER)
-    strcpy_s(ser_res.body, 12, "Hello World");
+      strcpy_s(ser_res.body, 12, "Hello World");
 #else
-    strcpy(ser_res.body, "Hello World");
+      strcpy(ser_res.body, "Hello World");
 #endif
+    }
     ser_res.body_len = 11;
 
     failed += (c_rest_response_serialize(&ser_res, &out_buf, &out_len) != 0 ||

@@ -2,6 +2,7 @@
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
 #include "c_rest_parser.h"
+#include "c_rest_str_utils.h"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -39,7 +40,7 @@ c_rest_error_t c_rest_parser_execute(c_rest_parser_context *ctx,
   if (!out_parsed)
     return C_REST_ERROR_GENERIC;
   *out_parsed = 0;
-  if (!ctx || !ctx->vtable || !ctx->vtable->execute) {
+  if (!ctx || !data || !ctx->vtable || !ctx->vtable->execute) {
     return C_REST_ERROR_GENERIC;
   }
   return ctx->vtable->execute(ctx, data, len, out_parsed);
@@ -47,9 +48,9 @@ c_rest_error_t c_rest_parser_execute(c_rest_parser_context *ctx,
 
 c_rest_error_t c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
                                                int *out_keep_alive) {
-  if (!out_keep_alive)
+  if (!ctx || !out_keep_alive)
     return C_REST_ERROR_GENERIC;
-  if (!ctx || !ctx->vtable || !ctx->vtable->should_keep_alive) {
+  if (!ctx->vtable || !ctx->vtable->should_keep_alive) {
     *out_keep_alive = 0;
     return C_REST_OK;
   }
@@ -118,22 +119,6 @@ basic_init(c_rest_parser_context *ctx,
   return C_REST_OK;
 }
 
-static c_rest_error_t c_rest_stricmp(const char *s1, const char *s2,
-                                     int *out_cmp) {
-  while (*s1 && *s2) {
-    int c1 = tolower((unsigned char)*s1);
-    int c2 = tolower((unsigned char)*s2);
-    if (c1 != c2) {
-      *out_cmp = c1 - c2;
-      return C_REST_OK;
-    }
-    s1++;
-    s2++;
-  }
-  *out_cmp = tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
-  return C_REST_OK;
-}
-
 static c_rest_error_t append_buf(struct basic_parser_state *st, char c,
                                  int is_key) {
   if (is_key) {
@@ -175,7 +160,7 @@ static c_rest_error_t basic_execute(c_rest_parser_context *ctx,
   size_t i = 0;
   c_rest_error_t rc;
 
-  if (!ctx || !data || !out_parsed || !ctx->internal_state)
+  if (!ctx->internal_state)
     return C_REST_ERROR_GENERIC;
   st = (struct basic_parser_state *)ctx->internal_state;
   *out_parsed = 0;
@@ -279,23 +264,27 @@ static c_rest_error_t basic_execute(c_rest_parser_context *ctx,
         /* process header */
         /* skip leading space in value */
         char *v = st->buf;
-        int cmp;
+        int cmp_cl, cmp_te, cmp_conn, cmp_close;
+        c_rest_error_t cmp_rc;
         while (*v == ' ')
           v++;
 
-        if (c_rest_stricmp(st->key_buf, "Content-Length", &cmp) == 0 &&
-            cmp == 0) {
+        cmp_rc = c_rest_strcasecmp(st->key_buf, "Content-Length", &cmp_cl);
+        if (cmp_rc == C_REST_OK && cmp_cl == 0) {
           st->content_length = (size_t)strtoul(v, NULL, 10);
-        } else if (c_rest_stricmp(st->key_buf, "Transfer-Encoding", &cmp) ==
-                       0 &&
-                   cmp == 0) {
-          if (strstr(v, "chunked"))
-            st->is_chunked = 1;
-        } else if (c_rest_stricmp(st->key_buf, "Connection", &cmp) == 0 &&
-                   cmp == 0) {
-          int vcmp;
-          if (c_rest_stricmp(v, "close", &vcmp) == 0 && vcmp == 0)
-            st->keep_alive = 0;
+        } else {
+          cmp_rc = c_rest_strcasecmp(st->key_buf, "Transfer-Encoding", &cmp_te);
+          if (cmp_rc == C_REST_OK && cmp_te == 0) {
+            if (strstr(v, "chunked"))
+              st->is_chunked = 1;
+          } else {
+            cmp_rc = c_rest_strcasecmp(st->key_buf, "Connection", &cmp_conn);
+            if (cmp_rc == C_REST_OK && cmp_conn == 0) {
+              cmp_rc = c_rest_strcasecmp(v, "close", &cmp_close);
+              if (cmp_rc == C_REST_OK && cmp_close == 0)
+                st->keep_alive = 0;
+            }
+          }
         }
 
         if (ctx->callbacks.on_header) {
@@ -319,21 +308,19 @@ static c_rest_error_t basic_execute(c_rest_parser_context *ctx,
     case 7:             /* body identity */
     {
       size_t to_read = len - i;
-      if (st->content_length > 0) {
-        size_t remaining = st->content_length - st->body_read;
-        if (to_read > remaining)
-          to_read = remaining;
+      size_t remaining = st->content_length - st->body_read;
+      if (to_read > remaining)
+        to_read = remaining;
+
+      if (ctx->callbacks.on_body) {
+        rc = ctx->callbacks.on_body(ctx, data + i, to_read);
+        if (rc != C_REST_OK)
+          return rc;
       }
-      if (to_read > 0) {
-        if (ctx->callbacks.on_body) {
-          rc = ctx->callbacks.on_body(ctx, data + i, to_read);
-          if (rc != C_REST_OK)
-            return rc;
-        }
-        st->body_read += to_read;
-        i += to_read;
-      }
-      if (st->content_length > 0 && st->body_read >= st->content_length) {
+      st->body_read += to_read;
+      i += to_read;
+
+      if (st->body_read >= st->content_length) {
         st->state = 6;
         if (ctx->callbacks.on_complete) {
           rc = ctx->callbacks.on_complete(ctx);
@@ -369,18 +356,17 @@ static c_rest_error_t basic_execute(c_rest_parser_context *ctx,
       size_t to_read = len - i;
       if (to_read > st->chunk_left)
         to_read = st->chunk_left;
-      if (to_read > 0) {
-        if (ctx->callbacks.on_body) {
-          rc = ctx->callbacks.on_body(ctx, data + i, to_read);
-          if (rc != C_REST_OK)
-            return rc;
-        }
-        st->chunk_left -= to_read;
-        i += to_read;
+
+      if (ctx->callbacks.on_body) {
+        rc = ctx->callbacks.on_body(ctx, data + i, to_read);
+        if (rc != C_REST_OK)
+          return rc;
       }
-      if (st->chunk_left == 0) {
-        st->state = 11; /* expect crlf */
-      }
+      st->chunk_left -= to_read;
+      i += to_read;
+
+      if (st->chunk_left == 0)
+        st->state = 11; /* chunk end CR */
     } break;
     case 11: /* chunk crlf */
       if (c == '\n') {
@@ -402,7 +388,7 @@ static c_rest_error_t basic_execute(c_rest_parser_context *ctx,
 static c_rest_error_t basic_should_keep_alive(c_rest_parser_context *ctx,
                                               int *out_keep_alive) {
   struct basic_parser_state *st;
-  if (!ctx || !out_keep_alive || !ctx->internal_state)
+  if (!ctx->internal_state)
     return C_REST_ERROR_GENERIC;
   st = (struct basic_parser_state *)ctx->internal_state;
   *out_keep_alive = st->keep_alive;
@@ -411,7 +397,7 @@ static c_rest_error_t basic_should_keep_alive(c_rest_parser_context *ctx,
 
 static c_rest_error_t basic_destroy(c_rest_parser_context *ctx) {
   struct basic_parser_state *st;
-  if (!ctx || !ctx->internal_state)
+  if (!ctx->internal_state)
     return C_REST_ERROR_GENERIC;
   st = (struct basic_parser_state *)ctx->internal_state;
   if (st->buf)

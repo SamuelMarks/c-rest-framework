@@ -237,8 +237,18 @@ static int test_parser_is_complete(void) {
   memset(&callbacks, 0, sizeof(callbacks));
   (void)!c_rest_parser_get_basic_vtable(&vtable);
 
-  /* Incomplete */
+  /* Incomplete body (Identity) */
   c_rest_parser_init(&ctx, vtable, &callbacks, NULL);
+  c_rest_parser_execute(
+      &ctx, "POST / HTTP/1.1\r\nContent-Length: 10\r\n\r\n123", 40, &parsed);
+  c_rest_parser_is_complete(&ctx, &complete);
+  c_rest_parser_destroy(&ctx);
+
+  /* Incomplete body (Chunked) */
+  c_rest_parser_init(&ctx, vtable, &callbacks, NULL);
+  c_rest_parser_execute(
+      &ctx, "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n5\r\n12", 50,
+      &parsed);
   c_rest_parser_is_complete(&ctx, &complete);
   c_rest_parser_destroy(&ctx);
 
@@ -451,6 +461,7 @@ static void test_invalid_args(int *res_ptr) {
     ctx.internal_state = tmp;
   }
 
+  ctx.vtable = &vtable;
   vtable.execute = NULL;
   rc = c_rest_parser_execute(&ctx, "data", 4, &parsed);
   *res_ptr += (rc != C_REST_ERROR_GENERIC);

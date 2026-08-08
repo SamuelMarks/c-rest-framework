@@ -23,7 +23,8 @@ static c_rest_error_t test_handler(struct c_rest_request *req,
   handler_called = 1;
 
   if (req->path_vars) {
-    if (strcmp(req->path_vars->name, "id") == 0 &&
+    if (req->path_vars->name && req->path_vars->value &&
+        strcmp(req->path_vars->name, "id") == 0 &&
         strcmp(req->path_vars->value, "123") == 0) {
       /* Matched var */
     } else {
@@ -215,6 +216,14 @@ static void test_coverage(void) {
 
   c_rest_router_dispatch(NULL, NULL, NULL);
   c_rest_router_dispatch(r, NULL, NULL);
+  {
+    struct c_rest_request req;
+    c_rest_router_dispatch(r, &req, NULL);
+  }
+  {
+    c_rest_router_add(r, "GET", "/var/:id", test_handler, NULL);
+    c_rest_router_dispatch(r, NULL, NULL);
+  }
 
   c_rest_router_add_openapi(NULL, "GET", "/a", test_handler, NULL, NULL);
   c_rest_router_add_openapi(r, "GET", "/a", test_handler, NULL, NULL);
@@ -255,6 +264,7 @@ static void test_coverage(void) {
   c_rest_router_add_template(r, "GET", "/a", NULL, NULL, NULL);
   c_rest_router_add_template(r, "GET", "/a", &dummy_ctx, NULL, NULL);
   c_rest_router_add_template(r, "GET", "/a", &dummy_ctx, dummy_tpl_fn, NULL);
+  c_rest_router_add_template(r, "GET", NULL, &dummy_ctx, dummy_tpl_fn, NULL);
   c_rest_router_add_template_openapi(NULL, "GET", "/a", NULL, NULL, NULL, NULL);
   c_rest_router_add_template_openapi(r, "GET", "/a", &dummy_ctx, dummy_tpl_fn,
                                      NULL, NULL);
@@ -497,6 +507,21 @@ int test_router(void) {
   req.path = "/api/users/123";
   res.status_code = 200;
 
+  {
+    extern int g_fail_malloc_at;
+    extern void *(*g_crf_malloc_hook)(size_t);
+    int mf_idx;
+    for (mf_idx = 1; mf_idx <= 5; mf_idx++) {
+      g_crf_malloc_hook = fail_malloc_n;
+      g_fail_malloc_at = mf_idx;
+      c_rest_router_dispatch(router, &req, &res);
+      c_rest_request_cleanup(&req);
+      req.path_vars = NULL;
+    }
+    g_fail_malloc_at = 0;
+    g_crf_malloc_hook = NULL;
+  }
+
   ret = c_rest_router_dispatch(router, &req, &res);
   if (ret != 0) {
     printf("Dispatch failed\n");
@@ -574,6 +599,7 @@ int test_router(void) {
   (void)!ret;
 #endif
 
+  (void)!c_rest_router_destroy(NULL);
   (void)!c_rest_router_destroy(router);
 
   if (test_oauth2_middleware_func() != 0)

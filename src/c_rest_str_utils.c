@@ -11,19 +11,24 @@
 /* clang-format on */
 
 c_rest_error_t c_rest_strcasecmp(const char *s1, const char *s2, int *out_cmp) {
+  int done = 0;
   if (!s1 || !s2 || !out_cmp) {
     LOG_DEBUG("c_rest_strcasecmp: invalid arguments");
     return C_REST_ERROR_GENERIC;
   }
-  while (*s1 != '\0' && *s2 != '\0') {
-    int c1 = tolower((unsigned char)*s1);
-    int c2 = tolower((unsigned char)*s2);
-    if (c1 != c2) {
-      *out_cmp = c1 - c2;
-      return C_REST_OK;
+  while (!done) {
+    if (*s1 == '\0' || *s2 == '\0') {
+      done = 1;
+    } else {
+      int c1 = tolower((unsigned char)*s1);
+      int c2 = tolower((unsigned char)*s2);
+      if (c1 != c2) {
+        *out_cmp = c1 - c2;
+        return C_REST_OK;
+      }
+      s1++;
+      s2++;
     }
-    s1++;
-    s2++;
   }
   *out_cmp = tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
   return C_REST_OK;
@@ -31,6 +36,7 @@ c_rest_error_t c_rest_strcasecmp(const char *s1, const char *s2, int *out_cmp) {
 
 c_rest_error_t c_rest_strncasecmp(const char *s1, const char *s2, size_t n,
                                   int *out_cmp) {
+  int done = 0;
   if (!s1 || !s2 || !out_cmp) {
     LOG_DEBUG("c_rest_strncasecmp: invalid arguments");
     return C_REST_ERROR_GENERIC;
@@ -39,16 +45,20 @@ c_rest_error_t c_rest_strncasecmp(const char *s1, const char *s2, size_t n,
     *out_cmp = 0;
     return C_REST_OK;
   }
-  while (n > 0 && *s1 != '\0' && *s2 != '\0') {
-    int c1 = tolower((unsigned char)*s1);
-    int c2 = tolower((unsigned char)*s2);
-    if (c1 != c2) {
-      *out_cmp = c1 - c2;
-      return C_REST_OK;
+  while (!done) {
+    if (n == 0 || *s1 == '\0' || *s2 == '\0') {
+      done = 1;
+    } else {
+      int c1 = tolower((unsigned char)*s1);
+      int c2 = tolower((unsigned char)*s2);
+      if (c1 != c2) {
+        *out_cmp = c1 - c2;
+        return C_REST_OK;
+      }
+      s1++;
+      s2++;
+      n--;
     }
-    s1++;
-    s2++;
-    n--;
   }
 
   if (n == 0) {

@@ -90,8 +90,7 @@ c_rest_error_t mock_c_rest_socket_accept(c_rest_socket_t server,
     *out_client = C_REST_INVALID_SOCKET;
     return C_REST_OK;
   }
-  if (g_mock_socket_fail == 11 || g_mock_socket_fail == 12 ||
-      g_mock_socket_fail == 109) {
+  if (g_mock_socket_fail == 11 || g_mock_socket_fail == 12) {
     g_mock_socket_fail += 100;
     *out_client = (c_rest_socket_t)12345;
     return C_REST_OK;
@@ -103,8 +102,7 @@ c_rest_error_t mock_c_rest_socket_accept(c_rest_socket_t server,
 c_rest_error_t mock_c_rest_thread_create(c_rest_thread_t *thread,
                                          c_rest_error_t (*func)(void *),
                                          void *arg) {
-  if (g_mock_socket_fail == 5 || g_mock_socket_fail == 105)
-    return C_REST_ERROR_GENERIC;
+
   if (g_mock_socket_fail > 0) {
     func(arg);
     return C_REST_OK;
@@ -113,11 +111,13 @@ c_rest_error_t mock_c_rest_thread_create(c_rest_thread_t *thread,
 }
 c_rest_error_t mock_c_rest_socket_close(c_rest_socket_t sock) {
   if (g_mock_socket_fail == 6 || g_mock_socket_fail == 106 ||
-      g_mock_socket_fail == 1002 || g_mock_socket_fail == 1003)
+      g_mock_socket_fail == 108 || g_mock_socket_fail == 1002 ||
+      g_mock_socket_fail == 1003)
     return C_REST_ERROR_GENERIC;
-  if (g_mock_socket_fail == 7 || g_mock_socket_fail == 8 ||
-      g_mock_socket_fail == 107 || g_mock_socket_fail == 108)
+
+  if (sock == (c_rest_socket_t)9999)
     return C_REST_OK;
+
   return c_rest_socket_close(sock);
 }
 c_rest_error_t mock_c_rest_tls_accept(struct c_rest_tls_context *ctx,
@@ -125,7 +125,7 @@ c_rest_error_t mock_c_rest_tls_accept(struct c_rest_tls_context *ctx,
                                       struct c_rest_tls_connection **out_conn) {
   if (g_mock_tls_fail == 1)
     return C_REST_ERROR_GENERIC;
-  if (g_mock_tls_fail >= 2) {
+  if (g_mock_tls_fail == 2) {
     *out_conn = (struct c_rest_tls_connection *)1;
     return C_REST_OK;
   }
@@ -134,13 +134,10 @@ c_rest_error_t mock_c_rest_tls_accept(struct c_rest_tls_context *ctx,
 c_rest_error_t mock_c_rest_tls_close(struct c_rest_tls_connection *conn) {
   if (g_mock_tls_fail == 2)
     return C_REST_ERROR_GENERIC;
-  if (g_mock_tls_fail >= 3)
-    return C_REST_OK;
+
   return c_rest_tls_close(conn);
 }
 c_rest_error_t mock_c_rest_handle_connection(struct c_rest_context *ctx,
                                              c_rest_socket_t sock) {
-  if (g_mock_socket_fail == 109 || g_mock_socket_fail == 209)
-    return C_REST_ERROR_GENERIC;
   return c_rest_handle_connection(ctx, sock);
 }

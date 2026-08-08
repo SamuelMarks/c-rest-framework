@@ -409,100 +409,105 @@ c_rest_error_t c_rest_handle_connection(struct c_rest_context *ctx,
     }
   }
 
-  do {
-    struct c_rest_connection_context conn_ctx;
-    struct connection_state st;
-    c_rest_parser_context pctx;
-    struct c_rest_parser_callbacks cbs;
-    const struct c_rest_parser_vtable *vt;
-    struct c_rest_response res_obj;
+  {
+    int done = 0;
+    while (!done) {
+      struct c_rest_connection_context conn_ctx;
+      struct connection_state st;
+      c_rest_parser_context pctx;
+      struct c_rest_parser_callbacks cbs;
+      const struct c_rest_parser_vtable *vt;
+      struct c_rest_response res_obj;
 
-    memset(&st, 0, sizeof(st));
-    memset(&res_obj, 0, sizeof(res_obj));
+      memset(&st, 0, sizeof(st));
+      memset(&res_obj, 0, sizeof(res_obj));
 
-    conn_ctx.sock = sock;
-    conn_ctx.tls_conn = tls_conn;
+      conn_ctx.sock = sock;
+      conn_ctx.tls_conn = tls_conn;
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
-    conn_ctx.cm_env = ctx->cm_env;
+      conn_ctx.cm_env = ctx->cm_env;
 #endif
-    conn_ctx.framework_ctx = ctx;
-    res_obj.context = (void *)&conn_ctx;
+      conn_ctx.framework_ctx = ctx;
+      res_obj.context = (void *)&conn_ctx;
 
-    cbs.on_method = on_method;
-    cbs.on_url = on_url;
-    cbs.on_header = on_header;
-    cbs.on_body = on_body;
-    cbs.on_complete = on_complete;
-    cbs.on_error = NULL;
+      cbs.on_method = on_method;
+      cbs.on_url = on_url;
+      cbs.on_header = on_header;
+      cbs.on_body = on_body;
+      cbs.on_complete = on_complete;
+      cbs.on_error = NULL;
 
-    (void)!c_rest_parser_get_basic_vtable(&vt);
-    rc = c_rest_parser_init(&pctx, vt, &cbs, &st);
-    if (rc != C_REST_OK) {
-      keep_alive = 0;
-      break;
-    }
-
-    while (1) {
-      if (tls_conn) {
-        res = c_rest_tls_read(tls_conn, buf, sizeof(buf), &read_bytes);
+      (void)!c_rest_parser_get_basic_vtable(&vt);
+      rc = c_rest_parser_init(&pctx, vt, &cbs, &st);
+      if (rc != C_REST_OK) {
+        keep_alive = 0;
       } else {
-        res = c_rest_socket_recv((c_rest_socket_t)sock, buf, sizeof(buf),
-                                 &read_bytes);
-      }
-      if (res != 0)
-        break;
+        while (1) {
+          if (tls_conn) {
+            res = c_rest_tls_read(tls_conn, buf, sizeof(buf), &read_bytes);
+          } else {
+            res = c_rest_socket_recv((c_rest_socket_t)sock, buf, sizeof(buf),
+                                     &read_bytes);
+          }
+          if (res != 0)
+            break;
 
-      rc = c_rest_parser_execute(&pctx, buf, read_bytes, &parsed_bytes);
-      if (rc != C_REST_OK)
-        break;
+          rc = c_rest_parser_execute(&pctx, buf, read_bytes, &parsed_bytes);
+          if (rc != C_REST_OK)
+            break;
 
-      if (st.is_done)
-        break;
-    }
-
-    if (st.method && st.url) {
-      st.req.method = st.method;
-
-      /* split path and query */
-      {
-        char *q = strchr(st.url, '?');
-        if (q) {
-          *q = '\0';
-          st.req.path = st.url;
-          st.req.query = q + 1;
-        } else {
-          st.req.path = st.url;
-          st.req.query = NULL;
+          if (st.is_done)
+            break;
         }
+
+        if (st.method && st.url) {
+          st.req.method = st.method;
+
+          /* split path and query */
+          {
+            char *q = strchr(st.url, '?');
+            if (q) {
+              *q = '\0';
+              st.req.path = st.url;
+              st.req.query = q + 1;
+            } else {
+              st.req.path = st.url;
+              st.req.query = NULL;
+            }
+          }
+
+          st.req.scheme = ctx->tls_ctx ? "https" : "http";
+
+          res_obj.status_code = 404;
+
+          if (ctx->router) {
+            rc = c_rest_router_dispatch(ctx->router, &st.req, &res_obj);
+          }
+
+          if (rc == C_REST_OK && !res_obj.headers_sent) {
+            (void)c_rest_response_send(&res_obj);
+          }
+
+          (void)!c_rest_request_cleanup(&st.req);
+          (void)!c_rest_response_cleanup(&res_obj);
+        }
+
+        (void)!c_rest_parser_should_keep_alive(&pctx, &keep_alive);
+        if (res != 0)
+          keep_alive = 0;
+        (void)!c_rest_parser_destroy(&pctx);
+
+        if (st.method)
+          C_REST_FREE((void *)(st.method));
+        if (st.url)
+          C_REST_FREE((void *)(st.url));
       }
 
-      st.req.scheme = ctx->tls_ctx ? "https" : "http";
-
-      res_obj.status_code = 404;
-
-      if (ctx->router) {
-        rc = c_rest_router_dispatch(ctx->router, &st.req, &res_obj);
+      if (!keep_alive) {
+        done = 1;
       }
-
-      if (rc == C_REST_OK && !res_obj.headers_sent) {
-        (void)c_rest_response_send(&res_obj);
-      }
-
-      (void)!c_rest_request_cleanup(&st.req);
-      (void)!c_rest_response_cleanup(&res_obj);
     }
-
-    (void)!c_rest_parser_should_keep_alive(&pctx, &keep_alive);
-    if (res != 0)
-      keep_alive = 0;
-    (void)!c_rest_parser_destroy(&pctx);
-
-    if (st.method)
-      C_REST_FREE((void *)(st.method));
-    if (st.url)
-      C_REST_FREE((void *)(st.url));
-
-  } while (keep_alive);
+  }
 
   if (tls_conn) {
     (void)!c_rest_tls_close(tls_conn);

@@ -801,29 +801,28 @@ c_rest_error_t c_rest_client_post_form_sync(
 c_rest_error_t
 c_rest_client_response_parse_json(const struct c_rest_client_response *res,
                                   void **out_json) {
+  char *str;
+  size_t i;
   if (!res || !out_json)
     return C_REST_ERROR_GENERIC;
   *out_json = NULL;
   if (!res->body || res->body_len == 0)
     return C_REST_ERROR_GENERIC;
 
-  {
-    char *str = (char *)CRF_MALLOC(res->body_len + 1);
-    if (!str)
-      return C_REST_ERROR_GENERIC;
-#if defined(_MSC_VER)
-    /* CDD_SAFE_CRT */ memcpy_s(str, res->body_len, res->body, res->body_len);
-#else
-    memcpy(str, res->body, res->body_len);
-#endif
-    str[res->body_len] = '\0';
+  str = (char *)CRF_MALLOC(res->body_len + 1);
+  if (!str)
+    return C_REST_ERROR_GENERIC;
 
-    *out_json = (void *)json_parse_string(str);
-    C_REST_FREE((void *)(str));
-
-    if (!*out_json)
-      return C_REST_ERROR_GENERIC;
+  for (i = 0; i < res->body_len; ++i) {
+    str[i] = ((const char *)res->body)[i];
   }
+  str[res->body_len] = '\0';
+
+  *out_json = (void *)json_parse_string(str);
+  C_REST_FREE((void *)(str));
+
+  if (!*out_json)
+    return C_REST_ERROR_GENERIC;
 
   return C_REST_OK;
 }

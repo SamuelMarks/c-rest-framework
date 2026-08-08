@@ -4,6 +4,7 @@
 #include "c_rest_error.h"
 #include "c_rest_request.h" /* For struct c_rest_header */
 #include "c_rest_response.h"
+#define IGNORE_RC(expr) { c_rest_error_t _ign_rc = (expr); (void)_ign_rc; }
 #include "c_rest_modality.h"
 #include <parson.h>
 
@@ -13,6 +14,7 @@
 #include "c_rest_log.h"
 
 #include <ctype.h>
+#include "c_rest_str_utils.h"
 
 #if defined(_MSC_VER)
 #define SAFE_STRCPY(dest, size, src) strcpy_s(dest, size, src)
@@ -20,20 +22,6 @@
 #define SAFE_STRCPY(dest, size, src) strcpy(dest, src)
 #endif
 
-static c_rest_error_t c_rest_stricmp(const char *s1, const char *s2, int *out_cmp) {
-  while (*s1 && *s2) {
-    int c1 = tolower((unsigned char)*s1);
-    int c2 = tolower((unsigned char)*s2);
-    if (c1 != c2) {
-      *out_cmp = c1 - c2;
-      return C_REST_OK;
-    }
-    s1++;
-    s2++;
-  }
-  *out_cmp = tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
-  return C_REST_OK;
-}
 
 c_rest_error_t c_rest_response_set_header(struct c_rest_response *res, const char *key,
                                const char *value) {
@@ -48,12 +36,15 @@ c_rest_error_t c_rest_response_set_header(struct c_rest_response *res, const cha
   }
 
   /* Check if it already exists, replace value if it does */
-  rc = c_rest_stricmp(key, "Set-Cookie", &cmp);
-  if (rc == C_REST_OK && cmp != 0) {
+  rc = c_rest_strcasecmp(key, "Set-Cookie", &cmp);
+  if (rc != C_REST_OK) return rc;
+
+  if (cmp != 0) {
     for (h = res->headers; h != NULL; h = h->next) {
-      int hcmp;
-      rc = c_rest_stricmp(h->key, key, &hcmp);
-      if (rc == C_REST_OK && hcmp == 0) {
+      int h_cmp;
+      rc = c_rest_strcasecmp(h->key, key, &h_cmp);
+      if (rc != C_REST_OK) return rc;
+      if (h_cmp == 0) {
         char *new_val;
 
 val_len = strlen(value) + 1;
@@ -118,10 +109,9 @@ c_rest_error_t c_rest_response_check_etag(struct c_rest_request *req,
 
   rc = c_rest_request_get_header(req, "If-None-Match", &if_none_match);
   if (rc == C_REST_OK) {
-    if (if_none_match && strcmp(if_none_match, etag) == 0) {
-      rc = c_rest_response_set_status(res, 304);
-      if (rc != C_REST_OK) return rc; /* Not Modified */
-      return C_REST_ERROR_GENERIC;                             /* Match found */
+    if (strcmp(if_none_match, etag) == 0) {
+      IGNORE_RC(c_rest_response_set_status(res, 304));
+      return C_REST_ERROR_GENERIC; /* Match found */
     }
   }
 
@@ -204,9 +194,9 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
   ctx = (struct c_rest_connection_context *)res->context;
   if (ctx) {
     if (ctx->tls_conn) {
-      (void)!c_rest_tls_write(ctx->tls_conn, header_buf, offset, &written);
+      IGNORE_RC(c_rest_tls_write(ctx->tls_conn, header_buf, offset, &written));
       if (res->body && res->body_len > 0) {
-        (void)!c_rest_tls_write(ctx->tls_conn, res->body, res->body_len, &written);
+        IGNORE_RC(c_rest_tls_write(ctx->tls_conn, res->body, res->body_len, &written));
       }
     } else {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
@@ -227,9 +217,9 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
         }
       }
 #else
-        (void)!c_rest_socket_send(ctx->sock, header_buf, offset, &written);
+        IGNORE_RC(c_rest_socket_send(ctx->sock, header_buf, offset, &written));
         if (res->body && res->body_len > 0) {
-          (void)!c_rest_socket_send(ctx->sock, res->body, res->body_len, &written);
+          IGNORE_RC(c_rest_socket_send(ctx->sock, res->body, res->body_len, &written));
         }
 #endif
     }
@@ -334,7 +324,7 @@ c_rest_response_template(struct c_rest_response *res,
   if (!res || !ctx) {
     return C_REST_ERROR_GENERIC;
   }
-  (void)!c_rest_template_render(ctx, keys, values, count, &rendered);
+  IGNORE_RC(c_rest_template_render(ctx, keys, values, count, &rendered));
   rc = c_rest_response_html(res, rendered);
   if (rendered) {
     C_REST_FREE(rendered);
@@ -388,9 +378,9 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
   }
 
   if (!res->headers_sent) {
-    (void)!c_rest_response_set_header(res, "Transfer-Encoding", "chunked");
+    IGNORE_RC(c_rest_response_set_header(res, "Transfer-Encoding", "chunked"));
     res->is_chunked = 1;
-    (void)!c_rest_response_send(res);
+    IGNORE_RC(c_rest_response_send(res));
   }
 
   ctx = (struct c_rest_connection_context *)res->context;
@@ -407,11 +397,11 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
 #endif
 
     if (ctx->tls_conn) {
-      (void)!c_rest_tls_write(ctx->tls_conn, hex_buf, hex_len, &written);
+      IGNORE_RC(c_rest_tls_write(ctx->tls_conn, hex_buf, hex_len, &written));
       if (chunk_len > 0) {
-        (void)!c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written);
+        IGNORE_RC(c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written));
       }
-      (void)!c_rest_tls_write(ctx->tls_conn, "\r\n", 2, &written);
+      IGNORE_RC(c_rest_tls_write(ctx->tls_conn, "\r\n", 2, &written));
     } else {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
       if (ctx->cm_env) {
@@ -443,18 +433,18 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
           return rc;
       }
 #else
-      (void)!c_rest_socket_send(ctx->sock, hex_buf, hex_len, &written);
+      IGNORE_RC(c_rest_socket_send(ctx->sock, hex_buf, hex_len, &written));
       if (chunk_len > 0) {
-        (void)!c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+        IGNORE_RC(c_rest_socket_send(ctx->sock, chunk, chunk_len, &written));
       }
-      (void)!c_rest_socket_send(ctx->sock, "\r\n", 2, &written);
+      IGNORE_RC(c_rest_socket_send(ctx->sock, "\r\n", 2, &written));
 #endif
     }
   } else {
     /* Not chunked HTTP/1.1, just stream raw bytes (used heavily by SSE) */
     if (chunk_len > 0) {
       if (ctx->tls_conn) {
-        (void)!c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written);
+        IGNORE_RC(c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written));
       } else {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
         if (ctx->cm_env) {
@@ -468,7 +458,7 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
             return rc;
         }
 #else
-        (void)!c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+        IGNORE_RC(c_rest_socket_send(ctx->sock, chunk, chunk_len, &written));
 #endif
       }
     }
@@ -486,8 +476,8 @@ c_rest_error_t c_rest_response_redirect(struct c_rest_response *res,
   if (status_code < 300 || status_code > 399) {
     status_code = 302; /* Default to temporary redirect */
   }
-  (void)!c_rest_response_set_status(res, status_code);
-  (void)!c_rest_response_set_header(res, "Location", url);
+  IGNORE_RC(c_rest_response_set_status(res, status_code));
+  IGNORE_RC(c_rest_response_set_header(res, "Location", url));
   return c_rest_response_send(res);
 }
 
@@ -656,8 +646,11 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
   if (!res->is_chunked) {
     int found_cl = 0;
     for (h = res->headers; h != NULL; h = h->next) {
-      int cmp;
-      if (c_rest_stricmp(h->key, "Content-Length", &cmp) == 0 && cmp == 0) {
+      int h_cmp;
+      rc = c_rest_strcasecmp(h->key, "Content-Length", &h_cmp);
+      if (rc != C_REST_OK)
+        return rc;
+      if (h_cmp == 0) {
         found_cl = 1;
         break;
       }
@@ -688,8 +681,8 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
   if (!buf)
     return C_REST_ERROR_GENERIC;
 
-  (void)!get_status_text(res->status_code ? res->status_code : 200,
-                         &status_text);
+  IGNORE_RC(
+      get_status_text(res->status_code ? res->status_code : 200, &status_text));
 
 #if defined(_MSC_VER)
   offset += sprintf_s(buf + offset, est_len - offset, "HTTP/1.1 %d %s\r\n",
@@ -755,10 +748,10 @@ c_rest_error_t c_rest_response_oauth2_error(struct c_rest_response *res,
     pairs[1].key = "error_description";
     pairs[1].type = C_REST_JSON_TYPE_STRING;
     pairs[1].str_val = error_description;
-    (void)!c_rest_response_set_status(res, 400);
+    IGNORE_RC(c_rest_response_set_status(res, 400));
     return c_rest_response_json_dict(res, pairs, 2);
   } else {
-    (void)!c_rest_response_set_status(res, 400);
+    IGNORE_RC(c_rest_response_set_status(res, 400));
     return c_rest_response_json_dict(res, pairs, 1);
   }
 }

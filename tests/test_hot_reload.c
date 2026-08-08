@@ -411,6 +411,16 @@ TEST test_hot_reload_oom(void) {
      * EINVAL. */
 
     {
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define C_REST_ASAN_ENABLED 1
+#endif
+#endif
+#if defined(__SANITIZE_ADDRESS__)
+#define C_REST_ASAN_ENABLED 1
+#endif
+
+#ifndef C_REST_ASAN_ENABLED
       c_rest_thread_t bad_thread;
       /* On Mac/Linux a completely invalid pointer to pthread_t usually causes
        * ESRCH or EINVAL */
@@ -420,6 +430,7 @@ TEST test_hot_reload_oom(void) {
       ctx->logger = &err_logger;
       res = c_rest_hot_reload_destroy(ctx);
       ASSERT_EQ(C_REST_OK, res);
+#endif
     }
   }
 

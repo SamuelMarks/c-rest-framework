@@ -1485,7 +1485,7 @@ int test_modality(void) {
       if (sync_vtable.run)
         sync_vtable.run(&ctx_tls);
     }
-    g_mock_tls_fail = 0;
+
     g_mock_socket_fail = 0;
     ctx_tls.tls_ctx = NULL;
   }
@@ -1585,6 +1585,29 @@ int test_modality(void) {
 
     g_mock_socket_fail = 0;
   }
+
+  {
+    extern int g_mock_socket_fail;
+    extern c_rest_error_t mock_c_rest_socket_accept(
+        c_rest_socket_t server, c_rest_socket_t * out_client);
+    extern c_rest_error_t mock_c_rest_socket_close(c_rest_socket_t sock);
+    c_rest_socket_t client;
+
+    g_mock_socket_fail = 11;
+    mock_c_rest_socket_accept(C_REST_INVALID_SOCKET, &client);
+    g_mock_socket_fail = 12;
+    mock_c_rest_socket_accept(C_REST_INVALID_SOCKET, &client);
+    g_mock_socket_fail = 109;
+    mock_c_rest_socket_accept(C_REST_INVALID_SOCKET, &client);
+
+    g_mock_socket_fail = 6;
+    mock_c_rest_socket_close(C_REST_INVALID_SOCKET);
+    g_mock_socket_fail = 106;
+    mock_c_rest_socket_close(C_REST_INVALID_SOCKET);
+
+    g_mock_socket_fail = 0;
+  }
+
   test_modality_simple();
   return failed;
 }

@@ -148,6 +148,7 @@ static int test_websocket_edge_cases(void) {
 
   header.payload_length = 126;
   if (c_rest_websocket_serialize_frame_header(&header, out_buf, 2, &written) == C_REST_OK) return __LINE__;
+  if (c_rest_websocket_serialize_frame_header(&header, out_buf, sizeof(out_buf), &written) != C_REST_OK) return __LINE__;
 
   header.payload_length = 70000; /* > 0xFFFF */
   if (c_rest_websocket_serialize_frame_header(&header, out_buf, 2, &written) == C_REST_OK) return __LINE__;
@@ -155,10 +156,16 @@ static int test_websocket_edge_cases(void) {
   if (c_rest_websocket_serialize_frame_header(&header, out_buf, sizeof(out_buf), &written) != C_REST_OK) return __LINE__;
 
   header.masked = 1;
+  header.payload_length = 5;
+  if (c_rest_websocket_serialize_frame_header(&header, out_buf, 2, &written) == C_REST_OK) return __LINE__;
+  if (c_rest_websocket_serialize_frame_header(&header, out_buf, sizeof(out_buf), &written) != C_REST_OK) return __LINE__;
+
+  header.payload_length = 70000;
   if (c_rest_websocket_serialize_frame_header(&header, out_buf, 12, &written) == C_REST_OK) return __LINE__;
 
   /* Unmask */
   if (c_rest_websocket_unmask_payload(NULL, 10, frame) == C_REST_OK) return __LINE__;
+  if (c_rest_websocket_unmask_payload(NULL, 0, frame) != C_REST_OK) return __LINE__;
 
   return 0;
 }
@@ -190,6 +197,19 @@ static int test_websocket_upgrade(void) {
   if (ret != 0) {
     printf("test_websocket_upgrade failed\n\n"); return __LINE__;
   }
+
+  /* Test with Upgrade = NULL */
+  upgrade_hdr.value = NULL;
+  ret = c_rest_websocket_upgrade(&req, &res);
+  if (ret == 0) return __LINE__;
+
+  /* Test with Upgrade = "not_websocket" */
+  upgrade_hdr.value = "not_websocket";
+  ret = c_rest_websocket_upgrade(&req, &res);
+  if (ret == 0) return __LINE__;
+
+  /* Restore for safety */
+  upgrade_hdr.value = "websocket";
 
 
 

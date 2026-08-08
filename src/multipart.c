@@ -100,7 +100,7 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
     case s_start:
       if (c == '-' && parser->index == 0) {
         parser->index++;
-      } else if (c == '-' && parser->index == 1) { /* LCOV_EXCL_BR_LINE */
+      } else if (c == '-') {
         parser->index++;
         parser->state = s_start_boundary;
       } else {
@@ -135,8 +135,7 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
       if (c == CR) {
         parser->state = s_headers_almost_done;
       } else if (c == ':') {
-        if (parser->callbacks.on_header_field &&
-            i > mark) { /* LCOV_EXCL_BR_LINE */
+        if (parser->callbacks.on_header_field && i > mark) {
           parser->callbacks.on_header_field(parser, data + mark, i - mark);
         }
         parser->state = s_header_value_start;
@@ -163,8 +162,7 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
       break;
     case s_header_value:
       if (c == CR) {
-        if (parser->callbacks.on_header_value &&
-            i > mark) { /* LCOV_EXCL_BR_LINE */
+        if (parser->callbacks.on_header_value && i > mark) {
           parser->callbacks.on_header_value(parser, data + mark, i - mark);
         }
         parser->state = s_header_value_almost_done;
@@ -232,7 +230,7 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
         } else {
           if (parser->callbacks.on_part_data) {
             parser->callbacks.on_part_data(parser, "\\r\\n--", 4);
-            if (parser->boundary_match_index > 2) { /* LCOV_EXCL_BR_LINE */
+            if (parser->boundary_match_index > 2) {
               parser->callbacks.on_part_data(parser, parser->boundary,
                                              parser->boundary_match_index - 2);
             }
@@ -241,10 +239,9 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
           mark = i;
           i--;
         }
-      } else if (parser->boundary_match_index - 2 ==
-                 parser->boundary_length) { /* LCOV_EXCL_BR_LINE */
+      } else {
         if (c == CR) {
-          if (parser->callbacks.on_part_end) { /* LCOV_EXCL_BR_LINE */
+          if (parser->callbacks.on_part_end) {
             parser->callbacks.on_part_end(parser);
           }
           parser->state = s_header_field_start;
@@ -277,10 +274,12 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
       break;
     case s_epilogue:
       break;
+    default:
+      return C_REST_ERROR_GENERIC;
     }
   }
 
-  if (parser->state == s_part_data && mark < len) { /* LCOV_EXCL_BR_LINE */
+  if (parser->state == s_part_data && mark < len) {
     if (parser->callbacks.on_part_data) {
       parser->callbacks.on_part_data(parser, data + mark, len - mark);
     }
@@ -301,18 +300,15 @@ c_rest_multipart_parser_clone(const c_rest_multipart_parser *parser,
     return C_REST_ERROR_GENERIC;
 
   *p = *parser;
-  if (parser->boundary) { /* LCOV_EXCL_BR_LINE */
-    if (C_REST_MALLOC(parser->boundary_length + 1, (void **)&p->boundary) !=
-        0) {
-      C_REST_FREE(p);
-      return C_REST_ERROR_GENERIC;
-    }
-#if defined(_MSC_VER)
-    strcpy_s(p->boundary, parser->boundary_length + 1, parser->boundary);
-#else
-    strcpy(p->boundary, parser->boundary);
-#endif
+  if (C_REST_MALLOC(parser->boundary_length + 1, (void **)&p->boundary) != 0) {
+    C_REST_FREE(p);
+    return C_REST_ERROR_GENERIC;
   }
+#if defined(_MSC_VER)
+  strcpy_s(p->boundary, parser->boundary_length + 1, parser->boundary);
+#else
+  strcpy(p->boundary, parser->boundary);
+#endif
 
   *out_clone = p;
   return C_REST_OK;
@@ -322,8 +318,7 @@ c_rest_error_t
 c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser) {
   if (!parser)
     return C_REST_ERROR_GENERIC;
-  if (parser->boundary) /* LCOV_EXCL_BR_LINE */
-    C_REST_FREE(parser->boundary);
+  C_REST_FREE(parser->boundary);
   C_REST_FREE(parser);
   return C_REST_OK;
 }

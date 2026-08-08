@@ -73,6 +73,14 @@ static void *fail_malloc_n(size_t size) {
   return malloc(size);
 }
 
+struct dummy_parser_state {
+  char *boundary;
+  size_t boundary_length;
+  size_t index;
+  size_t boundary_match_index;
+  int state;
+};
+
 static void test_multipart_invalid_args(int *res_ptr) {
   size_t parsed = 0;
   c_rest_multipart_parser *parser = NULL;
@@ -383,6 +391,12 @@ static void test_multipart_invalid_args(int *res_ptr) {
   c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
   rc = c_rest_multipart_parser_execute(
       parser, "--boundary\r\n\r\n\r\n--boundary--X", 30, &parsed);
+  c_rest_multipart_parser_destroy(parser);
+
+  /* Edge case: invalid state */
+  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ((struct dummy_parser_state *)parser)->state = 999;
+  rc = c_rest_multipart_parser_execute(parser, "data", 4, &parsed);
   c_rest_multipart_parser_destroy(parser);
 
   printf("malloc loop\n");
@@ -523,6 +537,14 @@ static void *fail_malloc_n(size_t size) {
   return malloc(size);
 }
 
+struct dummy_parser_state {
+  char *boundary;
+  size_t boundary_length;
+  size_t index;
+  size_t boundary_match_index;
+  int state;
+};
+
 static void test_multipart_invalid_args(int *res_ptr) {
   size_t parsed = 0;
   c_rest_multipart_parser *parser = NULL;
@@ -833,6 +855,12 @@ static void test_multipart_invalid_args(int *res_ptr) {
   c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
   rc = c_rest_multipart_parser_execute(
       parser, "--boundary\r\n\r\n\r\n--boundary--X", 30, &parsed);
+  c_rest_multipart_parser_destroy(parser);
+
+  /* Edge case: invalid state */
+  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ((struct dummy_parser_state *)parser)->state = 999;
+  rc = c_rest_multipart_parser_execute(parser, "data", 4, &parsed);
   c_rest_multipart_parser_destroy(parser);
 
   printf("malloc loop\n");

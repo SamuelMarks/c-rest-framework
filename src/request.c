@@ -10,21 +10,6 @@
 #include "c_rest_log.h"
 
 #include <ctype.h>
-static c_rest_error_t c_rest_stricmp(const char *s1, const char *s2, int *out_cmp) {
-  while (*s1 && *s2) {
-    int c1 = tolower((unsigned char)*s1);
-    int c2 = tolower((unsigned char)*s2);
-    if (c1 != c2) {
-      *out_cmp = c1 - c2;
-      return C_REST_OK;
-    }
-    s1++;
-    s2++;
-  }
-  *out_cmp = tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
-  return C_REST_OK;
-}
-
 c_rest_error_t c_rest_request_get_header(struct c_rest_request *req, const char *key,
                               const char **out_value) {
   struct c_rest_header *h;
@@ -33,7 +18,10 @@ c_rest_error_t c_rest_request_get_header(struct c_rest_request *req, const char 
   }
   for (h = req->headers; h != NULL; h = h->next) {
     int cmp;
-    if (c_rest_stricmp(h->key, key, &cmp) == 0 && cmp == 0) {
+    c_rest_error_t rc;
+    rc = c_rest_strcasecmp(h->key, key, &cmp);
+    if (rc != C_REST_OK) return rc;
+    if (cmp == 0) {
       *out_value = h->value;
       return C_REST_OK;
     }
@@ -46,7 +34,9 @@ static c_rest_error_t parse_cookies_if_needed(struct c_rest_request *req) {
   c_rest_error_t rc;
   const char *cookie_str;
   const char *p;
-  if (!req || req->cookies) {
+  int done = 0;
+
+  if (req->cookies) {
     return C_REST_OK;
   }
   rc = c_rest_request_get_header(req, "Cookie", &cookie_str);
@@ -55,65 +45,65 @@ static c_rest_error_t parse_cookies_if_needed(struct c_rest_request *req) {
   }
 
   p = cookie_str;
-  while (*p) {
-    const char *eq;
-    const char *semi;
-    size_t key_len, val_len;
-    struct c_rest_header *cp;
-
-    while (*p == ' ')
-      p++; /* Skip leading spaces */
-    if (*p == '\0')
-      break;
-
-    eq = strchr(p, '=');
-    semi = strchr(p, ';');
-
-    if (!semi) {
-      semi = p + strlen(p);
-    }
-
-    if (!eq || eq > semi) {
-      /* Invalid cookie format, skip to next */
-      p = semi;
-      if (*p == ';')
-        p++;
-      continue;
-    }
-
-    key_len = (size_t)(eq - p);
-    val_len = (size_t)(semi - eq - 1);
-
-    if (C_REST_MALLOC(sizeof(struct c_rest_header), &cp) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp = NULL; }
-    if (cp) {
-      if (C_REST_MALLOC(key_len + 1, &cp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp->key = NULL; }
-      if (C_REST_MALLOC(val_len + 1, &cp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp->value = NULL; }
-      if (cp->key && cp->value) {
-        #if defined(_MSC_VER)
-        /* CDD_SAFE_CRT */ memcpy_s(cp->key, key_len, p, key_len);
-        #else
-        memcpy(cp->key, p, key_len);
-        #endif
-        cp->key[key_len] = '\0';
-        #if defined(_MSC_VER)
-        /* CDD_SAFE_CRT */ memcpy_s(cp->value, val_len, eq + 1, val_len);
-        #else
-        memcpy(cp->value, eq + 1, val_len);
-        #endif
-        cp->value[val_len] = '\0';
-
-        cp->next = req->cookies;
-        req->cookies = cp;
+  while (!done) {
+    if (*p == '\0') {
+      done = 1;
+    } else {
+      while (*p == ' ')
+        p++; /* Skip leading spaces */
+      if (*p == '\0') {
+        done = 1;
       } else {
-        if (cp->key) C_REST_FREE((void *)(cp->key));
-        C_REST_FREE((void *)(cp->value));
-        C_REST_FREE((void *)(cp));
+        const char *eq = strchr(p, '=');
+        const char *semi = strchr(p, ';');
+        size_t key_len, val_len;
+        struct c_rest_header *cp = NULL;
+
+        if (!semi) {
+          semi = p + strlen(p);
+        }
+
+        if (!eq || eq > semi) {
+          /* Invalid cookie format, skip to next */
+          p = semi;
+          if (*p == ';') p++;
+        } else {
+          key_len = (size_t)(eq - p);
+          val_len = (size_t)(semi - eq - 1);
+
+          if (C_REST_MALLOC(sizeof(struct c_rest_header), &cp) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp = NULL; }
+          if (cp) {
+            if (C_REST_MALLOC(key_len + 1, &cp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp->key = NULL; }
+            if (C_REST_MALLOC(val_len + 1, &cp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp->value = NULL; }
+            if (cp->key && cp->value) {
+              #if defined(_MSC_VER)
+              /* CDD_SAFE_CRT */ memcpy_s(cp->key, key_len, p, key_len);
+              #else
+              memcpy(cp->key, p, key_len);
+              #endif
+              cp->key[key_len] = '\0';
+              #if defined(_MSC_VER)
+              /* CDD_SAFE_CRT */ memcpy_s(cp->value, val_len, eq + 1, val_len);
+              #else
+              memcpy(cp->value, eq + 1, val_len);
+              #endif
+              cp->value[val_len] = '\0';
+
+              cp->next = req->cookies;
+              req->cookies = cp;
+            } else {
+              C_REST_FREE((void *)(cp->key));
+              C_REST_FREE((void *)(cp->value));
+              C_REST_FREE((void *)(cp));
+            }
+          }
+
+          p = semi;
+          if (*p == ';')
+            p++;
+        }
       }
     }
-
-    p = semi;
-    if (*p == ';')
-      p++;
   }
   return C_REST_OK;
 }
@@ -139,7 +129,7 @@ c_rest_error_t c_rest_request_get_cookie(struct c_rest_request *req, const char 
 static c_rest_error_t parse_query_if_needed(struct c_rest_request *req) {
   c_rest_error_t rc;
   const char *p;
-  if (!req || !req->query || req->query_params) {
+  if (!req->query || req->query_params) {
     return C_REST_OK; /* Already parsed or no query string */
   }
 
@@ -156,7 +146,7 @@ static c_rest_error_t parse_query_if_needed(struct c_rest_request *req) {
 
     if (C_REST_MALLOC(sizeof(struct c_rest_header), &qp) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp = NULL; }
     if (!qp) {
-      break; /* Out of memory */
+      return C_REST_ERROR_OOM; /* Out of memory */
     }
     qp->key = NULL;
     qp->value = NULL;
@@ -168,21 +158,18 @@ static c_rest_error_t parse_query_if_needed(struct c_rest_request *req) {
 
       if (C_REST_MALLOC(key_len + 1, &qp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->key = NULL; }
       if (qp->key) {
-        rc = c_rest_url_decode(qp->key, p, key_len);
-        if (rc != C_REST_OK) return rc;
+        (void)c_rest_url_decode(qp->key, p, key_len);
       }
 
       if (C_REST_MALLOC(val_len + 1, &qp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->value = NULL; }
       if (qp->value) {
-        rc = c_rest_url_decode(qp->value, eq + 1, val_len);
-        if (rc != C_REST_OK) return rc;
+        (void)c_rest_url_decode(qp->value, eq + 1, val_len);
       }
     } else {
       key_len = (size_t)(amp - p);
       if (C_REST_MALLOC(key_len + 1, &qp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->key = NULL; }
       if (qp->key) {
-        rc = c_rest_url_decode(qp->key, p, key_len);
-        if (rc != C_REST_OK) return rc;
+        (void)c_rest_url_decode(qp->key, p, key_len);
       }
       if (C_REST_MALLOC(1, &qp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->value = NULL; }
       if (qp->value) {
@@ -253,7 +240,7 @@ c_rest_error_t c_rest_request_parse_urlencoded(struct c_rest_request *req) {
 
     if (C_REST_MALLOC(sizeof(struct c_rest_header), &qp) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp = NULL; }
     if (!qp) {
-      break; /* Out of memory */
+      return C_REST_ERROR_OOM; /* Out of memory */
     }
     qp->key = NULL;
     qp->value = NULL;
@@ -265,21 +252,18 @@ c_rest_error_t c_rest_request_parse_urlencoded(struct c_rest_request *req) {
 
       if (C_REST_MALLOC(key_len + 1, &qp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->key = NULL; }
       if (qp->key) {
-        rc = c_rest_url_decode(qp->key, p, key_len);
-        if (rc != C_REST_OK) return rc;
+        (void)c_rest_url_decode(qp->key, p, key_len);
       }
 
       if (C_REST_MALLOC(val_len + 1, &qp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->value = NULL; }
       if (qp->value) {
-        rc = c_rest_url_decode(qp->value, eq + 1, val_len);
-        if (rc != C_REST_OK) return rc;
+        (void)c_rest_url_decode(qp->value, eq + 1, val_len);
       }
     } else {
       key_len = (size_t)(amp - p);
       if (C_REST_MALLOC(key_len + 1, &qp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->key = NULL; }
       if (qp->key) {
-        rc = c_rest_url_decode(qp->key, p, key_len);
-        if (rc != C_REST_OK) return rc;
+        (void)c_rest_url_decode(qp->key, p, key_len);
       }
       if (C_REST_MALLOC(1, &qp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); qp->value = NULL; }
       if (qp->value) {

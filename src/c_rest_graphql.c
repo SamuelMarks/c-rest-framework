@@ -52,42 +52,56 @@ static c_rest_error_t alloc_list(struct c_rest_graphql_node_list **out_list) {
  */
 static c_rest_error_t list_append(struct c_rest_graphql_node_list *list,
                                   struct c_rest_graphql_node *node) {
-  if (list->count >= list->capacity) {
-    size_t new_cap = list->capacity == 0 ? 4 : list->capacity * 2;
-    struct c_rest_graphql_node **new_nodes = NULL;
-    if (C_REST_MALLOC(new_cap * sizeof(struct c_rest_graphql_node *),
-                      &new_nodes) != 0) {
-      return C_REST_ERROR_GENERIC;
-    }
-    if (list->nodes) {
-      memcpy(new_nodes, list->nodes,
-             list->count * sizeof(struct c_rest_graphql_node *));
-      C_REST_FREE(list->nodes);
-    }
-    list->nodes = new_nodes;
-    list->capacity = new_cap;
+  size_t new_cap;
+  struct c_rest_graphql_node **new_nodes;
+  size_t i;
+
+  if (list->count < list->capacity) {
+    list->nodes[list->count++] = node;
+    return C_REST_OK;
   }
+
+  new_cap = list->capacity == 0 ? 4 : list->capacity * 2;
+  new_nodes = NULL;
+
+  if (C_REST_MALLOC(new_cap * sizeof(struct c_rest_graphql_node *),
+                    &new_nodes) != 0) {
+    return C_REST_ERROR_GENERIC;
+  }
+
+  if (list->nodes != NULL) {
+    for (i = 0; i < list->count; i++) {
+      new_nodes[i] = list->nodes[i];
+    }
+    C_REST_FREE(list->nodes);
+  }
+  list->nodes = new_nodes;
+  list->capacity = new_cap;
+
   list->nodes[list->count++] = node;
   return C_REST_OK;
 }
 
 static c_rest_error_t skip_whitespace(struct c_rest_graphql_context *ctx) {
-  while (ctx->position < ctx->length) {
-    char c = ctx->input[ctx->position];
-    if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ',') {
-      ctx->position++;
-    } else if (c == '#') {
-      for (;;) {
-        if (ctx->position >= ctx->length)
-          break;
-        if (ctx->input[ctx->position] == '\n')
-          break;
-        if (ctx->input[ctx->position] == '\r')
-          break;
-        ctx->position++;
-      }
+  int done = 0;
+  while (!done) {
+    if (ctx->position >= ctx->length) {
+      done = 1;
     } else {
-      break;
+      char c = ctx->input[ctx->position];
+      if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ',') {
+        ctx->position++;
+      } else if (c == '#') {
+        while (ctx->position < ctx->length) {
+          if (ctx->input[ctx->position] == '\n' ||
+              ctx->input[ctx->position] == '\r') {
+            break;
+          }
+          ctx->position++;
+        }
+      } else {
+        done = 1;
+      }
     }
   }
   return C_REST_OK;

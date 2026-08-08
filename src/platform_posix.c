@@ -1,6 +1,7 @@
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
+#include "c_rest_endian.h"
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif
@@ -56,10 +57,12 @@ c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock, const char *host,
   int res;
 
   int opt = 1;
+
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(port);
+  c_rest_htons(port, &addr.sin_port);
   addr.sin_addr.s_addr = inet_addr(host);
 
   res = bind(s, (struct sockaddr *)&addr, sizeof(addr));
@@ -76,36 +79,34 @@ c_rest_error_t c_rest_socket_listen(c_rest_socket_t sock, int backlog) {
   int s = (int)sock;
   int res = listen(s, backlog);
   if (res < 0)
-    return C_REST_ERROR_GENERIC; /* LCOV_EXCL_LINE */
+    return C_REST_ERROR_GENERIC;
   return C_REST_OK;
 #else
   return C_REST_ERROR_GENERIC;
 #endif
 }
 
-c_rest_error_t
-c_rest_socket_accept(c_rest_socket_t server_sock, /* LCOV_EXCL_LINE */
-                     c_rest_socket_t *out_client_sock) {
+c_rest_error_t c_rest_socket_accept(c_rest_socket_t server_sock,
+                                    c_rest_socket_t *out_client_sock) {
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
-  int s = (int)server_sock; /* LCOV_EXCL_LINE */
+  int s = (int)server_sock;
   int client;
   struct sockaddr_in client_addr;
-  socklen_t addr_len = sizeof(client_addr); /* LCOV_EXCL_LINE */
+  socklen_t addr_len = sizeof(client_addr);
 
-  if (!out_client_sock)          /* LCOV_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* LCOV_EXCL_LINE */
+  if (!out_client_sock)
+    return C_REST_ERROR_GENERIC;
 
-  client = accept(s, (struct sockaddr *)&client_addr,
-                  &addr_len);    /* LCOV_EXCL_LINE */
-  if (client < 0)                /* LCOV_EXCL_LINE */
-    return C_REST_ERROR_GENERIC; /* LCOV_EXCL_LINE */
+  client = accept(s, (struct sockaddr *)&client_addr, &addr_len);
+  if (client < 0)
+    return C_REST_ERROR_GENERIC;
 
-  *out_client_sock = (c_rest_socket_t)client; /* LCOV_EXCL_LINE */
-  return C_REST_OK;                           /* LCOV_EXCL_LINE */
+  *out_client_sock = (c_rest_socket_t)client;
+  return C_REST_OK;
 #else
   return C_REST_ERROR_GENERIC;
 #endif
-} /* LCOV_EXCL_LINE */
+}
 
 c_rest_error_t c_rest_socket_set_nonblocking(c_rest_socket_t sock,
                                              int nonblocking) {
@@ -294,8 +295,8 @@ c_rest_error_t c_rest_cond_wait(c_rest_cond_t c, c_rest_mutex_t m) {
   if (!cond || !mutex)
     return C_REST_ERROR_GENERIC;
 
-  pthread_cond_wait(cond, mutex); /* LCOV_EXCL_LINE */
-  return C_REST_OK;               /* LCOV_EXCL_LINE */
+  pthread_cond_wait(cond, mutex);
+  return C_REST_OK;
 #else
   return C_REST_ERROR_GENERIC;
 #endif
@@ -348,7 +349,7 @@ c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
   if (pid == 0) {
     /* Child */
     execvp(executable, argv);
-    exit(127); /* Should not reach */ /* LCOV_EXCL_LINE */
+    exit(127); /* Should not reach */
   }
 
   *out_proc = (c_rest_process_t)pid;
@@ -373,7 +374,7 @@ c_rest_error_t c_rest_process_wait(c_rest_process_t proc, int *out_exit_code) {
     if (WIFEXITED(status)) {
       *out_exit_code = WEXITSTATUS(status);
     } else {
-      *out_exit_code = 1; /* LCOV_EXCL_LINE */
+      *out_exit_code = 1;
       /* Terminated by signal or otherwise */
     }
   }
@@ -391,11 +392,9 @@ c_rest_error_t c_rest_timer_get_ms(unsigned long *out_ms) {
     return C_REST_ERROR_GENERIC;
 
   /* Strict C89 lacks clock_gettime, but POSIX has it */
-  if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
-    *out_ms = (unsigned long)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
-    return C_REST_OK;
-  }
-  return C_REST_ERROR_GENERIC; /* LCOV_EXCL_LINE */
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  *out_ms = (unsigned long)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+  return C_REST_OK;
 #else
   return C_REST_ERROR_GENERIC;
 #endif
