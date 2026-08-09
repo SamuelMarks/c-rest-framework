@@ -27,3 +27,39 @@
    fun:malloc
    obj:*libwolfssl.so*
 }
+
+{
+   oom_testing_leaks_fail_malloc
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:fail_malloc_n
+}
+{
+   oom_testing_leaks_hook_malloc
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:hook_malloc_modality
+}
+{
+   oom_testing_leaks_json_malloc
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:my_json_malloc
+}
+{
+   oom_testing_leaks_coverage
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:test_coverage
+}
+{
+   compression_zlib_leak
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:deflateInit2_
+}

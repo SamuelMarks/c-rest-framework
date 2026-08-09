@@ -6,11 +6,6 @@
 #include <string.h>
 /* clang-format on */
 
-static void sig_handler(int sig) {
-  (void)sig;
-  exit(0);
-}
-
 int main(void) {
   c_rest_http23_ctx_t *ctx = NULL;
 

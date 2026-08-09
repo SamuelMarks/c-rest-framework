@@ -9,8 +9,12 @@ int usleep(unsigned int);
 
 #include <stdio.h>
 #include <string.h>
+#if defined(_WIN32)
+#include <winsock2.h>
+#else
 #include <sys/socket.h>
 #include <unistd.h>
+#endif
 /* clang-format on */
 
 static c_rest_error_t cond_thread_func(void *arg) {
@@ -103,6 +107,7 @@ int test_platform(void) {
   }
 
   {
+#ifndef _WIN32
     int fds[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
       c_rest_socket_t s1 = (c_rest_socket_t)fds[0];
@@ -111,6 +116,7 @@ int test_platform(void) {
       /*c_rest_socket_send(s1, "hello", 5, &wr);*/
       /*c_rest_socket_recv(s2, buf, 5, &rd);*/
     }
+#endif
   }
 
   {

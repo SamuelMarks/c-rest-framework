@@ -173,12 +173,7 @@ static void test_coverage(void) {
     c_rest_client_context *c = NULL;
     if (c_rest_client_init(&c) == C_REST_OK) {
       struct c_rest_client_response *sr = NULL;
-      struct c_rest_client_header hdr[1];
       c->client.send = mock_send_full;
-      
-
-      hdr[0].key = "a";
-      hdr[0].value = "b";
 
       /* Missing method */
       c_rest_client_request_sync(c, "http://a", NULL, NULL, 0, NULL, 0, &sr);

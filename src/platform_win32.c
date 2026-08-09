@@ -265,6 +265,7 @@ c_rest_error_t c_rest_cond_wait(c_rest_cond_t c, c_rest_mutex_t m) {
   struct cond_impl *cond = (struct cond_impl *)c;
   int wait_res;
   int last_waiter;
+  c_rest_error_t rc;
 
   if (!cond)
     return C_REST_ERROR_GENERIC;

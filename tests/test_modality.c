@@ -13,13 +13,25 @@ int usleep(unsigned int);
 #include "c_rest_response.h"
 #include <stdio.h>
 #include <string.h>
-#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#if defined(_WIN32)
+#include <winsock2.h>
+#ifndef AF_UNIX
+#define AF_UNIX 1
+#endif
+static int socketpair(int domain, int type, int protocol, int sv[2]) {
+  (void)domain;
+  (void)type;
+  (void)protocol;
+  sv[0] = -1;
+  sv[1] = -1;
+  return -1;
+}
+#else
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
-
 #endif
 /* clang-format on */
 
@@ -31,6 +43,15 @@ extern const struct c_rest_modality_vtable sync_vtable;
 extern const struct c_rest_modality_vtable single_thread_vtable;
 extern const struct c_rest_modality_vtable multi_thread_vtable;
 extern const struct c_rest_modality_vtable async_vtable;
+extern const struct c_rest_modality_vtable greenthread_vtable;
+extern const struct c_rest_modality_vtable message_passing_vtable;
+extern const struct c_rest_modality_vtable multi_process_vtable;
+extern int g_accept_calls;
+extern int g_mock_socket_fail;
+extern int g_mock_tls_fail;
+extern c_rest_error_t mock_c_rest_socket_accept(c_rest_socket_t server,
+                                                c_rest_socket_t *client);
+extern c_rest_error_t mock_c_rest_socket_close(c_rest_socket_t sock);
 
 static void my_dummy_free(void *ptr) { (void)ptr; }
 
@@ -362,7 +383,7 @@ static char *hook_strdup_modality(const char *str) {
   if (g_malloc_fail_count > 0)
     g_malloc_fail_count--;
 #if defined(_WIN32)
-  return _(char *) CRF_STRDUP(str);
+  return (char *)CRF_STRDUP(str);
 #else
   return (char *)CRF_STRDUP(str);
 #endif
@@ -376,42 +397,68 @@ struct test_client_args {
 static void my_sigalrm(int sig) { (void)sig; }
 static c_rest_error_t test_client_thread(void *arg) {
   struct test_client_args *args = (struct test_client_args *)arg;
-#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   int sock;
   struct sockaddr_in srv_addr;
   int retries = 50;
+
+  c_rest_platform_init();
+#if defined(_WIN32)
+  Sleep(100);
+#else
   usleep(100000);
+#endif
+
   while (retries-- > 0) {
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock >= 0) {
       memset(&srv_addr, 0, sizeof(srv_addr));
       srv_addr.sin_family = AF_INET;
-      srv_addr.sin_port = htons(args->port);
+      srv_addr.sin_port = htons((unsigned short)args->port);
       srv_addr.sin_addr.s_addr = htonl(0x7F000001);
       if (connect(sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) == 0) {
         const char *req =
             "GET / HTTP/1.1\r\nHost: loc\r\nConnection: close\r\n\r\n";
         send(sock, req, strlen(req), 0);
+#if defined(_WIN32)
+        Sleep(50);
+#else
         usleep(50000);
+#endif
         c_rest_stop(args->ctx);
+#if defined(_WIN32)
+        closesocket(sock);
+#else
         close(sock);
+#endif
         {
           int j;
           for (j = 0; j < 8; j++) {
             sock = socket(AF_INET, SOCK_STREAM, 0);
             if (sock >= 0) {
               connect(sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr));
+#if defined(_WIN32)
+              closesocket(sock);
+#else
               close(sock);
+#endif
             }
           }
         }
         break;
       }
+#if defined(_WIN32)
+      closesocket(sock);
+#else
       close(sock);
-    }
-    usleep(10000);
-  }
 #endif
+    }
+#if defined(_WIN32)
+    Sleep(10);
+#else
+    usleep(10000);
+#endif
+  }
+  c_rest_platform_cleanup();
   return C_REST_OK;
 }
 
@@ -676,7 +723,7 @@ int test_modality(void) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     /* Run with multiplatform mock */
     {
-      extern int g_accept_calls;
+
       g_accept_calls = 0;
       ctx->listen_address = "127.0.0.1";
       ctx->listen_port = 8080;
@@ -799,6 +846,7 @@ int test_modality(void) {
         ctx->vtable->init(ctx);
       }
       c_rest_destroy(ctx);
+      ctx = NULL;
     }
   }
   c_rest_set_router(NULL, NULL);
@@ -825,7 +873,7 @@ int test_modality(void) {
 #endif
   /* async modality direct tests */
   {
-    extern const struct c_rest_modality_vtable async_vtable;
+
     struct c_rest_context dummy_ctx_gt;
     c_rest_error_t rc_async;
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
@@ -961,7 +1009,7 @@ int test_modality(void) {
 
   /* greenthread modality direct tests */
   {
-    extern const struct c_rest_modality_vtable greenthread_vtable;
+
     struct c_rest_context dummy_ctx_gt;
     c_rest_error_t rc_gt;
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
@@ -1073,7 +1121,7 @@ int test_modality(void) {
 
   /* message_passing modality direct tests */
   {
-    extern const struct c_rest_modality_vtable message_passing_vtable;
+
     struct c_rest_context dummy_ctx_mp;
     c_rest_error_t rc_mp;
 
@@ -1176,7 +1224,7 @@ int test_modality(void) {
 
   /* multi_process modality direct tests */
   {
-    extern const struct c_rest_modality_vtable multi_process_vtable;
+
     struct c_rest_context dummy_ctx_mproc;
     c_rest_error_t rc_mproc;
 
@@ -1296,8 +1344,6 @@ int test_modality(void) {
 
   /* Extra run tests with thread connection to hit accept success */
   {
-    extern const struct c_rest_modality_vtable single_thread_vtable;
-    extern const struct c_rest_modality_vtable multi_thread_vtable;
 
     struct c_rest_context dummy_ctx;
     c_rest_thread_t client_thread;
@@ -1360,7 +1406,7 @@ int test_modality(void) {
   }
 
   {
-    extern int g_mock_socket_fail;
+
     struct c_rest_context ctx_err;
     struct my_sync_state multi_st;
     memset(&ctx_err, 0, sizeof(ctx_err));
@@ -1387,8 +1433,7 @@ int test_modality(void) {
   }
 
   {
-    extern int g_mock_socket_fail;
-    extern int g_mock_tls_fail;
+
     struct c_rest_context ctx_tls;
     struct my_sync_state sync_st;
     struct my_sync_state single_st;
@@ -1507,7 +1552,7 @@ int test_modality(void) {
   }
 
   {
-    extern int g_mock_socket_fail;
+
     struct c_rest_context ctx_err;
     struct my_sync_state st;
     int fails[] = {106, 108};
@@ -1588,10 +1633,6 @@ int test_modality(void) {
   }
 
   {
-    extern int g_mock_socket_fail;
-    extern c_rest_error_t mock_c_rest_socket_accept(
-        c_rest_socket_t server, c_rest_socket_t * out_client);
-    extern c_rest_error_t mock_c_rest_socket_close(c_rest_socket_t sock);
     c_rest_socket_t client;
 
     g_mock_socket_fail = 11;

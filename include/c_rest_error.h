@@ -16,7 +16,7 @@ extern "C" {
 /**
  * @brief Error codes returned by most functions in the framework.
  */
-typedef enum NO_DISCARD c_rest_error {
+typedef enum c_rest_error {
   /** @brief Success, no error. */
   C_REST_OK = 0,
   /** @brief Generic or unknown error. */

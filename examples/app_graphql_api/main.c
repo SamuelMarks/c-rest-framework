@@ -9,11 +9,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 #if defined(_WIN32)
 #include <winsock2.h>
-#else
-#include <signal.h>
 #endif
 /* clang-format on */
 

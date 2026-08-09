@@ -438,7 +438,9 @@ TEST test_hot_reload_oom(void) {
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
 #include "c_rest_request.h"
 #include "c_rest_response.h"
+#if !defined(_MSC_VER)
 #include <sys/socket.h>
+#endif
 
 TEST test_hot_reload_sse_routes(void) {
   struct c_rest_router *router = NULL;
