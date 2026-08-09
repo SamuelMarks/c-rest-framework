@@ -1,3 +1,4 @@
+#include <string.h>
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
@@ -174,6 +175,7 @@ static void test_coverage(void) {
       struct c_rest_client_response *sr = NULL;
       struct c_rest_client_header hdr[1];
       c->client.send = mock_send_full;
+      
 
       hdr[0].key = "a";
       hdr[0].value = "b";
@@ -239,12 +241,12 @@ static void test_coverage(void) {
     c_rest_client_context *c = NULL;
     if (c_rest_client_init(&c) == C_REST_OK) {
       struct c_rest_client_response *sr = NULL;
-      struct c_rest_client_header hdrs[1];
       struct c_rest_client_form_field fields[1];
-      fields[0].key = "k";
-      fields[0].value = "v";
+      struct c_rest_client_header hdrs[1];
       hdrs[0].key = "k";
       hdrs[0].value = "v";
+      fields[0].key = "k";
+      fields[0].value = "v";
 
       c->client.send = mock_send_full;
 
@@ -533,7 +535,7 @@ static void test_coverage(void) {
     /* Hit early parsing empty string body correctly to branch 0 on loop */
     c_rest_client_parse_form_urlencoded("", &pf, &pc);
 
-    /* Try a body with no & and only one side to test out loop */
+    /* Try a body with no && and only one side to test out loop */
     c_rest_client_parse_form_urlencoded("a", &pf, &pc);
     if (pf)
       c_rest_client_form_fields_free(pf, pc);
@@ -660,9 +662,6 @@ static void test_coverage(void) {
     c_rest_client_context *c = NULL;
     if (c_rest_client_init(&c) == C_REST_OK) {
       struct c_rest_client_response *sr = NULL;
-      struct c_rest_client_header hdrs[1];
-      hdrs[0].key = "k";
-      hdrs[0].value = "v";
 
       c->client.send = mock_send_full;
 
@@ -1031,13 +1030,13 @@ int test_client(void) {
   res = c_rest_proxy_request("http://localhost/proxy", NULL, NULL);
 
   /* Test URL encoding/decoding */
-  res = c_rest_client_url_encode("test + & = ?", &encoded);
+  res = c_rest_client_url_encode("test + && = ?", &encoded);
   failed += (res != C_REST_OK);
-  failed += (strcmp(encoded, "test+%2B+%26+%3D+%3F") != 0);
+  failed += (strcmp(encoded, "test+%2B+%26%26+%3D+%3F") != 0);
 
   res = c_rest_client_url_decode(encoded, &decoded);
   failed += (res != C_REST_OK);
-  failed += (strcmp(decoded, "test + & = ?") != 0);
+  failed += (strcmp(decoded, "test + && = ?") != 0);
 
   CRF_FREE(encoded);
   CRF_FREE(decoded);

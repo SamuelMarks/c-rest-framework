@@ -7,6 +7,12 @@ void *(*g_crf_calloc_hook)(size_t, size_t) = NULL;
 void *(*g_crf_realloc_hook)(void *, size_t) = NULL;
 char *(*g_crf_strdup_hook)(const char *) = NULL;
 
+
+
+
+
+
+
 void *test_c_rest_internal_malloc(size_t size) {
   if (g_crf_malloc_hook) return g_crf_malloc_hook(size);
   return malloc(size);
@@ -30,6 +36,21 @@ void *test_c_rest_internal_realloc(void *ptr, size_t size) {
 #include <string.h>
 #include "c_rest_log.h"
 /* clang-format on */
+
+#ifndef _MSC_VER
+char *c_rest_internal_strdup(const char *s) {
+  size_t len;
+  char *dup;
+  if (!s)
+    return NULL;
+  len = strlen(s) + 1;
+  dup = (char *)malloc(len);
+  if (dup) {
+    memcpy(dup, s, len);
+  }
+  return dup;
+}
+#endif
 
 typedef struct c_rest_mem_node {
   void *ptr;

@@ -181,8 +181,8 @@ static c_rest_error_t fail_middleware(struct c_rest_request *req,
   return C_REST_ERROR_GENERIC;
 }
 static c_rest_error_t dummy_ws_fn(struct c_rest_request *req,
-                                  const uint8_t *msg, size_t len, int type,
-                                  void *user) {
+                                  const unsigned char *msg, size_t len,
+                                  int type, void *user) {
   (void)req;
   (void)msg;
   (void)len;

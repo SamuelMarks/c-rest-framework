@@ -1,4 +1,7 @@
-
+#include <string.h>
+#ifdef __unix__
+int usleep(unsigned int);
+#endif
 
 /* clang-format off */
 #include "c_rest_error.h"
@@ -158,6 +161,7 @@ static void test_modality_simple(void) {
   }
 
   /* Trigger bind failure in single/multi/async run */
+  ctx.listen_port = 1;
   ctx.listen_address = "invalid_address_for_test";
 
   ctx.internal_state = &single_st;
@@ -358,9 +362,9 @@ static char *hook_strdup_modality(const char *str) {
   if (g_malloc_fail_count > 0)
     g_malloc_fail_count--;
 #if defined(_WIN32)
-  return _strdup(str);
+  return _(char *) CRF_STRDUP(str);
 #else
-  return strdup(str);
+  return (char *)CRF_STRDUP(str);
 #endif
 }
 #endif
@@ -464,8 +468,8 @@ int test_modality(void) {
     int fds[2];
     ctx->router = router;
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-      accepted_sock = (c_rest_socket_t)(intptr_t)fds[0];
-      client_sock = (c_rest_socket_t)(intptr_t)fds[1];
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
 
       /* Send a complete valid request to cover parsing callbacks */
       {
@@ -478,8 +482,8 @@ int test_modality(void) {
         c_rest_socket_close(accepted_sock);
 
         if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-          accepted_sock = (c_rest_socket_t)(intptr_t)fds[0];
-          client_sock = (c_rest_socket_t)(intptr_t)fds[1];
+          accepted_sock = (c_rest_socket_t)fds[0];
+          client_sock = (c_rest_socket_t)fds[1];
           c_rest_socket_send(client_sock, req, strlen(req), &wr);
           c_rest_socket_close(client_sock);
           ctx->router = NULL;
@@ -488,8 +492,8 @@ int test_modality(void) {
           c_rest_socket_close(accepted_sock);
 
           if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-            accepted_sock = (c_rest_socket_t)(intptr_t)fds[0];
-            client_sock = (c_rest_socket_t)(intptr_t)fds[1];
+            accepted_sock = (c_rest_socket_t)fds[0];
+            client_sock = (c_rest_socket_t)fds[1];
             c_rest_socket_send(client_sock, req, strlen(req), &wr);
             c_rest_socket_close(client_sock);
             ctx->tls_ctx = (void *)1;
@@ -513,8 +517,8 @@ int test_modality(void) {
       for (oom_idx = 0; oom_idx < 150; oom_idx++) {
         int fds[2];
         if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-          accepted_sock = (c_rest_socket_t)(intptr_t)fds[0];
-          client_sock = (c_rest_socket_t)(intptr_t)fds[1];
+          accepted_sock = (c_rest_socket_t)fds[0];
+          client_sock = (c_rest_socket_t)fds[1];
           {
             const char *req = "POST /test?foo=bar HTTP/1.1\r\nHost: "
                               "loc\r\nContent-Length: 5\r\n\r\nhello";
@@ -535,8 +539,8 @@ int test_modality(void) {
       {
         int fds[2];
         if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-          accepted_sock = (c_rest_socket_t)(intptr_t)fds[0];
-          client_sock = (c_rest_socket_t)(intptr_t)fds[1];
+          accepted_sock = (c_rest_socket_t)fds[0];
+          client_sock = (c_rest_socket_t)fds[1];
           {
             const char *req = "POST /test?foo=bar HTTP/1.1\r\nHost: "
                               "loc\r\nContent-Length: 5\r\n\r\nhello";
@@ -559,8 +563,8 @@ int test_modality(void) {
     int fds[2];
     ctx->router = router;
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-      accepted_sock = (c_rest_socket_t)(intptr_t)fds[0];
-      client_sock = (c_rest_socket_t)(intptr_t)fds[1];
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
 
       /* Make c_rest_tls_accept fail */
       ctx->tls_ctx = (struct c_rest_tls_context *)1;
@@ -581,8 +585,8 @@ int test_modality(void) {
     }
 
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-      accepted_sock = (c_rest_socket_t)(intptr_t)fds[0];
-      client_sock = (c_rest_socket_t)(intptr_t)fds[1];
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
 
       /* Send an invalid request */
       {
@@ -665,7 +669,7 @@ int test_modality(void) {
     /* Run with invalid host to fail bind immediately and not hang */ /* LCOV_EXCL_LINE
                                                                        */
     ctx->listen_address = "invalid_address_for_test";
-    ctx->listen_port = 9999;
+    ctx->listen_port = 1;
     ctx->logger.log_cb = mock_logger_cb;
     c_rest_run(ctx);
 
@@ -826,7 +830,7 @@ int test_modality(void) {
     c_rest_error_t rc_async;
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
     c_rest_socket_t valid_sock =
-        (c_rest_socket_t)(intptr_t)socket(AF_INET, SOCK_STREAM, 0);
+        (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
 #else
     c_rest_socket_t valid_sock =
         (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
@@ -917,8 +921,7 @@ int test_modality(void) {
     rc_async = async_vtable.init(&dummy_ctx_gt);
     if (rc_async == C_REST_OK) {
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
-      *(c_rest_socket_t *)dummy_ctx_gt.internal_state =
-          (c_rest_socket_t)(intptr_t)9999;
+      *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
 #else
       *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
 #endif
@@ -940,7 +943,7 @@ int test_modality(void) {
           ptrs[1]; /* evloop is second member (after size_t or c_rest_socket_t
                       which is 4 or 8 bytes) wait! c_rest_socket_t could be 4 or
                       8 bytes, so pointer might be unaligned? No, on 64-bit,
-                      c_rest_socket_t (intptr_t) is 8 bytes, so ptrs[1] is
+                      c_rest_socket_t  is 8 bytes, so ptrs[1] is
                       correct */
       ptrs[1] = NULL;
       async_vtable.destroy(&dummy_ctx_gt);
@@ -963,7 +966,7 @@ int test_modality(void) {
     c_rest_error_t rc_gt;
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
     c_rest_socket_t valid_sock =
-        (c_rest_socket_t)(intptr_t)socket(AF_INET, SOCK_STREAM, 0);
+        (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
 #else
     c_rest_socket_t valid_sock =
         (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
@@ -1056,8 +1059,7 @@ int test_modality(void) {
     rc_gt = greenthread_vtable.init(&dummy_ctx_gt);
     if (rc_gt == C_REST_OK) {
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
-      *(c_rest_socket_t *)dummy_ctx_gt.internal_state =
-          (c_rest_socket_t)(intptr_t)9999;
+      *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
 #else
       *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
 #endif
@@ -1153,7 +1155,7 @@ int test_modality(void) {
     rc_mp = message_passing_vtable.init(&dummy_ctx_mp);
     if (rc_mp == C_REST_OK) {
       *(c_rest_socket_t *)dummy_ctx_mp.internal_state =
-          (c_rest_socket_t)(intptr_t)socket(AF_INET, SOCK_STREAM, 0);
+          (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
       message_passing_vtable.destroy(&dummy_ctx_mp);
     }
 
@@ -1161,8 +1163,7 @@ int test_modality(void) {
     rc_mp = message_passing_vtable.init(&dummy_ctx_mp);
     if (rc_mp == C_REST_OK) {
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
-      *(c_rest_socket_t *)dummy_ctx_mp.internal_state =
-          (c_rest_socket_t)(intptr_t)9999;
+      *(c_rest_socket_t *)dummy_ctx_mp.internal_state = (c_rest_socket_t)9999;
 #else
       *(c_rest_socket_t *)dummy_ctx_mp.internal_state = (c_rest_socket_t)9999;
 #endif
@@ -1257,7 +1258,7 @@ int test_modality(void) {
     rc_mproc = multi_process_vtable.init(&dummy_ctx_mproc);
     if (rc_mproc == C_REST_OK) {
       *(c_rest_socket_t *)dummy_ctx_mproc.internal_state =
-          (c_rest_socket_t)(intptr_t)socket(AF_INET, SOCK_STREAM, 0);
+          (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
       multi_process_vtable.destroy(&dummy_ctx_mproc);
     }
 
@@ -1266,7 +1267,7 @@ int test_modality(void) {
     if (rc_mproc == C_REST_OK) {
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
       *(c_rest_socket_t *)dummy_ctx_mproc.internal_state =
-          (c_rest_socket_t)(intptr_t)9999;
+          (c_rest_socket_t)9999;
 #else
       *(c_rest_socket_t *)dummy_ctx_mproc.internal_state =
           (c_rest_socket_t)9999;

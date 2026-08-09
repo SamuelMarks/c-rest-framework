@@ -57,11 +57,11 @@ int test_pool(void) {
   /* Malloc path */
   g_crf_malloc_hook = mock_malloc;
   rc = c_rest_pool_allocate(&pool, &ptr1);
-  failed += (rc != C_REST_OK | ptr1 == NULL);
+  failed += (rc != C_REST_OK || ptr1 == NULL);
   g_crf_malloc_hook = NULL;
 
   rc = c_rest_pool_allocate(&pool, &ptr2);
-  failed += (rc != C_REST_OK | ptr2 == NULL);
+  failed += (rc != C_REST_OK || ptr2 == NULL);
 
   rc = c_rest_pool_free(&pool, ptr1);
   failed += (rc != C_REST_OK);
@@ -72,7 +72,7 @@ int test_pool(void) {
   /* Free list path */
   ptr1 = NULL;
   rc = c_rest_pool_allocate(&pool, &ptr1);
-  failed += (rc != C_REST_OK | ptr1 == NULL);
+  failed += (rc != C_REST_OK || ptr1 == NULL);
 
   rc = c_rest_pool_destroy(&pool);
   failed += (rc != C_REST_OK);

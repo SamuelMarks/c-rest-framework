@@ -228,7 +228,7 @@ c_rest_error_t c_rest_hot_reload_poll(c_rest_hot_reload_ctx_t *ctx,
   c_rest_error_t rc;
   size_t i;
   int changed = 0;
-  time_t current_mtime;
+  time_t current_mtime = 0;
 
   if (!ctx || !on_reload) {
     return C_REST_ERROR_INVALID_ARG;

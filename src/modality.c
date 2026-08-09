@@ -90,6 +90,9 @@ c_rest_error_t c_rest_init(enum c_rest_modality_type type,
   struct c_rest_context *ctx;
   const struct c_rest_modality_vtable *vtable;
   int res;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  extern void *(*g_crf_malloc_hook)(size_t);
+#endif
 
   if (!out_ctx) {
     return C_REST_ERROR_GENERIC;
@@ -115,9 +118,6 @@ c_rest_error_t c_rest_init(enum c_rest_modality_type type,
     return C_REST_ERROR_GENERIC; /* Out of memory */
   }
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
-  extern void *(*g_crf_malloc_hook)(size_t);
-#endif
   ctx->modality = type;
 #ifdef C_REST_TESTING_MALLOC_HOOK
   ctx->allocator.malloc_cb = g_crf_malloc_hook ? g_crf_malloc_hook : malloc;

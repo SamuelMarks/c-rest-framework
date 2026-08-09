@@ -8,7 +8,7 @@ extern "C" {
 
 #if defined(__cplusplus) && __cplusplus >= 201703L
 #define NO_DISCARD [[nodiscard]]
-#elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__clang__)
 #define NO_DISCARD __attribute__((warn_unused_result))
 #elif defined(_MSC_VER) && _MSC_VER >= 1700
 #define NO_DISCARD _Check_return_

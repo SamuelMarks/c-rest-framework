@@ -1,3 +1,6 @@
+#ifdef __unix__
+int usleep(unsigned int);
+#endif
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_platform.h"
@@ -102,8 +105,8 @@ int test_platform(void) {
   {
     int fds[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-      c_rest_socket_t s1 = (c_rest_socket_t)(intptr_t)fds[0];
-      c_rest_socket_t s2 = (c_rest_socket_t)(intptr_t)fds[1];
+      c_rest_socket_t s1 = (c_rest_socket_t)fds[0];
+      c_rest_socket_t s2 = (c_rest_socket_t)fds[1];
       size_t wr = 0, rd = 0;
       /*c_rest_socket_send(s1, "hello", 5, &wr);*/
       /*c_rest_socket_recv(s2, buf, 5, &rd);*/

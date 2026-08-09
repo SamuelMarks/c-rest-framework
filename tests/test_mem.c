@@ -112,21 +112,21 @@ int test_mem(void) {
 
   /* Allocations */
   rc = C_REST_MALLOC(50, &ptr_leak);
-  failed += (rc != C_REST_OK | ptr_leak == NULL);
+  failed += (rc != C_REST_OK || ptr_leak == NULL);
 
   /* Another leak */
   {
     void *ptr_leak2 = NULL;
     rc = C_REST_MALLOC(50, &ptr_leak2);
-    failed += (rc != C_REST_OK | ptr_leak2 == NULL);
+    failed += (rc != C_REST_OK || ptr_leak2 == NULL);
     (void)C_REST_FREE(ptr_leak2);
   }
 
   rc = C_REST_MALLOC(100, &ptr1);
-  failed += (rc != C_REST_OK | ptr1 == NULL);
+  failed += (rc != C_REST_OK || ptr1 == NULL);
 
   rc = C_REST_CALLOC(10, 10, &ptr2);
-  failed += (rc != C_REST_OK | ptr2 == NULL);
+  failed += (rc != C_REST_OK || ptr2 == NULL);
 
   /* Realloc invalid pointer when empty (or when no elements match) */
   g_crf_realloc_hook = fail_realloc;
@@ -135,7 +135,7 @@ int test_mem(void) {
   failed += (rc != C_REST_ERROR_OOM);
 
   rc = c_rest_mem_strdup("test_str", "test.c", 100, &str1);
-  failed += (rc != C_REST_OK | str1 == NULL);
+  failed += (rc != C_REST_OK || str1 == NULL);
 
   /* Realloc an untracked pointer successfully */
   {
@@ -147,15 +147,15 @@ int test_mem(void) {
 
   /* Realloc with non-null pointer */
   rc = C_REST_REALLOC(ptr1, 200, &ptr1);
-  failed += (rc != C_REST_OK | ptr1 == NULL);
+  failed += (rc != C_REST_OK || ptr1 == NULL);
 
   /* Realloc with NULL pointer (should malloc) */
   rc = C_REST_REALLOC(NULL, 30, &ptr3);
-  failed += (rc != C_REST_OK | ptr3 == NULL);
+  failed += (rc != C_REST_OK || ptr3 == NULL);
 
   /* Realloc with size 0 (should free) */
   rc = C_REST_REALLOC(ptr3, 0, &ptr3);
-  failed += (rc != C_REST_OK | ptr3 != NULL);
+  failed += (rc != C_REST_OK || ptr3 != NULL);
 
   /* Free */
   rc = C_REST_FREE(ptr1);

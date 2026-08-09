@@ -1,3 +1,6 @@
+#ifdef __unix__
+int usleep(unsigned int);
+#endif
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_mem.h"

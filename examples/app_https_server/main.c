@@ -1,3 +1,4 @@
+#include <signal.h>
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_modality.h"

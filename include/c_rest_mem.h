@@ -49,16 +49,20 @@ void *test_c_rest_internal_realloc(void *ptr, size_t size);
 #ifndef CRF_STRDUP
 #ifdef C_REST_TESTING_MALLOC_HOOK
 extern char *(*g_crf_strdup_hook)(const char *);
+
 #ifdef _MSC_VER
 #define CRF_STRDUP(s) (g_crf_strdup_hook ? g_crf_strdup_hook(s) : _strdup(s))
 #else
-#define CRF_STRDUP(s) (g_crf_strdup_hook ? g_crf_strdup_hook(s) : strdup(s))
+char *c_rest_internal_strdup(const char *s);
+#define CRF_STRDUP(s)                                                          \
+  (g_crf_strdup_hook ? g_crf_strdup_hook(s) : c_rest_internal_strdup(s))
 #endif
 #else
 #ifdef _MSC_VER
 #define CRF_STRDUP _strdup
 #else
-#define CRF_STRDUP strdup
+char *c_rest_internal_strdup(const char *s);
+#define CRF_STRDUP c_rest_internal_strdup
 #endif
 #endif
 #endif

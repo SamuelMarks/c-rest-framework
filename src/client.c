@@ -192,7 +192,7 @@ c_rest_error_t c_rest_client_request_sync(
   (void)!method_from_str(method, &req.method);
 
   for (i = 0; i < headers_count; ++i) {
-    http_headers_add(&req.headers, headers[i].key, headers[i].value);
+    (void)!http_headers_add(&req.headers, headers[i].key, headers[i].value);
   }
 
   if (body && body_len > 0) {

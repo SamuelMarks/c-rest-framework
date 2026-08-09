@@ -1,3 +1,4 @@
+#include <signal.h>
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_http23.h"
@@ -11,8 +12,8 @@ static void sig_handler(int sig) {
 }
 
 int main(void) {
-
   c_rest_http23_ctx_t *ctx = NULL;
+
   int res;
   size_t consumed = 0;
   int is_ready = 0;

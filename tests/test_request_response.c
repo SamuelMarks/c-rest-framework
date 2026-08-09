@@ -1,3 +1,4 @@
+#include <string.h>
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
@@ -179,6 +180,7 @@ static void test_coverage(void) {
     struct c_rest_response res_c = {0};
     res_c.body = "test";
     res_c.body_len = 0;
+    (void)res_c;
     /* To test body_len == 0 but body != NULL, although c_rest_response_send
      * handles this. */
   }
@@ -314,17 +316,17 @@ static void test_coverage(void) {
       c_rest_request_parse_json(&r, &json_obj);
 
       r.headers = (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
-      r.headers->key = strdup("k");
-      r.headers->value = strdup("v");
+      r.headers->key = (char *)CRF_STRDUP("k");
+      r.headers->value = (char *)CRF_STRDUP("v");
       r.headers->next = NULL;
 
       r.path_vars =
           (struct c_rest_path_var *)malloc(sizeof(struct c_rest_path_var));
-      r.path_vars->name = strdup("k");
-      r.path_vars->value = strdup("v");
+      r.path_vars->name = (char *)CRF_STRDUP("k");
+      r.path_vars->value = (char *)CRF_STRDUP("v");
       r.path_vars->next = NULL;
 
-      r.body = strdup("dynamic");
+      r.body = (char *)CRF_STRDUP("dynamic");
 
       c_rest_request_cleanup(&r);
     }
@@ -1082,20 +1084,20 @@ int test_request_response(void) {
     memset(&req3, 0, sizeof(req3));
 
     dyn_h = (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
-    dyn_h->key = strdup("Dyn-Key");
-    dyn_h->value = strdup("Dyn-Value");
+    dyn_h->key = (char *)CRF_STRDUP("Dyn-Key");
+    dyn_h->value = (char *)CRF_STRDUP("Dyn-Value");
     dyn_h->next = NULL;
     req3.headers = dyn_h;
 
     req3.cookies = (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
-    req3.cookies->key = strdup("Cookie-Key");
-    req3.cookies->value = strdup("Cookie-Value");
+    req3.cookies->key = (char *)CRF_STRDUP("Cookie-Key");
+    req3.cookies->value = (char *)CRF_STRDUP("Cookie-Value");
     req3.cookies->next = NULL;
 
     req3.path_vars =
         (struct c_rest_path_var *)malloc(sizeof(struct c_rest_path_var));
-    req3.path_vars->name = strdup("Path-Key");
-    req3.path_vars->value = strdup("Path-Value");
+    req3.path_vars->name = (char *)CRF_STRDUP("Path-Key");
+    req3.path_vars->value = (char *)CRF_STRDUP("Path-Value");
     req3.path_vars->next = NULL;
 
     c_rest_request_cleanup(&req3);
@@ -1161,7 +1163,7 @@ int test_request_response(void) {
     failed += (!found_ct || !found_cookie_session || !found_cookie_theme);
   }
 
-  /* Test ETag & Cache Control */
+  /* Test ETag && Cache Control */
   {
     struct c_rest_header req_h_etag;
     req_h_etag.key = "If-None-Match";

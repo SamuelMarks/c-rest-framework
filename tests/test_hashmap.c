@@ -45,7 +45,7 @@ int test_hashmap(void) {
   g_crf_malloc_hook = fail_malloc_n;
   g_fail_malloc_at = 1;
   rc = c_rest_hashmap_init(&map, 16);
-  failed += (rc != C_REST_ERROR_OOM & rc != C_REST_ERROR_GENERIC);
+  failed += (rc != C_REST_ERROR_OOM && rc != C_REST_ERROR_GENERIC);
   g_crf_malloc_hook = NULL;
   g_fail_malloc_at = 0;
 
@@ -58,14 +58,14 @@ int test_hashmap(void) {
   g_crf_malloc_hook = fail_malloc_n;
   g_fail_malloc_at = 1;
   rc = c_rest_hashmap_put(&map, "key2_malloc_fail", "value2");
-  failed += (rc != C_REST_ERROR_OOM & rc != C_REST_ERROR_GENERIC);
+  failed += (rc != C_REST_ERROR_OOM && rc != C_REST_ERROR_GENERIC);
   g_crf_malloc_hook = NULL;
   g_fail_malloc_at = 0;
 
   g_crf_malloc_hook = fail_malloc_n;
   g_fail_malloc_at = 2;
   rc = c_rest_hashmap_put(&map, "key3_malloc_fail", "value3");
-  failed += (rc != C_REST_ERROR_OOM & rc != C_REST_ERROR_GENERIC);
+  failed += (rc != C_REST_ERROR_OOM && rc != C_REST_ERROR_GENERIC);
   g_crf_malloc_hook = NULL;
   g_fail_malloc_at = 0;
 
@@ -109,7 +109,7 @@ int test_hashmap(void) {
   }
 
   rc = c_rest_hashmap_get(&map, "key1", &val);
-  failed += (rc != C_REST_OK | strcmp((const char *)val, "value1") != 0);
+  failed += (rc != C_REST_OK || strcmp((const char *)val, "value1") != 0);
 
   rc = c_rest_hashmap_get(NULL, "key1", &val);
   failed += (rc != C_REST_ERROR_GENERIC);

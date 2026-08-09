@@ -91,11 +91,11 @@ int test_ts_queue(void) {
 
   /* Pop first item (head->next not NULL) */
   rc = c_rest_ts_queue_pop(&q, &val);
-  failed += (rc != C_REST_OK | strcmp((const char *)val, "test1") != 0);
+  failed += (rc != C_REST_OK || strcmp((const char *)val, "test1") != 0);
 
   /* Pop second item (head->next is NULL, becomes empty) */
   rc = c_rest_ts_queue_pop(&q, &val);
-  failed += (rc != C_REST_OK | strcmp((const char *)val, "test2") != 0);
+  failed += (rc != C_REST_OK || strcmp((const char *)val, "test2") != 0);
 
   /* Test pop from empty queue (will block unless closed or cond fails) */
   /* If cond fails, it returns error */
@@ -114,7 +114,7 @@ int test_ts_queue(void) {
      Let's pop it! */
   rc = c_rest_ts_queue_pop(&q, &val);
   failed +=
-      (rc != C_REST_OK | strcmp((const char *)val, "test_cond_fail") != 0);
+      (rc != C_REST_OK || strcmp((const char *)val, "test_cond_fail") != 0);
 
   /* Close queue */
   rc = c_rest_ts_queue_close(&q);

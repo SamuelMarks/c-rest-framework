@@ -55,13 +55,13 @@ int test_list(void) {
   failed += (rc != C_REST_OK);
 
   rc = c_rest_list_pop_front(&list, &val);
-  failed += (rc != C_REST_OK | strcmp((const char *)val, "item1") != 0);
+  failed += (rc != C_REST_OK || strcmp((const char *)val, "item1") != 0);
 
   rc = c_rest_list_pop_front(&list, &val);
-  failed += (rc != C_REST_OK | strcmp((const char *)val, "item2") != 0);
+  failed += (rc != C_REST_OK || strcmp((const char *)val, "item2") != 0);
 
   rc = c_rest_list_pop_front(&list, &val);
-  failed += (rc == C_REST_OK | val != NULL); /* Should fail, list is empty */
+  failed += (rc == C_REST_OK || val != NULL); /* Should fail, list is empty */
 
   rc = c_rest_list_destroy(&list, NULL);
   failed += (rc != C_REST_OK);

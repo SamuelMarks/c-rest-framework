@@ -39,7 +39,7 @@ int test_string(void) {
 
   /* Test initial capacity 0 */
   rc = c_rest_string_init(&str, 0);
-  failed += (rc != C_REST_OK | str.capacity != 16);
+  failed += (rc != C_REST_OK || str.capacity != 16);
   (void)!c_rest_string_destroy(&str);
 
   /* Normal init */
