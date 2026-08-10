@@ -472,10 +472,16 @@ static int test_graphql_errors(void) {
     /* schema null, definitions valid */
     c_rest_graphql_parse("query { a }", 11, &doc);
     c_rest_graphql_resolve(doc, NULL, &json, &len);
+    if (json)
+      CRF_FREE(json);
+    json = NULL;
     c_rest_graphql_node_free(doc);
     doc = NULL;
     c_rest_graphql_parse("query { a }", 11, &doc);
     c_rest_graphql_resolve(doc, NULL, &json, &len);
+    if (json)
+      CRF_FREE(json);
+    json = NULL;
     c_rest_graphql_node_free(doc);
     doc = NULL;
     {
@@ -532,6 +538,9 @@ static int test_graphql_errors(void) {
     /* schema null */
     c_rest_graphql_parse("query { a }", 11, &doc);
     c_rest_graphql_resolve(doc, NULL, &json, &len);
+    if (json)
+      CRF_FREE(json);
+    json = NULL;
     c_rest_graphql_node_free(doc);
     doc = NULL;
   }

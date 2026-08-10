@@ -55,6 +55,8 @@ static c_rest_error_t sync_init(struct c_rest_context *ctx) {
   if (ctx->logger.log_cb) {
     rc = ctx->logger.log_cb("SYNC modality initialized");
     if (rc != C_REST_OK) {
+      ctx->allocator.free_cb(state);
+      ctx->internal_state = NULL;
       return rc;
     }
   }

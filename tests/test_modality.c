@@ -1,7 +1,4 @@
 #include <string.h>
-#ifdef __unix__
-int usleep(unsigned int);
-#endif
 
 /* clang-format off */
 #include "c_rest_error.h"
@@ -28,6 +25,8 @@ static int socketpair(int domain, int type, int protocol, int sv[2]) {
 }
 #else
 #include <sys/socket.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -394,7 +393,9 @@ struct test_client_args {
   struct c_rest_context *ctx;
   int port;
 };
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
 static void my_sigalrm(int sig) { (void)sig; }
+#endif
 static c_rest_error_t test_client_thread(void *arg) {
   struct test_client_args *args = (struct test_client_args *)arg;
   int sock;
@@ -405,7 +406,12 @@ static c_rest_error_t test_client_thread(void *arg) {
 #if defined(_WIN32)
   Sleep(100);
 #else
-  usleep(100000);
+  {
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 100000;
+    select(0, NULL, NULL, NULL, &tv);
+  }
 #endif
 
   while (retries-- > 0) {
@@ -422,7 +428,12 @@ static c_rest_error_t test_client_thread(void *arg) {
 #if defined(_WIN32)
         Sleep(50);
 #else
-        usleep(50000);
+        {
+          struct timeval tv;
+          tv.tv_sec = 0;
+          tv.tv_usec = 50000;
+          select(0, NULL, NULL, NULL, &tv);
+        }
 #endif
         c_rest_stop(args->ctx);
 #if defined(_WIN32)
@@ -455,7 +466,12 @@ static c_rest_error_t test_client_thread(void *arg) {
 #if defined(_WIN32)
     Sleep(10);
 #else
-    usleep(10000);
+    {
+      struct timeval tv;
+      tv.tv_sec = 0;
+      tv.tv_usec = 10000;
+      select(0, NULL, NULL, NULL, &tv);
+    }
 #endif
   }
   c_rest_platform_cleanup();

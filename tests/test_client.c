@@ -529,6 +529,9 @@ static void test_coverage(void) {
     size_t pc = 0;
     /* Hit early parsing empty string body correctly to branch 0 on loop */
     c_rest_client_parse_form_urlencoded("", &pf, &pc);
+    if (pf)
+      c_rest_client_form_fields_free(pf, pc);
+    pf = NULL;
 
     /* Try a body with no && and only one side to test out loop */
     c_rest_client_parse_form_urlencoded("a", &pf, &pc);
@@ -721,6 +724,9 @@ static void test_coverage(void) {
     c_rest_client_parse_form_urlencoded("a=b", &pf, NULL);
     c_rest_client_parse_form_urlencoded(NULL, &pf, &pc);
     c_rest_client_parse_form_urlencoded("", &pf, &pc);
+    if (pf)
+      c_rest_client_form_fields_free(pf, pc);
+    pf = NULL;
 
     /* no equals */
     c_rest_client_parse_form_urlencoded("a&b", &pf, &pc);

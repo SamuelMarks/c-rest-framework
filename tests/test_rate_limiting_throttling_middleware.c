@@ -1,6 +1,4 @@
-#ifdef __unix__
-int usleep(unsigned int);
-#endif
+
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
@@ -12,6 +10,8 @@ int usleep(unsigned int);
 #ifdef _WIN32
 __declspec(dllimport) void __stdcall Sleep(unsigned long dwMilliseconds);
 #else
+#include <sys/select.h>
+#include <sys/time.h>
 #include <unistd.h>
 #endif
 /* clang-format on */
@@ -20,7 +20,12 @@ static void sleep_ms(int ms) {
 #ifdef _WIN32
   Sleep(ms);
 #else
-  usleep(ms * 1000);
+  {
+    struct timeval tv;
+    tv.tv_sec = ms / 1000;
+    tv.tv_usec = (ms % 1000) * 1000;
+    select(0, NULL, NULL, NULL, &tv);
+  }
 #endif
 }
 

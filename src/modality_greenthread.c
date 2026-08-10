@@ -38,8 +38,11 @@ static c_rest_error_t greenthread_init(struct c_rest_context *ctx) {
 
   if (ctx->logger.log_cb) {
     rc = ctx->logger.log_cb("GREENTHREAD modality initialized");
-    if (rc != C_REST_OK)
+    if (rc != C_REST_OK) {
+      ctx->allocator.free_cb(state);
+      ctx->internal_state = NULL;
       return rc;
+    }
   }
   return C_REST_OK;
 }

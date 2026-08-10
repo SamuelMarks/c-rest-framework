@@ -590,6 +590,8 @@ int test_router(void) {
   res.status_code = 200;
   ret = c_rest_router_dispatch(router, &req, &res);
   (void)!ret;
+  c_rest_response_cleanup(&res);
+  memset(&res, 0, sizeof(res));
 
   /* Test SSE wrapper with null handler */
   c_rest_router_add_sse(router, "/sse_null", NULL, NULL);
@@ -597,6 +599,7 @@ int test_router(void) {
   res.status_code = 200;
   ret = c_rest_router_dispatch(router, &req, &res);
   (void)!ret;
+  c_rest_response_cleanup(&res);
 #endif
 
   (void)!c_rest_router_destroy(NULL);

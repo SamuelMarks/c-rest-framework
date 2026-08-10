@@ -399,9 +399,9 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
     }
 
     rc = c_rest_sse_send_event(res, &ev);
+    (void)!c_rest_sse_event_destroy(&ev);
     if (rc != C_REST_OK)
       return rc;
-    (void)!c_rest_sse_event_destroy(&ev);
   }
   return C_REST_OK;
 }

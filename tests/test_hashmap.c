@@ -42,6 +42,8 @@ int test_hashmap(void) {
   rc = c_rest_hashmap_init(&map, 0);
   failed += (rc != C_REST_ERROR_GENERIC);
 
+  c_rest_hashmap_destroy(&map, NULL);
+
   g_crf_malloc_hook = fail_malloc_n;
   g_fail_malloc_at = 1;
   rc = c_rest_hashmap_init(&map, 16);

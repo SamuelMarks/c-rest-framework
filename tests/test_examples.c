@@ -17,12 +17,18 @@ TEST test_app_node_style(void) {
   memset(&res, 0, sizeof(res));
 
   handle_hello_world(&req, &res, NULL);
+  c_rest_response_cleanup(&res);
+  memset(&res, 0, sizeof(res));
 
   req.query = "name=Alice";
   handle_echo(&req, &res, NULL);
+  c_rest_response_cleanup(&res);
+  memset(&res, 0, sizeof(res));
 
   req.query = "other=Alice";
   handle_echo(&req, &res, NULL);
+  c_rest_response_cleanup(&res);
+  memset(&res, 0, sizeof(res));
 
   app_node_style_main();
 

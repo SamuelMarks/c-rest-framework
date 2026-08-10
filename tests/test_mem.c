@@ -328,12 +328,16 @@ int test_mem(void) {
 
   c_rest_mem_tracker_init();
   {
-    void *leak_for_cleanup = NULL;
-    C_REST_MALLOC(10, &leak_for_cleanup);
-    C_REST_MALLOC(10, &leak_for_cleanup);
+    void *leak1 = NULL;
+    void *leak2 = NULL;
+    C_REST_MALLOC(10, &leak1);
+    C_REST_MALLOC(10, &leak2);
+
+    (void)!c_rest_mem_tracker_cleanup();
+    C_REST_FREE(leak1);
+    C_REST_FREE(leak2);
   }
 
-  (void)!c_rest_mem_tracker_cleanup();
   c_rest_mem_tracker_init();
   c_rest_mem_tracker_cleanup();
   (void)!c_rest_mem_tracker_cleanup();

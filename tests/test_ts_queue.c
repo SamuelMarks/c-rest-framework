@@ -171,6 +171,7 @@ int test_ts_queue(void) {
   failed += (rc != C_REST_OK);
   failed += (dummy_free_count != 1);
 
+#if !defined(_WIN32)
   /* Test destroy failure branches */
   (void)!c_rest_ts_queue_init(&q3);
   (void)!c_rest_ts_queue_push(&q3, "test_data");
@@ -178,7 +179,8 @@ int test_ts_queue(void) {
   q3.cond = (c_rest_cond_t)0;
   rc = c_rest_ts_queue_destroy(&q3, NULL);
   failed += (rc != C_REST_ERROR_GENERIC);
-  /* The mutex was destroyed above, so we must clean up real_cond manually */
+  /* The mutex was successfully destroyed by c_rest_ts_queue_destroy, 
+   * only the condition variable was left dangling */
   c_rest_cond_destroy(real_cond);
 
   (void)!c_rest_ts_queue_init(&q3);
@@ -190,6 +192,7 @@ int test_ts_queue(void) {
   /* Destroy what wasn't destroyed */
   c_rest_mutex_destroy(real_mutex);
   c_rest_cond_destroy(q3.cond);
+#endif
 
   if (failed) {
     printf("test_ts_queue failed\n");

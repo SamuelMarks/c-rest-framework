@@ -1,6 +1,4 @@
-#ifdef __unix__
-int usleep(unsigned int);
-#endif
+
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_platform.h"
@@ -13,6 +11,8 @@ int usleep(unsigned int);
 #include <winsock2.h>
 #else
 #include <sys/socket.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #include <unistd.h>
 #endif
 /* clang-format on */
@@ -20,7 +20,12 @@ int usleep(unsigned int);
 static c_rest_error_t cond_thread_func(void *arg) {
   c_rest_cond_t cond = (c_rest_cond_t)arg;
 #if defined(__unix__) || defined(__APPLE__)
-  usleep(10000);
+  {
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 10000;
+    select(0, NULL, NULL, NULL, &tv);
+  }
 #endif
   c_rest_cond_signal(cond);
   return C_REST_OK;

@@ -157,8 +157,6 @@ static void test_multipart_invalid_args(int *res_ptr) {
 
   c_rest_multipart_parser_destroy(parser);
   c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
-
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
   printf("invalid start\n");
   fflush(stdout);
   rc = c_rest_multipart_parser_execute(parser, "-x", 2, &parsed);
@@ -191,9 +189,6 @@ static void test_multipart_invalid_args(int *res_ptr) {
   c_rest_multipart_parser_destroy(parser);
   c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
 
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
-
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
   rc = c_rest_multipart_parser_execute(parser, "--boundary\r\n:\r\n\r\n", 18,
                                        &parsed);
   c_rest_multipart_parser_destroy(parser);
@@ -621,8 +616,6 @@ static void test_multipart_invalid_args(int *res_ptr) {
 
   c_rest_multipart_parser_destroy(parser);
   c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
-
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
   printf("invalid start\n");
   fflush(stdout);
   rc = c_rest_multipart_parser_execute(parser, "-x", 2, &parsed);
@@ -655,9 +648,6 @@ static void test_multipart_invalid_args(int *res_ptr) {
   c_rest_multipart_parser_destroy(parser);
   c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
 
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
-
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
   rc = c_rest_multipart_parser_execute(parser, "--boundary\r\n:\r\n\r\n", 18,
                                        &parsed);
   c_rest_multipart_parser_destroy(parser);
