@@ -876,7 +876,7 @@ int test_modality(void) {
 
     struct c_rest_context dummy_ctx_gt;
     c_rest_error_t rc_async;
-#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
     c_rest_socket_t valid_sock =
         (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
 #else
@@ -968,7 +968,7 @@ int test_modality(void) {
     /* async_destroy with invalid server_sock to trigger socket close error */
     rc_async = async_vtable.init(&dummy_ctx_gt);
     if (rc_async == C_REST_OK) {
-#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
       *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
 #else
       *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
@@ -1012,7 +1012,7 @@ int test_modality(void) {
 
     struct c_rest_context dummy_ctx_gt;
     c_rest_error_t rc_gt;
-#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
     c_rest_socket_t valid_sock =
         (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
 #else
@@ -1106,7 +1106,7 @@ int test_modality(void) {
     /* destroy with invalid server_sock to trigger socket close error */
     rc_gt = greenthread_vtable.init(&dummy_ctx_gt);
     if (rc_gt == C_REST_OK) {
-#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
       *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
 #else
       *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
@@ -1210,7 +1210,7 @@ int test_modality(void) {
     /* destroy with invalid server_sock to trigger socket close error */
     rc_mp = message_passing_vtable.init(&dummy_ctx_mp);
     if (rc_mp == C_REST_OK) {
-#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
       *(c_rest_socket_t *)dummy_ctx_mp.internal_state = (c_rest_socket_t)9999;
 #else
       *(c_rest_socket_t *)dummy_ctx_mp.internal_state = (c_rest_socket_t)9999;
@@ -1313,7 +1313,7 @@ int test_modality(void) {
     /* destroy with invalid server_sock to trigger socket close error */
     rc_mproc = multi_process_vtable.init(&dummy_ctx_mproc);
     if (rc_mproc == C_REST_OK) {
-#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
       *(c_rest_socket_t *)dummy_ctx_mproc.internal_state =
           (c_rest_socket_t)9999;
 #else
@@ -1337,7 +1337,7 @@ int test_modality(void) {
       };
       struct multi_process_state_mock *mock =
           (struct multi_process_state_mock *)dummy_ctx_mproc.internal_state;
-      mock->workers = (c_rest_process_t *)malloc(1);
+      mock->workers = (c_rest_process_t *)malloc(sizeof(c_rest_process_t));
       multi_process_vtable.destroy(&dummy_ctx_mproc);
     }
   }
@@ -1349,7 +1349,7 @@ int test_modality(void) {
     c_rest_thread_t client_thread;
     struct test_client_args args;
 
-#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = my_sigalrm;

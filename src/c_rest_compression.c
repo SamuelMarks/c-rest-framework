@@ -251,6 +251,7 @@ c_rest_error_t c_rest_compress_finish(c_rest_compression_ctx_t *ctx,
   if (ctx->type == C_REST_COMPRESSION_GZIP) {
     ctx->z_strm.avail_in = 0;
     ctx->z_strm.next_in = Z_NULL;
+    ctx->z_strm.avail_out = (uInt)out_capacity;
 
     do {
       if (ctx->z_strm.avail_out == 0) {

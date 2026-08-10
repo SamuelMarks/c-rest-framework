@@ -145,7 +145,7 @@ static int test_sse_parse_complete(void) {
   ASSERT_EQ(500, ev.retry);
   ASSERT_STR_EQ("test data", ev.data);
 
-  /* (void)!c_rest_sse_event_destroy(&ev); */
+  (void)!c_rest_sse_event_destroy(&ev);
   (void)!c_rest_sse_context_destroy(ctx);
   return 0;
 }
@@ -166,7 +166,7 @@ static int test_sse_parse_fragmented(void) {
   ASSERT_STR_EQ("partial", ev.event);
   ASSERT_STR_EQ("hello", ev.data);
 
-  /* (void)!c_rest_sse_event_destroy(&ev); */
+  (void)!c_rest_sse_event_destroy(&ev);
   (void)!c_rest_sse_context_destroy(ctx);
   return 0;
 }

@@ -8,6 +8,7 @@ int usleep(unsigned int);
 #include "c_rest_rate_limit.h"
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #ifdef _WIN32
 __declspec(dllimport) void __stdcall Sleep(unsigned long dwMilliseconds);
 #else
@@ -69,7 +70,12 @@ static int test_rate_limiter_allow_deny(void) {
   CHECK_EQ(0, remaining);
 
   /* Wait 1 second for partial refill (capacity is 2, fill rate is 1) */
-  sleep_ms(1000);
+  {
+    time_t start = time(NULL);
+    while (time(NULL) - start < 1) {
+      sleep_ms(100);
+    }
+  }
 
   /* After wait, should be allowed again, and tokens should be 0 */
   ret = c_rest_rate_limiter_check(&limiter, "127.0.0.1", 1, &remaining);
@@ -82,7 +88,12 @@ static int test_rate_limiter_allow_deny(void) {
   CHECK_EQ(1, remaining);
 
   /* Wait 3 seconds for refill (capacity is 2, fill rate is 1) */
-  sleep_ms(3000);
+  {
+    time_t start = time(NULL);
+    while (time(NULL) - start < 3) {
+      sleep_ms(100);
+    }
+  }
 
   /* After wait, should be allowed again, and tokens should not exceed capacity
    */

@@ -1,3 +1,4 @@
+/* clang-format off */
 #include "c_rest_request.h"
 #include "c_rest_response.h"
 #include "greatest.h"
@@ -7,6 +8,7 @@ int app_node_style_main(void);
 #define main app_node_style_main
 #include "../examples/app_node_style/main.c"
 #undef main
+/* clang-format on */
 
 TEST test_app_node_style(void) {
   struct c_rest_request req;
