@@ -1,3 +1,4 @@
+#include "c_rest_testing_mocks.h"
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
@@ -515,6 +516,7 @@ c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
 #endif
 
 #include "c_rest_base64.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
@@ -765,7 +767,7 @@ c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
 #endif
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-extern int g_mock_crypto_fail;
+C_REST_EXPORT extern int g_mock_crypto_fail;
 #define c_rest_rand_bytes(b, l)                                                \
   (g_mock_crypto_fail == 4 ? C_REST_ERROR_GENERIC : c_rest_rand_bytes(b, l))
 #endif
@@ -1016,7 +1018,7 @@ c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
 #define C_REST_PBKDF2_HASH_LEN 32
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-int g_mock_crypto_fail = 0;
+C_REST_EXPORT int g_mock_crypto_fail = 0;
 #undef c_rest_pbkdf2_hmac_sha256
 #define c_rest_pbkdf2_hmac_sha256(a, b, c, d, e, f, g)                         \
   (g_mock_crypto_fail == 2 ? C_REST_ERROR_GENERIC                              \

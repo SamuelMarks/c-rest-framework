@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifndef CRF_MALLOC
@@ -75,7 +76,7 @@ extern "C" {
  * @brief Initialize the memory tracker.
  * @return C_REST_OK on success, or an error code on failure.
  */
-c_rest_error_t c_rest_mem_tracker_init(void);
+C_REST_EXPORT extern c_rest_error_t c_rest_mem_tracker_init(void);
 
 /**
  * @brief Allocate memory, optionally tracking the allocation.
@@ -85,8 +86,8 @@ c_rest_error_t c_rest_mem_tracker_init(void);
  * @param out_ptr Pointer to where the allocated memory pointer will be stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-c_rest_error_t c_rest_mem_malloc(size_t size, const char *file, int line,
-                                 void *out_ptr);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_mem_malloc(size_t size, const char *file, int line, void *out_ptr);
 
 /**
  * @brief Allocate memory for an array, optionally tracking the allocation.
@@ -97,8 +98,9 @@ c_rest_error_t c_rest_mem_malloc(size_t size, const char *file, int line,
  * @param out_ptr Pointer to where the allocated memory pointer will be stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-c_rest_error_t c_rest_mem_calloc(size_t count, size_t size, const char *file,
-                                 int line, void *out_ptr);
+C_REST_EXPORT extern c_rest_error_t c_rest_mem_calloc(size_t count, size_t size,
+                                                      const char *file,
+                                                      int line, void *out_ptr);
 
 /**
  * @brief Reallocate memory, optionally tracking the allocation.
@@ -110,8 +112,9 @@ c_rest_error_t c_rest_mem_calloc(size_t count, size_t size, const char *file,
  * stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size, const char *file,
-                                  int line, void *out_ptr);
+C_REST_EXPORT extern c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size,
+                                                       const char *file,
+                                                       int line, void *out_ptr);
 
 /**
  * @brief Duplicate a string, optionally tracking the allocation.
@@ -122,27 +125,27 @@ c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size, const char *file,
  * stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-c_rest_error_t c_rest_mem_strdup(const char *str, const char *file, int line,
-                                 char **out_str);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_mem_strdup(const char *str, const char *file, int line, char **out_str);
 
 /**
  * @brief Free allocated memory.
  * @param ptr A pointer to the memory to free.
  * @return C_REST_OK on success, or an error code on failure.
  */
-c_rest_error_t c_rest_mem_free(void *ptr);
+C_REST_EXPORT extern c_rest_error_t c_rest_mem_free(void *ptr);
 
 /**
  * @brief Print a report of memory leaks detected by the tracker.
  * @return C_REST_OK on success, or an error code on failure.
  */
-c_rest_error_t c_rest_mem_tracker_print_leaks(void);
+C_REST_EXPORT extern c_rest_error_t c_rest_mem_tracker_print_leaks(void);
 
 /**
  * @brief Clean up the memory tracker and release its resources.
  * @return C_REST_OK on success, or an error code on failure.
  */
-c_rest_error_t c_rest_mem_tracker_cleanup(void);
+C_REST_EXPORT extern c_rest_error_t c_rest_mem_tracker_cleanup(void);
 
 #ifdef C_REST_MEM_TRACK
 /** @brief Macro to allocate memory with tracking. */

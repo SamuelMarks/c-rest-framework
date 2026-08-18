@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include "c_rest_error.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -23,7 +24,8 @@ extern "C" {
  * @param out_cmp Pointer to hold the comparison result.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_strcasecmp(const char *s1, const char *s2, int *out_cmp);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_strcasecmp(const char *s1, const char *s2, int *out_cmp);
 
 /**
  * @brief Compare two strings ignoring case, up to a maximum length.
@@ -34,8 +36,8 @@ c_rest_error_t c_rest_strcasecmp(const char *s1, const char *s2, int *out_cmp);
  * @param out_cmp Pointer to hold the comparison result.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_strncasecmp(const char *s1, const char *s2, size_t n,
-                                  int *out_cmp);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_strncasecmp(const char *s1, const char *s2, size_t n, int *out_cmp);
 
 /**
  * @brief Copy a string to a destination buffer safely.
@@ -46,8 +48,8 @@ c_rest_error_t c_rest_strncasecmp(const char *s1, const char *s2, size_t n,
  * @param out_len Pointer to hold the length of the string it tried to create.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_strlcpy(char *dst, const char *src, size_t dsize,
-                              size_t *out_len);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_strlcpy(char *dst, const char *src, size_t dsize, size_t *out_len);
 
 /**
  * @brief Append a string to a destination buffer safely.
@@ -58,8 +60,8 @@ c_rest_error_t c_rest_strlcpy(char *dst, const char *src, size_t dsize,
  * @param out_len Pointer to hold the length of the string it tried to create.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_strlcat(char *dst, const char *src, size_t dsize,
-                              size_t *out_len);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_strlcat(char *dst, const char *src, size_t dsize, size_t *out_len);
 
 /**
  * @brief Decode URL encoded string.
@@ -69,7 +71,8 @@ c_rest_error_t c_rest_strlcat(char *dst, const char *src, size_t dsize,
  * @param len Length of source.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_url_decode(char *dst, const char *src, size_t len);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_url_decode(char *dst, const char *src, size_t len);
 
 #ifdef __cplusplus
 }

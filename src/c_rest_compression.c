@@ -1,3 +1,4 @@
+#include "c_rest_testing_mocks.h"
 /* clang-format off */
 #include "c_rest_error.h"
 #include "../include/c_rest_compression.h"
@@ -19,7 +20,7 @@
 #endif
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-int g_mock_lib_fail = 0;
+C_REST_EXPORT int g_mock_lib_fail = 0;
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP)
 #define c_rest_deflateInit2(a, b, c, d, e, f)                                  \
   (g_mock_lib_fail == 1 ? Z_STREAM_ERROR : deflateInit2(a, b, c, d, e, f))

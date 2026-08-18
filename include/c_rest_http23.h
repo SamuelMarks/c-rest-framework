@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include "c_rest_request.h"
 #include "c_rest_response.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -47,8 +48,9 @@ typedef struct c_rest_http23_ctx c_rest_http23_ctx_t;
  * @param out_ctx Pointer to the pointer that will receive the context.
  * @return 0 on success, or a negative error code.
  */
-c_rest_error_t c_rest_http23_ctx_init(c_rest_protocol_t protocol,
-                                      c_rest_http23_ctx_t **out_ctx);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_http23_ctx_init(c_rest_protocol_t protocol,
+                       c_rest_http23_ctx_t **out_ctx);
 
 /**
  * @brief Destroy an HTTP/2 or HTTP/3 context.
@@ -56,7 +58,8 @@ c_rest_error_t c_rest_http23_ctx_init(c_rest_protocol_t protocol,
  * @param ctx The context to destroy.
  * @return 0 on success, or a negative error code.
  */
-c_rest_error_t c_rest_http23_ctx_destroy(c_rest_http23_ctx_t *ctx);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_http23_ctx_destroy(c_rest_http23_ctx_t *ctx);
 
 /**
  * @brief Process incoming data through the HTTP/2 or HTTP/3 state machine.
@@ -67,8 +70,9 @@ c_rest_error_t c_rest_http23_ctx_destroy(c_rest_http23_ctx_t *ctx);
  * @param out_consumed Pointer to store the number of bytes consumed.
  * @return 0 on success, or a negative error code.
  */
-c_rest_error_t c_rest_http23_process(c_rest_http23_ctx_t *ctx, const char *data,
-                                     size_t len, size_t *out_consumed);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_http23_process(c_rest_http23_ctx_t *ctx, const char *data, size_t len,
+                      size_t *out_consumed);
 
 /**
  * @brief Check if the current context has a completed request ready.
@@ -77,8 +81,8 @@ c_rest_error_t c_rest_http23_process(c_rest_http23_ctx_t *ctx, const char *data,
  * @param out_ready Pointer to store 1 if ready, 0 otherwise.
  * @return 0 on success, or a negative error code.
  */
-c_rest_error_t c_rest_http23_is_request_ready(c_rest_http23_ctx_t *ctx,
-                                              int *out_ready);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_http23_is_request_ready(c_rest_http23_ctx_t *ctx, int *out_ready);
 
 /**
  * @brief Retrieve the completed request from the context.
@@ -87,8 +91,9 @@ c_rest_error_t c_rest_http23_is_request_ready(c_rest_http23_ctx_t *ctx,
  * @param out_request Pointer to store the request pointer.
  * @return 0 on success, or a negative error code.
  */
-c_rest_error_t c_rest_http23_get_request(c_rest_http23_ctx_t *ctx,
-                                         struct c_rest_request **out_request);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_http23_get_request(c_rest_http23_ctx_t *ctx,
+                          struct c_rest_request **out_request);
 
 /**
  * @brief Format an HTTP/2 or HTTP/3 response frame from a response object.
@@ -99,10 +104,10 @@ c_rest_error_t c_rest_http23_get_request(c_rest_http23_ctx_t *ctx,
  * @param out_len Pointer to store the length of the output buffer.
  * @return 0 on success, or a negative error code.
  */
-c_rest_error_t c_rest_http23_format_response(c_rest_http23_ctx_t *ctx,
-                                             struct c_rest_response *response,
-                                             char **out_buffer,
-                                             size_t *out_len);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_http23_format_response(c_rest_http23_ctx_t *ctx,
+                              struct c_rest_response *response,
+                              char **out_buffer, size_t *out_len);
 
 /* __cplusplus */
 

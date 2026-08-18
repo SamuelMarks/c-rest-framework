@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include "c_rest_error.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -36,7 +37,8 @@ typedef struct c_rest_pool {
  * @param object_size The size of each object in the pool.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_pool_init(c_rest_pool *pool, size_t object_size);
+C_REST_EXPORT extern c_rest_error_t c_rest_pool_init(c_rest_pool *pool,
+                                                     size_t object_size);
 
 /**
  * @brief Allocates an object from the memory pool.
@@ -45,7 +47,8 @@ c_rest_error_t c_rest_pool_init(c_rest_pool *pool, size_t object_size);
  * @param out_ptr Pointer to hold the allocated object.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_pool_allocate(c_rest_pool *pool, void **out_ptr);
+C_REST_EXPORT extern c_rest_error_t c_rest_pool_allocate(c_rest_pool *pool,
+                                                         void **out_ptr);
 
 /**
  * @brief Frees an object back into the memory pool.
@@ -54,7 +57,8 @@ c_rest_error_t c_rest_pool_allocate(c_rest_pool *pool, void **out_ptr);
  * @param ptr The object to free.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_pool_free(c_rest_pool *pool, void *ptr);
+C_REST_EXPORT extern c_rest_error_t c_rest_pool_free(c_rest_pool *pool,
+                                                     void *ptr);
 
 /**
  * @brief Destroys the memory pool and frees all blocks.
@@ -62,7 +66,7 @@ c_rest_error_t c_rest_pool_free(c_rest_pool *pool, void *ptr);
  * @param pool The pool to destroy.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_pool_destroy(c_rest_pool *pool);
+C_REST_EXPORT extern c_rest_error_t c_rest_pool_destroy(c_rest_pool *pool);
 
 #ifdef __cplusplus
 }

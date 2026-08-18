@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include "c_rest_error.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -121,7 +122,7 @@ struct c_rest_parser_context {
  * @param user_data User data for callbacks.
  * @return 0 on success, error code otherwise.
  */
-c_rest_error_t c_rest_parser_init(
+C_REST_EXPORT extern c_rest_error_t c_rest_parser_init(
     c_rest_parser_context *ctx, const struct c_rest_parser_vtable *vtable,
     const struct c_rest_parser_callbacks *callbacks, void *user_data);
 /**
@@ -132,31 +133,33 @@ c_rest_error_t c_rest_parser_init(
  * @param out_parsed Pointer to store number of parsed bytes.
  * @return 0 on success, error code otherwise.
  */
-c_rest_error_t c_rest_parser_execute(c_rest_parser_context *ctx,
-                                     const char *data, size_t len,
-                                     size_t *out_parsed);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_parser_execute(c_rest_parser_context *ctx, const char *data, size_t len,
+                      size_t *out_parsed);
 /**
  * @brief Check if the connection should be kept alive.
  * @param ctx The parser context.
  * @param out_keep_alive Pointer to store result (1 if true, 0 if false).
  * @return 0 on success, error code otherwise.
  */
-c_rest_error_t c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
-                                               int *out_keep_alive);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
+                                int *out_keep_alive);
 /**
  * @brief Destroy the parser context.
  * @param ctx The parser context.
  * @return 0 on success, error code otherwise.
  */
-c_rest_error_t c_rest_parser_destroy(c_rest_parser_context *ctx);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_parser_destroy(c_rest_parser_context *ctx);
 
 /**
  * @brief Check if parser reached complete state.
  * @param ctx Context
  * @return 1 if complete, 0 otherwise
  */
-c_rest_error_t c_rest_parser_is_complete(c_rest_parser_context *ctx,
-                                         int *out_complete);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_parser_is_complete(c_rest_parser_context *ctx, int *out_complete);
 
 /* Specific parser backends */
 /**
@@ -164,7 +167,7 @@ c_rest_error_t c_rest_parser_is_complete(c_rest_parser_context *ctx,
  * @param out_vtable Pointer to store the vtable.
  * @return 0 on success.
  */
-c_rest_error_t
+C_REST_EXPORT extern c_rest_error_t
 c_rest_parser_get_basic_vtable(const struct c_rest_parser_vtable **out_vtable);
 
 #ifdef __cplusplus

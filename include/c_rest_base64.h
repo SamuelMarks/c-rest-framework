@@ -8,6 +8,7 @@
 /* clang-format off */
 #include "c_rest_error.h"
 #include <stddef.h>
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -22,8 +23,9 @@ extern "C" {
  * @param dst_len Output buffer size / returned size.
  * @return C_REST_OK on success.
  */
-c_rest_error_t c_rest_base64_encode(const unsigned char *src, size_t src_len,
-                                    char *dst, size_t *dst_len);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_base64_encode(const unsigned char *src, size_t src_len, char *dst,
+                     size_t *dst_len);
 
 /**
  * @brief Base64 decode string.
@@ -33,8 +35,10 @@ c_rest_error_t c_rest_base64_encode(const unsigned char *src, size_t src_len,
  * @param dst_len Output buffer size / returned size.
  * @return C_REST_OK on success.
  */
-c_rest_error_t c_rest_base64_decode(const char *src, size_t src_len,
-                                    unsigned char *dst, size_t *dst_len);
+C_REST_EXPORT extern c_rest_error_t c_rest_base64_decode(const char *src,
+                                                         size_t src_len,
+                                                         unsigned char *dst,
+                                                         size_t *dst_len);
 
 /**
  * @brief Base64url encode data (RFC 4648).
@@ -44,8 +48,9 @@ c_rest_error_t c_rest_base64_decode(const char *src, size_t src_len,
  * @param dst_len Output buffer size / returned size.
  * @return C_REST_OK on success.
  */
-c_rest_error_t c_rest_base64url_encode(const unsigned char *src, size_t src_len,
-                                       char *dst, size_t *dst_len);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_base64url_encode(const unsigned char *src, size_t src_len, char *dst,
+                        size_t *dst_len);
 
 /**
  * @brief Base64url decode string (RFC 4648).
@@ -55,8 +60,10 @@ c_rest_error_t c_rest_base64url_encode(const unsigned char *src, size_t src_len,
  * @param dst_len Output buffer size / returned size.
  * @return C_REST_OK on success.
  */
-c_rest_error_t c_rest_base64url_decode(const char *src, size_t src_len,
-                                       unsigned char *dst, size_t *dst_len);
+C_REST_EXPORT extern c_rest_error_t c_rest_base64url_decode(const char *src,
+                                                            size_t src_len,
+                                                            unsigned char *dst,
+                                                            size_t *dst_len);
 
 #ifdef __cplusplus
 }

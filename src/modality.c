@@ -1,3 +1,4 @@
+#include "c_rest_testing_mocks.h"
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
@@ -7,15 +8,15 @@
 #include "c_rest_log.h"
 #include <stdio.h>
 
-extern const struct c_rest_modality_vtable sync_vtable;
-extern const struct c_rest_modality_vtable single_thread_vtable;
-extern const struct c_rest_modality_vtable async_vtable;
-extern const struct c_rest_modality_vtable multi_thread_vtable;
+C_REST_EXPORT extern const struct c_rest_modality_vtable sync_vtable;
+C_REST_EXPORT extern const struct c_rest_modality_vtable single_thread_vtable;
+C_REST_EXPORT extern const struct c_rest_modality_vtable async_vtable;
+C_REST_EXPORT extern const struct c_rest_modality_vtable multi_thread_vtable;
 #if !defined(__EMSCRIPTEN__) && !defined(CDD_DOS)
-extern const struct c_rest_modality_vtable multi_process_vtable;
+C_REST_EXPORT extern const struct c_rest_modality_vtable multi_process_vtable;
 #endif
-extern const struct c_rest_modality_vtable greenthread_vtable;
-extern const struct c_rest_modality_vtable message_passing_vtable;
+C_REST_EXPORT extern const struct c_rest_modality_vtable greenthread_vtable;
+C_REST_EXPORT extern const struct c_rest_modality_vtable message_passing_vtable;
 
 /* We will reuse a dummy vtable for the unimplemented modalities for now */
 static c_rest_error_t dummy_init(struct c_rest_context *ctx) {
@@ -91,7 +92,7 @@ c_rest_error_t c_rest_init(enum c_rest_modality_type type,
   const struct c_rest_modality_vtable *vtable;
   int res;
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  extern void *(*g_crf_malloc_hook)(size_t);
+  C_REST_EXPORT extern void *(*g_crf_malloc_hook)(size_t);
 #endif
 
   if (!out_ctx) {
@@ -275,6 +276,7 @@ c_rest_error_t c_rest_set_router(struct c_rest_context *ctx,
 #include "c_rest_router.h"
 #include "c_rest_str_utils.h"
 #include <string.h>
+#include "c_rest_export.h"
 /* clang-format on */
 
 struct connection_state {

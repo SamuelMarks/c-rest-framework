@@ -1,11 +1,12 @@
+#include "c_rest_testing_mocks.h"
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
 #ifdef C_REST_TESTING_MALLOC_HOOK
-void *(*g_crf_malloc_hook)(size_t) = NULL;
-void *(*g_crf_calloc_hook)(size_t, size_t) = NULL;
-void *(*g_crf_realloc_hook)(void *, size_t) = NULL;
-char *(*g_crf_strdup_hook)(const char *) = NULL;
+C_REST_EXPORT void *(*g_crf_malloc_hook)(size_t) = NULL;
+C_REST_EXPORT void *(*g_crf_calloc_hook)(size_t, size_t) = NULL;
+C_REST_EXPORT void *(*g_crf_realloc_hook)(void *, size_t) = NULL;
+C_REST_EXPORT char *(*g_crf_strdup_hook)(const char *) = NULL;
 
 
 
@@ -65,8 +66,8 @@ static c_rest_mutex_t mem_mutex = (c_rest_mutex_t)-1;
 static int mem_initialized = 0;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-c_rest_mutex_t *g_crf_mem_mutex_ptr = &mem_mutex;
-int *g_crf_mem_initialized_ptr = &mem_initialized;
+C_REST_EXPORT c_rest_mutex_t *g_crf_mem_mutex_ptr = &mem_mutex;
+C_REST_EXPORT int *g_crf_mem_initialized_ptr = &mem_initialized;
 #endif
 
 c_rest_error_t c_rest_mem_tracker_init(void) {

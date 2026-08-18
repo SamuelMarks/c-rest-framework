@@ -1,3 +1,4 @@
+#include "c_rest_testing_mocks.h"
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_endian.h"
@@ -5,7 +6,7 @@
 /* clang-format on */
 
 #ifdef C_REST_TESTING_ENDIAN_HOOK
-c_rest_error_t (*g_crf_is_little_endian_hook)(int *) = NULL;
+C_REST_EXPORT c_rest_error_t (*g_crf_is_little_endian_hook)(int *) = NULL;
 #endif
 
 static c_rest_error_t is_little_endian(int *out_is_little) {

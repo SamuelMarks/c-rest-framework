@@ -8,6 +8,7 @@
 /* clang-format off */
 #include "c_rest_error.h"
 #include <stddef.h>
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -38,14 +39,16 @@ struct c_rest_sse_context;
  * @param ev Pointer to the event struct to initialize.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_sse_event_init(struct c_rest_sse_event *ev);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_sse_event_init(struct c_rest_sse_event *ev);
 
 /**
  * @brief Cleans up memory allocated within an SSE event struct.
  * @param ev Pointer to the event struct.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_sse_event_destroy(struct c_rest_sse_event *ev);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_sse_event_destroy(struct c_rest_sse_event *ev);
 
 /**
  * @brief Deep copies an SSE event.
@@ -53,8 +56,9 @@ c_rest_error_t c_rest_sse_event_destroy(struct c_rest_sse_event *ev);
  * @param dest The destination event to initialize and copy into.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_sse_event_clone(const struct c_rest_sse_event *src,
-                                      struct c_rest_sse_event *dest);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_sse_event_clone(const struct c_rest_sse_event *src,
+                       struct c_rest_sse_event *dest);
 
 /**
  * @brief Serializes an SSE event into a string buffer.
@@ -63,22 +67,25 @@ c_rest_error_t c_rest_sse_event_clone(const struct c_rest_sse_event *src,
  * @param out_len Pointer to receive the length of the string.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev,
-                                    char **out_buf, size_t *out_len);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
+                     size_t *out_len);
 
 /**
  * @brief Initializes an SSE parsing context.
  * @param out_ctx Pointer to receive the context pointer.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_sse_context_init(struct c_rest_sse_context **out_ctx);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_sse_context_init(struct c_rest_sse_context **out_ctx);
 
 /**
  * @brief Destroys an SSE parsing context.
  * @param ctx The context to destroy.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_sse_context_destroy(struct c_rest_sse_context *ctx);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_sse_context_destroy(struct c_rest_sse_context *ctx);
 
 /**
  * @brief Parses incoming SSE stream data.
@@ -89,9 +96,9 @@ c_rest_error_t c_rest_sse_context_destroy(struct c_rest_sse_context *ctx);
  * @return 0 on success (event parsed), 1 if more data is needed, or a negative
  * error code.
  */
-c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx,
-                                const char *data, size_t len,
-                                struct c_rest_sse_event *out_event);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data, size_t len,
+                 struct c_rest_sse_event *out_event);
 
 struct c_rest_response;
 
@@ -100,7 +107,8 @@ struct c_rest_response;
  * @param res The response object.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_sse_init_response(struct c_rest_response *res);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_sse_init_response(struct c_rest_response *res);
 
 /**
  * @brief Sends an SSE event to the client over the response connection.
@@ -108,15 +116,17 @@ c_rest_error_t c_rest_sse_init_response(struct c_rest_response *res);
  * @param ev The event to send.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_sse_send_event(struct c_rest_response *res,
-                                     const struct c_rest_sse_event *ev);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_sse_send_event(struct c_rest_response *res,
+                      const struct c_rest_sse_event *ev);
 
 /**
  * @brief Sends an SSE keep-alive comment to prevent timeouts.
  * @param res The response object.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_sse_send_keepalive(struct c_rest_response *res);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_sse_send_keepalive(struct c_rest_response *res);
 
 /* __cplusplus */
 

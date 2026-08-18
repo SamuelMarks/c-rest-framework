@@ -9,6 +9,7 @@
 
 #include "c_rest_router.h"
 #include "c_rest_orm.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -23,14 +24,14 @@ struct c_rest_response;
  *
  * user_data should be a pointer to the c_rest_context containing the db_pool.
  */
-c_rest_error_t c_rest_orm_transaction_start_middleware(
+C_REST_EXPORT extern c_rest_error_t c_rest_orm_transaction_start_middleware(
     struct c_rest_request *req, struct c_rest_response *res, void *user_data);
 
 /**
  * @brief Post-handler hook to commit/rollback transactions and release the
  * connection.
  */
-c_rest_error_t c_rest_orm_transaction_end_middleware(
+C_REST_EXPORT extern c_rest_error_t c_rest_orm_transaction_end_middleware(
     struct c_rest_request *req, struct c_rest_response *res, void *user_data);
 
 #ifdef __cplusplus

@@ -6,6 +6,7 @@
 #define C_REST_ORM_H
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -35,15 +36,15 @@ struct c_rest_db_config {
  * @param pool Pointer to hold the initialized pool.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_orm_init(struct c_rest_db_config *config,
-                               struct c_orm_pool **pool);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_orm_init(struct c_rest_db_config *config, struct c_orm_pool **pool);
 
 /**
  * @brief Wrapper for c-orm cleanup.
  * @param pool The pool to cleanup.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_orm_cleanup(struct c_orm_pool *pool);
+C_REST_EXPORT extern c_rest_error_t c_rest_orm_cleanup(struct c_orm_pool *pool);
 
 #ifdef __cplusplus
 }

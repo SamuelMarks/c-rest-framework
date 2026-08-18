@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include "c_rest_error.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -42,7 +43,7 @@ struct c_rest_multipart_callbacks {
  * @param user_data User data to associate with the parser.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_multipart_parser_init(
+C_REST_EXPORT extern c_rest_error_t c_rest_multipart_parser_init(
     c_rest_multipart_parser **out_parser, const char *boundary,
     const struct c_rest_multipart_callbacks *callbacks, void *user_data);
 
@@ -54,16 +55,18 @@ c_rest_error_t c_rest_multipart_parser_init(
  * @param out_parsed Pointer to store the number of bytes parsed.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
-                                               const char *data, size_t len,
-                                               size_t *out_parsed);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
+                                const char *data, size_t len,
+                                size_t *out_parsed);
 
 /**
  * @brief Destroy a multipart parser and free its resources.
  * @param parser The parser to destroy.
  * @return 0 on success, non-zero on error.
  */
-c_rest_error_t c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser);
 
 /**
  * @brief Clone a multipart parser context.
@@ -71,11 +74,11 @@ c_rest_error_t c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser);
  * @param out_clone Pointer to store the cloned parser.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t
+C_REST_EXPORT extern c_rest_error_t
 c_rest_multipart_parser_clone(const c_rest_multipart_parser *parser,
                               c_rest_multipart_parser **out_clone);
 
-c_rest_error_t
+C_REST_EXPORT extern c_rest_error_t
 c_rest_multipart_parser_get_user_data(c_rest_multipart_parser *parser,
                                       void **out_user_data);
 

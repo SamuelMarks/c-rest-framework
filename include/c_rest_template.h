@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 #include "c_rest_error.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -35,8 +36,9 @@ struct c_rest_template_context {
  * @param template_str The template string.
  * @return 0 on success, non-zero error code on failure.
  */
-c_rest_error_t c_rest_template_init(struct c_rest_template_context *ctx,
-                                    const char *template_str);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_template_init(struct c_rest_template_context *ctx,
+                     const char *template_str);
 
 /**
  * @brief Destroys a template context.
@@ -44,7 +46,8 @@ c_rest_error_t c_rest_template_init(struct c_rest_template_context *ctx,
  * @param ctx Pointer to the context to destroy.
  * @return 0 on success, non-zero error code on failure.
  */
-c_rest_error_t c_rest_template_destroy(struct c_rest_template_context *ctx);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_template_destroy(struct c_rest_template_context *ctx);
 
 /**
  * @brief Renders the template with provided values.
@@ -57,9 +60,10 @@ c_rest_error_t c_rest_template_destroy(struct c_rest_template_context *ctx);
  * freed.
  * @return 0 on success, non-zero error code on failure.
  */
-c_rest_error_t c_rest_template_render(const struct c_rest_template_context *ctx,
-                                      const char **keys, const char **values,
-                                      size_t count, char **out_result);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_template_render(const struct c_rest_template_context *ctx,
+                       const char **keys, const char **values, size_t count,
+                       char **out_result);
 
 #ifdef __cplusplus
 }

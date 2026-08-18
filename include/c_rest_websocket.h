@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include "c_rest_error.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -70,10 +71,9 @@ struct c_rest_response;
  * @param out_accept_len Size of the output buffer, updated to actual length.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_websocket_generate_accept(const char *ws_key,
-                                                size_t ws_key_len,
-                                                char *out_accept,
-                                                size_t *out_accept_len);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_websocket_generate_accept(const char *ws_key, size_t ws_key_len,
+                                 char *out_accept, size_t *out_accept_len);
 
 /**
  * @brief Process an HTTP request and upgrade it to a WebSocket connection if
@@ -82,8 +82,9 @@ c_rest_error_t c_rest_websocket_generate_accept(const char *ws_key,
  * @param res The outgoing HTTP response.
  * @return 0 on successful upgrade (status code 101 set), non-zero on failure.
  */
-c_rest_error_t c_rest_websocket_upgrade(struct c_rest_request *req,
-                                        struct c_rest_response *res);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_websocket_upgrade(struct c_rest_request *req,
+                         struct c_rest_response *res);
 
 /**
  * @brief Parses a WebSocket frame header from a buffer.
@@ -92,7 +93,7 @@ c_rest_error_t c_rest_websocket_upgrade(struct c_rest_request *req,
  * @param out_header The parsed frame header.
  * @return 0 on success (full header parsed), non-zero on failure or incomplete.
  */
-c_rest_error_t c_rest_websocket_parse_frame_header(
+C_REST_EXPORT extern c_rest_error_t c_rest_websocket_parse_frame_header(
     const unsigned char *data, size_t data_len,
     struct c_rest_websocket_frame_header *out_header);
 
@@ -103,7 +104,7 @@ c_rest_error_t c_rest_websocket_parse_frame_header(
  * @param masking_key The 4-byte masking key.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t
+C_REST_EXPORT extern c_rest_error_t
 c_rest_websocket_unmask_payload(unsigned char *payload, size_t payload_len,
                                 const unsigned char masking_key[4]);
 
@@ -115,7 +116,7 @@ c_rest_websocket_unmask_payload(unsigned char *payload, size_t payload_len,
  * @param out_written The number of bytes written to out_data.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_websocket_serialize_frame_header(
+C_REST_EXPORT extern c_rest_error_t c_rest_websocket_serialize_frame_header(
     const struct c_rest_websocket_frame_header *header, unsigned char *out_data,
     size_t out_data_max, size_t *out_written);
 

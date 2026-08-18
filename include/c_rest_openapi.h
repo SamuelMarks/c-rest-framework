@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include "c_rest_error.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -299,13 +300,15 @@ struct c_rest_openapi_spec {
  * @param out_spec Pointer to store the spec.
  * @return 0 on success, error code otherwise.
  */
-c_rest_error_t c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec);
 /**
  * @brief Destroys an OpenAPI spec object.
  * @param spec The spec object to destroy.
  * @return 0 on success, error code otherwise.
  */
-c_rest_error_t c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec);
 
 /**
  * @brief Adds a path operation to the OpenAPI spec.
@@ -315,7 +318,7 @@ c_rest_error_t c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec);
  * @param op The operation object.
  * @return 0 on success, error code otherwise.
  */
-c_rest_error_t
+C_REST_EXPORT extern c_rest_error_t
 c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
                              const char *route, const char *method,
                              const struct c_rest_openapi_operation *op);
@@ -327,7 +330,7 @@ c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
  * @param json_schema_str The raw JSON schema string. Will be parsed and merged.
  * @return 0 on success.
  */
-c_rest_error_t
+C_REST_EXPORT extern c_rest_error_t
 c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
                                          const char *schema_name,
                                          const char *json_schema_str);
@@ -341,7 +344,7 @@ struct c_rest_router;
  * json_free_serialized_string() from parson.
  * @return 0 on success.
  */
-c_rest_error_t
+C_REST_EXPORT extern c_rest_error_t
 c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
                             char **out_json);
 
@@ -351,8 +354,8 @@ c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
  * @param path The URL path (e.g., "/openapi.json").
  * @return 0 on success.
  */
-c_rest_error_t c_rest_enable_openapi(struct c_rest_router *router,
-                                     const char *path);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_enable_openapi(struct c_rest_router *router, const char *path);
 
 /**
  * @brief Add a route to serve Swagger UI documentation.
@@ -361,9 +364,9 @@ c_rest_error_t c_rest_enable_openapi(struct c_rest_router *router,
  * @param openapi_url The URL path to the OpenAPI JSON (e.g., "/openapi.json").
  * @return 0 on success.
  */
-c_rest_error_t c_rest_enable_swagger_ui(struct c_rest_router *router,
-                                        const char *docs_path,
-                                        const char *openapi_url);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_enable_swagger_ui(struct c_rest_router *router, const char *docs_path,
+                         const char *openapi_url);
 
 #ifdef __cplusplus
 }

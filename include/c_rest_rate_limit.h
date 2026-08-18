@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include "c_rest_error.h"
 #include <time.h>
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -61,9 +62,9 @@ typedef struct c_rest_rate_limiter {
  * track.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
-                                        size_t capacity, size_t fill_rate,
-                                        size_t max_entities);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_rate_limiter_init(c_rest_rate_limiter *limiter, size_t capacity,
+                         size_t fill_rate, size_t max_entities);
 
 /**
  * @brief Check if a request from the given identifier should be allowed.
@@ -74,17 +75,17 @@ c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
  * @return 0 if the request is allowed (enough tokens), non-zero if rate limited
  * or on error.
  */
-c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
-                                         const char *identifier,
-                                         size_t tokens_needed,
-                                         size_t *out_remaining);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_rate_limiter_check(c_rest_rate_limiter *limiter, const char *identifier,
+                          size_t tokens_needed, size_t *out_remaining);
 
 /**
  * @brief Free resources associated with the rate limiter.
  * @param limiter Pointer to the rate limiter to destroy.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter);
 
 /* __cplusplus */
 

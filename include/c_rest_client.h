@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include "c_rest_error.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -52,14 +53,16 @@ struct c_rest_client_form_field {
  * @param out_client Pointer to store the initialized context.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_init(c_rest_client_context **out_client);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_client_init(c_rest_client_context **out_client);
 
 /**
  * @brief Destroys an HTTP client context.
  * @param client The context to destroy.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_destroy(c_rest_client_context *client);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_client_destroy(c_rest_client_context *client);
 
 /**
  * @brief Executes a synchronous HTTP request.
@@ -73,7 +76,7 @@ c_rest_error_t c_rest_client_destroy(c_rest_client_context *client);
  * @param out_res Pointer to store the resulting response.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_request_sync(
+C_REST_EXPORT extern c_rest_error_t c_rest_client_request_sync(
     c_rest_client_context *client, const char *url, const char *method,
     const struct c_rest_client_header *headers, size_t headers_count,
     const void *body, size_t body_len, struct c_rest_client_response **out_res);
@@ -91,7 +94,7 @@ c_rest_error_t c_rest_client_request_sync(
  * @param user_data User data to pass to the callback.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_request_async(
+C_REST_EXPORT extern c_rest_error_t c_rest_client_request_async(
     c_rest_client_context *client, const char *url, const char *method,
     const struct c_rest_client_header *headers, size_t headers_count,
     const void *body, size_t body_len,
@@ -103,7 +106,8 @@ c_rest_error_t c_rest_client_request_async(
  * @param res The response to free.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_response_free(struct c_rest_client_response *res);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_client_response_free(struct c_rest_client_response *res);
 
 /**
  * @brief Builds a URL-encoded form string.
@@ -113,7 +117,7 @@ c_rest_error_t c_rest_client_response_free(struct c_rest_client_response *res);
  * @param out_len Pointer to store the length of the string.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_build_form_urlencoded(
+C_REST_EXPORT extern c_rest_error_t c_rest_client_build_form_urlencoded(
     const struct c_rest_client_form_field *fields, size_t num_fields,
     char **out_body, size_t *out_len);
 
@@ -123,7 +127,8 @@ c_rest_error_t c_rest_client_build_form_urlencoded(
  * @param out_str Pointer to store the newly allocated encoded string.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_url_encode(const char *in_str, char **out_str);
+C_REST_EXPORT extern c_rest_error_t c_rest_client_url_encode(const char *in_str,
+                                                             char **out_str);
 
 /**
  * @brief URL decodes a string.
@@ -131,7 +136,8 @@ c_rest_error_t c_rest_client_url_encode(const char *in_str, char **out_str);
  * @param out_str Pointer to store the newly allocated decoded string.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_url_decode(const char *in_str, char **out_str);
+C_REST_EXPORT extern c_rest_error_t c_rest_client_url_decode(const char *in_str,
+                                                             char **out_str);
 
 /**
  * @brief Parses a URL-encoded form string into an array of fields.
@@ -140,7 +146,7 @@ c_rest_error_t c_rest_client_url_decode(const char *in_str, char **out_str);
  * @param out_num_fields Pointer to store the number of fields.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_parse_form_urlencoded(
+C_REST_EXPORT extern c_rest_error_t c_rest_client_parse_form_urlencoded(
     const char *body, struct c_rest_client_form_field **out_fields,
     size_t *out_num_fields);
 
@@ -150,7 +156,7 @@ c_rest_error_t c_rest_client_parse_form_urlencoded(
  * @param num_fields The number of fields.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t
+C_REST_EXPORT extern c_rest_error_t
 c_rest_client_form_fields_free(struct c_rest_client_form_field *fields,
                                size_t num_fields);
 
@@ -162,9 +168,10 @@ c_rest_client_form_fields_free(struct c_rest_client_form_field *fields,
  * @param value The header value.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_header_set(struct c_rest_client_header **headers,
-                                        size_t *headers_count, const char *key,
-                                        const char *value);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_client_header_set(struct c_rest_client_header **headers,
+                         size_t *headers_count, const char *key,
+                         const char *value);
 
 /**
  * @brief Frees an array of headers.
@@ -172,8 +179,9 @@ c_rest_error_t c_rest_client_header_set(struct c_rest_client_header **headers,
  * @param headers_count The number of headers.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_headers_free(struct c_rest_client_header *headers,
-                                          size_t headers_count);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_client_headers_free(struct c_rest_client_header *headers,
+                           size_t headers_count);
 
 /**
  * @brief Builds a Basic Authorization header.
@@ -182,9 +190,9 @@ c_rest_error_t c_rest_client_headers_free(struct c_rest_client_header *headers,
  * @param out_header Pointer to store the newly allocated header string.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_build_auth_basic(const char *username,
-                                              const char *password,
-                                              char **out_header);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_client_build_auth_basic(const char *username, const char *password,
+                               char **out_header);
 
 /**
  * @brief Builds a Bearer Authorization header.
@@ -192,8 +200,8 @@ c_rest_error_t c_rest_client_build_auth_basic(const char *username,
  * @param out_header Pointer to store the newly allocated header string.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_build_auth_bearer(const char *token,
-                                               char **out_header);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_client_build_auth_bearer(const char *token, char **out_header);
 
 /**
  * @brief Executes a synchronous POST request with URL-encoded form data.
@@ -206,7 +214,7 @@ c_rest_error_t c_rest_client_build_auth_bearer(const char *token,
  * @param out_res Pointer to store the resulting response.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_client_post_form_sync(
+C_REST_EXPORT extern c_rest_error_t c_rest_client_post_form_sync(
     c_rest_client_context *client, const char *url,
     const struct c_rest_client_header *headers, size_t headers_count,
     const struct c_rest_client_form_field *fields, size_t num_fields,
@@ -218,7 +226,7 @@ c_rest_error_t c_rest_client_post_form_sync(
  * @param out_json Pointer to store the parsed JSON object (requires parson).
  * @return 0 on success, or an error code.
  */
-c_rest_error_t
+C_REST_EXPORT extern c_rest_error_t
 c_rest_client_response_parse_json(const struct c_rest_client_response *res,
                                   void **out_json);
 
@@ -229,8 +237,8 @@ c_rest_client_response_parse_json(const struct c_rest_client_response *res,
  * @param res The response.
  * @return 0 on success, or an error code.
  */
-c_rest_error_t c_rest_proxy_request(const char *target_url, void *req,
-                                    void *res);
+C_REST_EXPORT extern c_rest_error_t c_rest_proxy_request(const char *target_url,
+                                                         void *req, void *res);
 
 #ifdef __cplusplus
 }

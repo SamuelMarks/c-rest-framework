@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include "c_rest_error.h"
 #include "c_rest_platform.h"
+#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -39,13 +40,13 @@ enum c_rest_crypto_provider {
  * @brief Initialize the global TLS library state.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_tls_init(void);
+C_REST_EXPORT extern c_rest_error_t c_rest_tls_init(void);
 
 /**
  * @brief Get the currently active cryptographic provider.
  * @return The active c_rest_crypto_provider.
  */
-c_rest_error_t
+C_REST_EXPORT extern c_rest_error_t
 c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider);
 
 /**
@@ -63,13 +64,15 @@ struct c_rest_tls_connection;
  * @param out_ctx Pointer to the resulting context pointer.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_tls_context_init(struct c_rest_tls_context **out_ctx);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_tls_context_init(struct c_rest_tls_context **out_ctx);
 
 /**
  * @brief Destroy and clean up a TLS context.
  * @param ctx The context to destroy.
  */
-c_rest_error_t c_rest_tls_context_destroy(struct c_rest_tls_context *ctx);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_tls_context_destroy(struct c_rest_tls_context *ctx);
 
 /**
  * @brief Load a server certificate into the context.
@@ -77,8 +80,8 @@ c_rest_error_t c_rest_tls_context_destroy(struct c_rest_tls_context *ctx);
  * @param cert_path Path to the certificate file (PEM/DER).
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_tls_load_cert(struct c_rest_tls_context *ctx,
-                                    const char *cert_path);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_tls_load_cert(struct c_rest_tls_context *ctx, const char *cert_path);
 
 /**
  * @brief Load a server private key into the context.
@@ -86,8 +89,8 @@ c_rest_error_t c_rest_tls_load_cert(struct c_rest_tls_context *ctx,
  * @param key_path Path to the private key file (PEM/DER).
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_tls_load_key(struct c_rest_tls_context *ctx,
-                                   const char *key_path);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_tls_load_key(struct c_rest_tls_context *ctx, const char *key_path);
 
 /**
  * @brief Load a Certificate Authority (CA) chain into the context.
@@ -95,8 +98,9 @@ c_rest_error_t c_rest_tls_load_key(struct c_rest_tls_context *ctx,
  * @param ca_chain_path Path to the CA chain file.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_tls_load_ca_chain(struct c_rest_tls_context *ctx,
-                                        const char *ca_chain_path);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_tls_load_ca_chain(struct c_rest_tls_context *ctx,
+                         const char *ca_chain_path);
 
 /**
  * @brief Set the ALPN protocols for the context.
@@ -104,8 +108,8 @@ c_rest_error_t c_rest_tls_load_ca_chain(struct c_rest_tls_context *ctx,
  * @param protocols A comma-separated list of protocols (e.g., "h2,http/1.1").
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_tls_set_alpn(struct c_rest_tls_context *ctx,
-                                   const char *protocols);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_tls_set_alpn(struct c_rest_tls_context *ctx, const char *protocols);
 
 /** @brief Want read code for TLS. */
 #define C_REST_TLS_WANT_READ -2
@@ -119,9 +123,9 @@ c_rest_error_t c_rest_tls_set_alpn(struct c_rest_tls_context *ctx,
  * @param out_conn Pointer to the resulting TLS connection.
  * @return 0 on success, C_REST_TLS_WANT_READ, C_REST_TLS_WANT_WRITE, or error.
  */
-c_rest_error_t c_rest_tls_accept(struct c_rest_tls_context *ctx,
-                                 c_rest_socket_t sock,
-                                 struct c_rest_tls_connection **out_conn);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock,
+                  struct c_rest_tls_connection **out_conn);
 
 /**
  * @brief Read data from a TLS connection.
@@ -131,8 +135,9 @@ c_rest_error_t c_rest_tls_accept(struct c_rest_tls_context *ctx,
  * @param out_read Pointer to store the number of bytes actually read.
  * @return 0 on success, C_REST_TLS_WANT_READ, C_REST_TLS_WANT_WRITE, or error.
  */
-c_rest_error_t c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf,
-                               size_t len, size_t *out_read);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf, size_t len,
+                size_t *out_read);
 
 /**
  * @brief Write data to a TLS connection.
@@ -142,16 +147,17 @@ c_rest_error_t c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf,
  * @param out_written Pointer to store the number of bytes actually written.
  * @return 0 on success, C_REST_TLS_WANT_READ, C_REST_TLS_WANT_WRITE, or error.
  */
-c_rest_error_t c_rest_tls_write(struct c_rest_tls_connection *conn,
-                                const void *buf, size_t len,
-                                size_t *out_written);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_tls_write(struct c_rest_tls_connection *conn, const void *buf,
+                 size_t len, size_t *out_written);
 
 /**
  * @brief Close and clean up a TLS connection.
  * @param conn The TLS connection to close.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t c_rest_tls_close(struct c_rest_tls_connection *conn);
+C_REST_EXPORT extern c_rest_error_t
+c_rest_tls_close(struct c_rest_tls_connection *conn);
 
 #ifdef __cplusplus
 }

@@ -1,3 +1,4 @@
+#include "c_rest_testing_mocks.h"
 /* clang-format off */
 #include "c_rest_orm.h"
 
@@ -10,9 +11,9 @@
 /* Mock implementations for c-orm functions when c-orm is not present */
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-int g_mock_orm_init_fail = 0;
-int g_mock_orm_cleanup_fail = 0;
-int g_mock_socket_fail = 0;
+C_REST_EXPORT int g_mock_orm_init_fail = 0;
+C_REST_EXPORT int g_mock_orm_cleanup_fail = 0;
+C_REST_EXPORT int g_mock_socket_fail = 0;
 #endif
 
 c_rest_error_t c_rest_orm_init(struct c_rest_db_config *config,
@@ -43,12 +44,13 @@ c_rest_error_t c_rest_orm_cleanup(struct c_orm_pool *pool) {
 
 typedef int c_orm_mock_dummy_declaration;
 
+#include "c_rest_export.h"
 #include "c_rest_modality.h"
 #include "c_rest_platform.h"
 #include "c_rest_tls.h"
 
-extern int g_mock_socket_fail;
-int g_mock_tls_fail = 0;
+C_REST_EXPORT extern int g_mock_socket_fail;
+C_REST_EXPORT int g_mock_tls_fail = 0;
 
 #undef c_rest_socket_create
 #undef c_rest_socket_bind
