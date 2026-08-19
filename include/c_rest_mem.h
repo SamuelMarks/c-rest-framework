@@ -15,8 +15,8 @@
 
 #ifndef CRF_MALLOC
 #ifdef C_REST_TESTING_MALLOC_HOOK
-extern void *(*g_crf_malloc_hook)(size_t);
-void *test_c_rest_internal_malloc(size_t size);
+C_REST_EXPORT extern void *(*g_crf_malloc_hook)(size_t);
+C_REST_EXPORT void *test_c_rest_internal_malloc(size_t size);
 #define CRF_MALLOC test_c_rest_internal_malloc
 #else
 #define CRF_MALLOC malloc
@@ -25,8 +25,8 @@ void *test_c_rest_internal_malloc(size_t size);
 
 #ifndef CRF_CALLOC
 #ifdef C_REST_TESTING_MALLOC_HOOK
-extern void *(*g_crf_calloc_hook)(size_t, size_t);
-void *test_c_rest_internal_calloc(size_t count, size_t size);
+C_REST_EXPORT extern void *(*g_crf_calloc_hook)(size_t, size_t);
+C_REST_EXPORT void *test_c_rest_internal_calloc(size_t count, size_t size);
 #define CRF_CALLOC test_c_rest_internal_calloc
 #else
 #define CRF_CALLOC calloc
@@ -35,8 +35,8 @@ void *test_c_rest_internal_calloc(size_t count, size_t size);
 
 #ifndef CRF_REALLOC
 #ifdef C_REST_TESTING_MALLOC_HOOK
-extern void *(*g_crf_realloc_hook)(void *, size_t);
-void *test_c_rest_internal_realloc(void *ptr, size_t size);
+C_REST_EXPORT extern void *(*g_crf_realloc_hook)(void *, size_t);
+C_REST_EXPORT void *test_c_rest_internal_realloc(void *ptr, size_t size);
 #define CRF_REALLOC test_c_rest_internal_realloc
 #else
 #define CRF_REALLOC realloc
@@ -49,7 +49,7 @@ void *test_c_rest_internal_realloc(void *ptr, size_t size);
 
 #ifndef CRF_STRDUP
 #ifdef C_REST_TESTING_MALLOC_HOOK
-extern char *(*g_crf_strdup_hook)(const char *);
+C_REST_EXPORT extern char *(*g_crf_strdup_hook)(const char *);
 
 #ifdef _MSC_VER
 #define CRF_STRDUP(s) (g_crf_strdup_hook ? g_crf_strdup_hook(s) : _strdup(s))

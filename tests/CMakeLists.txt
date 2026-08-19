@@ -66,9 +66,6 @@ add_executable(c-rest-framework-tests ${TEST_SRCS})
 
 target_include_directories(c-rest-framework-tests PRIVATE ../include ${CMAKE_CURRENT_SOURCE_DIR} ${greatest_SOURCE_DIR})
 target_include_directories(c-rest-framework-tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../)
-if(MSVC AND BUILD_SHARED_LIBS)
-    target_compile_definitions(c-rest-framework-tests PRIVATE c_rest_framework_EXPORTS=1)
-endif()
 target_link_libraries(c-rest-framework-tests PRIVATE c-rest-framework)
 
 if(EMSCRIPTEN)

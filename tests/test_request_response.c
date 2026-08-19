@@ -36,8 +36,6 @@ static void test_coverage(void) {
   struct c_rest_request req;
   struct c_rest_response res;
   int i;
-  extern void *(*g_crf_malloc_hook)(size_t);
-  extern void *(*g_crf_realloc_hook)(void *, size_t);
   extern int g_fail_malloc_at;
   extern int g_fail_realloc_at;
 
@@ -134,7 +132,6 @@ static void test_coverage(void) {
     struct c_rest_response res_t = {0};
     struct c_rest_template_context ctx_t = {0};
     extern int g_fail_malloc_at;
-    extern void *(*g_crf_malloc_hook)(size_t);
     extern void *fail_malloc_n(size_t);
     g_crf_malloc_hook = fail_malloc_n;
     g_fail_malloc_at = 1;
@@ -502,7 +499,6 @@ static void test_coverage(void) {
 
     {
       int k_oom;
-      extern void *(*g_crf_malloc_hook)(size_t);
       extern int g_fail_malloc_at;
 
       /* To hit branch 112, fail the first allocation
@@ -1006,7 +1002,6 @@ int test_request_response(void) {
 
   {
     int i;
-    extern void *(*g_crf_malloc_hook)(size_t);
     extern int g_fail_malloc_at;
 
     for (i = 0; i <= 10; i++) {
@@ -1040,7 +1035,6 @@ int test_request_response(void) {
 
   {
     int i;
-    extern void *(*g_crf_malloc_hook)(size_t);
     extern int g_fail_malloc_at;
 
     for (i = 0; i <= 3; i++) {

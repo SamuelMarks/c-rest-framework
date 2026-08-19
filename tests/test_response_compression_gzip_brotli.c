@@ -278,8 +278,6 @@ static int test_compression_empty(void) {
   return 0;
 }
 
-extern int g_mock_lib_fail;
-
 static int test_compression_lib_failures(void) {
   c_rest_compression_ctx_t *ctx;
   unsigned char *out = NULL;
@@ -357,8 +355,6 @@ int g_fail_realloc_at = 0;
 
 static void test_coverage(void) {
   int i;
-  extern void *(*g_crf_malloc_hook)(size_t);
-  extern void *(*g_crf_realloc_hook)(void *, size_t);
   c_rest_compression_ctx_t *ctx;
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;

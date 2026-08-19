@@ -52,8 +52,6 @@ static int test_openapi_errors(void) {
   struct c_rest_openapi_spec *spec = NULL;
   char *json_str = NULL;
   int ret;
-  extern void *(*g_crf_malloc_hook)(size_t);
-  extern void *(*g_crf_realloc_hook)(void *, size_t);
   int i;
   struct c_rest_openapi_operation op;
   const char *tags[] = {"test_tag"};

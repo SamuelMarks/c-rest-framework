@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_testing_mocks.h"
 /* clang-format on */
 #ifndef C_REST_TEST_PROTOS_H
 #define C_REST_TEST_PROTOS_H

@@ -178,7 +178,6 @@ static void *fail_malloc_n(size_t size) {
 static int test_rate_limiter_malloc(void) {
   c_rest_rate_limiter limiter;
   int ret;
-  extern void *(*g_crf_malloc_hook)(size_t);
   int i;
   size_t remaining;
 

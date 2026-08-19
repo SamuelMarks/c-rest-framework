@@ -448,7 +448,6 @@ static int test_graphql_errors(void) {
   int called = 0;
   int res;
   int i;
-  extern void *(*g_crf_malloc_hook)(size_t);
 
   /* c_rest_graphql_parse errors */
 

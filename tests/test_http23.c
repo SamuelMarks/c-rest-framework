@@ -141,7 +141,6 @@ int test_http23(void) {
 
   /* Malloc failure tests */
   {
-    extern void *(*g_crf_malloc_hook)(size_t);
     c_rest_http23_ctx_t *err_ctx = NULL;
 
     g_crf_malloc_hook = fail_malloc;
@@ -160,7 +159,6 @@ int test_http23(void) {
 
   /* Malloc fail inside init ctx->request */
   {
-    extern void *(*g_crf_malloc_hook)(size_t);
     extern int g_malloc_fail_after;
     c_rest_http23_ctx_t *err_ctx = NULL;
 

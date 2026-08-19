@@ -5,8 +5,6 @@
 #include <stdlib.h>
 /* clang-format on */
 
-extern void *(*g_crf_malloc_hook)(size_t);
-
 static void *mock_malloc(size_t size) { return malloc(size); }
 
 int test_pool(void) {

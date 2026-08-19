@@ -602,9 +602,6 @@ TEST test_hot_reload_sse_routes(void) {
 #endif
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
-extern int g_mock_cm_thread_fail;
-extern int g_mock_cm_join_fail;
-extern int g_mock_cm_file_fail;
 TEST test_hot_reload_multiplatform(void) {
   c_rest_hot_reload_ctx_t *ctx = NULL;
   int res;

@@ -524,8 +524,6 @@ static void test_invalid_args(int *res_ptr) {
   /* Test malloc/realloc failures */
   {
     int i;
-    extern void *(*g_crf_malloc_hook)(size_t);
-    extern void *(*g_crf_realloc_hook)(void *, size_t);
     extern int g_fail_malloc_at;
     extern int g_fail_realloc_at;
 
@@ -726,7 +724,6 @@ int test_parser(void) {
     char huge_method[512];
     c_rest_parser_context ctx3;
     extern int g_fail_realloc_at;
-    extern void *(*g_crf_realloc_hook)(void *, size_t);
     memset(huge_method, 'M', sizeof(huge_method));
     huge_method[sizeof(huge_method) - 1] = '\0';
     c_rest_parser_init(&ctx3, vtable, &callbacks, NULL);

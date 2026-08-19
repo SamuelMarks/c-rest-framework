@@ -6,8 +6,6 @@
 #include <string.h>
 /* clang-format on */
 
-extern void *(*g_crf_malloc_hook)(size_t);
-
 static int dummy_free_count = 0;
 static void dummy_free(void *ptr) {
   if (ptr)
@@ -179,7 +177,7 @@ int test_ts_queue(void) {
   q3.cond = (c_rest_cond_t)0;
   rc = c_rest_ts_queue_destroy(&q3, NULL);
   failed += (rc != C_REST_ERROR_GENERIC);
-  /* The mutex was successfully destroyed by c_rest_ts_queue_destroy, 
+  /* The mutex was successfully destroyed by c_rest_ts_queue_destroy,
    * only the condition variable was left dangling */
   c_rest_cond_destroy(real_cond);
 

@@ -129,9 +129,6 @@ static void *fail_calloc_n(size_t nmemb, size_t size) {
 
 static void test_coverage(void) {
   int i;
-  extern void *(*g_crf_malloc_hook)(size_t);
-  extern void *(*g_crf_realloc_hook)(void *, size_t);
-  extern void *(*g_crf_calloc_hook)(size_t, size_t);
 
   c_rest_client_init(NULL);
   c_rest_client_destroy(NULL);
@@ -915,7 +912,6 @@ static void test_coverage(void) {
     c_rest_proxy_request(NULL, NULL, NULL);
     {
       extern int g_fail_malloc_at;
-      extern void *(*g_crf_malloc_hook)(size_t);
       g_fail_malloc_at = -1;
       fail_malloc_n(0);
       g_crf_malloc_hook = fail_malloc_n;

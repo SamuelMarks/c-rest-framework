@@ -5,9 +5,6 @@
 #include <string.h>
 /* clang-format on */
 
-extern void *(*g_crf_malloc_hook)(size_t);
-extern void *(*g_crf_realloc_hook)(void *, size_t);
-
 static void *failing_malloc_hook(size_t size) {
   (void)size;
   return NULL;

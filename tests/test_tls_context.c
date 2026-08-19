@@ -149,7 +149,6 @@ static int test_tls_context_malloc_failures(void) {
   struct c_rest_tls_context *ctx = NULL;
   struct c_rest_tls_connection *conn = NULL;
   int res;
-  extern void *(*g_crf_malloc_hook)(size_t);
   int failed = 0;
   int i;
 

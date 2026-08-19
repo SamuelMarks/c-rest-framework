@@ -249,7 +249,6 @@ static int test_c_rest_template_render_edge_cases(void) {
 
   /* Test reallocation failure in normal character copy */
   {
-    extern void *(*g_crf_realloc_hook)(void *, size_t);
 
     g_fail_realloc_at_tpl = -1;
     fail_realloc_n_tpl(NULL, 0);
@@ -266,7 +265,6 @@ static int test_c_rest_template_render_edge_cases(void) {
 
   /* Test reallocation failure in replacement */
   {
-    extern void *(*g_crf_realloc_hook)(void *, size_t);
     large_template[0] = '\0';
     for (i = 0; i < 10; i++) {
 #if defined(_MSC_VER)
@@ -294,7 +292,6 @@ static int test_c_rest_template_render_edge_cases(void) {
 
   /* Test reallocation failure in unmatched key replacement */
   {
-    extern void *(*g_crf_realloc_hook)(void *, size_t);
     large_template[0] = '\0';
     for (i = 0; i < 20; i++) {
 #if defined(_MSC_VER)

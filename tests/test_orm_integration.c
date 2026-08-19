@@ -13,8 +13,6 @@
 #include <string.h>
 /* clang-format on */
 
-extern void *(*g_crf_malloc_hook)(size_t);
-
 static void *fail_malloc(size_t size) {
   (void)size;
   return NULL;
@@ -64,7 +62,6 @@ int test_orm_integration(void) {
   }
 #ifdef C_REST_TESTING_MALLOC_HOOK
   {
-    extern int g_mock_orm_cleanup_fail;
     g_mock_orm_cleanup_fail = 1;
     ret = c_rest_orm_cleanup(NULL);
     g_mock_orm_cleanup_fail = 0;

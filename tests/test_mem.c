@@ -7,13 +7,6 @@
 #include <string.h>
 /* clang-format on */
 
-extern void *(*g_crf_malloc_hook)(size_t);
-extern void *(*g_crf_calloc_hook)(size_t, size_t);
-extern void *(*g_crf_realloc_hook)(void *, size_t);
-extern char *(*g_crf_strdup_hook)(const char *);
-extern c_rest_mutex_t *g_crf_mem_mutex_ptr;
-extern int *g_crf_mem_initialized_ptr;
-
 static void *fail_malloc(size_t size) {
   (void)size;
   return NULL;

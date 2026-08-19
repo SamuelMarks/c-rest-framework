@@ -239,8 +239,6 @@ static void test_coverage(void) {
   char *out;
   size_t olen;
   int i;
-  extern void *(*g_crf_malloc_hook)(size_t);
-  extern void *(*g_crf_realloc_hook)(void *, size_t);
   extern int g_fail_malloc_at;
   extern int g_fail_realloc_at;
   (void)out;
@@ -321,7 +319,6 @@ static void test_coverage(void) {
     }
 
     for (i = 0; i <= 30; i++) {
-      extern int g_mock_sse_append_fail;
       out = NULL;
       g_mock_sse_append_fail = i;
       c_rest_sse_serialize(&ev, &out, &olen);
@@ -330,7 +327,6 @@ static void test_coverage(void) {
         CRF_FREE(out);
     }
     {
-      extern int g_mock_sse_append_fail;
       out = NULL;
       g_mock_sse_append_fail = -2;
       c_rest_sse_serialize(&ev, &out, &olen);
@@ -570,7 +566,6 @@ static void test_coverage(void) {
   }
 
   {
-    extern int g_mock_sse_append_fail;
     g_mock_sse_append_fail = -3;
     if (c_rest_sse_context_init(&ctx) == C_REST_OK) {
       c_rest_sse_parse(ctx, "data: d\n\n", 9, &ev);

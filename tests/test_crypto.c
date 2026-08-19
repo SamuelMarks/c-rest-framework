@@ -142,8 +142,6 @@ int test_crypto(void) {
   return failed;
 }
 
-extern int g_mock_crypto_fail;
-
 static int test_crypto_rand_fail(void) {
   int failed = 0;
   char *hash = NULL;
@@ -335,7 +333,6 @@ static int test_crypto_malloc_failures(void) {
   char *hash = NULL;
   unsigned char dummy_hash[32];
   int res;
-  extern void *(*g_crf_malloc_hook)(size_t);
   int failed = 0;
   int i;
   enum c_rest_crypto_provider provider;

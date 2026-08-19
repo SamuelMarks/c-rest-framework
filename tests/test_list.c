@@ -15,7 +15,6 @@ static void *fail_malloc(size_t s) {
   (void)s;
   return NULL;
 }
-extern void *(*g_crf_malloc_hook)(size_t);
 
 int test_list(void) {
   c_rest_list list;

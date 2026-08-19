@@ -36,7 +36,6 @@ int test_tls_integration(void) {
   int res;
   int failed = 0;
   const char *msgs[2];
-  extern void *(*g_crf_malloc_hook)(size_t);
   int i;
 
   res = c_rest_tls_init();

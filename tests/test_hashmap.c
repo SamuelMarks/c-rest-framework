@@ -8,7 +8,6 @@
 /* clang-format on */
 
 extern int g_fail_malloc_at;
-extern void *(*g_crf_malloc_hook)(size_t);
 
 static void *fail_malloc_n(size_t size) {
   static int alloc_count = 0;
@@ -30,7 +29,6 @@ int test_hashmap(void) {
   c_rest_error_t rc;
   void *val = NULL;
   int failed = 0;
-  extern void *(*g_crf_malloc_hook)(size_t);
   extern int g_fail_malloc_at;
 
   rc = c_rest_hashmap_init(&map, 16);

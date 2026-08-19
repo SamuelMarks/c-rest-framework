@@ -14,17 +14,17 @@ C_REST_EXPORT char *(*g_crf_strdup_hook)(const char *) = NULL;
 
 
 
-void *test_c_rest_internal_malloc(size_t size) {
+C_REST_EXPORT void *test_c_rest_internal_malloc(size_t size) {
   if (g_crf_malloc_hook) return g_crf_malloc_hook(size);
   return malloc(size);
 }
 
-void *test_c_rest_internal_calloc(size_t count, size_t size) {
+C_REST_EXPORT void *test_c_rest_internal_calloc(size_t count, size_t size) {
   if (g_crf_calloc_hook) return g_crf_calloc_hook(count, size);
   return calloc(count, size);
 }
 
-void *test_c_rest_internal_realloc(void *ptr, size_t size) {
+C_REST_EXPORT void *test_c_rest_internal_realloc(void *ptr, size_t size) {
   if (g_crf_realloc_hook) return g_crf_realloc_hook(ptr, size);
   return realloc(ptr, size);
 }

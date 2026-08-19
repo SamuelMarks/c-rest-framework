@@ -87,7 +87,6 @@ static void test_multipart_invalid_args(int *res_ptr) {
   struct c_rest_multipart_callbacks callbacks;
   c_rest_error_t rc;
   int i;
-  extern void *(*g_crf_malloc_hook)(size_t);
   extern int g_fail_malloc_at;
 
   memset(&callbacks, 0, sizeof(callbacks));
@@ -546,7 +545,6 @@ static void test_multipart_invalid_args(int *res_ptr) {
   struct c_rest_multipart_callbacks callbacks;
   c_rest_error_t rc;
   int i;
-  extern void *(*g_crf_malloc_hook)(size_t);
   extern int g_fail_malloc_at;
 
   memset(&callbacks, 0, sizeof(callbacks));

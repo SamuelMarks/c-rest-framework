@@ -35,19 +35,9 @@ static int socketpair(int domain, int type, int protocol, int sv[2]) {
 /* clang-format on */
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-extern int g_mock_orm_init_fail;
 #endif
 
-extern const struct c_rest_modality_vtable sync_vtable;
-extern const struct c_rest_modality_vtable single_thread_vtable;
-extern const struct c_rest_modality_vtable multi_thread_vtable;
-extern const struct c_rest_modality_vtable async_vtable;
-extern const struct c_rest_modality_vtable greenthread_vtable;
-extern const struct c_rest_modality_vtable message_passing_vtable;
-extern const struct c_rest_modality_vtable multi_process_vtable;
 extern int g_accept_calls;
-extern int g_mock_socket_fail;
-extern int g_mock_tls_fail;
 extern c_rest_error_t mock_c_rest_socket_accept(c_rest_socket_t server,
                                                 c_rest_socket_t *client);
 extern c_rest_error_t mock_c_rest_socket_close(c_rest_socket_t sock);

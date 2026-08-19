@@ -4,8 +4,6 @@
 #include <stdio.h>
 /* clang-format on */
 
-extern c_rest_error_t (*g_crf_is_little_endian_hook)(int *);
-
 static c_rest_error_t mock_is_little_endian(int *out_is_little) {
   (void)out_is_little;
   return C_REST_ERROR_GENERIC;

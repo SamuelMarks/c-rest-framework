@@ -194,8 +194,6 @@ static c_rest_error_t dummy_ws_fn(struct c_rest_request *req,
 static void test_coverage(void) {
   c_rest_router *r;
   int i;
-  extern void *(*g_crf_malloc_hook)(size_t);
-  extern void *(*g_crf_realloc_hook)(void *, size_t);
   extern int g_fail_malloc_at;
   extern int g_fail_realloc_at;
   struct c_rest_openapi_spec *spec;
@@ -509,7 +507,6 @@ int test_router(void) {
 
   {
     extern int g_fail_malloc_at;
-    extern void *(*g_crf_malloc_hook)(size_t);
     int mf_idx;
     for (mf_idx = 1; mf_idx <= 5; mf_idx++) {
       g_crf_malloc_hook = fail_malloc_n;
