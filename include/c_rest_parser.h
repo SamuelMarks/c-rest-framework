@@ -156,7 +156,8 @@ c_rest_parser_destroy(c_rest_parser_context *ctx);
 /**
  * @brief Check if parser reached complete state.
  * @param ctx Context
- * @return 1 if complete, 0 otherwise
+ * @param out_complete Pointer to store result (1 if complete, 0 otherwise)
+ * @return C_REST_OK on success, error code otherwise.
  */
 C_REST_EXPORT extern c_rest_error_t
 c_rest_parser_is_complete(c_rest_parser_context *ctx, int *out_complete);

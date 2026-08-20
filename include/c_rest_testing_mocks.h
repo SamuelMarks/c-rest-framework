@@ -1,10 +1,12 @@
 #ifndef C_REST_TESTING_MOCKS_H
 #define C_REST_TESTING_MOCKS_H
 
+/* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_export.h"
 #include "c_rest_platform.h"
 #include <stddef.h>
+/* clang-format on */
 
 #ifdef __cplusplus
 extern "C" {

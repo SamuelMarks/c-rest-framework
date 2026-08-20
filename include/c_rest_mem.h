@@ -13,6 +13,7 @@
 #include "c_rest_export.h"
 /* clang-format on */
 
+/** @brief Internal wrapper for malloc to allow mocking. */
 #ifndef CRF_MALLOC
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT extern void *(*g_crf_malloc_hook)(size_t);
@@ -23,6 +24,7 @@ C_REST_EXPORT void *test_c_rest_internal_malloc(size_t size);
 #endif
 #endif
 
+/** @brief Internal wrapper for calloc to allow mocking. */
 #ifndef CRF_CALLOC
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT extern void *(*g_crf_calloc_hook)(size_t, size_t);
@@ -33,6 +35,7 @@ C_REST_EXPORT void *test_c_rest_internal_calloc(size_t count, size_t size);
 #endif
 #endif
 
+/** @brief Internal wrapper for realloc to allow mocking. */
 #ifndef CRF_REALLOC
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT extern void *(*g_crf_realloc_hook)(void *, size_t);
@@ -43,26 +46,42 @@ C_REST_EXPORT void *test_c_rest_internal_realloc(void *ptr, size_t size);
 #endif
 #endif
 
+/** @brief Internal wrapper for free. */
 #ifndef CRF_FREE
 #define CRF_FREE free
 #endif
 
+/** @brief Internal wrapper for strdup to allow mocking. */
 #ifndef CRF_STRDUP
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT extern char *(*g_crf_strdup_hook)(const char *);
 
 #ifdef _MSC_VER
+/** @brief Internal strdup implementation */
 #define CRF_STRDUP(s) (g_crf_strdup_hook ? g_crf_strdup_hook(s) : _strdup(s))
 #else
+/**
+ * @brief Internal strdup implementation.
+ * @param s String to duplicate.
+ * @return Duplicated string.
+ */
 char *c_rest_internal_strdup(const char *s);
+/** @brief Internal strdup implementation */
 #define CRF_STRDUP(s)                                                          \
   (g_crf_strdup_hook ? g_crf_strdup_hook(s) : c_rest_internal_strdup(s))
 #endif
 #else
 #ifdef _MSC_VER
+/** @brief Internal strdup implementation */
 #define CRF_STRDUP _strdup
 #else
+/**
+ * @brief Internal strdup implementation.
+ * @param s String to duplicate.
+ * @return Duplicated string.
+ */
 char *c_rest_internal_strdup(const char *s);
+/** @brief Internal strdup implementation */
 #define CRF_STRDUP c_rest_internal_strdup
 #endif
 #endif
