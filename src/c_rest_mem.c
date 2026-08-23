@@ -190,7 +190,6 @@ c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size, const char *file,
   void **real_out = (void **)out_ptr;
   c_rest_mem_node *curr;
   void *new_ptr;
-  c_rest_error_t rc;
 
   if (!real_out)
     return C_REST_ERROR_GENERIC;

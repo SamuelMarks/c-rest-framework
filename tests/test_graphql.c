@@ -11,7 +11,6 @@ static int test_graphql_basic_parse(void) {
   const char *query = "query getUser { user { id name } }";
   struct c_rest_graphql_node *doc = NULL;
   int res;
-  int i;
 
   res = c_rest_graphql_parse(query, strlen(query), &doc);
   if (res != 0)
@@ -62,7 +61,6 @@ static int test_graphql_parse_alias(void) {
   const char *query = "{ myUser: user { id } }";
   struct c_rest_graphql_node *doc = NULL;
   int res;
-  int i;
 
   res = c_rest_graphql_parse(query, strlen(query), &doc);
   if (res != 0)
@@ -209,7 +207,6 @@ static int test_graphql_malformed(void) {
   const char *query = "# This is a comment\n{ user { id ";
   struct c_rest_graphql_node *doc = NULL;
   int res;
-  int i;
 
   res = c_rest_graphql_parse(query, strlen(query), &doc);
   if (res == 0) {
@@ -445,7 +442,6 @@ static int test_graphql_errors(void) {
   struct c_rest_graphql_schema *schema = NULL;
   char *json = NULL;
   size_t len = 0;
-  int called = 0;
   int res;
   int i;
 

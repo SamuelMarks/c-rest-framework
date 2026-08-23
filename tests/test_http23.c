@@ -25,7 +25,6 @@ static void *fail_malloc(size_t size) {
 
 int test_http23(void) {
   c_rest_http23_ctx_t *ctx = NULL;
-  int res;
   size_t consumed = 0;
   int is_ready = 0;
   struct c_rest_request *req = NULL;

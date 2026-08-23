@@ -414,7 +414,7 @@ static c_rest_error_t test_client_thread(void *arg) {
       if (connect(sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) == 0) {
         const char *req =
             "GET / HTTP/1.1\r\nHost: loc\r\nConnection: close\r\n\r\n";
-        send(sock, req, strlen(req), 0);
+        send(sock, req, (int)strlen(req), 0);
 #if defined(_WIN32)
         Sleep(50);
 #else
@@ -502,7 +502,6 @@ int test_modality(void) {
   int i;
   int rc;
   c_rest_socket_t client_sock = C_REST_INVALID_SOCKET;
-  c_rest_socket_t server_sock = C_REST_INVALID_SOCKET;
   c_rest_socket_t accepted_sock = C_REST_INVALID_SOCKET;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK

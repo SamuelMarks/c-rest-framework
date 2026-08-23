@@ -115,9 +115,6 @@ int test_platform(void) {
 #ifndef _WIN32
     int fds[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-      c_rest_socket_t s1 = (c_rest_socket_t)fds[0];
-      c_rest_socket_t s2 = (c_rest_socket_t)fds[1];
-      size_t wr = 0, rd = 0;
       /*c_rest_socket_send(s1, "hello", 5, &wr);*/
       /*c_rest_socket_recv(s2, buf, 5, &rd);*/
     }
@@ -133,7 +130,7 @@ int test_platform(void) {
   }
 
   {
-    c_rest_socket_t tsock, csock;
+    c_rest_socket_t tsock;
     c_rest_socket_create(&tsock);
     c_rest_socket_set_nonblocking((c_rest_socket_t)-1, 1);
     c_rest_socket_set_nonblocking((c_rest_socket_t)-1, 0);

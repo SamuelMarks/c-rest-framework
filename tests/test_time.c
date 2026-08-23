@@ -76,7 +76,7 @@ int test_time(void) {
   res = c_rest_http_date_format(t, buf, sizeof(buf));
   if (res == C_REST_OK) {
     /* Some systems might succeed with -1, try a huge positive value */
-    t = (time_t)(((unsigned long long)1 << 62) - 1);
+    t = (time_t)(((time_t)1 << (sizeof(time_t) * 8 - 2)) - 1);
     res = c_rest_http_date_format(t, buf, sizeof(buf));
     if (res == C_REST_OK) {
       printf("Failed to trigger gmtime failure\n");

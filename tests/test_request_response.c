@@ -498,7 +498,6 @@ static void test_coverage(void) {
     c_rest_response_check_etag(&req2_ex, &res2_ex, "other-etag");
 
     {
-      int k_oom;
       extern int g_fail_malloc_at;
 
       /* To hit branch 112, fail the first allocation

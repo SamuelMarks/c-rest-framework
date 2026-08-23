@@ -321,8 +321,6 @@ static int test_parser_errors(void) {
   const struct c_rest_parser_vtable *vtable = NULL;
   size_t parsed;
   const char *req = "GET / HTTP/1.1\r\nHeader-No-Colon\r\n\r\n";
-  int keep_alive;
-  int complete = 0;
   callbacks.on_method = on_method;
   callbacks.on_url = on_url;
   callbacks.on_header = on_header;

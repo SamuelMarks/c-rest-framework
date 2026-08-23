@@ -95,7 +95,6 @@ static int test_websocket_edge_cases(void) {
   unsigned char frame[32];
   unsigned char out_buf[32];
   size_t written;
-  int res;
   char accept_buf[128];
   size_t accept_len = sizeof(accept_buf);
   const char *long_key = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"; /* 100 bytes */

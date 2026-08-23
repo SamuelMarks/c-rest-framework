@@ -127,7 +127,6 @@ c_rest_error_t c_rest_request_get_cookie(struct c_rest_request *req, const char 
 }
 
 static c_rest_error_t parse_query_if_needed(struct c_rest_request *req) {
-  c_rest_error_t rc;
   const char *p;
   if (!req->query || req->query_params) {
     return C_REST_OK; /* Already parsed or no query string */
@@ -217,7 +216,6 @@ c_rest_error_t c_rest_request_get_query(struct c_rest_request *req, const char *
 }
 
 c_rest_error_t c_rest_request_parse_urlencoded(struct c_rest_request *req) {
-  c_rest_error_t rc;
   const char *p;
   if (!req || req->form_params) {
     return C_REST_OK; /* Already parsed or no body */

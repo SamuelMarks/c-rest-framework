@@ -269,8 +269,9 @@ TEST test_hot_reload_logger(void) {
   ASSERT_EQ(C_REST_OK, res);
 
   err_logger.log_cb = mock_logger_err_cb;
-  res = c_rest_hot_reload_init(&ctx, &err_logger);
+  res = c_rest_hot_reload_init(&ctx, &logger);
   ASSERT_EQ(C_REST_OK, res);
+  ctx->logger = &err_logger;
   /* the add_watch fails because the logger returns error */
   res = c_rest_hot_reload_add_watch(ctx, "test_log.txt");
   ASSERT_EQ(C_REST_ERROR_GENERIC, res);
@@ -384,9 +385,12 @@ TEST test_hot_reload_oom(void) {
   /* OOM test for start with err_logger */
   {
     struct c_rest_logger err_logger;
+    struct c_rest_logger normal_logger;
+    normal_logger.log_cb = mock_logger_cb;
     err_logger.log_cb = mock_logger_err_cb;
-    res = c_rest_hot_reload_init(&ctx, &err_logger);
+    res = c_rest_hot_reload_init(&ctx, &normal_logger);
     ASSERT_EQ(C_REST_OK, res);
+    ctx->logger = &err_logger;
 
     g_crf_malloc_hook = hook_malloc;
     g_malloc_fail_count = 0;
@@ -422,13 +426,14 @@ TEST test_hot_reload_oom(void) {
 #endif
 
 #ifndef C_REST_ASAN_ENABLED
-      c_rest_thread_t bad_thread;
       /* On Mac/Linux a completely invalid pointer to pthread_t usually causes
        * ESRCH or EINVAL */
 #endif
     }
   }
 
+  res = c_rest_hot_reload_destroy(ctx);
+  ASSERT_EQ(C_REST_OK, res);
   g_crf_malloc_hook = NULL;
   g_crf_realloc_hook = NULL;
   PASS();

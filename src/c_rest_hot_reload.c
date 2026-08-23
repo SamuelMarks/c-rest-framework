@@ -75,7 +75,9 @@ static c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
   }
 #endif
 
-  cfs_path_init_str(&p, path);
+  if (cfs_path_init_str(&p, (const cfs_char_t *)path) != 0) {
+    return C_REST_ERROR_GENERIC;
+  }
   if (cfs_last_write_time(&p, &ftime, &ec) == 0) {
     *out_mtime = (time_t)ftime;
     cfs_path_destroy(&p);
@@ -133,7 +135,12 @@ c_rest_error_t c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
   (*out_ctx)->cm_env = NULL;
 #endif
 
-  hot_reload_log(*out_ctx, "[HOT RELOAD] Initialized context");
+  rc = hot_reload_log(*out_ctx, "[HOT RELOAD] Initialized context");
+  if (rc != C_REST_OK) {
+    C_REST_FREE(*out_ctx);
+    *out_ctx = NULL;
+    return rc;
+  }
 
   return C_REST_OK;
 }

@@ -213,7 +213,6 @@ int test_mem(void) {
 
   /* Test add_node failures */
   {
-    void *p = NULL;
     c_rest_mutex_t real_mutex = *g_crf_mem_mutex_ptr;
 
     /* Malloc for node fails */

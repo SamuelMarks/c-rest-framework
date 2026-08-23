@@ -368,7 +368,9 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
                                            const char *chunk,
                                            size_t chunk_len) {
   struct c_rest_connection_context *ctx;
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
   c_rest_error_t rc;
+#endif
   size_t written = 0;
   char hex_buf[32];
   size_t hex_len;
@@ -469,7 +471,6 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
 
 c_rest_error_t c_rest_response_redirect(struct c_rest_response *res,
                                         const char *url, int status_code) {
-  c_rest_error_t rc;
   if (!res || !url) {
     return C_REST_ERROR_GENERIC;
   }
@@ -736,7 +737,6 @@ c_rest_error_t c_rest_response_oauth2_error(struct c_rest_response *res,
                                             const char *error,
                                             const char *error_description) {
   struct c_rest_json_pair pairs[2];
-  c_rest_error_t rc;
   if (!res || !error)
     return C_REST_ERROR_GENERIC;
 

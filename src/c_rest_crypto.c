@@ -38,7 +38,6 @@
 #endif
 
 c_rest_error_t c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) {
-  c_rest_error_t rc;
   if (!out_provider)
     return C_REST_ERROR_GENERIC;
 
@@ -86,7 +85,6 @@ typedef uint32_t c_rest_uint32_t;
 
 static c_rest_error_t sha1_transform(c_rest_uint32_t state[5],
                            const unsigned char buffer[64]) {
-  c_rest_error_t rc;
   c_rest_uint32_t a, b, c, d, e;
   typedef union {
     unsigned char c[64];
@@ -152,7 +150,6 @@ static c_rest_error_t sha1_transform(c_rest_uint32_t state[5],
 }
 
 c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
-  c_rest_error_t rc;
   c_rest_uint32_t state[5];
   c_rest_uint32_t count[2];
   unsigned char buffer[64];
@@ -242,7 +239,6 @@ static const c_rest_uint32_t sha256_k[64] = {
 
 static c_rest_error_t sha256_transform(c_rest_uint32_t state[8],
                              const unsigned char buffer[64]) {
-  c_rest_error_t rc;
   c_rest_uint32_t a, b, c, d, e, f, g, h, t1, t2, m[64];
   int i, j;
 
@@ -293,7 +289,6 @@ static c_rest_error_t sha256_transform(c_rest_uint32_t state[8],
 
 c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
                   unsigned char hash[32]) {
-  c_rest_error_t rc;
   c_rest_uint32_t state[8];
   c_rest_uint32_t count[2];
   unsigned char buffer[64];
@@ -361,7 +356,6 @@ c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
 }
 
 c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
-  c_rest_error_t rc;
   /* Naive fallback */
   size_t i;
   for (i = 0; i < len; ++i) {
@@ -616,7 +610,6 @@ c_rest_error_t rc = c_rest_pbkdf2_hmac_sha256(
 c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
                                   const unsigned char *data, size_t data_len,
                                   unsigned char hash[32]) {
-  c_rest_error_t rc;
   unsigned char k_ipad[64];
   unsigned char k_opad[64];
   unsigned char actual_key[64];
@@ -773,7 +766,6 @@ C_REST_EXPORT extern int g_mock_crypto_fail;
 #endif
 c_rest_error_t c_rest_random_string_generate(size_t entropy_bytes,
                                              char **out_str) {
-  c_rest_error_t rc;
   unsigned char *rand_buf;
   size_t out_len = 0;
 
@@ -804,7 +796,6 @@ c_rest_error_t c_rest_random_string_generate(size_t entropy_bytes,
 }
 
 c_rest_error_t c_rest_oauth2_generate_access_token(char **out_token) {
-  c_rest_error_t rc;
   /* 32 bytes of entropy corresponds to 256 bits, standard for access tokens.
      When base64url-encoded, it produces ~43 characters. */
   return c_rest_random_string_generate(32, out_token);
@@ -1032,7 +1023,6 @@ C_REST_EXPORT int g_mock_crypto_fail = 0;
 c_rest_error_t c_rest_hash_password(const char *password,
                                     enum c_rest_password_hash_alg alg,
                                     char **out_hash) {
-  c_rest_error_t rc;
   unsigned char salt[C_REST_PBKDF2_SALT_LEN];
   unsigned char hash[C_REST_PBKDF2_HASH_LEN];
   char *salt_b64 = NULL;
@@ -1104,7 +1094,6 @@ cleanup:
 #endif
 c_rest_error_t c_rest_verify_password(const char *password,
                                       const char *hash_str) {
-  c_rest_error_t rc;
   int iters = 0;
   char salt_b64[128];
   char hash_b64[128];

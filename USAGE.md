@@ -6,11 +6,12 @@ This document details the configuration options, build system flags, and core en
 
 The build system exposes several toggles to configure CRT linkage, character sets, sanitizers, and cryptographic backends.
 
-### Windows & CRT Toggles
-- **`C_REST_FRAMEWORK_STATIC_CRT`** (`OFF` by default): Use the Static C Runtime Library (`/MT`, `/MTd`). Recommended when you want to avoid redistributing the Visual C++ Redistributable.
-- **`C_REST_FRAMEWORK_SHARED_CRT`** (`ON` by default): Use the Shared C Runtime Library (`/MD`, `/MDd`).
-- **`C_REST_FRAMEWORK_UNICODE`** (`OFF` by default): Compile with `UNICODE` and `_UNICODE` defined (Windows only).
-- **`C_REST_FRAMEWORK_ANSI`** (`OFF` by default): Compile with ANSI (Multi-Byte) character set.
+### Windows & Build Toggles
+- **`C_REST_FRAMEWORK_CRT_LINKAGE`** (`dynamic` by default): Use the Static (`static` for `/MT`, `/MTd`) or Shared (`dynamic` for `/MD`, `/MDd`) C Runtime Library. `static` is recommended when you want to avoid redistributing the Visual C++ Redistributable.
+- **`C_REST_FRAMEWORK_CHARSET`** (`UNICODE` by default): Compile with `UNICODE` (defines `UNICODE` and `_UNICODE`) or `ANSI` (Multi-Byte) character set.
+- **`C_REST_FRAMEWORK_THREADING`** (`ON` by default): Enable multi-threading.
+- **`C_REST_FRAMEWORK_MSVC_RTC`** (`OFF` by default): MSVC Runtime Checks (OFF, 1, s, u).
+- **`C_REST_FRAMEWORK_LTO`** (`OFF` by default): Enable Link-Time Optimization (IPO).
 
 ### Cryptography Backends
 You can choose a specific backend for TLS/SSL and cryptographic hashing. (Only one backend should be enabled at a time).

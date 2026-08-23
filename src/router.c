@@ -113,7 +113,6 @@ static c_rest_error_t create_node(const char *segment, size_t len,
 
 static c_rest_error_t free_node(struct c_rest_route_node *node) {
   struct c_rest_route_handler *h;
-  c_rest_error_t rc;
 
   C_REST_FREE((void *)(node->segment));
   if (node->var_name)
@@ -180,7 +179,6 @@ c_rest_error_t c_rest_router_init(c_rest_router **out_router) {
 
 c_rest_error_t c_rest_router_destroy(c_rest_router *router) {
   struct c_rest_middleware_chain *m;
-  c_rest_error_t rc;
 
   if (!router)
     return C_REST_ERROR_GENERIC;
@@ -308,7 +306,6 @@ c_rest_error_t c_rest_router_add_openapi(c_rest_router *router, const char *meth
                               const char *path, c_rest_handler_fn handler,
                               void *user_data,
                               const struct c_rest_openapi_operation *op_meta) {
-  c_rest_error_t rc;
   c_rest_error_t res = c_rest_router_add(router, method, path, handler, user_data);
   if (res == C_REST_OK && op_meta) {
     IGNORE_RC(c_rest_openapi_spec_add_path(router->openapi_spec, path, method, op_meta));
@@ -327,7 +324,6 @@ struct c_rest_ws_route_data {
 static c_rest_error_t c_rest_ws_upgrade_handler(struct c_rest_request *req,
                                      struct c_rest_response *res,
                                      void *user_data) {
-  c_rest_error_t ret;
   (void)user_data; /* Used later by connection logic to call on_message */
   return c_rest_websocket_upgrade(req, res);
 }
@@ -359,7 +355,6 @@ c_rest_error_t c_rest_router_add_websocket_openapi(
     c_rest_websocket_on_message_fn on_message,
     c_rest_websocket_on_close_fn on_close, void *user_data,
     const struct c_rest_openapi_operation *op_meta) {
-  c_rest_error_t rc;
   c_rest_error_t res = c_rest_router_add_websocket(router, path, on_message, on_close,
                                         user_data);
   if (res == C_REST_OK && op_meta) {
@@ -412,7 +407,6 @@ c_rest_error_t c_rest_router_add_sse(c_rest_router *router, const char *path,
 c_rest_error_t c_rest_router_add_sse_openapi(
     c_rest_router *router, const char *path, c_rest_handler_fn handler,
     void *user_data, const struct c_rest_openapi_operation *op_meta) {
-  c_rest_error_t rc;
   int res = c_rest_router_add_sse(router, path, handler, user_data);
   if (res == 0 && op_meta) {
     IGNORE_RC(c_rest_openapi_spec_add_path(router->openapi_spec, path, "GET", op_meta));
@@ -433,7 +427,6 @@ static c_rest_error_t c_rest_graphql_handler(struct c_rest_request *req,
   char *json = NULL;
   size_t len = 0;
   int ret;
-  c_rest_error_t rc;
 
   if (!req->body) {
     IGNORE_RC(c_rest_response_set_status(res, 400));
@@ -470,7 +463,6 @@ c_rest_error_t c_rest_router_add_graphql_openapi(
     c_rest_router *router, const char *path,
     struct c_rest_graphql_schema *schema,
     const struct c_rest_openapi_operation *op_meta) {
-  c_rest_error_t rc;
   int res = c_rest_router_add_graphql(router, path, schema);
   if (res == 0 && op_meta) {
     IGNORE_RC(c_rest_openapi_spec_add_path(router->openapi_spec, path, "POST", op_meta));
@@ -545,7 +537,6 @@ c_rest_error_t c_rest_router_add_template_openapi(
     const struct c_rest_template_context *ctx,
     c_rest_template_data_fn data_provider, void *user_data,
     const struct c_rest_openapi_operation *op_meta) {
-  c_rest_error_t rc;
   int res = c_rest_router_add_template(router, method, path, ctx, data_provider,
                                        user_data);
   if (res == 0 && op_meta) {

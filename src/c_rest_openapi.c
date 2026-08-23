@@ -456,8 +456,6 @@ serialize_operation(JSON_Object *methods_obj, const char *method_name,
   JSON_Object *op_obj;
   JSON_Value *tags_val;
   JSON_Array *tags_arr;
-  JSON_Value *ext_docs_val;
-  JSON_Object *ext_docs_obj;
   size_t i;
 
   op_val = json_value_init_object();
@@ -520,7 +518,6 @@ serialize_operation(JSON_Object *methods_obj, const char *method_name,
 c_rest_error_t
 c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
                             char **out_json) {
-  c_rest_error_t rc;
   JSON_Value *root_val;
   JSON_Object *root_obj;
   JSON_Value *info_val;
@@ -928,7 +925,6 @@ static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
                                          void *user_data) {
   struct c_rest_router *router = (struct c_rest_router *)user_data;
   struct c_rest_openapi_spec *spec = NULL;
-  c_rest_error_t rc;
   char *html_buf;
   size_t html_len;
   const char *openapi_url = "/openapi.json";
@@ -968,7 +964,6 @@ static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
 c_rest_error_t c_rest_enable_swagger_ui(struct c_rest_router *router,
                                         const char *docs_path,
                                         const char *openapi_url) {
-  c_rest_error_t rc;
   struct c_rest_openapi_spec *spec = NULL;
   if (!router || !docs_path || !openapi_url)
     return C_REST_ERROR_GENERIC;

@@ -656,8 +656,6 @@ static void test_coverage(void) {
   {
     c_rest_client_context *c = NULL;
     if (c_rest_client_init(&c) == C_REST_OK) {
-      struct c_rest_client_response *sr = NULL;
-
       c->client.send = mock_send_full;
 
       /* Force out_res to NULL but res valid */
@@ -795,7 +793,7 @@ static void test_coverage(void) {
   }
 
   {
-    char *enc = NULL, *dec = NULL;
+    char *dec = NULL;
     char *body = NULL;
     size_t blen = 0;
     struct c_rest_client_form_field *pf = NULL;

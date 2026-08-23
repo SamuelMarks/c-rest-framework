@@ -50,7 +50,8 @@ c_rest_error_t c_rest_jwt_middleware(struct c_rest_request *req,
 
   config = (struct c_rest_jwt_middleware_config *)user_data;
 
-  if (c_rest_request_get_auth_bearer(req, &token) != 0) {
+  rc = c_rest_request_get_auth_bearer(req, &token);
+  if (rc != C_REST_OK) {
     c_rest_response_set_status(res, 401);
     c_rest_response_set_header(res, "WWW-Authenticate", "Bearer realm=\"API\"");
     c_rest_response_html(res, "Unauthorized: Missing Bearer token");

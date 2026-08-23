@@ -402,13 +402,10 @@ c_rest_error_t c_rest_process_wait(c_rest_process_t proc, int *out_exit_code) {
 c_rest_error_t c_rest_timer_get_ms(unsigned long *out_ms) {
   if (!out_ms)
     return C_REST_ERROR_GENERIC;
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 28159)
-#endif
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0600
+  *out_ms = (unsigned long)GetTickCount64();
+#else
   *out_ms = GetTickCount();
-#if defined(_MSC_VER)
-#pragma warning(pop)
 #endif
   return C_REST_OK;
 }

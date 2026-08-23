@@ -51,7 +51,6 @@ c_rest_error_t c_rest_websocket_generate_accept(const char *ws_key,
   char concat_buf[128];
   unsigned char sha1_hash[20];
   size_t concat_len;
-  int res;
 
   if (!ws_key || !out_accept || !out_accept_len) {
     return C_REST_ERROR_GENERIC;

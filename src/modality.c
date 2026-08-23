@@ -20,7 +20,6 @@ C_REST_EXPORT extern const struct c_rest_modality_vtable message_passing_vtable;
 
 /* We will reuse a dummy vtable for the unimplemented modalities for now */
 static c_rest_error_t dummy_init(struct c_rest_context *ctx) {
-  c_rest_error_t rc;
   if (ctx->logger.log_cb) {
     (void)ctx->logger.log_cb("Initializing Dummy modality");
   }
@@ -28,7 +27,6 @@ static c_rest_error_t dummy_init(struct c_rest_context *ctx) {
 }
 
 static c_rest_error_t dummy_destroy(struct c_rest_context *ctx) {
-  c_rest_error_t rc;
   if (ctx->logger.log_cb) {
     (void)ctx->logger.log_cb("Destroying Dummy modality");
   }
@@ -41,7 +39,6 @@ static c_rest_error_t dummy_run(struct c_rest_context *ctx) {
 }
 
 static c_rest_error_t dummy_stop(struct c_rest_context *ctx) {
-  c_rest_error_t rc;
   if (ctx->logger.log_cb) {
     (void)ctx->logger.log_cb("Stopping Dummy modality");
   }
@@ -194,7 +191,6 @@ rc = ctx->logger.log_cb("Initializing c-orm database connection pool..."); if (r
 }
 
 c_rest_error_t c_rest_stop(struct c_rest_context *ctx) {
-  c_rest_error_t rc;
   if (!ctx) {
     return C_REST_ERROR_GENERIC;
   }
@@ -210,7 +206,6 @@ c_rest_error_t c_rest_stop(struct c_rest_context *ctx) {
 }
 
 c_rest_error_t c_rest_destroy(struct c_rest_context *ctx) {
-  c_rest_error_t rc;
   int res = 0;
   if (!ctx) {
     return C_REST_ERROR_GENERIC;

@@ -241,7 +241,11 @@ c_rest_error_t c_rest_sse_context_init(struct c_rest_sse_context **out_ctx) {
   ctx->buffer = NULL;
   ctx->buffer_len = 0;
   ctx->buffer_cap = 0;
-  c_rest_sse_event_init(&ctx->current_event);
+  rc = c_rest_sse_event_init(&ctx->current_event);
+  if (rc != C_REST_OK) {
+    C_REST_FREE(ctx);
+    return rc;
+  }
 
   *out_ctx = ctx;
   return C_REST_OK;
