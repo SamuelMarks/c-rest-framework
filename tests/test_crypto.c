@@ -263,7 +263,11 @@ static int test_crypto_errors(void) {
     c_rest_base64url_encode(expected_sig, 32, NULL, &encoded_sig_len);
     c_rest_base64url_encode(expected_sig, 32, encoded_sig, &encoded_sig_len);
     encoded_sig[encoded_sig_len] = '\0';
+#if defined(_MSC_VER)
+    sprintf_s(token_buf, sizeof(token_buf), "%s.%s", to_sign, encoded_sig);
+#else
     sprintf(token_buf, "%s.%s", to_sign, encoded_sig);
+#endif
 
     res = c_rest_jwt_verify_hs256(token_buf, key, 3, &out_payload);
     failed += (res == C_REST_OK);

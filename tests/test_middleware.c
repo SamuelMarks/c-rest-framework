@@ -76,7 +76,11 @@ static char *failing_strdup_hook(const char *s) {
   {
     char *dup = (char *)malloc(strlen(s) + 1);
     if (dup)
+#if defined(_MSC_VER)
+      strcpy_s(dup, strlen(s) + 1, s);
+#else
       strcpy(dup, s);
+#endif
     return dup;
   }
 }

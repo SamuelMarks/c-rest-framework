@@ -332,7 +332,11 @@ int test_graphql(void) {
         struct c_rest_graphql_node *field = op->selection_set->nodes[0];
         field->value = malloc(10);
         if (field->value)
+#if defined(_MSC_VER)
+          strcpy_s(field->value, 6, "dummy");
+#else
           strcpy(field->value, "dummy");
+#endif
         field->arguments = malloc(sizeof(struct c_rest_graphql_node_list));
         if (field->arguments) {
           field->arguments->count = 1;

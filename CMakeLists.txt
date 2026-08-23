@@ -118,7 +118,7 @@ option(${PROJECT_NAME_SAFE}_USE_LIBFETCH "Use libfetch" OFF)
 
 option(${PROJECT_NAME_SAFE}_MULTIPLATFORM_INTEGRATION "Integrate with c-multiplatform" OFF)
 option(${PROJECT_NAME_SAFE}_FETCH_CAH "Fetch c-abstract-http from GitHub" ON)
-option(${PROJECT_NAME_SAFE}_FETCH_C_ORM "Fetch c-orm from GitHub" OFF)
+option(${PROJECT_NAME_SAFE}_FETCH_C_ORM "Fetch c-orm from GitHub" ON)
 option(${PROJECT_NAME_SAFE}_FETCH_C_FS "Fetch c-fs from GitHub" ON)
 option(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART "Enable Hot-Reloading / Auto-Restart" ON)
 option(${PROJECT_NAME_SAFE}_FETCH_CDD_C "Fetch cdd-c from GitHub" ON)
@@ -285,19 +285,12 @@ set(C_ABSTRACT_HTTP_USE_LIBFETCH ${${PROJECT_NAME_SAFE}_USE_LIBFETCH} CACHE BOOL
 
 if(${PROJECT_NAME_SAFE}_FETCH_C_FS)
     set(CDD_DEPS "FETCHCONTENT" CACHE STRING "" FORCE)
-    if(FALSE)
-        FetchContent_Declare(
-          cfs
-          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-fs"
-        )
-    else()
-        FetchContent_Declare(
-          cfs
-          GIT_REPOSITORY https://github.com/SamuelMarks/c-fs.git
-        GIT_TAG master
-        )
-    endif()
-        set(OLD_BSL_CFS ${BUILD_SHARED_LIBS})
+    FetchContent_Declare(
+      cfs
+      GIT_REPOSITORY https://github.com/SamuelMarks/c-fs.git
+      GIT_TAG master
+    )
+    set(OLD_BSL_CFS ${BUILD_SHARED_LIBS})
         set(BUILD_SHARED_LIBS OFF)
         FetchContent_MakeAvailable(cfs)
         set(BUILD_SHARED_LIBS ${OLD_BSL_CFS})
@@ -321,22 +314,14 @@ endif()
 
 
 
-    if(FALSE)
-        message(STATUS "Using local c_str_span from ${CMAKE_CURRENT_LIST_DIR}/../c-str-span")
-        FetchContent_Declare(
-            c_str_span
-            SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-str-span"
-        )
-    else()
-        FetchContent_Declare(
-            c_str_span
-            GIT_REPOSITORY https://github.com/SamuelMarks/c-str-span.git
+    FetchContent_Declare(
+        c-str-span
+        GIT_REPOSITORY https://github.com/SamuelMarks/c-str-span.git
         GIT_TAG master
-        )
-    endif()
+    )
     set(OLD_BSL_CSS ${BUILD_SHARED_LIBS})
     set(BUILD_SHARED_LIBS OFF)
-    FetchContent_MakeAvailable(c_str_span)
+    FetchContent_MakeAvailable(c-str-span)
     set(BUILD_SHARED_LIBS ${OLD_BSL_CSS})
     c_rest_framework_strip_bad_flags(c_str_span_compiler_flags INTERFACE_COMPILE_OPTIONS)
     c_rest_framework_strip_bad_flags(c_str_span_compiler_flags INTERFACE_LINK_OPTIONS)
@@ -670,21 +655,14 @@ endif()
 c_rest_framework_resolve_parson()
 
 if(${PROJECT_NAME_SAFE}_FETCH_CDD_C)
-    if(FALSE)
-        FetchContent_Declare(
-          cdd_c
-          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../cdd-c"
-        )
-    else()
-        FetchContent_Declare(
-          cdd_c
-          GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
-          GIT_TAG master
-        )
-    endif()
+    FetchContent_Declare(
+      cdd-c
+      GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
+      GIT_TAG master
+    )
     set(OLD_BSL_CDD ${BUILD_SHARED_LIBS})
     set(BUILD_SHARED_LIBS OFF)
-    FetchContent_MakeAvailable(cdd_c)
+    FetchContent_MakeAvailable(cdd-c)
     set(BUILD_SHARED_LIBS ${OLD_BSL_CDD})
     if (TARGET c_cdd)
         target_compile_definitions(c_cdd PUBLIC CDD_BUILD_TESTS)
@@ -703,21 +681,14 @@ if(${PROJECT_NAME_SAFE}_FETCH_CDD_C)
 endif()
 
 if(${PROJECT_NAME_SAFE}_FETCH_CAH)
-    if(FALSE)
-        FetchContent_Declare(
-          c_abstract_http
-          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-abstract-http"
-        )
-    else()
-        FetchContent_Declare(
-          c_abstract_http
-          GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
-        GIT_TAG master
-        )
-    endif()
+    FetchContent_Declare(
+      c-abstract-http
+      GIT_REPOSITORY https://github.com/SamuelMarks/c-abstract-http.git
+      GIT_TAG master
+    )
     set(OLD_BSL_CAH ${BUILD_SHARED_LIBS})
     set(BUILD_SHARED_LIBS OFF)
-    FetchContent_MakeAvailable(c_abstract_http)
+    FetchContent_MakeAvailable(c-abstract-http)
     set(BUILD_SHARED_LIBS ${OLD_BSL_CAH})
     c_rest_framework_strip_bad_flags(c-abstract-http COMPILE_OPTIONS)
     c_rest_framework_strip_bad_flags(c-abstract-http LINK_OPTIONS)
@@ -725,21 +696,14 @@ if(${PROJECT_NAME_SAFE}_FETCH_CAH)
 endif()
 
 if(${PROJECT_NAME_SAFE}_FETCH_C_ORM)
-    if(FALSE)
-        FetchContent_Declare(
-          c_orm
-          SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../c-orm"
-        )
-    else()
-        FetchContent_Declare(
-          c_orm
-          GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
-        GIT_TAG master
-        )
-    endif()
+    FetchContent_Declare(
+      c-orm
+      GIT_REPOSITORY https://github.com/SamuelMarks/c-orm.git
+      GIT_TAG master
+    )
     set(OLD_BSL_CORM ${BUILD_SHARED_LIBS})
     set(BUILD_SHARED_LIBS OFF)
-    FetchContent_MakeAvailable(c_orm)
+    FetchContent_MakeAvailable(c-orm)
     set(BUILD_SHARED_LIBS ${OLD_BSL_CORM})
     add_definitions(-D${PROJECT_NAME_SAFE}_USE_REAL_C_ORM)
 
@@ -754,9 +718,8 @@ endif()
 
 if(${PROJECT_NAME_SAFE}_FETCH_C_ORM)
     target_link_libraries(c-rest-framework PUBLIC c-orm)
-else()
-    target_sources(c-rest-framework PRIVATE src/c_orm_mock.c)
 endif()
+target_sources(c-rest-framework PRIVATE src/c_orm_mock.c)
 
 if(${PROJECT_NAME_SAFE}_FETCH_C_FS)
     target_link_libraries(c-rest-framework PUBLIC cfs)
@@ -803,6 +766,10 @@ c_rest_framework_strip_bad_flags(c_str_span_compiler_flags INTERFACE_COMPILE_OPT
 c_rest_framework_strip_bad_flags(c_str_span_compiler_flags INTERFACE_LINK_OPTIONS)
 c_rest_framework_strip_bad_flags(c-abstract-http COMPILE_OPTIONS)
 c_rest_framework_strip_bad_flags(c-abstract-http LINK_OPTIONS)
+
+c_rest_framework_strip_bad_flags(c_cdd COMPILE_OPTIONS)
+c_rest_framework_strip_bad_flags(c-orm COMPILE_OPTIONS)
+c_rest_framework_strip_bad_flags(cfs COMPILE_OPTIONS)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     if(BUILD_TESTING)

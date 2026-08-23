@@ -85,14 +85,22 @@ int test_hashmap(void) {
     int i;
     for (i = 0; i < 32; i++) {
       char buf[32];
+#if defined(_MSC_VER)
+      sprintf_s(buf, sizeof(buf), "collide%d", i);
+#else
       sprintf(buf, "collide%d", i);
+#endif
       rc = c_rest_hashmap_put(&map, buf, "v");
       failed += (rc != C_REST_OK);
     }
 
     for (i = 0; i < 32; i++) {
       char buf[32];
+#if defined(_MSC_VER)
+      sprintf_s(buf, sizeof(buf), "collide%dx", i);
+#else
       sprintf(buf, "collide%dx", i);
+#endif
       rc = c_rest_hashmap_get(&map, buf, &val);
     }
 
@@ -102,7 +110,11 @@ int test_hashmap(void) {
 
     for (i = 0; i < 32; i++) {
       char buf[32];
+#if defined(_MSC_VER)
+      sprintf_s(buf, sizeof(buf), "collide%d", i);
+#else
       sprintf(buf, "collide%d", i);
+#endif
       rc = c_rest_hashmap_remove(&map, buf);
       failed += (rc != C_REST_OK);
     }
@@ -169,7 +181,11 @@ int test_hashmap(void) {
     char *v = CRF_MALLOC(10);
     char *v2 = NULL;
     if (v) {
+#if defined(_MSC_VER)
+      strcpy_s(v, 5, "test");
+#else
       strcpy(v, "test");
+#endif
       rc = c_rest_hashmap_put(&map, "k", v);
       rc = c_rest_hashmap_put(&map, "k2", v2);
       rc = c_rest_hashmap_destroy(&map, free);

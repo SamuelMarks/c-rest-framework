@@ -167,7 +167,11 @@ static int test_openapi_errors(void) {
     c_rest_openapi_spec_init(&tmpspec);
     for (i = 0; i < 10; i++) {
       char buf[32];
+#if defined(_MSC_VER)
+      sprintf_s(buf, sizeof(buf), "Comp%d", i);
+#else
       sprintf(buf, "Comp%d", i);
+#endif
       c_rest_openapi_spec_add_component_schema(tmpspec, buf, "{}");
     }
     c_rest_openapi_spec_to_json(tmpspec, NULL);
@@ -817,9 +821,17 @@ int test_openapi(void) {
 
   for (ret = 0; ret < 20; ret++) {
     char buf[32];
+#if defined(_MSC_VER)
+    sprintf_s(buf, sizeof(buf), "CompTest%d", ret);
+#else
     sprintf(buf, "CompTest%d", ret);
+#endif
     c_rest_openapi_spec_add_component_schema(spec, buf, "{}");
+#if defined(_MSC_VER)
+    sprintf_s(buf, sizeof(buf), "/api/more%d", ret);
+#else
     sprintf(buf, "/api/more%d", ret);
+#endif
     c_rest_openapi_spec_add_path(spec, buf, "GET", &op);
   }
 

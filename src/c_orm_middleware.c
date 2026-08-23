@@ -8,7 +8,7 @@
 #include "c_rest_error.h"
 /* clang-format on */
 
-#ifndef C_REST_FRAMEWORK_USE_REAL_C_ORM
+/* #ifndef C_REST_FRAMEWORK_USE_REAL_C_ORM */
 
 c_rest_error_t c_rest_orm_transaction_start_middleware(
     struct c_rest_request *req, struct c_rest_response *res, void *user_data) {
@@ -47,12 +47,12 @@ c_rest_error_t c_rest_orm_transaction_end_middleware(
   return C_REST_OK;
 }
 
-#else
+/* #else */
 
 /* Here we would include c-orm real headers and call c_orm_pool_borrow(),
    c_orm_begin(), c_orm_commit(), c_orm_rollback(), c_orm_pool_release(). */
 /* ... */
 
-#endif /* C_REST_FRAMEWORK_USE_REAL_C_ORM */
+/* #endif C_REST_FRAMEWORK_USE_REAL_C_ORM */
 
 typedef int c_orm_middleware_dummy_declaration;

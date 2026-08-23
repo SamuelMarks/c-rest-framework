@@ -261,7 +261,12 @@ int test_jwt_json_web_tokens_authentication_middleware(void) {
                               &jwt_token_no_verify) != 0)
       return 1;
 
+#if defined(_MSC_VER)
+    sprintf_s(header_val_no_verify, sizeof(header_val_no_verify), "Bearer %s",
+              jwt_token_no_verify);
+#else
     sprintf(header_val_no_verify, "Bearer %s", jwt_token_no_verify);
+#endif
     auth_hdr_no_verify.key = "Authorization";
     auth_hdr_no_verify.value = header_val_no_verify;
     req_no_verify.headers = &auth_hdr_no_verify;

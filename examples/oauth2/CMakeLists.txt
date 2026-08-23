@@ -42,25 +42,17 @@ endif()
 
 # Fetch c-rest-framework if not found
 if(NOT TARGET c-rest-framework)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../..")
-        # Ensure we are actually adding the framework, we could check project name but this is good enough
-        add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../.." c-rest-framework-build)
-    else()
-        include(FetchContent)
-        FetchContent_Declare(
-            c-rest-framework
-            GIT_REPOSITORY https://github.com/SamuelMarks/c-rest-framework.git
-            GIT_TAG master
-        )
-        FetchContent_MakeAvailable(c-rest-framework)
-    endif()
+    include(FetchContent)
+    FetchContent_Declare(
+        c-rest-framework
+        GIT_REPOSITORY https://github.com/SamuelMarks/c-rest-framework.git
+        GIT_TAG master
+    )
+    FetchContent_MakeAvailable(c-rest-framework)
 endif()
 
 # Fetch c-orm if not found
 if(NOT TARGET c-orm)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../c-orm")
-        add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../c-orm" c-orm-build)
-    else()
         include(FetchContent)
         FetchContent_Declare(
             c-orm
@@ -68,7 +60,6 @@ if(NOT TARGET c-orm)
             GIT_TAG master
         )
         FetchContent_MakeAvailable(c-orm)
-    endif()
 endif()
 
 add_library(oauth2_example_static STATIC src/oauth2_server.c src/oauth2_client.c)

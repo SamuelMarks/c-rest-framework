@@ -70,7 +70,12 @@ TEST test_hot_reload_add_watch(void) {
   ASSERT_EQ(C_REST_OK, res);
 
   {
-    FILE *f1 = fopen("test_file.txt", "w");
+    FILE *f1 = NULL;
+#if defined(_MSC_VER)
+    fopen_s(&f1, "test_file.txt", "w");
+#else
+    f1 = fopen("test_file.txt", "w");
+#endif
     if (f1)
       fclose(f1);
   }
@@ -78,7 +83,12 @@ TEST test_hot_reload_add_watch(void) {
   ASSERT_EQ(C_REST_OK, res);
 
   {
-    FILE *f2 = fopen("another_file.txt", "w");
+    FILE *f2 = NULL;
+#if defined(_MSC_VER)
+    fopen_s(&f2, "another_file.txt", "w");
+#else
+    f2 = fopen("another_file.txt", "w");
+#endif
     if (f2)
       fclose(f2);
   }
@@ -121,8 +131,12 @@ TEST test_hot_reload_modification(void) {
   FILE *f;
   const char *test_filename = "test_hot_reload_tmp.txt";
 
-  /* Create file */
+/* Create file */
+#if defined(_MSC_VER)
+  fopen_s(&f, test_filename, "w");
+#else
   f = fopen(test_filename, "w");
+#endif
   ASSERT(f != NULL);
   fprintf(f, "hello\n");
   fclose(f);
@@ -141,8 +155,12 @@ TEST test_hot_reload_modification(void) {
   /* Wait at least 1-2 seconds (file mtime usually has 1s resolution) */
   sleep_seconds(2);
 
-  /* Modify file */
+/* Modify file */
+#if defined(_MSC_VER)
+  fopen_s(&f, test_filename, "a");
+#else
   f = fopen(test_filename, "a");
+#endif
   ASSERT(f != NULL);
   fprintf(f, "world\n");
   fclose(f);
@@ -238,7 +256,12 @@ TEST test_hot_reload_logger(void) {
   ASSERT_EQ(C_REST_OK, res);
 
   {
-    FILE *f = fopen("test_log.txt", "w");
+    FILE *f = NULL;
+#if defined(_MSC_VER)
+    fopen_s(&f, "test_log.txt", "w");
+#else
+    f = fopen("test_log.txt", "w");
+#endif
     if (f)
       fclose(f);
   }
@@ -252,7 +275,12 @@ TEST test_hot_reload_logger(void) {
   /* Modify file to trigger a change in poll */
   sleep_seconds(2);
   {
-    FILE *f = fopen("test_log.txt", "a");
+    FILE *f = NULL;
+#if defined(_MSC_VER)
+    fopen_s(&f, "test_log.txt", "a");
+#else
+    f = fopen("test_log.txt", "a");
+#endif
     if (f) {
       fprintf(f, "a");
       fclose(f);
@@ -317,7 +345,12 @@ TEST test_hot_reload_oom(void) {
 
   /* add watch path OOM */
   {
-    FILE *f = fopen("test_oom.txt", "w");
+    FILE *f = NULL;
+#if defined(_MSC_VER)
+    fopen_s(&f, "test_oom.txt", "w");
+#else
+    f = fopen("test_oom.txt", "w");
+#endif
     if (f)
       fclose(f);
   }
@@ -483,7 +516,12 @@ TEST test_hot_reload_sse_routes(void) {
 
   /* Create a file and add it */
   {
-    FILE *f = fopen("test_sse_file.txt", "w");
+    FILE *f = NULL;
+#if defined(_MSC_VER)
+    fopen_s(&f, "test_sse_file.txt", "w");
+#else
+    f = fopen("test_sse_file.txt", "w");
+#endif
     if (f) {
       fprintf(f, "a");
       fclose(f);
@@ -526,7 +564,12 @@ TEST test_hot_reload_sse_routes(void) {
   /* Second dispatch: wait 2s, modify file, poll, then dispatch */
   sleep_seconds(2);
   {
-    FILE *f = fopen("test_sse_file.txt", "a");
+    FILE *f = NULL;
+#if defined(_MSC_VER)
+    fopen_s(&f, "test_sse_file.txt", "a");
+#else
+    f = fopen("test_sse_file.txt", "a");
+#endif
     if (f) {
       fprintf(f, "b");
       fclose(f);
@@ -622,7 +665,12 @@ TEST test_hot_reload_multiplatform(void) {
   ASSERT_EQ(C_REST_OK, res);
 
   {
-    FILE *f = fopen("test_mp_file.txt", "w");
+    FILE *f = NULL;
+#if defined(_MSC_VER)
+    fopen_s(&f, "test_mp_file.txt", "w");
+#else
+    f = fopen("test_mp_file.txt", "w");
+#endif
     if (f)
       fclose(f);
   }
