@@ -20,7 +20,6 @@ static void *fail_malloc(size_t size) {
 int test_ts_queue(void) {
   c_rest_ts_queue q;
   c_rest_ts_queue q2;
-  c_rest_ts_queue q3;
   int failed = 0;
   void *val = NULL;
   c_rest_error_t rc;
@@ -170,26 +169,29 @@ int test_ts_queue(void) {
   failed += (dummy_free_count != 1);
 
 #if !defined(_WIN32)
-  /* Test destroy failure branches */
-  (void)!c_rest_ts_queue_init(&q3);
-  (void)!c_rest_ts_queue_push(&q3, "test_data");
-  real_cond = q3.cond;
-  q3.cond = (c_rest_cond_t)0;
-  rc = c_rest_ts_queue_destroy(&q3, NULL);
-  failed += (rc != C_REST_ERROR_GENERIC);
-  /* The mutex was successfully destroyed by c_rest_ts_queue_destroy,
-   * only the condition variable was left dangling */
-  c_rest_cond_destroy(real_cond);
+  {
+    c_rest_ts_queue q3;
+    /* Test destroy failure branches */
+    (void)!c_rest_ts_queue_init(&q3);
+    (void)!c_rest_ts_queue_push(&q3, "test_data");
+    real_cond = q3.cond;
+    q3.cond = (c_rest_cond_t)0;
+    rc = c_rest_ts_queue_destroy(&q3, NULL);
+    failed += (rc != C_REST_ERROR_GENERIC);
+    /* The mutex was successfully destroyed by c_rest_ts_queue_destroy,
+     * only the condition variable was left dangling */
+    c_rest_cond_destroy(real_cond);
 
-  (void)!c_rest_ts_queue_init(&q3);
-  (void)!c_rest_ts_queue_push(&q3, "test_data");
-  real_mutex = q3.mutex;
-  q3.mutex = (c_rest_mutex_t)0;
-  rc = c_rest_ts_queue_destroy(&q3, NULL);
-  failed += (rc != C_REST_ERROR_GENERIC);
-  /* Destroy what wasn't destroyed */
-  c_rest_mutex_destroy(real_mutex);
-  c_rest_cond_destroy(q3.cond);
+    (void)!c_rest_ts_queue_init(&q3);
+    (void)!c_rest_ts_queue_push(&q3, "test_data");
+    real_mutex = q3.mutex;
+    q3.mutex = (c_rest_mutex_t)0;
+    rc = c_rest_ts_queue_destroy(&q3, NULL);
+    failed += (rc != C_REST_ERROR_GENERIC);
+    /* Destroy what wasn't destroyed */
+    c_rest_mutex_destroy(real_mutex);
+    c_rest_cond_destroy(q3.cond);
+  }
 #endif
 
   if (failed) {

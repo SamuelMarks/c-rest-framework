@@ -36,9 +36,9 @@ static int g_mock_send_no_body = 0;
 static int g_mock_send_null_headers = 0;
 static int g_mock_send_body_len_only = 0;
 
-static int mock_send_full(struct HttpTransportContext *ctx,
-                          const struct HttpRequest *req,
-                          struct HttpResponse **res) {
+static c_abstract_http_error_t mock_send_full(struct HttpTransportContext *ctx,
+                                              const struct HttpRequest *req,
+                                              struct HttpResponse **res) {
   struct HttpResponse *r;
   (void)ctx;
   (void)req;

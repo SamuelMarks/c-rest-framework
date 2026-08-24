@@ -388,7 +388,7 @@ static void my_sigalrm(int sig) { (void)sig; }
 #endif
 static c_rest_error_t test_client_thread(void *arg) {
   struct test_client_args *args = (struct test_client_args *)arg;
-  int sock;
+  c_rest_socket_t sock = C_REST_INVALID_SOCKET;
   struct sockaddr_in srv_addr;
   int retries = 50;
 
@@ -406,7 +406,7 @@ static c_rest_error_t test_client_thread(void *arg) {
 
   while (retries-- > 0) {
     sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock >= 0) {
+    if (sock != C_REST_INVALID_SOCKET) {
       memset(&srv_addr, 0, sizeof(srv_addr));
       srv_addr.sin_family = AF_INET;
       srv_addr.sin_port = htons((unsigned short)args->port);
@@ -435,7 +435,7 @@ static c_rest_error_t test_client_thread(void *arg) {
           int j;
           for (j = 0; j < 8; j++) {
             sock = socket(AF_INET, SOCK_STREAM, 0);
-            if (sock >= 0) {
+            if (sock != C_REST_INVALID_SOCKET) {
               connect(sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr));
 #if defined(_WIN32)
               closesocket(sock);

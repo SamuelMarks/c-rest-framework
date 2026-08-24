@@ -131,7 +131,6 @@ static void test_coverage(void) {
   {
     struct c_rest_response res_t = {0};
     struct c_rest_template_context ctx_t = {0};
-    extern int g_fail_malloc_at;
     extern void *fail_malloc_n(size_t);
     g_crf_malloc_hook = fail_malloc_n;
     g_fail_malloc_at = 1;
@@ -498,8 +497,6 @@ static void test_coverage(void) {
     c_rest_response_check_etag(&req2_ex, &res2_ex, "other-etag");
 
     {
-      extern int g_fail_malloc_at;
-
       /* To hit branch 112, fail the first allocation
        * (c_rest_response_set_header) */
       g_crf_malloc_hook = fail_malloc_n;
