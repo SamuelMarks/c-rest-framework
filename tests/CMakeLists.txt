@@ -10,8 +10,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../greatest/greatest.h")
 else()
     FetchContent_Declare(
       greatest
-      URL "https://raw.githubusercontent.com/SamuelMarks/greatest/refs/heads/master/greatest.h"
-      DOWNLOAD_NO_EXTRACT TRUE
+      GIT_REPOSITORY https://github.com/SamuelMarks/greatest.git
+      GIT_TAG master
     )
 endif()
 FetchContent_MakeAvailable(greatest)

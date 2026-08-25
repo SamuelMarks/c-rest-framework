@@ -237,6 +237,13 @@ macro(c_rest_framework_apply_crypto tgt scope)
 endmacro()
 
 include(FetchContent)
+FetchContent_Declare(
+  greatest
+  GIT_REPOSITORY https://github.com/SamuelMarks/greatest.git
+  GIT_TAG        master
+)
+FetchContent_MakeAvailable(greatest)
+
 set(C_ABSTRACT_HTTP_USE_MBEDTLS ${${PROJECT_NAME_SAFE}_USE_MBEDTLS} CACHE BOOL "" FORCE)
 set(C_ABSTRACT_HTTP_USE_OPENSSL ${${PROJECT_NAME_SAFE}_USE_OPENSSL} CACHE BOOL "" FORCE)
 set(C_ABSTRACT_HTTP_USE_LIBRESSL ${${PROJECT_NAME_SAFE}_USE_LIBRESSL} CACHE BOOL "" FORCE)

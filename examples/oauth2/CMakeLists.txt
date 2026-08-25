@@ -102,8 +102,8 @@ if(OAUTH2_BUILD_TESTS AND BUILD_TESTING)
     else()
         FetchContent_Declare(
             greatest
-            URL https://raw.githubusercontent.com/SamuelMarks/greatest/master/greatest.h
-            DOWNLOAD_NO_EXTRACT TRUE
+            GIT_REPOSITORY https://github.com/SamuelMarks/greatest.git
+            GIT_TAG master
         )
     endif()
     FetchContent_MakeAvailable(greatest)
