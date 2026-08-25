@@ -103,7 +103,9 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
     ret = 1; /* Rate limited */
   }
 
-  { c_rest_mutex_unlock(limiter->mutex); }
+  {
+    c_rest_mutex_unlock(limiter->mutex);
+  }
   return ret;
 }
 

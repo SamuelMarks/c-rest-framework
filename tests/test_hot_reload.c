@@ -465,11 +465,11 @@ TEST test_hot_reload_oom(void) {
     }
   }
 
-  res = c_rest_hot_reload_destroy(ctx);
-  ASSERT_EQ(C_REST_OK, res);
-  g_crf_malloc_hook = NULL;
-  g_crf_realloc_hook = NULL;
-  PASS();
+    res = c_rest_hot_reload_destroy(ctx);
+    ASSERT_EQ(C_REST_OK, res);
+    g_crf_malloc_hook = NULL;
+    g_crf_realloc_hook = NULL;
+    PASS();
 }
 #endif
 
