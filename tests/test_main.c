@@ -19,7 +19,7 @@ static int test_init_destroy(void) {
   struct c_rest_context *ctx = NULL;
   int res;
 
-  res = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
+  res = (int)c_rest_init(C_REST_MODALITY_SYNC, &ctx);
   if (res != 0 || ctx == NULL) {
     printf("Failed to init C_REST_MODALITY_SYNC\n");
     return 1;
@@ -27,7 +27,7 @@ static int test_init_destroy(void) {
 
   ctx->logger.log_cb = test_logger;
 
-  res = c_rest_destroy(ctx);
+  res = (int)c_rest_destroy(ctx);
   if (res != 0) {
     printf("Failed to destroy ctx\n");
     return 1;
@@ -48,12 +48,12 @@ static int test_all_enums(void) {
       continue;
     }
 #endif
-    res = c_rest_init((enum c_rest_modality_type)i, &ctx);
+    res = (int)c_rest_init((enum c_rest_modality_type)i, &ctx);
     if (res != 0 || ctx == NULL) {
       printf("Failed to init enum %d\n", i);
       return 1;
     }
-    res = c_rest_destroy(ctx);
+    res = (int)c_rest_destroy(ctx);
     if (res != 0) {
       printf("Failed to destroy enum %d\n", i);
       return 1;

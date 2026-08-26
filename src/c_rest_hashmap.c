@@ -20,7 +20,7 @@ static c_rest_error_t hash_string(const char *str, size_t *out_hash) {
   if (strcmp(str, "TEST_MOCK_HASH_FAIL") == 0)
     return C_REST_ERROR_GENERIC;
   while ((c = *str++)) {
-    hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    hash = ((hash << 5) + hash) + (size_t)c; /* hash * 33 + c */
   }
   *out_hash = hash;
   return C_REST_OK;

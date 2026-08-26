@@ -111,7 +111,7 @@ c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *ctx,
 c_rest_error_t c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
                                       struct c_rest_logger *logger) {
   c_rest_error_t rc;
-  int err;
+  c_rest_error_t err;
 
   if (!out_ctx) {
     return C_REST_ERROR_INVALID_ARG;
@@ -151,7 +151,7 @@ c_rest_error_t c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx,
   size_t path_len;
   char *path_copy;
   time_t current_mtime;
-  int err;
+  c_rest_error_t err;
 
   if (!ctx || !path) {
     return C_REST_ERROR_INVALID_ARG;
@@ -254,7 +254,7 @@ c_rest_error_t c_rest_hot_reload_poll(c_rest_hot_reload_ctx_t *ctx,
 
   if (changed) {
     ctx->state = C_REST_HOT_RELOAD_STATE_CHANGED;
-    return on_reload(user_data);
+    return (c_rest_error_t)on_reload(user_data);
   }
 
   return C_REST_OK;

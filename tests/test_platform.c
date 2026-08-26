@@ -58,7 +58,7 @@ int test_platform(void) {
   c_rest_mutex_t mutex = 0;
   c_rest_cond_t cond;
   c_rest_process_t proc;
-  int rc;
+  c_rest_error_t rc;
   int val = 0;
   unsigned long ms;
   char buf[16];

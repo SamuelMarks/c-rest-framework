@@ -59,7 +59,7 @@ static c_rest_error_t upload_handler(struct c_rest_request *req,
   c_rest_multipart_parser *parser = NULL;
   struct c_rest_multipart_callbacks callbacks = {0};
   size_t parsed = 0;
-  int parse_res = 0;
+  c_rest_error_t parse_res = 0;
   (void)ctx;
 
   callbacks.on_part_begin = on_part_begin;

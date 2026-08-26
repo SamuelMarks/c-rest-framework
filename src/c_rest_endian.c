@@ -36,7 +36,8 @@ c_rest_error_t c_rest_htons(unsigned short hostshort,
     return rc;
   }
   swapped = (unsigned short)((hostshort >> 8) | (hostshort << 8));
-  *out_netshort = (unsigned short)(little * swapped + (1 - little) * hostshort);
+  *out_netshort = (unsigned short)((unsigned short)little * swapped +
+                                   (1 - (unsigned short)little) * hostshort);
   return C_REST_OK;
 }
 
@@ -55,7 +56,8 @@ c_rest_error_t c_rest_htonl(unsigned long hostlong,
   }
   swapped = ((hostlong & 0xFF000000) >> 24) | ((hostlong & 0x00FF0000) >> 8) |
             ((hostlong & 0x0000FF00) << 8) | ((hostlong & 0x000000FF) << 24);
-  *out_netlong = little * swapped + (1 - little) * hostlong;
+  *out_netlong =
+      (unsigned long)little * swapped + (1 - (unsigned long)little) * hostlong;
   return C_REST_OK;
 }
 

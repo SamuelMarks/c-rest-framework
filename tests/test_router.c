@@ -61,7 +61,7 @@ static int test_oauth2_middleware_func(void) {
   struct c_rest_request req;
   struct c_rest_response res;
   struct c_rest_header auth_hdr;
-  int ret;
+  c_rest_error_t ret;
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
@@ -474,7 +474,7 @@ int test_router(void) {
   c_rest_router *router = NULL;
   struct c_rest_request req;
   struct c_rest_response res;
-  int ret;
+  c_rest_error_t ret;
   test_coverage();
 
   memset(&req, 0, sizeof(req));

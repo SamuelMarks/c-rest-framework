@@ -31,7 +31,7 @@ static c_rest_error_t resolve_user(const char *field_name, char **out_json,
 
   *out_json = (char *)CRF_MALLOC(len + 1);
   if (!*out_json)
-    return -1;
+    return C_REST_ERROR_GENERIC;
 
   memcpy(*out_json, res, len + 1);
   *out_len = len;
@@ -49,7 +49,7 @@ static c_rest_error_t resolve_posts(const char *field_name, char **out_json,
 
   *out_json = (char *)CRF_MALLOC(len + 1);
   if (!*out_json)
-    return -1;
+    return C_REST_ERROR_GENERIC;
 
   memcpy(*out_json, res, len + 1);
   *out_len = len;
@@ -66,7 +66,7 @@ int main(void) {
   struct c_rest_context *ctx = NULL;
   struct c_rest_router *router = NULL;
   struct c_rest_graphql_schema *schema = NULL;
-  int res;
+  c_rest_error_t res;
 
 #if defined(_WIN32)
   WSADATA wsa;

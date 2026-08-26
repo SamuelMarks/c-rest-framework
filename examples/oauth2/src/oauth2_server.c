@@ -284,7 +284,7 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
   char *auth_user = NULL;
   char *auth_pass = NULL;
   int is_valid = 0;
-  int err = 0;
+  c_orm_error_t err = 0;
   c_orm_oauth2_token_t token;
   struct c_rest_json_pair json_pairs[4];
 

@@ -24,7 +24,7 @@ int main(void) {
   c_rest_router *router = NULL;
   struct c_rest_request req;
   struct c_rest_response res;
-  int ret;
+  c_rest_error_t ret;
 
   printf("Running tests for Notes App...\n");
 

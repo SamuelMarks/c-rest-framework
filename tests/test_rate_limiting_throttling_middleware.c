@@ -33,7 +33,7 @@ static void sleep_ms(int ms) {
 
 static int test_rate_limiter_init_destroy(void) {
   c_rest_rate_limiter limiter;
-  int ret;
+  c_rest_error_t ret;
   int failed = 0;
 
   ret = c_rest_rate_limiter_init(&limiter, 10, 1, 100);
@@ -51,7 +51,7 @@ static int test_rate_limiter_init_destroy(void) {
 
 static int test_rate_limiter_allow_deny(void) {
   c_rest_rate_limiter limiter;
-  int ret;
+  c_rest_error_t ret;
   size_t remaining;
   int failed = 0;
 
@@ -114,7 +114,7 @@ static int test_rate_limiter_allow_deny(void) {
 
 static int test_rate_limiter_edge_cases(void) {
   c_rest_rate_limiter limiter;
-  int ret;
+  c_rest_error_t ret;
   size_t remaining;
   int failed = 0;
 
@@ -177,7 +177,7 @@ static void *fail_malloc_n(size_t size) {
 
 static int test_rate_limiter_malloc(void) {
   c_rest_rate_limiter limiter;
-  int ret;
+  c_rest_error_t ret;
   int i;
   size_t remaining;
 

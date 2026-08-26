@@ -1030,7 +1030,7 @@ c_rest_error_t c_rest_hash_password(const char *password,
   char *hash_b64 = NULL;
   size_t hash_b64_len = 0;
   size_t out_len = 0;
-  int res = 1;
+  c_rest_error_t res = C_REST_ERROR_GENERIC;
 
   if (!password || !out_hash) {
     return C_REST_ERROR_GENERIC;
@@ -1077,7 +1077,7 @@ c_rest_error_t c_rest_hash_password(const char *password,
           CAST_SIZE_T(C_REST_PBKDF2_ITERATIONS), salt_b64, hash_b64);
 #endif
 
-  res = 0;
+  res = C_REST_OK;
 
 cleanup:
   C_REST_FREE((void *)(salt_b64));
@@ -1102,7 +1102,7 @@ c_rest_error_t c_rest_verify_password(const char *password,
   unsigned char expected_hash[C_REST_PBKDF2_HASH_LEN];
   unsigned char computed_hash[C_REST_PBKDF2_HASH_LEN];
   size_t expected_hash_len = 0;
-  int res = 1;
+  c_rest_error_t res = C_REST_ERROR_GENERIC;
 
   if (!password || !hash_str) {
     return C_REST_ERROR_GENERIC;
@@ -1164,7 +1164,7 @@ c_rest_error_t c_rest_verify_password(const char *password,
       diff |= (expected_hash[i] ^ computed_hash[i]);
     }
     if (diff == 0) {
-      res = 0;
+      res = C_REST_OK;
     }
   }
 

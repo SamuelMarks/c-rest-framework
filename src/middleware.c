@@ -163,7 +163,7 @@ c_rest_error_t c_rest_auth_middleware(struct c_rest_request *req,
         return rc;
       return C_REST_ERROR_GENERIC;
     }
-    rc = verifier->verify_bearer(token, &auth_ctx);
+    rc = (c_rest_error_t)verifier->verify_bearer(token, &auth_ctx);
     if (rc != C_REST_OK) {
       C_REST_FREE((void *)(token));
       (void)!c_rest_response_set_status(res, 401);

@@ -354,7 +354,7 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
 
   while (line_start < ctx->buffer + ctx->buffer_len) {
     line_end = (const char *)memchr(line_start, '\n',
-                                    ctx->buffer + ctx->buffer_len - line_start);
+                                    (size_t)(ctx->buffer + ctx->buffer_len - line_start));
     if (!line_end) {
       break;
     }
@@ -552,7 +552,7 @@ c_rest_error_t c_rest_sse_send_event(struct c_rest_response *res,
                                      const struct c_rest_sse_event *ev) {
   char *buf;
   size_t len;
-  int ret;
+  c_rest_error_t ret;
 
   if (!res || !ev) {
     return C_REST_ERROR_GENERIC;

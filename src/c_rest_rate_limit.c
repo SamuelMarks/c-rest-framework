@@ -13,7 +13,7 @@ static void c_rest_rate_limiter_bucket_free(void *bucket_ptr) {
 c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
                                         size_t capacity, size_t fill_rate,
                                         size_t max_entities) {
-  int ret;
+  c_rest_error_t ret;
   if (!limiter) {
     return C_REST_ERROR_GENERIC;
   }
@@ -43,7 +43,7 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
                                          const char *identifier,
                                          size_t tokens_needed,
                                          size_t *out_remaining) {
-  int ret;
+  c_rest_error_t ret;
   c_rest_rate_limit_bucket *bucket;
   void *val = NULL;
   time_t now;
@@ -103,9 +103,7 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
     ret = 1; /* Rate limited */
   }
 
-  {
-    c_rest_mutex_unlock(limiter->mutex);
-  }
+  { c_rest_mutex_unlock(limiter->mutex); }
   return ret;
 }
 

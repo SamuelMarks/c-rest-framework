@@ -43,7 +43,7 @@ int main(void) {
 
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
-  int res;
+  c_rest_error_t res;
 
   printf("Initializing Notes App...\n");
 

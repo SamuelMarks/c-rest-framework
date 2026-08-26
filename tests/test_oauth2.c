@@ -17,8 +17,8 @@ TEST test_password_hashing(void) {
   char *hash = NULL;
   int res;
 
-  res = c_rest_hash_password("my_secure_password",
-                             C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
+  res = (int)c_rest_hash_password("my_secure_password",
+                                  C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
   ASSERT_EQ(0, res);
   ASSERT_NEQ(NULL, hash);
 
@@ -26,15 +26,16 @@ TEST test_password_hashing(void) {
   ASSERT(strncmp(hash, "$pbkdf2-sha256$i=100000$", 24) == 0);
 
   /* Verify with correct password */
-  res = c_rest_verify_password("my_secure_password", hash);
+  res = (int)c_rest_verify_password("my_secure_password", hash);
   ASSERT_EQ(0, res);
 
   /* Verify with incorrect password */
-  res = c_rest_verify_password("wrong_password", hash);
+  res = (int)c_rest_verify_password("wrong_password", hash);
   ASSERT_NEQ(0, res);
 
   /* Verify with invalid hash string */
-  res = c_rest_verify_password("my_secure_password", "invalid_hash_string");
+  res =
+      (int)c_rest_verify_password("my_secure_password", "invalid_hash_string");
   ASSERT_NEQ(0, res);
 
   CRF_FREE(hash);
@@ -46,11 +47,11 @@ TEST test_random_string_generation(void) {
   char *rand_str2 = NULL;
   int res;
 
-  res = c_rest_random_string_generate(32, &rand_str1);
+  res = (int)c_rest_random_string_generate(32, &rand_str1);
   ASSERT_EQ(0, res);
   ASSERT_NEQ(NULL, rand_str1);
 
-  res = c_rest_random_string_generate(32, &rand_str2);
+  res = (int)c_rest_random_string_generate(32, &rand_str2);
   ASSERT_EQ(0, res);
   ASSERT_NEQ(NULL, rand_str2);
 
@@ -71,11 +72,11 @@ TEST test_oauth2_generate_access_token(void) {
   char *token2 = NULL;
   int res;
 
-  res = c_rest_oauth2_generate_access_token(&token1);
+  res = (int)c_rest_oauth2_generate_access_token(&token1);
   ASSERT_EQ(0, res);
   ASSERT_NEQ(NULL, token1);
 
-  res = c_rest_oauth2_generate_access_token(&token2);
+  res = (int)c_rest_oauth2_generate_access_token(&token2);
   ASSERT_EQ(0, res);
   ASSERT_NEQ(NULL, token2);
 
@@ -97,18 +98,18 @@ TEST test_urlencoded_parser(void) {
              "credentials";
   req.body_len = strlen(req.body);
 
-  res = c_rest_request_parse_urlencoded(&req);
+  res = (int)c_rest_request_parse_urlencoded(&req);
   ASSERT_EQ(0, res);
 
-  res = c_rest_request_get_form_param(&req, "client_id", &val);
+  res = (int)c_rest_request_get_form_param(&req, "client_id", &val);
   ASSERT_EQ(0, res);
   ASSERT_STR_EQ("my_client", val);
 
-  res = c_rest_request_get_form_param(&req, "grant_type", &val);
+  res = (int)c_rest_request_get_form_param(&req, "grant_type", &val);
   ASSERT_EQ(0, res);
   ASSERT_STR_EQ("client_credentials", val);
 
-  res = c_rest_request_get_form_param(&req, "missing_param", &val);
+  res = (int)c_rest_request_get_form_param(&req, "missing_param", &val);
   ASSERT_NEQ(0, res);
 
   req.body = NULL; /* so cleanup doesn't free string literal */
@@ -131,7 +132,7 @@ TEST test_basic_auth_parser(void) {
   auth_hdr.next = NULL;
   req.headers = &auth_hdr;
 
-  res = c_rest_request_get_auth_basic(&req, &user, &pass);
+  res = (int)c_rest_request_get_auth_basic(&req, &user, &pass);
   ASSERT_EQ(0, res);
   ASSERT_STR_EQ("admin", user);
   ASSERT_STR_EQ("secret", pass);
@@ -157,7 +158,7 @@ TEST test_bearer_token_parser(void) {
   auth_hdr.next = NULL;
   req.headers = &auth_hdr;
 
-  res = c_rest_request_get_auth_bearer(&req, &token);
+  res = (int)c_rest_request_get_auth_bearer(&req, &token);
   ASSERT_EQ(0, res);
   ASSERT_STR_EQ("abcdef1234567890", token);
 
@@ -189,7 +190,7 @@ TEST test_auth_middleware(void) {
   struct c_rest_request req;
   struct c_rest_response res;
   struct c_rest_auth_verifier verifier;
-  int ret;
+  c_rest_error_t ret;
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));

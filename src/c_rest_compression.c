@@ -201,7 +201,7 @@ c_rest_error_t c_rest_compress_data(c_rest_compression_ctx_t *ctx,
     while (available_in > 0 || BrotliEncoderHasMoreOutput(ctx->b_strm)) {
       if (available_out == 0) {
         unsigned char *new_buf = NULL;
-        size_t offset = next_out - out_buf;
+        size_t offset = (size_t)(next_out - out_buf);
         out_capacity *= 2;
         if (C_REST_REALLOC(out_buf, out_capacity, &new_buf) != 0) {
           C_REST_FREE(out_buf);
@@ -221,7 +221,7 @@ c_rest_error_t c_rest_compress_data(c_rest_compression_ctx_t *ctx,
     }
 
     *out_data = out_buf;
-    *out_len = next_out - out_buf;
+    *out_len = (size_t)(next_out - out_buf);
     return C_REST_OK;
   }
 #endif
@@ -299,7 +299,7 @@ c_rest_error_t c_rest_compress_finish(c_rest_compression_ctx_t *ctx,
 
       if (!BrotliEncoderIsFinished(ctx->b_strm)) {
         unsigned char *new_buf = NULL;
-        size_t offset = next_out - out_buf;
+        size_t offset = (size_t)(next_out - out_buf);
         brotli_out_capacity *= 2;
         if (C_REST_REALLOC(out_buf, brotli_out_capacity, &new_buf) != 0) {
           C_REST_FREE(out_buf);
@@ -312,7 +312,7 @@ c_rest_error_t c_rest_compress_finish(c_rest_compression_ctx_t *ctx,
     }
 
     *out_data = out_buf;
-    *out_len = next_out - out_buf;
+    *out_len = (size_t)(next_out - out_buf);
     return C_REST_OK;
   }
 #endif

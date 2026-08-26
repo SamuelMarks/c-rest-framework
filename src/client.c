@@ -179,7 +179,7 @@ c_rest_error_t c_rest_client_request_sync(
     struct c_rest_client_response **out_res) {
   struct HttpRequest req;
   struct HttpResponse *res = NULL;
-  int rc;
+  c_rest_error_t rc;
   struct c_rest_client_response *out = NULL;
   size_t i;
 
@@ -203,7 +203,8 @@ c_rest_error_t c_rest_client_request_sync(
   if (!client->client.send)
     return C_REST_ERROR_GENERIC;
 
-  rc = client->client.send(client->client.transport, &req, &res);
+  rc =
+      (c_rest_error_t)client->client.send(client->client.transport, &req, &res);
 
   if (out_res && res) {
     out = (struct c_rest_client_response *)CRF_MALLOC(
@@ -281,7 +282,7 @@ c_rest_error_t c_rest_client_request_async(
     const void *body, size_t body_len,
     void (*callback)(struct c_rest_client_response *res, void *data),
     void *user_data) {
-  int res;
+  c_rest_error_t res;
   struct c_rest_client_response *out = NULL;
   if (!client || !client->client.transport || !url || !method)
     return C_REST_ERROR_GENERIC;
@@ -321,7 +322,7 @@ c_rest_error_t c_rest_client_url_encode(const char *in_str, char **out_str) {
   for (i = 0; i < len; ++i) {
     unsigned char c = (unsigned char)in_str[i];
     if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-      out[j++] = c;
+      out[j++] = (char)c;
     } else if (c == ' ') {
       out[j++] = '+';
     } else {
@@ -761,7 +762,7 @@ c_rest_error_t c_rest_client_post_form_sync(
     const struct c_rest_client_header *headers, size_t headers_count,
     const struct c_rest_client_form_field *fields, size_t num_fields,
     struct c_rest_client_response **out_res) {
-  int ret;
+  c_rest_error_t ret;
   char *body = NULL;
   size_t body_len = 0;
   struct c_rest_client_header *all_headers = NULL;

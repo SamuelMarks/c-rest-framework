@@ -21,7 +21,7 @@
     if ((const void *)(expected) == NULL && (const void *)(actual) == NULL) break; \
     if ((const void *)(actual) == NULL) {                                      \
       printf("%s:%d: Assertion failed: expected '%s', got NULL\n", __FILE__,   \
-             __LINE__, (expected) ? (expected) : "NULL");                      \
+             __LINE__, ((const void *)(expected) != NULL) ? (expected) : "NULL");                      \
       return 1;                                                                \
     }                                                                          \
     if ((const void *)(expected) == NULL) {                                    \
@@ -177,7 +177,7 @@ static int test_sse_parse_fragmented(void) {
 static int test_sse_wrappers(void) {
   struct c_rest_response res;
   struct c_rest_sse_event ev;
-  int ret;
+  c_rest_error_t ret;
 
   memset(&res, 0, sizeof(res));
 

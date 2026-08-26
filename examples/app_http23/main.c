@@ -9,7 +9,7 @@
 int main(void) {
   c_rest_http23_ctx_t *ctx = NULL;
 
-  int res;
+  c_rest_error_t res;
   size_t consumed = 0;
   int is_ready = 0;
   struct c_rest_request *req = NULL;

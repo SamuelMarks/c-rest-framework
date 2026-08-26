@@ -34,7 +34,7 @@ int test_orm_integration(void) {
   struct c_rest_request req;
   struct c_rest_response res;
   struct c_rest_orm_model user_model;
-  int ret;
+  c_rest_error_t ret;
 
   printf("Running orm integration tests...\n");
 

@@ -51,7 +51,7 @@ static void *fail_malloc_n(size_t size) {
 static int test_openapi_errors(void) {
   struct c_rest_openapi_spec *spec = NULL;
   char *json_str = NULL;
-  int ret;
+  c_rest_error_t ret;
   int i;
   struct c_rest_openapi_operation op;
   const char *tags[] = {"test_tag"};
@@ -537,7 +537,7 @@ int test_openapi(void) {
   struct c_rest_openapi_spec *spec = NULL;
   struct c_rest_openapi_operation op;
   const char *tags[] = {"test_tag"};
-  int ret;
+  c_rest_error_t ret;
   char *json_str = NULL;
 
   extern void json_set_allocation_functions(void *(*)(size_t),

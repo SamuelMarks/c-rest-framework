@@ -65,7 +65,7 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
   JSON_Object *json_obj = NULL;
   const char *access_token = NULL;
   int expires_in = 0;
-  int err = 0;
+  c_rest_error_t err = 0;
 
   if (username == NULL || password == NULL || out_access_token == NULL ||
       out_expires_in == NULL) {

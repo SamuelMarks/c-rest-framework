@@ -27,7 +27,7 @@ int main(void) {
   struct c_rest_context *ctx = NULL;
   struct c_rest_tls_context *tls_ctx = NULL;
   c_rest_router *router = NULL;
-  int res;
+  c_rest_error_t res;
 
   if (c_rest_tls_init() != 0) {
     printf("No TLS backend available, skipping.\n");

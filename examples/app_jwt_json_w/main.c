@@ -76,7 +76,7 @@ int main(void) {
   struct c_rest_router *router = NULL;
   struct c_rest_jwt_middleware_config jwt_config;
   const unsigned char secret[] = "my_super_secret_key";
-  int res;
+  c_rest_error_t res;
 
   printf("Initializing c-rest-framework...\n");
   signal(SIGTERM, sig_handler);

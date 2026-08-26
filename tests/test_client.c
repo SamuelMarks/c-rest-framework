@@ -998,18 +998,18 @@ int test_client(void) {
 
   test_coverage();
 
-  res = c_rest_tls_init();
+  res = (int)c_rest_tls_init();
   failed += (res != C_REST_OK);
 
-  res = c_rest_client_init(&client);
+  res = (int)c_rest_client_init(&client);
   failed += (res != C_REST_OK);
   failed += (client == NULL);
 
   headers[0].key = "X-Test-Header";
   headers[0].value = "TestValue";
 
-  res = c_rest_client_request_sync(client, "http://localhost", "GET", headers,
-                                   1, NULL, 0, &sync_res);
+  res = (int)c_rest_client_request_sync(client, "http://localhost", "GET",
+                                        headers, 1, NULL, 0, &sync_res);
   /* Should fail gracefully with connection refused or success if there's a
    * listener */
   if (sync_res) {
@@ -1017,19 +1017,20 @@ int test_client(void) {
     sync_res = NULL;
   }
 
-  res = c_rest_client_request_async(client, "http://localhost", "POST", NULL, 0,
-                                    "test", 4, async_callback, NULL);
+  res =
+      (int)c_rest_client_request_async(client, "http://localhost", "POST", NULL,
+                                       0, "test", 4, async_callback, NULL);
   /* Async failure is fine as long as it handles the callback correctly or
    * safely fails */
 
-  res = c_rest_proxy_request("http://localhost/proxy", NULL, NULL);
+  res = (int)c_rest_proxy_request("http://localhost/proxy", NULL, NULL);
 
   /* Test URL encoding/decoding */
-  res = c_rest_client_url_encode("test + && = ?", &encoded);
+  res = (int)c_rest_client_url_encode("test + && = ?", &encoded);
   failed += (res != C_REST_OK);
   failed += (strcmp(encoded, "test+%2B+%26%26+%3D+%3F") != 0);
 
-  res = c_rest_client_url_decode(encoded, &decoded);
+  res = (int)c_rest_client_url_decode(encoded, &decoded);
   failed += (res != C_REST_OK);
   failed += (strcmp(decoded, "test + && = ?") != 0);
 
@@ -1042,14 +1043,14 @@ int test_client(void) {
   fields[1].key = "username";
   fields[1].value = "test user";
 
-  res = c_rest_client_build_form_urlencoded(fields, 2, &body, &body_len);
+  res = (int)c_rest_client_build_form_urlencoded(fields, 2, &body, &body_len);
   failed += (res != C_REST_OK);
   failed += (strcmp(body, "grant_type=password&username=test+user") != 0);
   failed += (body_len != strlen("grant_type=password&username=test+user"));
 
   /* Test Form URL encoded parser */
-  res =
-      c_rest_client_parse_form_urlencoded(body, &parsed_fields, &parsed_count);
+  res = (int)c_rest_client_parse_form_urlencoded(body, &parsed_fields,
+                                                 &parsed_count);
   failed += (res != C_REST_OK);
   failed += (parsed_count != 2);
   if (parsed_fields && parsed_count == 2) {
@@ -1062,11 +1063,11 @@ int test_client(void) {
   CRF_FREE(body);
 
   /* Test Header Builders */
-  res = c_rest_client_header_set(&custom_headers, &custom_headers_count,
-                                 "Accept", "application/json");
+  res = (int)c_rest_client_header_set(&custom_headers, &custom_headers_count,
+                                      "Accept", "application/json");
   failed += (res != C_REST_OK);
-  res = c_rest_client_header_set(&custom_headers, &custom_headers_count,
-                                 "Custom-Key", "Custom-Val");
+  res = (int)c_rest_client_header_set(&custom_headers, &custom_headers_count,
+                                      "Custom-Key", "Custom-Val");
   failed += (res != C_REST_OK);
   failed += (custom_headers_count != 2);
   if (custom_headers_count > 0) {
@@ -1075,19 +1076,20 @@ int test_client(void) {
   c_rest_client_headers_free(custom_headers, custom_headers_count);
 
   /* Test Auth basic/bearer */
-  res = c_rest_client_build_auth_basic("Aladdin", "open sesame", &auth_basic);
+  res = (int)c_rest_client_build_auth_basic("Aladdin", "open sesame",
+                                            &auth_basic);
   failed += (res != C_REST_OK);
   failed += (strcmp(auth_basic, "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==") != 0);
   CRF_FREE(auth_basic);
 
-  res = c_rest_client_build_auth_bearer("some_token", &auth_bearer);
+  res = (int)c_rest_client_build_auth_bearer("some_token", &auth_bearer);
   failed += (res != C_REST_OK);
   failed += (strcmp(auth_bearer, "Bearer some_token") != 0);
   CRF_FREE(auth_bearer);
 
   /* Test c_rest_client_post_form_sync */
-  res = c_rest_client_post_form_sync(client, "http://localhost", headers, 1,
-                                     fields, 2, &sync_res);
+  res = (int)c_rest_client_post_form_sync(client, "http://localhost", headers,
+                                          1, fields, 2, &sync_res);
   if (sync_res) {
     (void)!c_rest_client_response_free(sync_res);
     sync_res = NULL;
@@ -1098,7 +1100,7 @@ int test_client(void) {
     struct c_rest_client_response dummy_res;
     dummy_res.body = (void *)"{\"key\":\"value\"}";
     dummy_res.body_len = strlen((char *)dummy_res.body);
-    res = c_rest_client_response_parse_json(&dummy_res, &json);
+    res = (int)c_rest_client_response_parse_json(&dummy_res, &json);
     failed += (res != C_REST_OK);
     failed += (json == NULL);
     if (json) {

@@ -19,37 +19,37 @@ int test_time(void) {
   printf("Testing HTTP Date format and parse...\n");
 
   t = 784111777; /* Sun, 06 Nov 1994 08:49:37 GMT */
-  res = c_rest_http_date_format(t, buf, sizeof(buf));
+  res = (int)(int)c_rest_http_date_format(t, buf, sizeof(buf));
   failed += (res != C_REST_OK);
   failed += (strcmp(buf, "Sun, 06 Nov 1994 08:49:37 GMT") != 0);
 
-  res = c_rest_http_date_parse(buf, &t);
+  res = (int)(int)c_rest_http_date_parse(buf, &t);
   failed += (res != C_REST_OK);
   failed += (t != 784111777);
 
-  res = c_rest_http_date_format(t, NULL, sizeof(buf));
+  res = (int)(int)c_rest_http_date_format(t, NULL, sizeof(buf));
   failed += (res != C_REST_ERROR_GENERIC);
 
-  res = c_rest_http_date_format(t, buf, 10);
+  res = (int)(int)c_rest_http_date_format(t, buf, 10);
   failed += (res != C_REST_ERROR_GENERIC);
 
-  res = c_rest_http_date_parse(NULL, &t);
+  res = (int)(int)c_rest_http_date_parse(NULL, &t);
   failed += (res != C_REST_ERROR_GENERIC);
 
-  res = c_rest_http_date_parse(buf, NULL);
+  res = (int)(int)c_rest_http_date_parse(buf, NULL);
   failed += (res != C_REST_ERROR_GENERIC);
 
-  res = c_rest_http_date_parse("Invalid format string GMT", &t);
+  res = (int)(int)c_rest_http_date_parse("Invalid format string GMT", &t);
   failed += (res != C_REST_ERROR_GENERIC);
 
-  res = c_rest_http_date_parse("Sun, 06 Xxx 1994 08:49:37 GMT", &t);
+  res = (int)(int)c_rest_http_date_parse("Sun, 06 Xxx 1994 08:49:37 GMT", &t);
   failed += (res != C_REST_ERROR_GENERIC);
 
-  res = c_rest_http_date_parse("Sun, 06 Nov 1969 08:49:37 GMT", &t);
+  res = (int)(int)c_rest_http_date_parse("Sun, 06 Nov 1969 08:49:37 GMT", &t);
   failed += (res != C_REST_ERROR_GENERIC); /* year < 1970 */
 
   /* Year after leap year */
-  res = c_rest_http_date_parse("Sun, 06 Nov 1973 08:49:37 GMT", &t);
+  res = (int)(int)c_rest_http_date_parse("Sun, 06 Nov 1973 08:49:37 GMT", &t);
   failed += (res != C_REST_OK);
 
   /* Leap year logic:
@@ -58,26 +58,26 @@ int test_time(void) {
      > 1970 divisible by 400 => leap year (e.g. 2000)
   */
 
-  res = c_rest_http_date_parse("Sun, 06 Nov 2100 08:49:37 GMT",
-                               &t); /* Not leap, covers % 100 != 0 */
+  res = (int)(int)c_rest_http_date_parse("Sun, 06 Nov 2100 08:49:37 GMT",
+                                         &t); /* Not leap, covers % 100 != 0 */
   failed += (res != C_REST_OK);
 
-  res = c_rest_http_date_parse("Sun, 06 Nov 2000 08:49:37 GMT",
-                               &t); /* Leap year covers % 400 == 0 */
+  res = (int)(int)c_rest_http_date_parse("Sun, 06 Nov 2000 08:49:37 GMT",
+                                         &t); /* Leap year covers % 400 == 0 */
   failed += (res != C_REST_OK);
 
-  res =
-      c_rest_http_date_parse("Sun, 06 Nov 2004 08:49:37 GMT",
-                             &t); /* Leap year covers % 4 == 0 and % 100 != 0 */
+  res = (int)c_rest_http_date_parse(
+      "Sun, 06 Nov 2004 08:49:37 GMT",
+      &t); /* Leap year covers % 4 == 0 and % 100 != 0 */
   failed += (res != C_REST_OK);
 
   /* Test gmtime failure */
   t = (time_t)-1;
-  res = c_rest_http_date_format(t, buf, sizeof(buf));
+  res = (int)(int)c_rest_http_date_format(t, buf, sizeof(buf));
   if (res == C_REST_OK) {
     /* Some systems might succeed with -1, try a huge positive value */
     t = (time_t)(((time_t)1 << (sizeof(time_t) * 8 - 2)) - 1);
-    res = c_rest_http_date_format(t, buf, sizeof(buf));
+    res = (int)(int)c_rest_http_date_format(t, buf, sizeof(buf));
     if (res == C_REST_OK) {
       printf("Failed to trigger gmtime failure\n");
     }

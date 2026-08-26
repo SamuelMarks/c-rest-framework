@@ -45,7 +45,7 @@ static void sleep_seconds(int seconds) {
     defined(_MSC_VER)
   Sleep((unsigned long)(seconds * 1000));
 #else
-  sleep(seconds);
+  sleep((unsigned int)seconds);
 #endif
 }
 
@@ -53,11 +53,11 @@ TEST test_hot_reload_init_destroy(void) {
   c_rest_hot_reload_ctx_t *ctx = NULL;
   int res;
 
-  res = c_rest_hot_reload_init(&ctx, NULL);
+  res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
   ASSERT(ctx != NULL);
 
-  res = c_rest_hot_reload_destroy(ctx);
+  res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
   PASS();
 }
@@ -66,7 +66,7 @@ TEST test_hot_reload_add_watch(void) {
   c_rest_hot_reload_ctx_t *ctx = NULL;
   int res;
 
-  res = c_rest_hot_reload_init(&ctx, NULL);
+  res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
 
   {
@@ -79,7 +79,7 @@ TEST test_hot_reload_add_watch(void) {
     if (f1)
       fclose(f1);
   }
-  res = c_rest_hot_reload_add_watch(ctx, "test_file.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "test_file.txt");
   ASSERT_EQ(C_REST_OK, res);
 
   {
@@ -92,10 +92,10 @@ TEST test_hot_reload_add_watch(void) {
     if (f2)
       fclose(f2);
   }
-  res = c_rest_hot_reload_add_watch(ctx, "another_file.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "another_file.txt");
   ASSERT_EQ(C_REST_OK, res);
 
-  res = c_rest_hot_reload_destroy(ctx);
+  res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
   PASS();
 }
@@ -112,14 +112,14 @@ TEST test_hot_reload_start(void) {
   int res;
   int called = 0;
 
-  res = c_rest_hot_reload_init(&ctx, NULL);
+  res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
 
-  res = c_rest_hot_reload_start(ctx, dummy_reload_callback, &called);
+  res = (int)c_rest_hot_reload_start(ctx, dummy_reload_callback, &called);
   ASSERT_EQ(C_REST_OK, res);
   ASSERT_EQ(0, called);
 
-  res = c_rest_hot_reload_destroy(ctx);
+  res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
   PASS();
 }
@@ -141,14 +141,14 @@ TEST test_hot_reload_modification(void) {
   fprintf(f, "hello\n");
   fclose(f);
 
-  res = c_rest_hot_reload_init(&ctx, NULL);
+  res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
 
-  res = c_rest_hot_reload_add_watch(ctx, test_filename);
+  res = (int)c_rest_hot_reload_add_watch(ctx, test_filename);
   ASSERT_EQ(C_REST_OK, res);
 
   /* Poll immediately, shouldn't be called because nothing changed */
-  res = c_rest_hot_reload_poll(ctx, dummy_reload_callback, &called);
+  res = (int)c_rest_hot_reload_poll(ctx, dummy_reload_callback, &called);
   ASSERT_EQ(C_REST_OK, res);
   ASSERT_EQ(0, called);
 
@@ -166,11 +166,11 @@ TEST test_hot_reload_modification(void) {
   fclose(f);
 
   /* Poll again, should detect change */
-  res = c_rest_hot_reload_poll(ctx, dummy_reload_callback, &called);
+  res = (int)c_rest_hot_reload_poll(ctx, dummy_reload_callback, &called);
   ASSERT_EQ(C_REST_OK, res);
   ASSERT_EQ(1, called);
 
-  res = c_rest_hot_reload_destroy(ctx);
+  res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
 
   remove(test_filename);
@@ -182,7 +182,7 @@ TEST test_hot_reload_edge_cases(void) {
   int res;
 
   /* Invalid init */
-  res = c_rest_hot_reload_init(NULL, NULL);
+  res = (int)c_rest_hot_reload_init(NULL, NULL);
 
   /* Test logger with NULL log_cb */
   {
@@ -198,38 +198,38 @@ TEST test_hot_reload_edge_cases(void) {
   ASSERT_EQ(C_REST_ERROR_INVALID_ARG, res);
 
   /* Invalid watch */
-  res = c_rest_hot_reload_add_watch(NULL, "test");
+  res = (int)c_rest_hot_reload_add_watch(NULL, "test");
   ASSERT_EQ(C_REST_ERROR_INVALID_ARG, res);
 
-  res = c_rest_hot_reload_init(&ctx, NULL);
+  res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
 
-  res = c_rest_hot_reload_add_watch(ctx, NULL);
+  res = (int)c_rest_hot_reload_add_watch(ctx, NULL);
   ASSERT_EQ(C_REST_ERROR_INVALID_ARG, res);
 
   /* invalid file watch */
-  res = c_rest_hot_reload_add_watch(ctx, "does_not_exist_file.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "does_not_exist_file.txt");
   ASSERT_EQ(C_REST_ERROR_GENERIC, res);
 
   /* Invalid start */
-  res = c_rest_hot_reload_start(NULL, dummy_reload_callback, NULL);
+  res = (int)c_rest_hot_reload_start(NULL, dummy_reload_callback, NULL);
   ASSERT_EQ(C_REST_ERROR_INVALID_ARG, res);
 
-  res = c_rest_hot_reload_start(ctx, NULL, NULL);
+  res = (int)c_rest_hot_reload_start(ctx, NULL, NULL);
   ASSERT_EQ(C_REST_ERROR_INVALID_ARG, res);
 
   /* Invalid poll */
-  res = c_rest_hot_reload_poll(NULL, dummy_reload_callback, NULL);
+  res = (int)c_rest_hot_reload_poll(NULL, dummy_reload_callback, NULL);
   ASSERT_EQ(C_REST_ERROR_INVALID_ARG, res);
 
-  res = c_rest_hot_reload_poll(ctx, NULL, NULL);
+  res = (int)c_rest_hot_reload_poll(ctx, NULL, NULL);
   ASSERT_EQ(C_REST_ERROR_INVALID_ARG, res);
 
   /* Invalid destroy */
-  res = c_rest_hot_reload_destroy(NULL);
+  res = (int)c_rest_hot_reload_destroy(NULL);
   ASSERT_EQ(C_REST_ERROR_INVALID_ARG, res);
 
-  res = c_rest_hot_reload_destroy(ctx);
+  res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
 
   PASS();
@@ -252,7 +252,7 @@ TEST test_hot_reload_logger(void) {
   int res;
 
   logger.log_cb = mock_logger_cb;
-  res = c_rest_hot_reload_init(&ctx, &logger);
+  res = (int)c_rest_hot_reload_init(&ctx, &logger);
   ASSERT_EQ(C_REST_OK, res);
 
   {
@@ -265,11 +265,11 @@ TEST test_hot_reload_logger(void) {
     if (f)
       fclose(f);
   }
-  res = c_rest_hot_reload_add_watch(ctx, "test_log.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "test_log.txt");
   ASSERT_EQ(C_REST_OK, res);
 
   /* Poll with no changes, should be OK */
-  res = c_rest_hot_reload_poll(ctx, dummy_reload_callback, NULL);
+  res = (int)c_rest_hot_reload_poll(ctx, dummy_reload_callback, NULL);
   ASSERT_EQ(C_REST_OK, res);
 
   /* Modify file to trigger a change in poll */
@@ -289,22 +289,22 @@ TEST test_hot_reload_logger(void) {
 
   /* Temporarily make logger fail so poll fails */
   logger.log_cb = mock_logger_err_cb;
-  res = c_rest_hot_reload_poll(ctx, dummy_reload_callback, NULL);
+  res = (int)c_rest_hot_reload_poll(ctx, dummy_reload_callback, NULL);
   ASSERT_EQ(C_REST_ERROR_GENERIC, res);
   logger.log_cb = mock_logger_cb;
 
-  res = c_rest_hot_reload_destroy(ctx);
+  res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
 
   err_logger.log_cb = mock_logger_err_cb;
-  res = c_rest_hot_reload_init(&ctx, &logger);
+  res = (int)c_rest_hot_reload_init(&ctx, &logger);
   ASSERT_EQ(C_REST_OK, res);
   ctx->logger = &err_logger;
   /* the add_watch fails because the logger returns error */
-  res = c_rest_hot_reload_add_watch(ctx, "test_log.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "test_log.txt");
   ASSERT_EQ(C_REST_ERROR_GENERIC, res);
 
-  res = c_rest_hot_reload_destroy(ctx);
+  res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
 
   PASS();
@@ -340,7 +340,7 @@ TEST test_hot_reload_oom(void) {
 
   /* init OOM */
   g_malloc_fail_count = 0;
-  res = c_rest_hot_reload_init(&ctx, NULL);
+  res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_ERROR_OOM, res);
 
   /* add watch path OOM */
@@ -355,20 +355,20 @@ TEST test_hot_reload_oom(void) {
       fclose(f);
   }
   g_malloc_fail_count = -1;
-  res = c_rest_hot_reload_init(&ctx, NULL);
+  res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
 
   /* we will fail on allocating watched_paths or times */
   g_malloc_fail_count = 0;
-  res = c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
   ASSERT_EQ(C_REST_ERROR_OOM, res);
 
   g_malloc_fail_count = 1;
-  res = c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
   ASSERT_EQ(C_REST_ERROR_OOM, res);
 
   g_malloc_fail_count = 2;
-  res = c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
   ASSERT_EQ(C_REST_ERROR_OOM, res);
 
   /* realloc OOM */
@@ -377,42 +377,42 @@ TEST test_hot_reload_oom(void) {
   {
     int i;
     for (i = 0; i < 8; i++) {
-      res = c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
+      res = (int)c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
       ASSERT_EQ(C_REST_OK, res);
     }
   }
   /* Now it will realloc */
   g_malloc_fail_count = 0;
-  res = c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
   ASSERT_EQ(C_REST_ERROR_OOM, res);
 
   g_malloc_fail_count = 1;
-  res = c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
   ASSERT_EQ(C_REST_ERROR_OOM, res);
 
   /* Now allow it to succeed */
   g_malloc_fail_count = -1;
-  res = c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "test_oom.txt");
   ASSERT_EQ(C_REST_OK, res);
 
   g_malloc_fail_count = -1;
-  res = c_rest_hot_reload_destroy(ctx);
+  res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
 
   g_malloc_fail_count = -1;
-  res = c_rest_hot_reload_init(&ctx, NULL);
+  res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
 
   g_crf_malloc_hook = hook_malloc;
   g_malloc_fail_count = 0;
-  res = c_rest_hot_reload_start(ctx, dummy_reload_callback, NULL);
+  res = (int)c_rest_hot_reload_start(ctx, dummy_reload_callback, NULL);
   ASSERT_EQ(C_REST_ERROR_GENERIC, res);
   g_crf_malloc_hook = NULL;
   g_malloc_fail_count = -1;
 
   g_crf_malloc_hook = NULL;
   g_malloc_fail_count = -1;
-  res = c_rest_hot_reload_destroy(ctx);
+  res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
 
   /* OOM test for start with err_logger */
@@ -421,20 +421,20 @@ TEST test_hot_reload_oom(void) {
     struct c_rest_logger normal_logger;
     normal_logger.log_cb = mock_logger_cb;
     err_logger.log_cb = mock_logger_err_cb;
-    res = c_rest_hot_reload_init(&ctx, &normal_logger);
+    res = (int)c_rest_hot_reload_init(&ctx, &normal_logger);
     ASSERT_EQ(C_REST_OK, res);
     ctx->logger = &err_logger;
 
     g_crf_malloc_hook = hook_malloc;
     g_malloc_fail_count = 0;
-    res = c_rest_hot_reload_start(ctx, dummy_reload_callback, NULL);
+    res = (int)c_rest_hot_reload_start(ctx, dummy_reload_callback, NULL);
     ASSERT_EQ(C_REST_ERROR_GENERIC, res);
     g_crf_malloc_hook = NULL;
     g_malloc_fail_count = -1;
 
     g_crf_malloc_hook = NULL;
     g_malloc_fail_count = -1;
-    res = c_rest_hot_reload_start(ctx, dummy_reload_callback, NULL);
+    res = (int)c_rest_hot_reload_start(ctx, dummy_reload_callback, NULL);
     ASSERT_EQ(C_REST_ERROR_GENERIC, res);
 
     /* Corrupt watcher_thread to make c_rest_thread_join fail */
@@ -465,11 +465,11 @@ TEST test_hot_reload_oom(void) {
     }
   }
 
-    res = c_rest_hot_reload_destroy(ctx);
-    ASSERT_EQ(C_REST_OK, res);
-    g_crf_malloc_hook = NULL;
-    g_crf_realloc_hook = NULL;
-    PASS();
+  res = (int)c_rest_hot_reload_destroy(ctx);
+  ASSERT_EQ(C_REST_OK, res);
+  g_crf_malloc_hook = NULL;
+  g_crf_realloc_hook = NULL;
+  PASS();
 }
 #endif
 
@@ -487,7 +487,7 @@ TEST test_hot_reload_sse_routes(void) {
   struct c_rest_connection_context conn_ctx;
   struct c_rest_request req;
   struct c_rest_response res;
-  int rc;
+  c_rest_error_t rc;
   c_rest_socket_t server_sock = C_REST_INVALID_SOCKET;
   c_rest_socket_t client_sock = C_REST_INVALID_SOCKET;
   c_rest_socket_t accepted_sock = C_REST_INVALID_SOCKET;
@@ -655,13 +655,13 @@ TEST test_hot_reload_multiplatform(void) {
   int res;
   int dummy_called = 0;
 
-  res = c_rest_hot_reload_init(&ctx, NULL);
+  res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
 
-  res = c_rest_hot_reload_set_multiplatform_env(NULL, (cm_env_t)1);
+  res = (int)c_rest_hot_reload_set_multiplatform_env(NULL, (cm_env_t)1);
   ASSERT_EQ(C_REST_ERROR_INVALID_ARG, res);
 
-  res = c_rest_hot_reload_set_multiplatform_env(ctx, (cm_env_t)1);
+  res = (int)c_rest_hot_reload_set_multiplatform_env(ctx, (cm_env_t)1);
   ASSERT_EQ(C_REST_OK, res);
 
   {
@@ -674,15 +674,15 @@ TEST test_hot_reload_multiplatform(void) {
     if (f)
       fclose(f);
   }
-  res = c_rest_hot_reload_add_watch(ctx, "test_mp_file.txt");
+  res = (int)c_rest_hot_reload_add_watch(ctx, "test_mp_file.txt");
   ASSERT_EQ(C_REST_OK, res);
 
   g_mock_cm_file_fail = 1;
-  res = c_rest_hot_reload_poll(ctx, dummy_reload_callback, &dummy_called);
+  res = (int)c_rest_hot_reload_poll(ctx, dummy_reload_callback, &dummy_called);
   g_mock_cm_file_fail = 0;
 
   g_mock_cm_thread_fail = 1;
-  res = c_rest_hot_reload_start(ctx, dummy_reload_callback, &dummy_called);
+  res = (int)c_rest_hot_reload_start(ctx, dummy_reload_callback, &dummy_called);
   ASSERT_EQ(C_REST_ERROR_GENERIC, res);
 
   /* Test logger failure during start failure */
@@ -690,17 +690,18 @@ TEST test_hot_reload_multiplatform(void) {
     struct c_rest_logger err_logger;
     err_logger.log_cb = mock_logger_err_cb;
     ctx->logger = &err_logger;
-    res = c_rest_hot_reload_start(ctx, dummy_reload_callback, &dummy_called);
+    res =
+        (int)c_rest_hot_reload_start(ctx, dummy_reload_callback, &dummy_called);
     ASSERT_EQ(C_REST_ERROR_GENERIC, res);
     ctx->logger = NULL;
   }
   g_mock_cm_thread_fail = 0;
 
-  res = c_rest_hot_reload_start(ctx, dummy_reload_callback, &dummy_called);
+  res = (int)c_rest_hot_reload_start(ctx, dummy_reload_callback, &dummy_called);
   ASSERT_EQ(C_REST_OK, res);
 
   g_mock_cm_join_fail = 1;
-  res = c_rest_hot_reload_destroy(ctx);
+  res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
   g_mock_cm_join_fail = 0;
 

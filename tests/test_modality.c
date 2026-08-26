@@ -411,10 +411,15 @@ static c_rest_error_t test_client_thread(void *arg) {
       srv_addr.sin_family = AF_INET;
       srv_addr.sin_port = htons((unsigned short)args->port);
       srv_addr.sin_addr.s_addr = htonl(0x7F000001);
-      if (connect(sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) == 0) {
+      if (connect((int)sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) ==
+          0) {
         const char *req =
             "GET / HTTP/1.1\r\nHost: loc\r\nConnection: close\r\n\r\n";
-        send(sock, req, (int)strlen(req), 0);
+#if defined(_WIN32)
+        send((int)sock, req, (int)strlen(req), 0);
+#else
+        send((int)sock, req, strlen(req), 0);
+#endif
 #if defined(_WIN32)
         Sleep(50);
 #else
@@ -429,18 +434,19 @@ static c_rest_error_t test_client_thread(void *arg) {
 #if defined(_WIN32)
         closesocket(sock);
 #else
-        close(sock);
+        close((int)sock);
 #endif
         {
           int j;
           for (j = 0; j < 8; j++) {
             sock = socket(AF_INET, SOCK_STREAM, 0);
             if (sock != C_REST_INVALID_SOCKET) {
-              connect(sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr));
+              connect((int)sock, (struct sockaddr *)&srv_addr,
+                      sizeof(srv_addr));
 #if defined(_WIN32)
               closesocket(sock);
 #else
-              close(sock);
+              close((int)sock);
 #endif
             }
           }
@@ -450,7 +456,7 @@ static c_rest_error_t test_client_thread(void *arg) {
 #if defined(_WIN32)
       closesocket(sock);
 #else
-      close(sock);
+      close((int)sock);
 #endif
     }
 #if defined(_WIN32)
@@ -500,7 +506,7 @@ int test_modality(void) {
                                             C_REST_MODALITY_SINGLE_PROCESS};
   int num_modalities = 8;
   int i;
-  int rc;
+  c_rest_error_t rc;
   c_rest_socket_t client_sock = C_REST_INVALID_SOCKET;
   c_rest_socket_t accepted_sock = C_REST_INVALID_SOCKET;
 

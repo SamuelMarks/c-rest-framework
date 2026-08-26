@@ -16,7 +16,7 @@ int test_base64(void) {
   unsigned char buf[64];
   char b64[64];
   size_t len;
-  int rc;
+  c_rest_error_t rc;
   int failed = 0;
   const char *msgs[2];
 

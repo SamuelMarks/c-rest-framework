@@ -34,7 +34,7 @@ int main(void) {
   struct c_rest_openapi_spec *spec = NULL;
   struct c_rest_openapi_operation op;
   struct c_rest_context *ctx = NULL;
-  int rc;
+  c_rest_error_t rc;
   const char *tags[] = {"greeting"};
 
   struct c_rest_openapi_response res_hello;

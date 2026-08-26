@@ -87,7 +87,7 @@ c_rest_error_t c_rest_init(enum c_rest_modality_type type,
                 struct c_rest_context **out_ctx) {
   struct c_rest_context *ctx;
   const struct c_rest_modality_vtable *vtable;
-  int res;
+  c_rest_error_t res;
 #ifdef C_REST_TESTING_MALLOC_HOOK
   C_REST_EXPORT extern void *(*g_crf_malloc_hook)(size_t);
 #endif
@@ -161,7 +161,7 @@ c_rest_error_t c_rest_init(enum c_rest_modality_type type,
 
 c_rest_error_t c_rest_run(struct c_rest_context *ctx) {
   c_rest_error_t rc;
-  int res;
+  c_rest_error_t res;
   if (!ctx) {
     return C_REST_ERROR_GENERIC;
   }
@@ -206,7 +206,7 @@ c_rest_error_t c_rest_stop(struct c_rest_context *ctx) {
 }
 
 c_rest_error_t c_rest_destroy(struct c_rest_context *ctx) {
-  int res = 0;
+  c_rest_error_t res = C_REST_OK;
   if (!ctx) {
     return C_REST_ERROR_GENERIC;
   }
@@ -391,7 +391,7 @@ c_rest_error_t c_rest_handle_connection(struct c_rest_context *ctx,
   struct c_rest_tls_connection *tls_conn = NULL;
   char buf[4096];
   size_t read_bytes, parsed_bytes;
-  int res;
+  c_rest_error_t res;
   int keep_alive = 0;
   c_rest_error_t rc;
 

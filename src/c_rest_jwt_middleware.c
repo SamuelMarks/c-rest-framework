@@ -31,7 +31,7 @@ c_rest_error_t c_rest_jwt_middleware(struct c_rest_request *req,
   char *token;
   char *payload;
   void *auth_ctx;
-  int verify_res;
+  c_rest_error_t verify_res;
   c_rest_error_t rc;
 
   token = NULL;

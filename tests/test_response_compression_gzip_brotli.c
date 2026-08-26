@@ -26,7 +26,7 @@
 
 static int test_compression_none(void) {
   c_rest_compression_ctx_t *ctx = NULL;
-  int res;
+  c_rest_error_t res;
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
 
@@ -54,7 +54,7 @@ static int test_compression_gzip_basic(void) {
   size_t in_len = strlen(test_data);
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
-  int res;
+  c_rest_error_t res;
 
   /* Compress */
   res = c_rest_compress_buffer(C_REST_COMPRESSION_GZIP,
@@ -76,7 +76,7 @@ static int test_compression_gzip_basic(void) {
     strm.next_in = (Bytef *)comp_data;
     /* 15 + 16 for gzip */
     ASSERT_EQ(Z_OK, inflateInit2(&strm, 15 + 16));
-    strm.avail_out = decomp_len;
+    strm.avail_out = (uInt)decomp_len;
     strm.next_out = decomp_data;
     ASSERT_EQ(Z_STREAM_END, inflate(&strm, Z_NO_FLUSH));
     ASSERT_EQ(Z_OK, inflateEnd(&strm));
@@ -95,7 +95,7 @@ static int test_compression_gzip_large(void) {
   char *test_data = CRF_MALLOC(in_len);
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
-  int res;
+  c_rest_error_t res;
   size_t i;
 
   for (i = 0; i < in_len; i++)
@@ -121,7 +121,7 @@ static int test_compression_brotli_basic(void) {
   size_t in_len = strlen(test_data);
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
-  int res;
+  c_rest_error_t res;
 
   /* Compress */
   res = c_rest_compress_buffer(C_REST_COMPRESSION_BROTLI,
@@ -151,7 +151,7 @@ static int test_compression_brotli_large(void) {
   char *test_data = CRF_MALLOC(in_len);
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
-  int res;
+  c_rest_error_t res;
   size_t i;
 
   for (i = 0; i < in_len; i++)
@@ -171,7 +171,7 @@ static int test_compression_brotli_large(void) {
 #endif
 
 static int test_compression_errors(void) {
-  int res;
+  c_rest_error_t res;
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
   c_rest_compression_ctx_t *ctx = NULL;
@@ -605,7 +605,7 @@ int test_response_compression_gzip_brotli(void) {
 }
 
 static int test_compression_more_errors(void) {
-  int res;
+  c_rest_error_t res;
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
 
@@ -676,7 +676,7 @@ static int test_compression_more_errors(void) {
 }
 
 static int test_compression_malloc_failures(void) {
-  int res;
+  c_rest_error_t res;
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
   c_rest_compression_ctx_t *ctx = NULL;
@@ -767,7 +767,7 @@ static int test_compression_malloc_failures(void) {
 }
 
 static int test_compression_concat_failures(void) {
-  int res;
+  c_rest_error_t res;
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
 
@@ -784,7 +784,7 @@ static int test_compression_concat_failures(void) {
 }
 
 static int test_compression_realloc_failures(void) {
-  int res;
+  c_rest_error_t res;
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
   c_rest_compression_ctx_t *ctx = NULL;
@@ -845,7 +845,7 @@ static int test_compression_realloc_failures(void) {
 }
 
 static int test_compression_realloc_finish_failures(void) {
-  int res;
+  c_rest_error_t res;
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
   c_rest_compression_ctx_t *ctx = NULL;
@@ -915,7 +915,7 @@ static int test_compression_realloc_finish_failures(void) {
 }
 
 static int test_compression_buffer_malloc_failures(void) {
-  int res;
+  c_rest_error_t res;
   unsigned char *comp_data = NULL;
   size_t comp_len = 0;
   int i;

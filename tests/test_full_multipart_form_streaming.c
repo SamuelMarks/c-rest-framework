@@ -74,13 +74,15 @@ int test_full_multipart_form_streaming(void) {
 
   printf("Running multipart parser tests...\n");
 
-  res = c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  res =
+      (int)c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
   if (res != 0) { /* LCOV_EXCL_BR_LINE */
     printf("Failed to init multipart parser\n");
     return res;
   }
 
-  res = c_rest_multipart_parser_execute(parser, data, strlen(data), &parsed);
+  res =
+      (int)c_rest_multipart_parser_execute(parser, data, strlen(data), &parsed);
   if (res != 0) { /* LCOV_EXCL_BR_LINE */
     printf("Failed to parse multipart data\n");
     (void)!c_rest_multipart_parser_destroy(parser);

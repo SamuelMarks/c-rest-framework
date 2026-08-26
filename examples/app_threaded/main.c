@@ -35,7 +35,7 @@ int main(void) {
 
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
-  int rc;
+  c_rest_error_t rc;
 
   printf("Initializing Threaded Synchronous Application...\n");
 

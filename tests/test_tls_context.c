@@ -20,49 +20,49 @@ int test_tls_context(void) {
   size_t written = 0, rd = 0;
   char buf[10];
 
-  res = c_rest_tls_init();
+  res = (int)c_rest_tls_init();
   failed += (res != C_REST_OK);
 
-  res = c_rest_tls_context_init(&ctx);
+  res = (int)c_rest_tls_context_init(&ctx);
   failed += (res != C_REST_OK);
 
   if (res == C_REST_OK) {
-    res = c_rest_tls_load_cert(ctx, "tests/certs/server.crt");
-    res = c_rest_tls_load_key(ctx, "tests/certs/server.key");
+    res = (int)c_rest_tls_load_cert(ctx, "tests/certs/server.crt");
+    res = (int)c_rest_tls_load_key(ctx, "tests/certs/server.key");
 
-    res = c_rest_tls_load_ca_chain(ctx, "tests/certs/ca.crt");
+    res = (int)c_rest_tls_load_ca_chain(ctx, "tests/certs/ca.crt");
     if (res != C_REST_OK) {
       printf("Failed load_ca_chain\n");
       failed++;
     }
 
-    res = c_rest_tls_set_alpn(ctx, "h2,http/1.1");
+    res = (int)c_rest_tls_set_alpn(ctx, "h2,http/1.1");
     if (res != C_REST_OK) {
       printf("Failed set_alpn\n");
       failed++;
     }
 
-    res = c_rest_tls_accept(ctx, 0, &conn);
+    res = (int)c_rest_tls_accept(ctx, 0, &conn);
 
     if (conn) {
-      res = c_rest_tls_read(conn, buf, 10, &rd);
+      res = (int)c_rest_tls_read(conn, buf, 10, &rd);
       if (res == C_REST_OK) {
         printf("Read should fail in dummy or fail handhshake\n");
       }
 
-      res = c_rest_tls_write(conn, buf, 10, &written);
+      res = (int)c_rest_tls_write(conn, buf, 10, &written);
       if (res == C_REST_OK) {
         printf("Write should fail in dummy or fail handshake\n");
       }
 
-      res = c_rest_tls_close(conn);
+      res = (int)c_rest_tls_close(conn);
       if (res != C_REST_OK) {
         printf("Close conn failed\n");
         failed++;
       }
     }
 
-    res = c_rest_tls_context_destroy(ctx);
+    res = (int)c_rest_tls_context_destroy(ctx);
     if (res != C_REST_OK) {
       printf("Destroy ctx failed\n");
       failed++;
@@ -92,31 +92,31 @@ static int test_tls_context_errors(void) {
   size_t written = 0, rd = 0;
   char buf[10];
 
-  res = c_rest_tls_context_destroy(NULL);
+  res = (int)c_rest_tls_context_destroy(NULL);
   if (res == C_REST_OK) {
     printf("Err: destroy(NULL)\n");
     failed++;
   }
 
-  res = c_rest_tls_accept(NULL, 0, &conn);
+  res = (int)c_rest_tls_accept(NULL, 0, &conn);
   if (res == C_REST_OK) {
     printf("Err: accept(NULL)\n");
     failed++;
   }
 
-  res = c_rest_tls_read(NULL, buf, 10, &rd);
+  res = (int)c_rest_tls_read(NULL, buf, 10, &rd);
   if (res == C_REST_OK) {
     printf("Err: read(NULL)\n");
     failed++;
   }
 
-  res = c_rest_tls_write(NULL, buf, 10, &written);
+  res = (int)c_rest_tls_write(NULL, buf, 10, &written);
   if (res == C_REST_OK) {
     printf("Err: write(NULL)\n");
     failed++;
   }
 
-  res = c_rest_tls_close(NULL);
+  res = (int)c_rest_tls_close(NULL);
   if (res != C_REST_OK) {
     printf("Err: close(NULL)\n");
     failed++;
@@ -156,7 +156,7 @@ static int test_tls_context_malloc_failures(void) {
 
   for (i = 0; i < 5; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_tls_context_init(&ctx);
+    res = (int)c_rest_tls_context_init(&ctx);
     if (res == C_REST_OK) {
       c_rest_tls_context_destroy(ctx);
     }
@@ -168,7 +168,7 @@ static int test_tls_context_malloc_failures(void) {
     g_crf_malloc_hook = fail_malloc_n;
     for (i = 0; i < 5; i++) {
       g_malloc_fail_after = i;
-      res = c_rest_tls_accept(ctx, 0, &conn);
+      res = (int)c_rest_tls_accept(ctx, 0, &conn);
       if (res == C_REST_OK) {
         c_rest_tls_close(conn);
       }

@@ -12,7 +12,7 @@ static int test_graphql_basic_parse(void) {
   struct c_rest_graphql_node *doc = NULL;
   int res;
 
-  res = c_rest_graphql_parse(query, strlen(query), &doc);
+  res = (int)c_rest_graphql_parse(query, strlen(query), &doc);
   if (res != 0)
     return 1;
   if (!doc)
@@ -62,7 +62,7 @@ static int test_graphql_parse_alias(void) {
   struct c_rest_graphql_node *doc = NULL;
   int res;
 
-  res = c_rest_graphql_parse(query, strlen(query), &doc);
+  res = (int)c_rest_graphql_parse(query, strlen(query), &doc);
   if (res != 0)
     return 1;
   if (!doc)
@@ -100,11 +100,11 @@ static c_rest_error_t dummy_resolver(const char *field_name, char **out_json,
   }
 
   if (C_REST_MALLOC(len + 1, out_json) != 0)
-    return -1;
+    return C_REST_ERROR_GENERIC;
 
   memcpy(*out_json, res, len + 1);
   *out_len = len;
-  return 0;
+  return C_REST_OK;
 }
 
 static int test_graphql_resolve_dummy(void) {
@@ -116,25 +116,25 @@ static int test_graphql_resolve_dummy(void) {
   int res;
   int called = 0;
 
-  res = c_rest_graphql_schema_init(&schema);
+  res = (int)c_rest_graphql_schema_init(&schema);
   if (res != 0)
     return 1;
 
-  res = c_rest_graphql_schema_add_resolver(schema, "user", dummy_resolver,
+  res = (int)c_rest_graphql_schema_add_resolver(schema, "user", dummy_resolver,
                                            &called);
   if (res != 0)
     return 1;
 
-  res = c_rest_graphql_schema_add_resolver(schema, "null_json", dummy_resolver,
+  res = (int)c_rest_graphql_schema_add_resolver(schema, "null_json", dummy_resolver,
                                            NULL);
   if (res != 0)
     return 1;
 
-  res = c_rest_graphql_parse(query, strlen(query), &doc);
+  res = (int)c_rest_graphql_parse(query, strlen(query), &doc);
   if (res != 0)
     return 1;
 
-  res = c_rest_graphql_resolve(doc, schema, &json, &len);
+  res = (int)c_rest_graphql_resolve(doc, schema, &json, &len);
   if (res != 0)
     return 1;
   if (!json)
@@ -152,8 +152,8 @@ static int test_graphql_resolve_dummy(void) {
   /* Test null json return */
   doc = NULL;
   json = NULL;
-  res = c_rest_graphql_parse("{ null_json }", 13, &doc);
-  res = c_rest_graphql_resolve(doc, schema, &json, &len);
+  res = (int)c_rest_graphql_parse("{ null_json }", 13, &doc);
+  res = (int)c_rest_graphql_resolve(doc, schema, &json, &len);
   if (json) {
     C_REST_FREE(json);
   }
@@ -208,7 +208,7 @@ static int test_graphql_malformed(void) {
   struct c_rest_graphql_node *doc = NULL;
   int res;
 
-  res = c_rest_graphql_parse(query, strlen(query), &doc);
+  res = (int)c_rest_graphql_parse(query, strlen(query), &doc);
   if (res == 0) {
     (void)!c_rest_graphql_node_free(doc);
     return 1;
@@ -217,7 +217,7 @@ static int test_graphql_malformed(void) {
 
   query = "query { }";
   doc = NULL;
-  res = c_rest_graphql_parse(query, strlen(query), &doc);
+  res = (int)c_rest_graphql_parse(query, strlen(query), &doc);
   if (res == 0) {
     (void)!c_rest_graphql_node_free(doc);
     return 1; /* Supposed to fail or result in empty doc, currently
@@ -239,7 +239,7 @@ static int test_graphql_router(void) {
   struct c_rest_graphql_schema *schema = NULL;
   struct c_rest_request req;
   struct c_rest_response res;
-  int ret;
+  c_rest_error_t ret;
   int called = 0;
   const char *query = "query { user { id } }";
 
@@ -544,17 +544,17 @@ static int test_graphql_errors(void) {
     doc = NULL;
   }
 
-  res = c_rest_graphql_parse(NULL, 10, &doc);
+  res = (int)c_rest_graphql_parse(NULL, 10, &doc);
   if (res == C_REST_OK)
     return 1;
-  res = c_rest_graphql_parse("query {}", 8, NULL);
+  res = (int)c_rest_graphql_parse("query {}", 8, NULL);
   if (res == C_REST_OK)
     return 1;
 
   g_crf_malloc_hook = fail_malloc_n;
   for (i = 0; i < 20; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_graphql_parse("query getUser { user }", 22, &doc);
+    res = (int)c_rest_graphql_parse("query getUser { user }", 22, &doc);
     if (res == C_REST_OK) {
       c_rest_graphql_node_free(doc);
       doc = NULL;
@@ -564,7 +564,7 @@ static int test_graphql_errors(void) {
 
   for (i = 0; i < 5; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_graphql_schema_init(&schema);
+    res = (int)c_rest_graphql_schema_init(&schema);
     if (res == C_REST_OK) {
       c_rest_graphql_schema_free(schema);
       schema = NULL;
@@ -576,24 +576,27 @@ static int test_graphql_errors(void) {
   g_malloc_fail_after = -1;
 
   /* schema add resolver errors */
-  res = c_rest_graphql_schema_init(&schema);
+  res = (int)c_rest_graphql_schema_init(&schema);
   if (res != C_REST_OK)
     return 1;
 
-  res = c_rest_graphql_schema_add_resolver(NULL, "f", dummy_resolver, NULL);
+  res =
+      (int)c_rest_graphql_schema_add_resolver(NULL, "f", dummy_resolver, NULL);
   if (res == C_REST_OK)
     return 1;
-  res = c_rest_graphql_schema_add_resolver(schema, NULL, dummy_resolver, NULL);
+  res = (int)c_rest_graphql_schema_add_resolver(schema, NULL, dummy_resolver,
+                                                NULL);
   if (res == C_REST_OK)
     return 1;
-  res = c_rest_graphql_schema_add_resolver(schema, "f", NULL, NULL);
+  res = (int)c_rest_graphql_schema_add_resolver(schema, "f", NULL, NULL);
   if (res == C_REST_OK)
     return 1;
 
   g_crf_malloc_hook = fail_malloc_n;
   for (i = 0; i < 5; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_graphql_schema_add_resolver(schema, "f", dummy_resolver, NULL);
+    res = (int)c_rest_graphql_schema_add_resolver(schema, "f", dummy_resolver,
+                                                  NULL);
     if (res == C_REST_OK) {
       break;
     }
@@ -602,31 +605,32 @@ static int test_graphql_errors(void) {
   g_malloc_fail_after = -1;
 
   doc = NULL;
-  res = c_rest_graphql_resolve(doc, schema, &json, &len); /* doc is NULL here */
+  res = (int)c_rest_graphql_resolve(doc, schema, &json,
+                                    &len); /* doc is NULL here */
   if (res == C_REST_OK)
     return 1;
 
   g_crf_malloc_hook = NULL;
 
-  res = c_rest_graphql_parse("{ user { id } }", 15, &doc);
+  res = (int)c_rest_graphql_parse("{ user { id } }", 15, &doc);
   if (res != C_REST_OK)
     return 1;
 
   /* resolve errors */
-  res = c_rest_graphql_resolve(NULL, schema, &json, &len);
+  res = (int)c_rest_graphql_resolve(NULL, schema, &json, &len);
   if (res == C_REST_OK)
     return 1;
-  res = c_rest_graphql_resolve(doc, schema, NULL, &len);
+  res = (int)c_rest_graphql_resolve(doc, schema, NULL, &len);
   if (res == C_REST_OK)
     return 1;
-  res = c_rest_graphql_resolve(doc, schema, &json, NULL);
+  res = (int)c_rest_graphql_resolve(doc, schema, &json, NULL);
   if (res == C_REST_OK)
     return 1;
 
   g_crf_malloc_hook = fail_malloc_n;
   for (i = 0; i < 20; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_graphql_resolve(doc, schema, &json, &len);
+    res = (int)c_rest_graphql_resolve(doc, schema, &json, &len);
     if (res == C_REST_OK) {
       C_REST_FREE(json);
       break;

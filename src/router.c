@@ -260,7 +260,7 @@ c_rest_error_t c_rest_router_add(c_rest_router *router, const char *method,
     struct c_rest_route_node *child;
 
     if (next_slash) {
-      len = next_slash - p;
+      len = (size_t)(next_slash - p);
     } else {
       len = strlen(p);
     }
@@ -407,7 +407,7 @@ c_rest_error_t c_rest_router_add_sse(c_rest_router *router, const char *path,
 c_rest_error_t c_rest_router_add_sse_openapi(
     c_rest_router *router, const char *path, c_rest_handler_fn handler,
     void *user_data, const struct c_rest_openapi_operation *op_meta) {
-  int res = c_rest_router_add_sse(router, path, handler, user_data);
+  c_rest_error_t res = c_rest_router_add_sse(router, path, handler, user_data);
   if (res == 0 && op_meta) {
     IGNORE_RC(c_rest_openapi_spec_add_path(router->openapi_spec, path, "GET", op_meta));
   }
@@ -426,7 +426,7 @@ static c_rest_error_t c_rest_graphql_handler(struct c_rest_request *req,
   struct c_rest_graphql_node *doc = NULL;
   char *json = NULL;
   size_t len = 0;
-  int ret;
+  c_rest_error_t ret;
 
   if (!req->body) {
     IGNORE_RC(c_rest_response_set_status(res, 400));
@@ -463,7 +463,7 @@ c_rest_error_t c_rest_router_add_graphql_openapi(
     c_rest_router *router, const char *path,
     struct c_rest_graphql_schema *schema,
     const struct c_rest_openapi_operation *op_meta) {
-  int res = c_rest_router_add_graphql(router, path, schema);
+  c_rest_error_t res = c_rest_router_add_graphql(router, path, schema);
   if (res == 0 && op_meta) {
     IGNORE_RC(c_rest_openapi_spec_add_path(router->openapi_spec, path, "POST", op_meta));
   }
@@ -537,8 +537,8 @@ c_rest_error_t c_rest_router_add_template_openapi(
     const struct c_rest_template_context *ctx,
     c_rest_template_data_fn data_provider, void *user_data,
     const struct c_rest_openapi_operation *op_meta) {
-  int res = c_rest_router_add_template(router, method, path, ctx, data_provider,
-                                       user_data);
+  c_rest_error_t res = c_rest_router_add_template(router, method, path, ctx,
+                                                  data_provider, user_data);
   if (res == 0 && op_meta) {
     IGNORE_RC(c_rest_openapi_spec_add_path(router->openapi_spec, path, method,
                                            op_meta));
@@ -668,7 +668,7 @@ static c_rest_error_t match_route(struct c_rest_route_node *node,
 
   next_slash = strchr(path, '/');
   if (next_slash) {
-    len = next_slash - path;
+    len = (size_t)(next_slash - path);
   } else {
     len = strlen(path);
   }

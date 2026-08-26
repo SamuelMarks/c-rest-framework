@@ -233,7 +233,7 @@ static void test_coverage(void) {
 int test_middleware_suite(void) {
   struct c_rest_request req;
   struct c_rest_response res;
-  int rc;
+  c_rest_error_t rc;
 
   printf("Testing cors middleware...\n");
   memset(&req, 0, sizeof(req));

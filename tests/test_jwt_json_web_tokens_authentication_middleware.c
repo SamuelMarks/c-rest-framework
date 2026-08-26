@@ -63,7 +63,7 @@ static int test_jwt_middleware_success(void) {
   char *jwt_token;
   char header_val[512];
   const unsigned char secret[] = "supersecret";
-  int ret;
+  c_rest_error_t ret;
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
@@ -110,7 +110,7 @@ static int test_jwt_middleware_missing_token(void) {
   struct c_rest_request req;
   struct c_rest_response res;
   const unsigned char secret[] = "supersecret";
-  int ret;
+  c_rest_error_t ret;
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
@@ -137,7 +137,7 @@ static int test_jwt_middleware_invalid_signature(void) {
   char header_val[512];
   const unsigned char secret[] = "supersecret";
   const unsigned char wrong_secret[] = "wrongsecret";
-  int ret;
+  c_rest_error_t ret;
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
@@ -186,7 +186,7 @@ static int test_jwt_middleware_invalid_payload(void) {
   char *jwt_token;
   char header_val[512];
   const unsigned char secret[] = "supersecret";
-  int ret;
+  c_rest_error_t ret;
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));

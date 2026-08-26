@@ -17,7 +17,7 @@ static int test_websocket_generate_accept(void) {
   size_t accept_len = sizeof(accept_buf);
   int res;
 
-  res = c_rest_websocket_generate_accept(key, strlen(key), accept_buf,
+  res = (int)c_rest_websocket_generate_accept(key, strlen(key), accept_buf,
                                          &accept_len);
   if (res != 0) {
     printf("test_websocket_generate_accept failed to generate accept\n\n"); return __LINE__;
@@ -36,14 +36,14 @@ static int test_websocket_parse_frame_header(void) {
                             0x33, 0x44}; /* FIN, BINARY, Masked, 5 bytes */
   int res;
 
-  res = c_rest_websocket_parse_frame_header(frame1, sizeof(frame1), &header);
+  res = (int)c_rest_websocket_parse_frame_header(frame1, sizeof(frame1), &header);
   if (res != 0 || header.fin != 1 || header.opcode != C_REST_WS_OPCODE_TEXT ||
       header.masked != 0 || header.payload_length != 5 ||
       header.header_length != 2) {
     printf("test_websocket_parse_frame_header failed on frame1\n\n"); return __LINE__;
   }
 
-  res = c_rest_websocket_parse_frame_header(frame2, sizeof(frame2), &header);
+  res = (int)c_rest_websocket_parse_frame_header(frame2, sizeof(frame2), &header);
   if (res != 0 || header.fin != 1 || header.opcode != C_REST_WS_OPCODE_BINARY ||
       header.masked != 1 || header.payload_length != 5 ||
       header.header_length != 6) {
@@ -61,7 +61,7 @@ static int test_websocket_unmask_payload(void) {
   unsigned char key[] = {0x37, 0xFA, 0x21, 0x3D};
   int res;
 
-  res = c_rest_websocket_unmask_payload(payload, sizeof(payload), key);
+  res = (int)c_rest_websocket_unmask_payload(payload, sizeof(payload), key);
   if (res != 0)
     return 1;
   if (payload[0] != 0x4E || payload[1] != 0xA5) {
@@ -82,7 +82,7 @@ static int test_websocket_serialize_frame_header(void) {
   header.payload_length = 5;
   header.masked = 0;
 
-  res = c_rest_websocket_serialize_frame_header(&header, out_buf,
+  res = (int)c_rest_websocket_serialize_frame_header(&header, out_buf,
                                                 sizeof(out_buf), &written);
   if (res != 0 || written != 2 || out_buf[0] != 0x81 || out_buf[1] != 0x05) {
     printf("test_websocket_serialize_frame_header failed\n\n"); return __LINE__;
@@ -177,7 +177,7 @@ static int test_websocket_upgrade(void) {
   struct c_rest_response res;
   struct c_rest_header upgrade_hdr;
   struct c_rest_header key_hdr;
-  int ret;
+  c_rest_error_t ret;
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
@@ -246,7 +246,7 @@ static int test_websocket_router_registration(void) {
   struct c_rest_response res;
   struct c_rest_header upgrade_hdr;
   struct c_rest_header key_hdr;
-  int ret;
+  c_rest_error_t ret;
 
   ret = c_rest_router_init(&router);
   if (ret != 0)

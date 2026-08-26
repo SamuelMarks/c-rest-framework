@@ -163,32 +163,32 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
   }
 
 #if defined(_MSC_VER)
-  offset += sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
+  offset += (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
                       "HTTP/1.1 %d %s\r\n", res->status_code, status_text);
 #else
-  offset += sprintf(header_buf + offset, "HTTP/1.1 %d %s\r\n", res->status_code,
+  offset += (size_t)sprintf(header_buf + offset, "HTTP/1.1 %d %s\r\n", res->status_code,
                     status_text);
 #endif
 
   for (h = res->headers; h != NULL; h = h->next) {
 #if defined(_MSC_VER)
-    offset += sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
+    offset += (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
                         "%s: %s\r\n", h->key, h->value);
 #else
 
 #ifdef _MSC_VER
-/* CDD_SAFE_CRT */ offset += sprintf_s(header_buf + offset, sizeof(header_buf) - offset, "%s: %s\r\n", h->key, h->value);
+/* CDD_SAFE_CRT */ offset += (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset, "%s: %s\r\n", h->key, h->value);
 #else
-/* CDD_SAFE_CRT */ offset += sprintf(header_buf + offset, "%s: %s\r\n", h->key, h->value);
+/* CDD_SAFE_CRT */ offset += (size_t)sprintf(header_buf + offset, "%s: %s\r\n", h->key, h->value);
 #endif
 
 #endif
   }
 
 #if defined(_MSC_VER)
-  offset += sprintf_s(header_buf + offset, sizeof(header_buf) - offset, "\r\n");
+  offset += (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset, "\r\n");
 #else
-  offset += sprintf(header_buf + offset, "\r\n");
+  offset += (size_t)sprintf(header_buf + offset, "\r\n");
 #endif
 
   ctx = (struct c_rest_connection_context *)res->context;
@@ -395,7 +395,7 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
     hex_len =
         sprintf_s(hex_buf, sizeof(hex_buf), "%X\r\n", (unsigned int)chunk_len);
 #else
-    hex_len = sprintf(hex_buf, "%X\r\n", (unsigned int)chunk_len);
+    hex_len = (size_t)sprintf(hex_buf, "%X\r\n", (unsigned int)chunk_len);
 #endif
 
     if (ctx->tls_conn) {
@@ -686,34 +686,36 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
       get_status_text(res->status_code ? res->status_code : 200, &status_text));
 
 #if defined(_MSC_VER)
-  offset += sprintf_s(buf + offset, est_len - offset, "HTTP/1.1 %d %s\r\n",
-                      res->status_code ? res->status_code : 200, status_text);
+  offset +=
+      (size_t)sprintf_s(buf + offset, est_len - offset, "HTTP/1.1 %d %s\r\n",
+                        res->status_code ? res->status_code : 200, status_text);
 #else
-  offset += sprintf(buf + offset, "HTTP/1.1 %d %s\r\n",
-                    res->status_code ? res->status_code : 200, status_text);
+  offset +=
+      (size_t)sprintf(buf + offset, "HTTP/1.1 %d %s\r\n",
+                      res->status_code ? res->status_code : 200, status_text);
 #endif
 
   for (h = res->headers; h != NULL; h = h->next) {
 #if defined(_MSC_VER)
-    offset += sprintf_s(buf + offset, est_len - offset, "%s: %s\r\n", h->key,
-                        h->value);
+    offset += (size_t)sprintf_s(buf + offset, est_len - offset, "%s: %s\r\n",
+                                h->key, h->value);
 #else
 
 #ifdef _MSC_VER
-    /* CDD_SAFE_CRT */ offset += sprintf_s(buf + offset, est_len - offset,
-                                           "%s: %s\r\n", h->key, h->value);
+    /* CDD_SAFE_CRT */ offset += (size_t)sprintf_s(
+        buf + offset, est_len - offset, "%s: %s\r\n", h->key, h->value);
 #else
     /* CDD_SAFE_CRT */ offset +=
-        sprintf(buf + offset, "%s: %s\r\n", h->key, h->value);
+        (size_t)sprintf(buf + offset, "%s: %s\r\n", h->key, h->value);
 #endif
 
 #endif
   }
 
 #if defined(_MSC_VER)
-  offset += sprintf_s(buf + offset, est_len - offset, "\r\n");
+  offset += (size_t)sprintf_s(buf + offset, est_len - offset, "\r\n");
 #else
-  offset += sprintf(buf + offset, "\r\n");
+  offset += (size_t)sprintf(buf + offset, "\r\n");
 #endif
 
   if (res->body && res->body_len > 0) {

@@ -191,8 +191,8 @@ c_rest_error_t c_rest_tls_load_cert(struct c_rest_tls_context *ctx,
 #elif defined(C_REST_USE_MBEDTLS)
   if (mbedtls_x509_crt_parse_file(&ctx->cert, cert_path) != 0)
     return C_REST_ERROR_GENERIC;
-  /* Call conf_own_cert in load_key instead, because we need both cert and
-   * pkey to be parsed */
+    /* Call conf_own_cert in load_key instead, because we need both cert and
+     * pkey to be parsed */
 #elif defined(C_REST_USE_WOLFSSL)
   if (wolfSSL_CTX_use_certificate_chain_file(ctx->ctx, cert_path) !=
       WOLFSSL_SUCCESS)

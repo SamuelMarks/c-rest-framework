@@ -42,36 +42,37 @@ int test_crypto(void) {
       0xae, 0xb9, 0xf4, 0xd7, 0x89, 0x13, 0x24, 0xe6, 0xd9, 0x48, 0xe4,
       0xc6, 0xc6, 0x0c, 0x06, 0x21, 0xcd, 0xac, 0x48, 0x62, 0x3a};
 
-  res = c_rest_sha1(data, 11, sha1_hash);
+  res = (int)c_rest_sha1(data, 11, sha1_hash);
   failed += (res != 0);
   failed += (memcmp(sha1_hash, expected_sha1, 20) != 0);
 
-  res = c_rest_sha256(data, 11, sha256_hash);
+  res = (int)c_rest_sha256(data, 11, sha256_hash);
   failed += (res != 0);
   failed += (memcmp(sha256_hash, expected_sha256, 32) != 0);
 
-  res = c_rest_rand_bytes(rand_buf, sizeof(rand_buf));
+  res = (int)c_rest_rand_bytes(rand_buf, sizeof(rand_buf));
   failed += (res != 0);
 
-  res = c_rest_hmac_sha256(hmac_key, 6, data, 11, hmac_hash);
+  res = (int)c_rest_hmac_sha256(hmac_key, 6, data, 11, hmac_hash);
   failed += (res != 0);
   failed += (memcmp(hmac_hash, expected_hmac, 32) != 0);
 
   {
     unsigned char large_data[100];
     memset(large_data, 'A', 100);
-    res = c_rest_sha1(large_data, 100, sha1_hash);
+    res = (int)c_rest_sha1(large_data, 100, sha1_hash);
     failed += (res != 0);
-    res = c_rest_sha256(large_data, 100, sha256_hash);
+    res = (int)c_rest_sha256(large_data, 100, sha256_hash);
     failed += (res != 0);
   }
 
-  res = c_rest_jwt_sign_hs256("{\"sub\":\"123\"}", hmac_key, 6, &jwt_token);
+  res =
+      (int)c_rest_jwt_sign_hs256("{\"sub\":\"123\"}", hmac_key, 6, &jwt_token);
   failed += (res != 0);
   failed += (jwt_token == NULL);
 
   if (jwt_token) {
-    res = c_rest_jwt_verify_hs256(jwt_token, hmac_key, 6, &jwt_payload);
+    res = (int)c_rest_jwt_verify_hs256(jwt_token, hmac_key, 6, &jwt_payload);
     failed += (res != 0);
     failed += (jwt_payload == NULL);
 
@@ -86,12 +87,12 @@ int test_crypto(void) {
     const unsigned char pwd[] = "password";
     const unsigned char salt[] = "salt";
     unsigned char dk[32];
-    res = c_rest_pbkdf2_hmac_sha256(pwd, 8, salt, 4, 1, 32, dk);
+    res = (int)c_rest_pbkdf2_hmac_sha256(pwd, 8, salt, 4, 1, 32, dk);
     failed += (res != 0);
 
     {
       char *rand_str = NULL;
-      res = c_rest_random_string_generate(32, &rand_str);
+      res = (int)c_rest_random_string_generate(32, &rand_str);
       failed += (res != 0);
       failed += (rand_str == NULL);
       if (rand_str) {
@@ -193,60 +194,65 @@ static int test_crypto_errors(void) {
   int res;
 
   /* hash_password errors */
-  res = c_rest_hash_password(NULL, C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
+  res = (int)c_rest_hash_password(NULL, C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
   failed += (res == C_REST_OK);
-  res = c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256, NULL);
+  res = (int)c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256, NULL);
   failed += (res == C_REST_OK);
-  res = c_rest_hash_password("pwd", (enum c_rest_password_hash_alg)999, &hash);
+  res = (int)c_rest_hash_password("pwd", (enum c_rest_password_hash_alg)999,
+                                  &hash);
   failed += (res == C_REST_OK);
 
   /* verify_password errors */
-  res = c_rest_verify_password(NULL, "$pbkdf2-sha256$i=1000$salt$hash");
+  res = (int)c_rest_verify_password(NULL, "$pbkdf2-sha256$i=1000$salt$hash");
   failed += (res == C_REST_OK);
-  res = c_rest_verify_password("pwd", NULL);
+  res = (int)c_rest_verify_password("pwd", NULL);
   failed += (res == C_REST_OK);
-  res = c_rest_verify_password("pwd", "invalid");
+  res = (int)c_rest_verify_password("pwd", "invalid");
   failed += (res == C_REST_OK);
-  res = c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$saltonly");
+  res = (int)c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$saltonly");
   failed += (res == C_REST_OK);
-  res = c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$sal~$hash");
+  res = (int)c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$sal~$hash");
   failed += (res == C_REST_OK);
-  res = c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$has~");
+  res =
+      (int)c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$has~");
   failed += (res == C_REST_OK);
 
   /* random_string_generate errors */
-  res = c_rest_random_string_generate(10, NULL);
+  res = (int)c_rest_random_string_generate(10, NULL);
   failed += (res == C_REST_OK);
-  res = c_rest_random_string_generate(0, &hash);
+  res = (int)c_rest_random_string_generate(0, &hash);
   failed += (res == C_REST_OK);
 
   /* tls_get_provider errors */
-  res = c_rest_tls_get_provider(NULL);
+  res = (int)c_rest_tls_get_provider(NULL);
   failed += (res == C_REST_OK);
 
   /* jwt_sign_hs256 errors */
-  res = c_rest_jwt_sign_hs256(NULL, (const unsigned char *)"key", 3, &hash);
+  res =
+      (int)c_rest_jwt_sign_hs256(NULL, (const unsigned char *)"key", 3, &hash);
   failed += (res == C_REST_OK);
-  res = c_rest_jwt_sign_hs256("{}", NULL, 3, &hash);
+  res = (int)c_rest_jwt_sign_hs256("{}", NULL, 3, &hash);
   failed += (res == C_REST_OK);
-  res = c_rest_jwt_sign_hs256("{}", (const unsigned char *)"key", 3, NULL);
+  res = (int)c_rest_jwt_sign_hs256("{}", (const unsigned char *)"key", 3, NULL);
   failed += (res == C_REST_OK);
 
   /* jwt_verify_hs256 errors */
-  res = c_rest_jwt_verify_hs256(NULL, (const unsigned char *)"key", 3, &hash);
+  res = (int)c_rest_jwt_verify_hs256(NULL, (const unsigned char *)"key", 3,
+                                     &hash);
   failed += (res == C_REST_OK);
-  res = c_rest_jwt_verify_hs256("token", NULL, 3, &hash);
+  res = (int)c_rest_jwt_verify_hs256("token", NULL, 3, &hash);
   failed += (res == C_REST_OK);
-  res = c_rest_jwt_verify_hs256("token", (const unsigned char *)"key", 3, NULL);
+  res = (int)c_rest_jwt_verify_hs256("token", (const unsigned char *)"key", 3,
+                                     NULL);
   failed += (res == C_REST_OK);
-  res = c_rest_jwt_verify_hs256("invalid.token", (const unsigned char *)"key",
-                                3, &hash);
+  res = (int)c_rest_jwt_verify_hs256("invalid.token",
+                                     (const unsigned char *)"key", 3, &hash);
   failed += (res == C_REST_OK);
-  res = c_rest_jwt_verify_hs256("invalid", (const unsigned char *)"key", 3,
-                                &hash);
+  res = (int)c_rest_jwt_verify_hs256("invalid", (const unsigned char *)"key", 3,
+                                     &hash);
   failed += (res == C_REST_OK);
-  res = c_rest_jwt_verify_hs256("invalid.token.here",
-                                (const unsigned char *)"key", 3, &hash);
+  res = (int)c_rest_jwt_verify_hs256("invalid.token.here",
+                                     (const unsigned char *)"key", 3, &hash);
   failed += (res == C_REST_OK);
 
   {
@@ -269,42 +275,42 @@ static int test_crypto_errors(void) {
     sprintf(token_buf, "%s.%s", to_sign, encoded_sig);
 #endif
 
-    res = c_rest_jwt_verify_hs256(token_buf, key, 3, &out_payload);
+    res = (int)c_rest_jwt_verify_hs256(token_buf, key, 3, &out_payload);
     failed += (res == C_REST_OK);
   }
 
   /* pbkdf2_hmac_sha256 errors */
-  res = c_rest_pbkdf2_hmac_sha256(NULL, 0, (const unsigned char *)"salt", 4, 1,
-                                  32, dummy_hash); /* Dummy hash */
+  res = (int)c_rest_pbkdf2_hmac_sha256(NULL, 0, (const unsigned char *)"salt",
+                                       4, 1, 32, dummy_hash); /* Dummy hash */
   failed += (res == C_REST_OK);
-  res = c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3, NULL, 0, 1,
-                                  32, dummy_hash);
+  res = (int)c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3, NULL, 0,
+                                       1, 32, dummy_hash);
   failed += (res == C_REST_OK);
-  res =
-      c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3,
-                                (const unsigned char *)"salt", 4, 1, 32, NULL);
+  res = (int)c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3,
+                                       (const unsigned char *)"salt", 4, 1, 32,
+                                       NULL);
   failed += (res == C_REST_OK);
-  res = c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3,
-                                  (const unsigned char *)"salt", 4, 0, 32,
-                                  dummy_hash);
+  res = (int)c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3,
+                                       (const unsigned char *)"salt", 4, 0, 32,
+                                       dummy_hash);
   failed += (res == C_REST_OK);
 
   /* hmac_sha256 errors and large key */
   {
     unsigned char large_key[100];
     memset(large_key, 'A', 100);
-    res = c_rest_hmac_sha256(large_key, 100, (const unsigned char *)"data", 4,
-                             dummy_hash);
+    res = (int)c_rest_hmac_sha256(large_key, 100, (const unsigned char *)"data",
+                                  4, dummy_hash);
     failed += (res != C_REST_OK);
   }
-  res =
-      c_rest_hmac_sha256(NULL, 3, (const unsigned char *)"data", 4, dummy_hash);
+  res = (int)c_rest_hmac_sha256(NULL, 3, (const unsigned char *)"data", 4,
+                                dummy_hash);
   failed += (res == C_REST_OK);
-  res =
-      c_rest_hmac_sha256((const unsigned char *)"key", 3, NULL, 4, dummy_hash);
+  res = (int)c_rest_hmac_sha256((const unsigned char *)"key", 3, NULL, 4,
+                                dummy_hash);
   failed += (res == C_REST_OK);
-  res = c_rest_hmac_sha256((const unsigned char *)"key", 3,
-                           (const unsigned char *)"data", 4, NULL);
+  res = (int)c_rest_hmac_sha256((const unsigned char *)"key", 3,
+                                (const unsigned char *)"data", 4, NULL);
   failed += (res == C_REST_OK);
 
   return failed;
@@ -342,7 +348,7 @@ static int test_crypto_malloc_failures(void) {
   enum c_rest_crypto_provider provider;
 
   /* Check tls_get_provider valid pointer */
-  res = c_rest_tls_get_provider(&provider);
+  res = (int)c_rest_tls_get_provider(&provider);
   failed += (res != C_REST_OK);
 
   g_crf_malloc_hook = fail_malloc_n;
@@ -353,7 +359,8 @@ static int test_crypto_malloc_failures(void) {
     for (j = 0; j < 3; j++) {
       g_malloc_fail_size = sizes[j];
       g_malloc_fail_after = 0;
-      res = c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
+      res = (int)c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256,
+                                      &hash);
       if (res == C_REST_OK)
         CRF_FREE(hash);
     }
@@ -362,14 +369,14 @@ static int test_crypto_malloc_failures(void) {
 
   for (i = 0; i < 20; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_verify_password(
+    res = (int)c_rest_verify_password(
         "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
   }
 
   for (i = 0; i < 5; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_random_string_generate(10, &hash);
+    res = (int)c_rest_random_string_generate(10, &hash);
     if (res == C_REST_OK)
       CRF_FREE(hash);
   }
@@ -377,14 +384,16 @@ static int test_crypto_malloc_failures(void) {
   /* Malloc failure when encoding hash/salt */
   for (i = 0; i < 20; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
+    res =
+        (int)c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
     if (res == C_REST_OK)
       CRF_FREE(hash);
   }
 
   for (i = 0; i < 15; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_jwt_sign_hs256("{}", (const unsigned char *)"key", 3, &hash);
+    res = (int)c_rest_jwt_sign_hs256("{}", (const unsigned char *)"key", 3,
+                                     &hash);
     if (res == C_REST_OK)
       CRF_FREE(hash);
   }
@@ -396,8 +405,8 @@ static int test_crypto_malloc_failures(void) {
       for (i = 0; i < 10; i++) {
         g_malloc_fail_size = -1;
         g_malloc_fail_after = i;
-        res = c_rest_jwt_verify_hs256(valid_token, (const unsigned char *)"key",
-                                      3, &hash);
+        res = (int)c_rest_jwt_verify_hs256(
+            valid_token, (const unsigned char *)"key", 3, &hash);
         if (res == C_REST_OK)
           CRF_FREE(hash);
       }
@@ -407,42 +416,44 @@ static int test_crypto_malloc_failures(void) {
 
   for (i = 0; i < 5; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3,
-                                    (const unsigned char *)"salt", 4, 1, 32,
-                                    dummy_hash);
+    res = (int)c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3,
+                                         (const unsigned char *)"salt", 4, 1,
+                                         32, dummy_hash);
   }
 
   for (i = 0; i < 5; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_hmac_sha256((const unsigned char *)"key", 3,
-                             (const unsigned char *)"data", 4, dummy_hash);
+    res = (int)c_rest_hmac_sha256((const unsigned char *)"key", 3,
+                                  (const unsigned char *)"data", 4, dummy_hash);
   }
   for (i = 0; i < 20; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_verify_password(
+    res = (int)c_rest_verify_password(
         "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
   }
 
   /* Cover bad base64 in verify_password */
-  res = c_rest_verify_password("pwd",
-                               "$pbkdf2-sha256$i=1000$+++=$"
-                               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
-  res = c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$+++=");
+  res = (int)c_rest_verify_password(
+      "pwd", "$pbkdf2-sha256$i=1000$+++=$"
+             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
   res =
-      c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$aG==aA==");
+      (int)c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$+++=");
+  res = (int)c_rest_verify_password("pwd",
+                                    "$pbkdf2-sha256$i=1000$c2FsdA==$aG==aA==");
 
   /* Cover hmac_sha256 fail in verify_password */
   for (i = 0; i < 5; i++) {
     g_malloc_fail_after = i;
-    res = c_rest_verify_password(
+    res = (int)c_rest_verify_password(
         "pwd", "$pbkdf2-sha256$i=2$c2FsdA==$"
                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
   }
 
   /* Cover bad base64 in jwt_verify */
-  res = c_rest_jwt_verify_hs256("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.+++.+++",
-                                (const unsigned char *)"key", 3, &hash);
+  res = (int)c_rest_jwt_verify_hs256(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.+++.+++",
+      (const unsigned char *)"key", 3, &hash);
 
   g_crf_malloc_hook = NULL;
 

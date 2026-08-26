@@ -97,7 +97,8 @@ int test_http23(void) {
 
     /* init errors */
     fails += c_rest_http23_ctx_init(C_REST_PROTOCOL_HTTP2, NULL) == C_REST_OK;
-    fails += c_rest_http23_ctx_init(-1, &err_ctx) == C_REST_OK;
+    fails +=
+        c_rest_http23_ctx_init((c_rest_protocol_t)-1, &err_ctx) == C_REST_OK;
     fails +=
         c_rest_http23_ctx_init(C_REST_PROTOCOL_HTTP3, &err_ctx) != C_REST_OK;
     c_rest_http23_ctx_destroy(err_ctx);

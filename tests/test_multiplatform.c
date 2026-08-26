@@ -133,16 +133,16 @@ int test_multiplatform_integration(void) {
   if (res != 0)
     return C_REST_ERROR_GENERIC;
 
-  res = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
+  res = (int)c_rest_init(C_REST_MODALITY_SYNC, &ctx);
   if (res != 0)
     return C_REST_ERROR_GENERIC;
 
-  res = c_rest_set_multiplatform_env(ctx, env);
+  res = (int)c_rest_set_multiplatform_env(ctx, env);
   if (res != 0)
     return C_REST_ERROR_GENERIC;
 
   /* Should use mock cm_socket_close via cm_env */
-  res = c_rest_destroy(ctx);
+  res = (int)c_rest_destroy(ctx);
   if (res != 0)
     return C_REST_ERROR_GENERIC;
 

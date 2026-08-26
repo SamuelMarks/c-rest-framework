@@ -631,10 +631,10 @@ int test_parser(void) {
   callbacks.on_complete = on_complete;
   callbacks.on_error = on_error;
 
-  res = c_rest_parser_get_basic_vtable(&vtable);
+  res = (int)c_rest_parser_get_basic_vtable(&vtable);
   failed += (res != 0 || !vtable);
   if (vtable) {
-    res = c_rest_parser_init(&ctx, vtable, &callbacks, NULL);
+    res = (int)c_rest_parser_init(&ctx, vtable, &callbacks, NULL);
     failed += (res != 0);
   }
 
@@ -667,17 +667,18 @@ int test_parser(void) {
     g_fail_callbacks = 0;
   }
 
-  res = c_rest_parser_init(&ctx, vtable, &callbacks, NULL);
+  res = (int)c_rest_parser_init(&ctx, vtable, &callbacks, NULL);
   failed += (res != 0);
   if (res == C_REST_OK) {
-    res = c_rest_parser_execute(&ctx, valid_req, strlen(valid_req), &parsed);
+    res =
+        (int)c_rest_parser_execute(&ctx, valid_req, strlen(valid_req), &parsed);
     failed += (res != 0 || parsed != strlen(valid_req));
 
     failed += (!method_called || !url_called || !complete_called);
 
     /* Test malformed request */
-    res = c_rest_parser_execute(&ctx, malformed_req, strlen(malformed_req),
-                                &parsed);
+    res = (int)c_rest_parser_execute(&ctx, malformed_req, strlen(malformed_req),
+                                     &parsed);
     failed += (res != 0 || parsed != 0);
   }
 
@@ -694,24 +695,24 @@ int test_parser(void) {
     callbacks2.on_error = on_error;
     c_rest_parser_get_basic_vtable(&vtable2);
     c_rest_parser_init(&ctx2, vtable2, &callbacks2, (void *)1);
-    res = c_rest_parser_execute(&ctx2, malformed_req, strlen(malformed_req),
-                                &parsed);
+    res = (int)c_rest_parser_execute(&ctx2, malformed_req,
+                                     strlen(malformed_req), &parsed);
     failed += (res != C_REST_ERROR_GENERIC);
     c_rest_parser_destroy(&ctx2);
 
     c_rest_parser_init(&ctx2, vtable2, &callbacks2, NULL);
-    res = c_rest_parser_execute(&ctx2, malformed_req, strlen(malformed_req),
-                                &parsed);
+    res = (int)c_rest_parser_execute(&ctx2, malformed_req,
+                                     strlen(malformed_req), &parsed);
     failed += (res != 0);
 
     /* Test executing when state already has error */
-    res = c_rest_parser_execute(&ctx2, "data", 4, &parsed);
+    res = (int)c_rest_parser_execute(&ctx2, "data", 4, &parsed);
     failed += (res != C_REST_ERROR_GENERIC);
 
     /* Reset error, set invalid state */
     ((struct basic_parser_state *)ctx2.internal_state)->has_error = 0;
     ((struct basic_parser_state *)ctx2.internal_state)->state = 999;
-    res = c_rest_parser_execute(&ctx2, "data", 4, &parsed);
+    res = (int)c_rest_parser_execute(&ctx2, "data", 4, &parsed);
     failed += (res != C_REST_ERROR_GENERIC);
 
     c_rest_parser_destroy(&ctx2);
@@ -727,8 +728,8 @@ int test_parser(void) {
     c_rest_parser_init(&ctx3, vtable, &callbacks, NULL);
     g_fail_realloc_at = 1; /* 1st realloc in append_buf */
     g_crf_realloc_hook = fail_realloc_n;
-    res = c_rest_parser_execute(&ctx3, huge_method, sizeof(huge_method) - 1,
-                                &parsed);
+    res = (int)c_rest_parser_execute(&ctx3, huge_method,
+                                     sizeof(huge_method) - 1, &parsed);
     g_crf_realloc_hook = NULL;
     g_fail_realloc_at = 0;
     c_rest_parser_destroy(&ctx3);
@@ -738,7 +739,7 @@ int test_parser(void) {
     c_rest_parser_context ctx3;
     const struct c_rest_parser_vtable *vtable3 = NULL;
     c_rest_parser_get_basic_vtable(&vtable3);
-    res = c_rest_parser_init(&ctx3, vtable3, &callbacks, NULL);
+    res = (int)c_rest_parser_init(&ctx3, vtable3, &callbacks, NULL);
     failed += (res != C_REST_OK);
     if (res == C_REST_OK) {
       const char *req_nl = "\r\n\r\nGET / HTTP/1.1\r\n\r\n";

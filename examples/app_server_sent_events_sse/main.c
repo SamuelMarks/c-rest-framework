@@ -23,7 +23,7 @@ static c_rest_error_t sleep_ms(int milliseconds) {
 #if defined(_WIN32)
   Sleep((unsigned long)milliseconds);
 #else
-  usleep(milliseconds * 1000);
+  usleep((useconds_t)milliseconds * 1000);
 #endif
   return C_REST_OK;
 }
@@ -82,7 +82,7 @@ int main(void) {
 
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
-  int res;
+  c_rest_error_t res;
 
   printf("Starting Server-Sent Events (SSE) Example...\n");
 

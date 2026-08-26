@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
   const char *tls_key = NULL;
 
   int i;
-  int run_res;
+  c_rest_error_t run_res;
 
   /* 1. Read environment variables first */
   const char *env_db_url = getenv("OAUTH2_DB_URL");

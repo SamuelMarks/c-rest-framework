@@ -146,7 +146,7 @@ static c_rest_error_t decode_internal(const char *src, size_t src_len,
     if (src[i] == '=')
       return C_REST_ERROR_PARSE;
     else {
-      rc = get_val(src[i++], is_url, &val_a);
+      rc = get_val((unsigned char)src[i++], is_url, &val_a);
       if (rc != C_REST_OK)
         return rc;
       sextet_a = val_a;
@@ -154,7 +154,7 @@ static c_rest_error_t decode_internal(const char *src, size_t src_len,
     if (i >= in_len || src[i] == '=')
       return C_REST_ERROR_PARSE;
     else {
-      rc = get_val(src[i++], is_url, &val_b);
+      rc = get_val((unsigned char)src[i++], is_url, &val_b);
       if (rc != C_REST_OK)
         return rc;
       sextet_b = val_b;
@@ -163,7 +163,7 @@ static c_rest_error_t decode_internal(const char *src, size_t src_len,
       if (src[i] == '=')
         i++;
       else {
-        rc = get_val(src[i++], is_url, &val_c);
+        rc = get_val((unsigned char)src[i++], is_url, &val_c);
         if (rc != C_REST_OK)
           return rc;
         sextet_c = val_c;
@@ -173,7 +173,7 @@ static c_rest_error_t decode_internal(const char *src, size_t src_len,
       if (src[i] == '=')
         i++;
       else {
-        rc = get_val(src[i++], is_url, &val_d);
+        rc = get_val((unsigned char)src[i++], is_url, &val_d);
         if (rc != C_REST_OK)
           return rc;
         sextet_d = val_d;
