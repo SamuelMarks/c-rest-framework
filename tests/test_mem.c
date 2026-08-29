@@ -322,8 +322,8 @@ int test_mem(void) {
   {
     void *leak1 = NULL;
     void *leak2 = NULL;
-    C_REST_MALLOC(10, &leak1);
-    C_REST_MALLOC(10, &leak2);
+    (void)C_REST_MALLOC(10, &leak1);
+    (void)C_REST_MALLOC(10, &leak2);
 
     (void)!c_rest_mem_tracker_cleanup();
     C_REST_FREE(leak1);

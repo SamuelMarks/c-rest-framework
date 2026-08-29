@@ -189,7 +189,7 @@ C_REST_EXPORT extern c_rest_error_t c_rest_mem_tracker_cleanup(void);
 #define C_REST_REALLOC(ptr, size, out_ptr)                                     \
   (((*((void **)(out_ptr))) = CRF_REALLOC(ptr, size)) == NULL)
 /** @brief Macro to free memory without tracking. */
-#define C_REST_FREE(ptr) (CRF_FREE(ptr), 0)
+#define C_REST_FREE(ptr) CRF_FREE(ptr)
 #endif
 
 #ifdef __cplusplus

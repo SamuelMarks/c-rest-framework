@@ -253,7 +253,8 @@ c_rest_error_t c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
   return C_REST_OK;
 }
 
-static c_rest_error_t copy_string(const char **dst, const char *src) {
+static c_rest_error_t copy_string(void *dst_ptr, const char *src) {
+  const char **dst = (const char **)dst_ptr;
   if (src) {
     if (C_REST_MALLOC(strlen(src) + 1, dst) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *dst = NULL; return C_REST_ERROR_OOM; }
 #if defined(_MSC_VER)
@@ -266,25 +267,26 @@ static c_rest_error_t copy_string(const char **dst, const char *src) {
 }
 
 static c_rest_error_t copy_operation(struct c_rest_openapi_operation *dst,
-                          const struct c_rest_openapi_operation *src) {
+                          const void *src_ptr) {
+  const struct c_rest_openapi_operation *src = (const struct c_rest_openapi_operation *)src_ptr;
   c_rest_error_t rc;
   size_t i;
 
-  rc = copy_string(&dst->operation_id, src->operation_id);
+  rc = copy_string((void *)(size_t)&dst->operation_id, src->operation_id);
   if (rc != C_REST_OK) return rc;
-  rc = copy_string(&dst->summary, src->summary);
+  rc = copy_string((void *)(size_t)&dst->summary, src->summary);
   if (rc != C_REST_OK) return rc;
-  rc = copy_string(&dst->description, src->description);
+  rc = copy_string((void *)(size_t)&dst->description, src->description);
   if (rc != C_REST_OK) return rc;
 
   if (src->tags) {
     if (C_REST_MALLOC(sizeof(char *) * src->n_tags, &dst->tags) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->tags = NULL; }
     if (dst->tags) {
-      memset(dst->tags, 0, sizeof(char *) * src->n_tags);
+      memset((void *)dst->tags, 0, sizeof(char *) * src->n_tags);
       dst->n_tags = src->n_tags;
       for (i = 0; i < src->n_tags; i++) {
         dst->tags[i] = NULL;
-        rc = copy_string(&dst->tags[i], src->tags[i]);
+        rc = copy_string((void *)(size_t)&dst->tags[i], src->tags[i]);
         if (rc != C_REST_OK) return rc;
       }
     }
@@ -296,9 +298,9 @@ static c_rest_error_t copy_operation(struct c_rest_openapi_operation *dst,
   /* copy params done */
 
   dst->deprecated = src->deprecated;
-  rc = copy_string(&dst->external_docs.description, src->external_docs.description);
+  rc = copy_string((void *)(size_t)&dst->external_docs.description, src->external_docs.description);
   if (rc != C_REST_OK) return rc;
-  rc = copy_string(&dst->external_docs.url, src->external_docs.url);
+  rc = copy_string((void *)(size_t)&dst->external_docs.url, src->external_docs.url);
   if (rc != C_REST_OK) return rc;
 
   if (src->security) {
@@ -309,16 +311,16 @@ static c_rest_error_t copy_operation(struct c_rest_openapi_operation *dst,
       for (i = 0; i < src->n_security; i++) {
         size_t k;
         dst->security[i].name = NULL;
-        rc = copy_string(&dst->security[i].name, src->security[i].name);
+        rc = copy_string((void *)(size_t)&dst->security[i].name, src->security[i].name);
         if (rc != C_REST_OK) return rc;
         if (src->security[i].scopes) {
           if (C_REST_MALLOC(sizeof(char *) * src->security[i].n_scopes, &(dst->security[i].scopes)) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); dst->security[i].scopes = NULL; }
           if (dst->security[i].scopes) {
-            memset(dst->security[i].scopes, 0, sizeof(char *) * src->security[i].n_scopes);
+            memset((void *)dst->security[i].scopes, 0, sizeof(char *) * src->security[i].n_scopes);
             dst->security[i].n_scopes = src->security[i].n_scopes;
             for (k = 0; k < src->security[i].n_scopes; k++) {
               dst->security[i].scopes[k] = NULL;
-              rc = copy_string(&dst->security[i].scopes[k],
+              rc = copy_string((void *)(size_t)&dst->security[i].scopes[k],
                           src->security[i].scopes[k]);
               if (rc != C_REST_OK) return rc;
             }
@@ -366,12 +368,12 @@ c_rest_error_t c_rest_openapi_spec_add_component_schema(
   }
 
   spec->component_schemas_keys[spec->n_components] = NULL;
-  rc = copy_string((const char **)&spec->component_schemas_keys[spec->n_components],
+  rc = copy_string((void *)(size_t)&spec->component_schemas_keys[spec->n_components],
               schema_name);
   if (rc != C_REST_OK) return rc;
 
   spec->component_schemas_json[spec->n_components] = NULL;
-  rc = copy_string((const char **)&spec->component_schemas_json[spec->n_components],
+  rc = copy_string((void *)(size_t)&spec->component_schemas_json[spec->n_components],
               json_schema_str);
   if (rc != C_REST_OK) return rc;
 
@@ -414,7 +416,7 @@ c_rest_error_t c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
 
     path = &spec->paths[spec->n_paths++];
     memset(path, 0, sizeof(struct c_rest_openapi_path));
-    rc = copy_string(&path->route, route);
+    rc = copy_string((void *)(size_t)&path->route, route);
     if (rc != C_REST_OK) return rc;
   }
 
@@ -733,7 +735,7 @@ c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
           json_object_set_string(s_obj, "openIdConnectUrl",
                                  s->open_id_connect_url);
 
-        /* condition true in test */ if (1) {
+        /* condition true in test */ {
           JSON_Value *flows_val = json_value_init_object();
           JSON_Object *flows_obj = json_value_get_object(flows_val);
 

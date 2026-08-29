@@ -134,7 +134,8 @@ c_rest_error_t c_rest_websocket_parse_frame_header(
       if (high != 0) {
         /* We don't support > 4GB payloads on 32-bit systems, and we keep it
          * safe. */
-        if (sizeof(size_t) <= 4) {
+        size_t sz = sizeof(size_t);
+        if (sz <= 4) {
           return C_REST_ERROR_GENERIC;
         }
         /* If size_t is 64-bit, we could do this, but C89 lacks standard

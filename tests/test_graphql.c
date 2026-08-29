@@ -146,7 +146,7 @@ static int test_graphql_resolve_dummy(void) {
   if (called != 1)
     return 1;
 
-  (void)!C_REST_FREE(json);
+  C_REST_FREE(json);
   (void)!c_rest_graphql_node_free(doc);
 
   /* Test null json return */
@@ -165,16 +165,16 @@ static int test_graphql_resolve_dummy(void) {
     struct c_rest_graphql_node *op = NULL;
     struct c_rest_graphql_node *field = NULL;
 
-    C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node), (void**)&manual_doc);
+    (void)C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node), (void**)&manual_doc);
     manual_doc->type = C_REST_GRAPHQL_NODE_DOCUMENT;
     c_rest_graphql_resolve(manual_doc, schema, &json, &len);
     if (json) C_REST_FREE(json);
 
-    C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node_list), (void**)&manual_doc->definitions);
-    C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node *), (void**)&manual_doc->definitions->nodes);
+    (void)C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node_list), (void**)&manual_doc->definitions);
+    (void)C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node *), (void**)&manual_doc->definitions->nodes);
     manual_doc->definitions->count = 1;
 
-    C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node), (void**)&op);
+    (void)C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node), (void**)&op);
     manual_doc->definitions->nodes[0] = op;
 
     op->type = C_REST_GRAPHQL_NODE_FIELD; /* wrong type */
@@ -185,11 +185,11 @@ static int test_graphql_resolve_dummy(void) {
     c_rest_graphql_resolve(manual_doc, schema, &json, &len);
     if (json) C_REST_FREE(json);
 
-    C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node_list), (void**)&op->selection_set);
-    C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node *), (void**)&op->selection_set->nodes);
+    (void)C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node_list), (void**)&op->selection_set);
+    (void)C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node *), (void**)&op->selection_set->nodes);
     op->selection_set->count = 1;
 
-    C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node), (void**)&field);
+    (void)C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node), (void**)&field);
     op->selection_set->nodes[0] = field;
 
     field->type = C_REST_GRAPHQL_NODE_DOCUMENT; /* wrong type */

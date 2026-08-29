@@ -86,7 +86,7 @@ static int test_compression_gzip_basic(void) {
     ASSERT_EQ(0, memcmp(test_data, decomp_data, in_len));
   }
 
-  (void)!C_REST_FREE(comp_data);
+  C_REST_FREE(comp_data);
   return 0;
 }
 
@@ -108,7 +108,7 @@ static int test_compression_gzip_large(void) {
   ASSERT(comp_data != NULL);
   ASSERT(comp_len > 0);
 
-  (void)!C_REST_FREE(comp_data);
+  C_REST_FREE(comp_data);
   CRF_FREE(test_data);
   return 0;
 }
@@ -142,7 +142,7 @@ static int test_compression_brotli_basic(void) {
     ASSERT_EQ(0, memcmp(test_data, decomp_data, in_len));
   }
 
-  (void)!C_REST_FREE(comp_data);
+  C_REST_FREE(comp_data);
   return 0;
 }
 
@@ -164,7 +164,7 @@ static int test_compression_brotli_large(void) {
   ASSERT(comp_data != NULL);
   ASSERT(comp_len > 0);
 
-  (void)!C_REST_FREE(comp_data);
+  C_REST_FREE(comp_data);
   CRF_FREE(test_data);
   return 0;
 }
@@ -219,7 +219,7 @@ static int test_compression_errors(void) {
   if (res != C_REST_ERROR_GENERIC)
     return 1;
 
-  (void)!c_rest_compression_ctx_destroy(ctx);
+  c_rest_compression_ctx_destroy(ctx);
 #else
   if (res != C_REST_ERROR_GENERIC)
     return 1;
@@ -735,7 +735,7 @@ static int test_compression_malloc_failures(void) {
     return 1;
 
   g_crf_malloc_hook = NULL;
-  (void)!c_rest_compression_ctx_destroy(ctx);
+  c_rest_compression_ctx_destroy(ctx);
 #endif
 
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI)
@@ -761,7 +761,7 @@ static int test_compression_malloc_failures(void) {
     return 1;
 
   g_crf_malloc_hook = NULL;
-  (void)!c_rest_compression_ctx_destroy(ctx);
+  c_rest_compression_ctx_destroy(ctx);
 #endif
 
   return 0;
@@ -815,7 +815,7 @@ static int test_compression_realloc_failures(void) {
 
   g_crf_realloc_hook = NULL;
 
-  (void)!c_rest_compression_ctx_destroy(ctx);
+  c_rest_compression_ctx_destroy(ctx);
 #endif
 
   g_fail_realloc_at = -1;
@@ -839,7 +839,7 @@ static int test_compression_realloc_failures(void) {
   }
   g_crf_realloc_hook = NULL;
 
-  (void)!c_rest_compression_ctx_destroy(ctx);
+  c_rest_compression_ctx_destroy(ctx);
 #endif
 
   return 0;
@@ -880,7 +880,7 @@ static int test_compression_realloc_finish_failures(void) {
      * preallocated */
   }
 
-  (void)!c_rest_compression_ctx_destroy(ctx);
+  c_rest_compression_ctx_destroy(ctx);
 #endif
 
   /* BROTLI */
@@ -909,7 +909,7 @@ static int test_compression_realloc_finish_failures(void) {
      * preallocated */
   }
 
-  (void)!c_rest_compression_ctx_destroy(ctx);
+  c_rest_compression_ctx_destroy(ctx);
 #endif
 
   return 0;

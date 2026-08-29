@@ -123,7 +123,7 @@ static c_rest_error_t parse_name(struct c_rest_graphql_context *ctx,
   c = (unsigned char)ctx->input[ctx->position];
   if (isalpha(c) || c == '_') {
     ctx->position++;
-    while (1) {
+    for (;;) {
       if (ctx->position >= ctx->length)
         break;
       c = (unsigned char)ctx->input[ctx->position];

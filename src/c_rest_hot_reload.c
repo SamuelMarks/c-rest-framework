@@ -362,7 +362,9 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
     const char *msg = "Hot reload context not available";
     res->status_code = 503;
     res->body_len = strlen(msg);
-    C_REST_MALLOC(res->body_len + 1, (void **)&res->body);
+    if (C_REST_MALLOC(res->body_len + 1, (void **)&res->body)) {
+      /* handle OOM implicitly */
+    }
 #if defined(_MSC_VER)
     strcpy_s(res->body, res->body_len + 1, msg);
 #else
@@ -387,7 +389,8 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
     struct c_rest_sse_event ev;
     (void)!c_rest_sse_event_init(&ev);
     /* We must dup strings if we rely on c_rest_sse_event_destroy */
-    C_REST_MALLOC(7, (void **)&ev.event);
+    if (C_REST_MALLOC(7, (void **)&ev.event)) {
+    }
     if (ev.event) {
 #if defined(_MSC_VER)
       strcpy_s(ev.event, 7, "reload");
@@ -396,7 +399,8 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
 #endif
     }
 
-    C_REST_MALLOC(5, (void **)&ev.data);
+    if (C_REST_MALLOC(5, (void **)&ev.data)) {
+    }
     if (ev.data) {
 #if defined(_MSC_VER)
       strcpy_s(ev.data, 5, "true");

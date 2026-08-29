@@ -1053,12 +1053,16 @@ c_rest_error_t c_rest_hash_password(const char *password,
   }
 
   c_rest_base64_encode(salt, C_REST_PBKDF2_SALT_LEN, NULL, &salt_b64_len);
-  C_REST_MALLOC(salt_b64_len + 1, &salt_b64);
+  if (C_REST_MALLOC(salt_b64_len + 1, &salt_b64) != 0)
+    return C_REST_ERROR_OOM;
   c_rest_base64_encode(salt, C_REST_PBKDF2_SALT_LEN, salt_b64, &salt_b64_len);
   salt_b64[salt_b64_len] = '\0';
 
   c_rest_base64_encode(hash, C_REST_PBKDF2_HASH_LEN, NULL, &hash_b64_len);
-  C_REST_MALLOC(hash_b64_len + 1, &hash_b64);
+  if (C_REST_MALLOC(hash_b64_len + 1, &hash_b64) != 0) {
+    C_REST_FREE(salt_b64);
+    return C_REST_ERROR_OOM;
+  }
   c_rest_base64_encode(hash, C_REST_PBKDF2_HASH_LEN, hash_b64, &hash_b64_len);
   hash_b64[hash_b64_len] = '\0';
 

@@ -439,7 +439,7 @@ c_rest_error_t c_rest_handle_connection(struct c_rest_context *ctx,
       if (rc != C_REST_OK) {
         keep_alive = 0;
       } else {
-        while (1) {
+        for (;;) {
           if (tls_conn) {
             res = c_rest_tls_read(tls_conn, buf, sizeof(buf), &read_bytes);
           } else {

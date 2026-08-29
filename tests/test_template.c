@@ -84,7 +84,7 @@ static int test_c_rest_template_render_basic(void) {
     return __LINE__;
   if (strcmp(result, "Hello World, I am Mr!") != 0)
     return __LINE__;
-  (void)!C_REST_FREE(result);
+  C_REST_FREE(result);
   if (c_rest_template_destroy(&ctx) != 0)
     return __LINE__;
   return 0;
@@ -104,7 +104,7 @@ static int test_c_rest_template_render_missing_key(void) {
     return __LINE__;
   if (strcmp(result, "Hello World, {{title}}") != 0)
     return __LINE__;
-  (void)!C_REST_FREE(result);
+  C_REST_FREE(result);
   if (c_rest_template_destroy(&ctx) != 0)
     return __LINE__;
   return 0;
@@ -128,7 +128,7 @@ static int test_c_rest_template_render_edge_cases(void) {
     return __LINE__;
   if (strcmp(result, "bb") != 0)
     return __LINE__;
-  (void)!C_REST_FREE(result);
+  C_REST_FREE(result);
   if (c_rest_template_destroy(&ctx) != 0)
     return __LINE__;
 
@@ -141,7 +141,7 @@ static int test_c_rest_template_render_edge_cases(void) {
     return __LINE__;
   if (strcmp(result, "Hello {{name") != 0)
     return __LINE__;
-  (void)!C_REST_FREE(result);
+  C_REST_FREE(result);
   if (c_rest_template_destroy(&ctx) != 0)
     return __LINE__;
 
@@ -154,7 +154,7 @@ static int test_c_rest_template_render_edge_cases(void) {
     return __LINE__;
   if (strcmp(result, "Hello {{name}foo") != 0)
     return __LINE__;
-  (void)!C_REST_FREE(result);
+  C_REST_FREE(result);
   if (c_rest_template_destroy(&ctx) != 0)
     return __LINE__;
 
@@ -170,7 +170,7 @@ static int test_c_rest_template_render_edge_cases(void) {
       return __LINE__;
     if (strcmp(result, "Hello 2") != 0)
       return __LINE__;
-    (void)!C_REST_FREE(result);
+    C_REST_FREE(result);
     if (c_rest_template_destroy(&ctx) != 0)
       return __LINE__;
   }
@@ -184,7 +184,7 @@ static int test_c_rest_template_render_edge_cases(void) {
     return __LINE__;
   if (strcmp(result, "Null  test") != 0)
     return __LINE__;
-  (void)!C_REST_FREE(result);
+  C_REST_FREE(result);
   if (c_rest_template_destroy(&ctx) != 0)
     return __LINE__;
 
@@ -204,7 +204,7 @@ static int test_c_rest_template_render_edge_cases(void) {
     return __LINE__;
   if (result == NULL)
     return __LINE__;
-  (void)!C_REST_FREE(result);
+  C_REST_FREE(result);
   if (c_rest_template_destroy(&ctx) != 0)
     return __LINE__;
 
@@ -224,7 +224,7 @@ static int test_c_rest_template_render_edge_cases(void) {
     return __LINE__;
   if (result == NULL)
     return __LINE__;
-  (void)!C_REST_FREE(result);
+  C_REST_FREE(result);
   if (c_rest_template_destroy(&ctx) != 0)
     return __LINE__;
 
@@ -245,7 +245,7 @@ static int test_c_rest_template_render_edge_cases(void) {
     return __LINE__;
   if (result == NULL)
     return __LINE__;
-  (void)!C_REST_FREE(result);
+  C_REST_FREE(result);
 
   /* Test reallocation failure in normal character copy */
   {

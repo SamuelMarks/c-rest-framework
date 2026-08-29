@@ -38,6 +38,7 @@ static void test_coverage(void) {
   int i;
   extern int g_fail_malloc_at;
   extern int g_fail_realloc_at;
+  (void)g_fail_realloc_at;
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));

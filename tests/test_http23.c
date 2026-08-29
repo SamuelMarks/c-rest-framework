@@ -67,7 +67,7 @@ int test_http23(void) {
     if (out_buf) {
       fails += strstr(out_buf, "HTTP/2 FRAME: body_len=5") == NULL;
       fails += strstr(out_buf, "hello") == NULL;
-      (void)!C_REST_FREE((void *)out_buf);
+      C_REST_FREE((void *)out_buf);
     }
 
     out_buf = NULL;
@@ -79,7 +79,7 @@ int test_http23(void) {
 
     if (out_buf) {
       fails += strstr(out_buf, "HTTP/2 FRAME: body_len=0") == NULL;
-      (void)!C_REST_FREE((void *)out_buf);
+      C_REST_FREE((void *)out_buf);
     }
 
     fails += c_rest_http23_ctx_destroy(ctx) != C_REST_OK;
