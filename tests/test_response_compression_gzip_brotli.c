@@ -447,7 +447,8 @@ static void test_coverage(void) {
     g_fail_realloc_at = 0;
   }
 
-#if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI)
+#if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI) &&            \
+    !defined(DISABLE_GZIP_BROTLI_OOM_TESTS)
   for (i = 1; i <= 30; i++) {
     g_fail_malloc_at = -1;
     fail_malloc_n(0);

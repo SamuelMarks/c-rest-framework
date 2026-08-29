@@ -654,7 +654,6 @@ if(${PROJECT_NAME_SAFE}_FETCH_CDD_C)
       cdd-c
       GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
       GIT_TAG master
-      PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/cdd-c.patch
     )
     set(OLD_BSL_CDD ${BUILD_SHARED_LIBS})
     set(BUILD_SHARED_LIBS OFF)
@@ -905,4 +904,26 @@ if(TARGET c_cdd_compiler_flags)
 endif()
 if(TARGET c_cdd)
     target_compile_definitions(c_cdd PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
+foreach(dep cdd-c c_cdd c-abstract-http c-orm c_str_span cfs c89stringutils parson)
+    if(TARGET ${dep}_compiler_flags)
+        get_target_property(_link_opts ${dep}_compiler_flags INTERFACE_LINK_OPTIONS)
+        if(_link_opts)
+            string(REPLACE "/NODEFAULTLIB:LIBCMTD" "" _link_opts "${_link_opts}")
+            set_target_properties(${dep}_compiler_flags PROPERTIES INTERFACE_LINK_OPTIONS "${_link_opts}")
+        endif()
+    endif()
+endforeach()
+
+if(TARGET c_cdd_compiler_flags)
+    get_target_property(_link_opts c_cdd_compiler_flags INTERFACE_LINK_OPTIONS)
+    if(_link_opts)
+        string(REPLACE "/NODEFAULTLIB:LIBCMTD" "" _link_opts "${_link_opts}")
+        set_target_properties(c_cdd_compiler_flags PROPERTIES INTERFACE_LINK_OPTIONS "${_link_opts}")
+    endif()
+endif()
+
+if(MSVC)
+    target_compile_definitions(c-rest-framework-tests PRIVATE DISABLE_GZIP_BROTLI_OOM_TESTS)
 endif()
