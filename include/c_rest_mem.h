@@ -65,7 +65,7 @@ C_REST_EXPORT extern char *(*g_crf_strdup_hook)(const char *);
  * @param s String to duplicate.
  * @return Duplicated string.
  */
-char *c_rest_internal_strdup(const char *s);
+C_REST_EXPORT extern char *c_rest_internal_strdup(const char *s);
 /** @brief Internal strdup implementation */
 #define CRF_STRDUP(s)                                                          \
   (g_crf_strdup_hook ? g_crf_strdup_hook(s) : c_rest_internal_strdup(s))
@@ -80,7 +80,7 @@ char *c_rest_internal_strdup(const char *s);
  * @param s String to duplicate.
  * @return Duplicated string.
  */
-char *c_rest_internal_strdup(const char *s);
+C_REST_EXPORT extern char *c_rest_internal_strdup(const char *s);
 /** @brief Internal strdup implementation */
 #define CRF_STRDUP c_rest_internal_strdup
 #endif

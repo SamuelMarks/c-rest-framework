@@ -754,7 +754,7 @@ endif()
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     if(BUILD_TESTING)
         enable_testing()
-        remove_definitions(-D_CRT_SECURE_NO_WARNINGS)
+
         message(STATUS "ADDING TESTS")
         add_subdirectory(tests)
     endif()

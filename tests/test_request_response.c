@@ -724,7 +724,7 @@ static void test_coverage(void) {
 #ifndef _WIN32
     fake_ctx.sock = -1;
 #else
-    fake_ctx.sock = (unsigned long long)-1;
+    fake_ctx.sock = (c_rest_socket_t)-1;
 #endif
     r.headers_sent = 1;
     r.is_chunked = 0;

@@ -34,7 +34,7 @@ def is_test_function(name: str) -> bool:
     if not name:
         return False
     return (
-        name == "main"
+        name == "main", "Sleep"
         or name == "openapi_type_to_c_orm_type"
         or name == "openapi_type_to_c_type"
         or name.endswith("_impl")

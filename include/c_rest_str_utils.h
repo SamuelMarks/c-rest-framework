@@ -12,7 +12,26 @@
 #include "c_rest_export.h"
 /* clang-format on */
 
+/**
+ * @brief Safe sprintf.
+ */
+C_REST_EXPORT extern c_rest_error_t
+c_rest_sprintf_s(char *buffer, size_t sizeOfBuffer, const char *format, ...);
+
+/**
+ * @brief Safe strcpy.
+ */
+C_REST_EXPORT extern c_rest_error_t
+c_rest_strcpy_s(char *dest, size_t dest_size, const char *src);
+
+/**
+ * @brief Safe strncpy.
+ */
+C_REST_EXPORT extern c_rest_error_t
+c_rest_strncpy_s(char *dest, size_t dest_size, const char *src, size_t count);
+
 #ifdef __cplusplus
+
 extern "C" {
 #endif
 

@@ -41,9 +41,6 @@ static int socketpair(int domain, int type, int protocol, int sv[2]) {
 #endif
 
 extern int g_accept_calls;
-extern c_rest_error_t mock_c_rest_socket_accept(c_rest_socket_t server,
-                                                c_rest_socket_t *client);
-extern c_rest_error_t mock_c_rest_socket_close(c_rest_socket_t sock);
 
 static void my_dummy_free(void *ptr) { (void)ptr; }
 
@@ -408,20 +405,20 @@ static c_rest_error_t test_client_thread(void *arg) {
 #endif
 
   while (retries-- > 0) {
-    sock = socket(AF_INET, SOCK_STREAM, 0);
+    sock = (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
     if (sock != C_REST_INVALID_SOCKET) {
       memset(&srv_addr, 0, sizeof(srv_addr));
       srv_addr.sin_family = AF_INET;
       srv_addr.sin_port = htons((unsigned short)args->port);
       srv_addr.sin_addr.s_addr = htonl(0x7F000001);
-      if (connect((int)sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) ==
-          0) {
+      if (connect((int)(size_t)sock, (struct sockaddr *)&srv_addr,
+                  sizeof(srv_addr)) == 0) {
         const char *req =
             "GET / HTTP/1.1\r\nHost: loc\r\nConnection: close\r\n\r\n";
 #if defined(_WIN32)
-        send((int)sock, req, (int)strlen(req), 0);
+        send((int)(size_t)sock, req, (int)strlen(req), 0);
 #else
-        send((int)sock, req, strlen(req), 0);
+        send((int)(size_t)sock, req, strlen(req), 0);
 #endif
 #if defined(_WIN32)
         Sleep(50);
@@ -442,9 +439,9 @@ static c_rest_error_t test_client_thread(void *arg) {
         {
           int j;
           for (j = 0; j < 8; j++) {
-            sock = socket(AF_INET, SOCK_STREAM, 0);
+            sock = (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
             if (sock != C_REST_INVALID_SOCKET) {
-              connect((int)sock, (struct sockaddr *)&srv_addr,
+              connect((int)(size_t)sock, (struct sockaddr *)&srv_addr,
                       sizeof(srv_addr));
 #if defined(_WIN32)
               closesocket(sock);

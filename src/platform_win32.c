@@ -97,7 +97,7 @@ c_rest_error_t c_rest_socket_set_nonblocking(c_rest_socket_t sock,
                                              int nonblocking) {
   SOCKET s = (SOCKET)sock;
   u_long mode = nonblocking ? 1 : 0;
-  int res = ioctlsocket(s, FIONBIO, &mode);
+  int res = ioctlsocket(s, (long)FIONBIO, &mode);
   if (res != NO_ERROR) {
     return C_REST_ERROR_GENERIC;
   }
@@ -278,7 +278,7 @@ c_rest_error_t c_rest_cond_wait(c_rest_cond_t c, c_rest_mutex_t m) {
   if (rc != C_REST_OK)
     return rc;
 
-  wait_res = WaitForMultipleObjects(2, cond->events, FALSE, INFINITE);
+  wait_res = (int)WaitForMultipleObjects(2, cond->events, FALSE, INFINITE);
 
   EnterCriticalSection(&cond->waiters_count_lock);
   cond->waiters_count--;

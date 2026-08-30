@@ -18,7 +18,7 @@ __declspec(dllimport) void __stdcall Sleep(unsigned long dwMilliseconds);
 
 static void sleep_ms(int ms) {
 #ifdef _WIN32
-  Sleep(ms);
+  Sleep((unsigned long)ms);
 #else
   {
     struct timeval tv;

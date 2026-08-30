@@ -19,7 +19,7 @@
 #endif
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__) || defined(_MSC_VER)
-void __stdcall Sleep(unsigned long dwMilliseconds);
+/* NOLINT */ void __stdcall Sleep(unsigned long dwMilliseconds);
 #else
 #include <unistd.h>
 #endif

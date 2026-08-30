@@ -477,7 +477,11 @@ TEST test_hot_reload_oom(void) {
 #include "c_rest_request.h"
 #include "c_rest_response.h"
 #if !defined(_MSC_VER)
+#if defined(_WIN32)
+#include <winsock2.h>
+#else
 #include <sys/socket.h>
+#endif
 #endif
 
 TEST test_hot_reload_sse_routes(void) {
