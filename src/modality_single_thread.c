@@ -41,7 +41,6 @@ struct single_thread_state {
 static c_rest_error_t single_thread_init(struct c_rest_context *ctx) {
   struct single_thread_state *state;
   c_rest_error_t rc;
-
   if (!ctx) {
     return C_REST_ERROR_INVALID_ARG;
   }
@@ -72,7 +71,6 @@ static c_rest_error_t single_thread_init(struct c_rest_context *ctx) {
 static c_rest_error_t single_thread_destroy(struct c_rest_context *ctx) {
   struct single_thread_state *state;
   c_rest_error_t rc;
-
   if (!ctx || !ctx->internal_state) {
     return C_REST_ERROR_INVALID_ARG;
   }
@@ -82,7 +80,7 @@ static c_rest_error_t single_thread_destroy(struct c_rest_context *ctx) {
   if (state->server_sock != C_REST_INVALID_SOCKET) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     if (ctx->cm_env) {
-      cm_socket_close(ctx->cm_env, state->server_sock);
+      rc = cm_socket_close(ctx->cm_env, state->server_sock);
     } else {
       rc = c_rest_socket_close(state->server_sock);
       if (rc != C_REST_OK) {
@@ -117,7 +115,6 @@ static c_rest_error_t single_thread_destroy(struct c_rest_context *ctx) {
 static c_rest_error_t single_thread_run(struct c_rest_context *ctx) {
   struct single_thread_state *state;
   c_rest_error_t rc;
-
   if (!ctx || !ctx->internal_state) {
     return C_REST_ERROR_INVALID_ARG;
   }
@@ -206,15 +203,19 @@ static c_rest_error_t single_thread_run(struct c_rest_context *ctx) {
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
       if (ctx->cm_env) {
-        cm_socket_close(ctx->cm_env, client_sock);
+        rc = cm_socket_close(ctx->cm_env, client_sock);
       } else {
         rc = c_rest_socket_close(client_sock);
+        if (rc != C_REST_OK)
+          return rc;
         if (rc != C_REST_OK) {
           return rc;
         }
       }
 #else
       rc = c_rest_socket_close(client_sock);
+      if (rc != C_REST_OK)
+        return rc;
       if (rc != C_REST_OK) {
         return rc;
       }
@@ -242,7 +243,6 @@ static c_rest_error_t single_thread_run(struct c_rest_context *ctx) {
 static c_rest_error_t single_thread_stop(struct c_rest_context *ctx) {
   struct single_thread_state *state;
   c_rest_error_t rc;
-
   if (!ctx || !ctx->internal_state)
     return C_REST_ERROR_GENERIC;
 
@@ -252,7 +252,7 @@ static c_rest_error_t single_thread_stop(struct c_rest_context *ctx) {
   if (state->server_sock != C_REST_INVALID_SOCKET) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     if (ctx->cm_env) {
-      cm_socket_close(ctx->cm_env, state->server_sock);
+      rc = cm_socket_close(ctx->cm_env, state->server_sock);
     } else {
       rc = c_rest_socket_close(state->server_sock);
       if (rc != C_REST_OK) {

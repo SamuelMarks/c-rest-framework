@@ -52,9 +52,28 @@ TEST test_server_init_fail_nulls(void) {
   PASS();
 }
 
+static void *fail_malloc_n(size_t size) {
+  static int alloc_count = 0;
+  extern int g_fail_malloc_at;
+  extern void *test_c_rest_internal_malloc(size_t);
+  if (g_fail_malloc_at <= 0) {
+    alloc_count = 0;
+    return NULL;
+  }
+  alloc_count++;
+  if (alloc_count == g_fail_malloc_at) {
+    g_fail_malloc_at = 0;
+    return NULL;
+  }
+  return test_c_rest_internal_malloc(size);
+}
+
+int g_fail_malloc_at = -1;
+
 TEST test_client_password_grant(void) {
   char *access_token = NULL;
   int expires_in = 0;
+  extern void *(*g_crf_malloc_hook)(size_t);
 
   ASSERT_EQ(1, oauth2_client_password_grant(NULL, "pass", &access_token,
                                             &expires_in));
@@ -63,6 +82,14 @@ TEST test_client_password_grant(void) {
   ASSERT_EQ(1, oauth2_client_password_grant("user", "pass", NULL, &expires_in));
   ASSERT_EQ(1,
             oauth2_client_password_grant("user", "pass", &access_token, NULL));
+
+  /* Test OOM in c_rest_client_build_auth_basic */
+  g_crf_malloc_hook = fail_malloc_n;
+  g_fail_malloc_at = 1;
+  ASSERT_EQ(1, oauth2_client_password_grant("user", "pass", &access_token,
+                                            &expires_in));
+  g_crf_malloc_hook = NULL;
+  g_fail_malloc_at = -1;
 
   /* We don't have a real server, so it should fail */
   ASSERT_EQ(1, oauth2_client_password_grant("user", "pass", &access_token,

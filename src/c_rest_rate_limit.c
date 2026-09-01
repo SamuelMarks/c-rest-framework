@@ -13,6 +13,7 @@ static void c_rest_rate_limiter_bucket_free(void *bucket_ptr) {
 c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
                                         size_t capacity, size_t fill_rate,
                                         size_t max_entities) {
+  c_rest_error_t rc;
   c_rest_error_t ret;
   if (!limiter) {
     return C_REST_ERROR_GENERIC;
@@ -31,7 +32,10 @@ c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
   ret = c_rest_mutex_create(&limiter->mutex);
 
   if (ret != C_REST_OK) {
-    c_rest_hashmap_destroy(&limiter->buckets, c_rest_rate_limiter_bucket_free);
+    rc = c_rest_hashmap_destroy(&limiter->buckets,
+                                c_rest_rate_limiter_bucket_free);
+    if (rc != C_REST_OK)
+      return rc;
     return ret;
   }
 
@@ -43,6 +47,7 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
                                          const char *identifier,
                                          size_t tokens_needed,
                                          size_t *out_remaining) {
+  c_rest_error_t rc;
   c_rest_error_t ret;
   c_rest_rate_limit_bucket *bucket;
   void *val = NULL;
@@ -56,7 +61,9 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
 
   now = time(NULL);
 
-  c_rest_mutex_lock(limiter->mutex);
+  rc = c_rest_mutex_lock(limiter->mutex);
+  if (rc != C_REST_OK)
+    return rc;
 
   ret = c_rest_hashmap_get(&limiter->buckets, identifier, &val);
   if (ret == 0) {
@@ -77,7 +84,9 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
     ret = C_REST_MALLOC(sizeof(c_rest_rate_limit_bucket), &new_bucket_ptr);
 
     if (ret != 0) {
-      c_rest_mutex_unlock(limiter->mutex);
+      rc = c_rest_mutex_unlock(limiter->mutex);
+      if (rc != C_REST_OK)
+        return rc;
       return ret;
     }
 
@@ -89,7 +98,9 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
 
     if (ret != 0) {
       C_REST_FREE(bucket);
-      c_rest_mutex_unlock(limiter->mutex);
+      rc = c_rest_mutex_unlock(limiter->mutex);
+      if (rc != C_REST_OK)
+        return rc;
       return ret;
     }
   }
@@ -103,22 +114,36 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
     ret = 1; /* Rate limited */
   }
 
-  { c_rest_mutex_unlock(limiter->mutex); }
+  {
+    rc = c_rest_mutex_unlock(limiter->mutex);
+    if (rc != C_REST_OK)
+      return rc;
+  }
   return ret;
 }
 
 c_rest_error_t c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter) {
+  c_rest_error_t rc;
   if (!limiter || !limiter->initialized) {
     return C_REST_ERROR_GENERIC;
   }
 
-  c_rest_mutex_lock(limiter->mutex);
+  rc = c_rest_mutex_lock(limiter->mutex);
+  if (rc != C_REST_OK)
+    return rc;
 
-  c_rest_hashmap_destroy(&limiter->buckets, c_rest_rate_limiter_bucket_free);
+  rc = c_rest_hashmap_destroy(&limiter->buckets,
+                              c_rest_rate_limiter_bucket_free);
+  if (rc != C_REST_OK)
+    return rc;
 
-  c_rest_mutex_unlock(limiter->mutex);
+  rc = c_rest_mutex_unlock(limiter->mutex);
+  if (rc != C_REST_OK)
+    return rc;
 
-  c_rest_mutex_destroy(limiter->mutex);
+  rc = c_rest_mutex_destroy(limiter->mutex);
+  if (rc != C_REST_OK)
+    return rc;
 
   limiter->initialized = 0;
   return C_REST_OK;

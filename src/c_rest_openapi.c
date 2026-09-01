@@ -867,20 +867,37 @@ static c_rest_error_t openapi_handler(struct c_rest_request *req,
   struct c_rest_router *router = (struct c_rest_router *)user_data;
   struct c_rest_openapi_spec *spec = NULL;
   char *json_str = NULL;
-  c_rest_router_get_openapi_spec(router, &spec);
+  c_rest_error_t rc;
+  rc = c_rest_router_get_openapi_spec(router, &spec);
+  if (rc != C_REST_OK)
+    return rc;
 
   /* unused args */
   (void)req;
 
-  (void)c_rest_openapi_spec_to_json(spec, &json_str);
+  rc = c_rest_openapi_spec_to_json(spec, &json_str);
+  if (rc != C_REST_OK)
+    return rc;
   if (json_str) {
-    c_rest_response_set_status(res, 200);
-    c_rest_response_json(res, json_str);
+    rc = c_rest_response_set_status(res, 200);
+    if (rc != C_REST_OK) {
+      json_free_serialized_string(json_str);
+      return rc;
+    }
+    rc = c_rest_response_json(res, json_str);
+    if (rc != C_REST_OK) {
+      json_free_serialized_string(json_str);
+      return rc;
+    }
     json_free_serialized_string(json_str);
   } else {
-    c_rest_response_set_status(res, 500);
-    c_rest_response_json(res,
-                         "{\"error\": \"Failed to serialize OpenAPI spec\"}");
+    rc = c_rest_response_set_status(res, 500);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = c_rest_response_json(
+        res, "{\"error\": \"Failed to serialize OpenAPI spec\"}");
+    if (rc != C_REST_OK)
+      return rc;
   }
   return C_REST_OK;
 }
@@ -929,9 +946,12 @@ static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
   struct c_rest_openapi_spec *spec = NULL;
   char *html_buf;
   size_t html_len;
+  c_rest_error_t rc;
   const char *openapi_url = "/openapi.json";
 
-  c_rest_router_get_openapi_spec(router, &spec);
+  rc = c_rest_router_get_openapi_spec(router, &spec);
+  if (rc != C_REST_OK)
+    return rc;
 
   /* unused args */
   (void)req;
@@ -957,8 +977,16 @@ static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
           openapi_url);
 #endif
 
-  c_rest_response_set_status(res, 200);
-  c_rest_response_html(res, html_buf);
+  rc = c_rest_response_set_status(res, 200);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(html_buf));
+    return rc;
+  }
+  rc = c_rest_response_html(res, html_buf);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(html_buf));
+    return rc;
+  }
   C_REST_FREE((void *)(html_buf));
   return C_REST_OK;
 }
@@ -967,10 +995,13 @@ c_rest_error_t c_rest_enable_swagger_ui(struct c_rest_router *router,
                                         const char *docs_path,
                                         const char *openapi_url) {
   struct c_rest_openapi_spec *spec = NULL;
+  c_rest_error_t rc;
   if (!router || !docs_path || !openapi_url)
     return C_REST_ERROR_GENERIC;
 
-  c_rest_router_get_openapi_spec(router, &spec);
+  rc = c_rest_router_get_openapi_spec(router, &spec);
+  if (rc != C_REST_OK)
+    return rc;
   C_REST_FREE((void *)(spec->swagger_openapi_url));
   if (C_REST_MALLOC(strlen(openapi_url) + 1,
                     (void **)&spec->swagger_openapi_url) != 0) {

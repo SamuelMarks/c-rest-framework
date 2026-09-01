@@ -68,7 +68,6 @@ static c_rest_error_t sync_init(struct c_rest_context *ctx) {
 static c_rest_error_t sync_destroy(struct c_rest_context *ctx) {
   struct sync_state *state;
   c_rest_error_t rc;
-
   if (!ctx || !ctx->internal_state) {
     return C_REST_ERROR_INVALID_ARG;
   }
@@ -78,7 +77,7 @@ static c_rest_error_t sync_destroy(struct c_rest_context *ctx) {
   if (state->server_sock != C_REST_INVALID_SOCKET) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     if (ctx->cm_env) {
-      cm_socket_close(ctx->cm_env, state->server_sock);
+      rc = cm_socket_close(ctx->cm_env, state->server_sock);
     } else {
       rc = c_rest_socket_close(state->server_sock);
       if (rc != C_REST_OK) {
@@ -113,7 +112,6 @@ static c_rest_error_t sync_destroy(struct c_rest_context *ctx) {
 static c_rest_error_t sync_run(struct c_rest_context *ctx) {
   struct sync_state *state;
   c_rest_error_t rc;
-
   if (!ctx || !ctx->internal_state) {
     return C_REST_ERROR_INVALID_ARG;
   }
@@ -182,15 +180,19 @@ static c_rest_error_t sync_run(struct c_rest_context *ctx) {
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
       if (ctx->cm_env) {
-        cm_socket_close(ctx->cm_env, client_sock);
+        rc = cm_socket_close(ctx->cm_env, client_sock);
       } else {
         rc = c_rest_socket_close(client_sock);
+        if (rc != C_REST_OK)
+          return rc;
         if (rc != C_REST_OK) {
           return rc;
         }
       }
 #else
       rc = c_rest_socket_close(client_sock);
+      if (rc != C_REST_OK)
+        return rc;
       if (rc != C_REST_OK) {
         return rc;
       }
@@ -227,7 +229,7 @@ static c_rest_error_t sync_stop(struct c_rest_context *ctx) {
   if (state->server_sock != C_REST_INVALID_SOCKET) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     if (ctx->cm_env)
-      cm_socket_close(ctx->cm_env, state->server_sock);
+      rc = cm_socket_close(ctx->cm_env, state->server_sock);
     else {
       rc = c_rest_socket_close(state->server_sock);
       if (rc != C_REST_OK)

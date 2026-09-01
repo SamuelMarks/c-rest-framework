@@ -330,6 +330,7 @@ c_rest_error_t c_rest_graphql_parse(const char *query, size_t query_len,
   return C_REST_OK;
 }
 
+#undef c_rest_graphql_node_free
 c_rest_error_t c_rest_graphql_node_free(struct c_rest_graphql_node *node) {
   size_t i;
 

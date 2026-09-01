@@ -19,7 +19,9 @@ c_rest_error_t c_rest_orm_crud_get_list(struct c_rest_request *req,
     rc = c_rest_response_set_status(res, 500);
     if (rc != C_REST_OK)
       return rc;
-    c_rest_response_json(res, "{\"error\": \"Internal Server Error\"}");
+    rc = c_rest_response_json(res, "{\"error\": \"Internal Server Error\"}");
+    if (rc != C_REST_OK)
+      return rc;
     return C_REST_ERROR_GENERIC;
   }
 
@@ -40,7 +42,9 @@ c_rest_error_t c_rest_orm_crud_get_one(struct c_rest_request *req,
   struct c_rest_orm_model *model = (struct c_rest_orm_model *)user_data;
 
   if (!model || !req->db_conn) {
-    c_rest_response_set_status(res, 500);
+    rc = c_rest_response_set_status(res, 500);
+    if (rc != C_REST_OK)
+      return rc;
     return C_REST_ERROR_GENERIC;
   }
 
@@ -62,7 +66,9 @@ c_rest_error_t c_rest_orm_crud_create(struct c_rest_request *req,
   struct c_rest_orm_model *model = (struct c_rest_orm_model *)user_data;
 
   if (!model || !req->db_conn) {
-    c_rest_response_set_status(res, 500);
+    rc = c_rest_response_set_status(res, 500);
+    if (rc != C_REST_OK)
+      return rc;
     return C_REST_ERROR_GENERIC;
   }
 
@@ -83,7 +89,9 @@ c_rest_error_t c_rest_orm_crud_update(struct c_rest_request *req,
   struct c_rest_orm_model *model = (struct c_rest_orm_model *)user_data;
 
   if (!model || !req->db_conn) {
-    c_rest_response_set_status(res, 500);
+    rc = c_rest_response_set_status(res, 500);
+    if (rc != C_REST_OK)
+      return rc;
     return C_REST_ERROR_GENERIC;
   }
 
@@ -104,7 +112,9 @@ c_rest_error_t c_rest_orm_crud_delete(struct c_rest_request *req,
   struct c_rest_orm_model *model = (struct c_rest_orm_model *)user_data;
 
   if (!model || !req->db_conn) {
-    c_rest_response_set_status(res, 500);
+    rc = c_rest_response_set_status(res, 500);
+    if (rc != C_REST_OK)
+      return rc;
     return C_REST_ERROR_GENERIC;
   }
 

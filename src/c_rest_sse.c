@@ -534,7 +534,9 @@ c_rest_error_t c_rest_sse_init_response(struct c_rest_response *res) {
     return C_REST_ERROR_GENERIC;
   }
 
-  (void)c_rest_response_set_status(res, 200);
+  rc = c_rest_response_set_status(res, 200);
+  if (rc != C_REST_OK)
+    return rc;
   rc = c_rest_response_set_header(res, "Content-Type", "text/event-stream");
   if (rc != C_REST_OK)
     return rc;

@@ -45,7 +45,6 @@ struct multi_thread_state {
 static c_rest_error_t multi_thread_init(struct c_rest_context *ctx) {
   struct multi_thread_state *state;
   c_rest_error_t rc;
-
 #if defined(CDD_DOS)
   if (ctx && ctx->logger.log_cb) {
     rc = ctx->logger.log_cb(
@@ -94,7 +93,6 @@ static c_rest_error_t multi_thread_init(struct c_rest_context *ctx) {
 static c_rest_error_t multi_thread_destroy(struct c_rest_context *ctx) {
   struct multi_thread_state *state;
   c_rest_error_t rc;
-
   if (!ctx || !ctx->internal_state) {
     return C_REST_ERROR_INVALID_ARG;
   }
@@ -104,7 +102,7 @@ static c_rest_error_t multi_thread_destroy(struct c_rest_context *ctx) {
   if (state->server_sock != C_REST_INVALID_SOCKET) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     if (ctx->cm_env) {
-      cm_socket_close(ctx->cm_env, state->server_sock);
+      rc = cm_socket_close(ctx->cm_env, state->server_sock);
     } else {
       rc = c_rest_socket_close(state->server_sock);
       if (rc != C_REST_OK) {
@@ -152,7 +150,6 @@ struct connection_worker_args {
 static c_rest_error_t worker_thread(void *arg) {
   struct connection_worker_args *wargs = (struct connection_worker_args *)arg;
   c_rest_error_t rc;
-
   c_rest_error_t final_rc;
 
   rc = c_rest_handle_connection(wargs->ctx, wargs->client_sock);
@@ -160,7 +157,7 @@ static c_rest_error_t worker_thread(void *arg) {
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
   if (wargs->ctx->cm_env) {
-    cm_socket_close(wargs->ctx->cm_env, wargs->client_sock);
+    rc = cm_socket_close(wargs->ctx->cm_env, wargs->client_sock);
   } else {
     rc = c_rest_socket_close(wargs->client_sock);
     if (rc != C_REST_OK && final_rc == C_REST_OK) {
@@ -187,7 +184,6 @@ static c_rest_error_t worker_thread(void *arg) {
 static c_rest_error_t multi_thread_run(struct c_rest_context *ctx) {
   struct multi_thread_state *state;
   c_rest_error_t rc;
-
   if (!ctx || !ctx->internal_state) {
     return C_REST_ERROR_INVALID_ARG;
   }
@@ -283,13 +279,17 @@ static c_rest_error_t multi_thread_run(struct c_rest_context *ctx) {
           fprintf(stderr, "MULTI_THREAD: Failed to create thread\n");
           /* cleanup and close on failure */
           ctx->allocator.free_cb(wargs);
-          c_rest_socket_close(client_sock);
+          rc = c_rest_socket_close(client_sock);
+          if (rc != C_REST_OK)
+            return rc;
           return rc;
         }
 #endif
       } else {
 #if defined(_WIN32)
         rc = c_rest_socket_close(client_sock);
+        if (rc != C_REST_OK)
+          return rc;
 #endif
       }
     } else {
@@ -319,7 +319,6 @@ static c_rest_error_t multi_thread_run(struct c_rest_context *ctx) {
 static c_rest_error_t multi_thread_stop(struct c_rest_context *ctx) {
   struct multi_thread_state *state;
   c_rest_error_t rc;
-
   if (!ctx || !ctx->internal_state) {
     return C_REST_ERROR_GENERIC;
   }
@@ -330,7 +329,7 @@ static c_rest_error_t multi_thread_stop(struct c_rest_context *ctx) {
   if (state->server_sock != C_REST_INVALID_SOCKET) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     if (ctx->cm_env) {
-      cm_socket_close(ctx->cm_env, state->server_sock);
+      rc = cm_socket_close(ctx->cm_env, state->server_sock);
     } else {
       rc = c_rest_socket_close(state->server_sock);
       if (rc != C_REST_OK) {

@@ -762,6 +762,7 @@ c_rest_error_t c_rest_client_post_form_sync(
     const struct c_rest_client_header *headers, size_t headers_count,
     const struct c_rest_client_form_field *fields, size_t num_fields,
     struct c_rest_client_response **out_res) {
+  c_rest_error_t rc;
   c_rest_error_t ret;
   char *body = NULL;
   size_t body_len = 0;
@@ -772,8 +773,10 @@ c_rest_error_t c_rest_client_post_form_sync(
   if (!client || !url)
     return C_REST_ERROR_GENERIC;
 
-  ret =
+  ret = rc =
       c_rest_client_build_form_urlencoded(fields, num_fields, &body, &body_len);
+  if (rc != C_REST_OK)
+    return rc;
   if (ret != 0)
     return ret;
 

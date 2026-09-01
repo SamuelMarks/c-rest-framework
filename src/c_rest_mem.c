@@ -108,7 +108,9 @@ static c_rest_error_t add_node(void *ptr, size_t size, const char *file,
   }
   node->next = mem_list;
   mem_list = node;
-  (void)c_rest_mutex_unlock(mem_mutex);
+  rc = c_rest_mutex_unlock(mem_mutex);
+  if (rc != C_REST_OK)
+    return rc;
   return C_REST_OK;
 }
 
@@ -139,7 +141,9 @@ static c_rest_error_t remove_node(void *ptr) {
     prev = curr;
     curr = curr->next;
   }
-  (void)c_rest_mutex_unlock(mem_mutex);
+  rc = c_rest_mutex_unlock(mem_mutex);
+  if (rc != C_REST_OK)
+    return rc;
   return C_REST_OK;
 }
 
@@ -190,6 +194,7 @@ c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size, const char *file,
   void **real_out = (void **)out_ptr;
   c_rest_mem_node *curr;
   void *new_ptr;
+  c_rest_error_t rc;
 
   if (!real_out)
     return C_REST_ERROR_GENERIC;
@@ -208,13 +213,17 @@ c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size, const char *file,
   }
   if (size == 0) {
     {
-      (void)c_rest_mem_free(ptr);
+      rc = c_rest_mem_free(ptr);
+      if (rc != C_REST_OK)
+        return rc;
     }
     *real_out = NULL;
     return C_REST_OK;
   }
 
-  (void)c_rest_mutex_lock(mem_mutex);
+  rc = c_rest_mutex_lock(mem_mutex);
+  if (rc != C_REST_OK)
+    return rc;
   curr = mem_list;
   if (!curr)
     goto end_search2;
@@ -226,19 +235,25 @@ search_loop2:
   if (curr)
     goto search_loop2;
 end_search2:
-  (void)c_rest_mutex_unlock(mem_mutex);
+  rc = c_rest_mutex_unlock(mem_mutex);
+  if (rc != C_REST_OK)
+    return rc;
 
   if (C_REST_REALLOC(ptr, size, &new_ptr) != 0) {
     LOG_DEBUG("C_REST_REALLOC failed");
     new_ptr = NULL;
   }
   if (new_ptr && curr) {
-    (void)c_rest_mutex_lock(mem_mutex);
+    rc = c_rest_mutex_lock(mem_mutex);
+    if (rc != C_REST_OK)
+      return rc;
     curr->ptr = new_ptr;
     curr->size = size;
     curr->file = file;
     curr->line = line;
-    (void)c_rest_mutex_unlock(mem_mutex);
+    rc = c_rest_mutex_unlock(mem_mutex);
+    if (rc != C_REST_OK)
+      return rc;
   }
   *real_out = new_ptr;
   return new_ptr ? C_REST_OK : C_REST_ERROR_OOM;
@@ -306,7 +321,9 @@ c_rest_error_t c_rest_mem_tracker_print_leaks(void) {
     count++;
     curr = curr->next;
   }
-  (void)c_rest_mutex_unlock(mem_mutex);
+  rc = c_rest_mutex_unlock(mem_mutex);
+  if (rc != C_REST_OK)
+    return rc;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   goto print_leaks;
@@ -350,9 +367,13 @@ c_rest_error_t c_rest_mem_tracker_cleanup(void) {
   }
   mem_list = NULL;
 
-  (void)c_rest_mutex_unlock(mem_mutex);
+  rc = c_rest_mutex_unlock(mem_mutex);
+  if (rc != C_REST_OK)
+    return rc;
 
-  (void)c_rest_mutex_destroy(mem_mutex);
+  rc = c_rest_mutex_destroy(mem_mutex);
+  if (rc != C_REST_OK)
+    return rc;
   mem_initialized = 0;
   return C_REST_OK;
 }

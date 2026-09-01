@@ -368,9 +368,7 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
                                            const char *chunk,
                                            size_t chunk_len) {
   struct c_rest_connection_context *ctx;
-#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
   c_rest_error_t rc;
-#endif
   size_t written = 0;
   char hex_buf[32];
   size_t hex_len;
@@ -399,11 +397,17 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
 #endif
 
     if (ctx->tls_conn) {
-      IGNORE_RC(c_rest_tls_write(ctx->tls_conn, hex_buf, hex_len, &written));
+      rc = c_rest_tls_write(ctx->tls_conn, hex_buf, hex_len, &written);
+      if (rc != C_REST_OK)
+        return rc;
       if (chunk_len > 0) {
-        IGNORE_RC(c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written));
+        rc = c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written);
+        if (rc != C_REST_OK)
+          return rc;
       }
-      IGNORE_RC(c_rest_tls_write(ctx->tls_conn, "\r\n", 2, &written));
+      rc = c_rest_tls_write(ctx->tls_conn, "\r\n", 2, &written);
+      if (rc != C_REST_OK)
+        return rc;
     } else {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
       if (ctx->cm_env) {
@@ -435,18 +439,26 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
           return rc;
       }
 #else
-      IGNORE_RC(c_rest_socket_send(ctx->sock, hex_buf, hex_len, &written));
+      rc = c_rest_socket_send(ctx->sock, hex_buf, hex_len, &written);
+      if (rc != C_REST_OK)
+        return rc;
       if (chunk_len > 0) {
-        IGNORE_RC(c_rest_socket_send(ctx->sock, chunk, chunk_len, &written));
+        rc = c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+        if (rc != C_REST_OK)
+          return rc;
       }
-      IGNORE_RC(c_rest_socket_send(ctx->sock, "\r\n", 2, &written));
+      rc = c_rest_socket_send(ctx->sock, "\r\n", 2, &written);
+      if (rc != C_REST_OK)
+        return rc;
 #endif
     }
   } else {
     /* Not chunked HTTP/1.1, just stream raw bytes (used heavily by SSE) */
     if (chunk_len > 0) {
       if (ctx->tls_conn) {
-        IGNORE_RC(c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written));
+        rc = c_rest_tls_write(ctx->tls_conn, chunk, chunk_len, &written);
+        if (rc != C_REST_OK)
+          return rc;
       } else {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
         if (ctx->cm_env) {
@@ -460,7 +472,9 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
             return rc;
         }
 #else
-        IGNORE_RC(c_rest_socket_send(ctx->sock, chunk, chunk_len, &written));
+        rc = c_rest_socket_send(ctx->sock, chunk, chunk_len, &written);
+        if (rc != C_REST_OK)
+          return rc;
 #endif
       }
     }

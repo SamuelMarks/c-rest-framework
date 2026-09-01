@@ -48,11 +48,15 @@ c_rest_error_t c_rest_http23_ctx_init(c_rest_protocol_t protocol,
 }
 
 c_rest_error_t c_rest_http23_ctx_destroy(c_rest_http23_ctx_t *ctx) {
+  c_rest_error_t rc;
   if (!ctx) {
     return C_REST_ERROR_GENERIC;
   }
 
-  c_rest_request_cleanup(ctx->request);
+  rc = c_rest_request_cleanup(ctx->request);
+  if (rc != C_REST_OK) {
+    return rc;
+  }
   C_REST_FREE(ctx->request);
 
   C_REST_FREE(ctx);

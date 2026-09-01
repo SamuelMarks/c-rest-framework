@@ -88,8 +88,11 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
 
   /* Basic auth header as an alternative or additional requirement depending on
    * server */
-  (void)!c_rest_client_build_auth_basic(g_client_id, g_client_secret,
-                                        &auth_header);
+  err = c_rest_client_build_auth_basic(g_client_id, g_client_secret,
+                                       &auth_header);
+  if (err != 0) {
+    return 1;
+  }
 
   headers[0].key = "Authorization";
   headers[0].value = auth_header ? auth_header : "";

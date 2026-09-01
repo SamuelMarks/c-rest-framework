@@ -92,8 +92,11 @@ static c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
 
 static c_rest_error_t watcher_thread_func(void *arg) {
   c_rest_hot_reload_ctx_t *ctx = (c_rest_hot_reload_ctx_t *)arg;
+  c_rest_error_t rc;
   /* Poll once for the test environment */
-  c_rest_hot_reload_poll(ctx, ctx->on_reload, ctx->user_data);
+  rc = c_rest_hot_reload_poll(ctx, ctx->on_reload, ctx->user_data);
+  if (rc != C_REST_OK)
+    return rc;
   return C_REST_OK;
 }
 
@@ -301,7 +304,8 @@ c_rest_error_t c_rest_hot_reload_start(c_rest_hot_reload_ctx_t *ctx,
 }
 
 c_rest_error_t c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
-  c_rest_error_t rc;
+  c_rest_error_t rc = C_REST_OK;
+  c_rest_error_t ret_rc = C_REST_OK;
   size_t i;
 
   if (!ctx) {
@@ -321,7 +325,10 @@ c_rest_error_t c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
     rc = c_rest_thread_join(ctx->watcher_thread);
 #endif
     if (rc != C_REST_OK) {
-      (void)!hot_reload_log(ctx, "[HOT RELOAD] Failed to join watcher thread");
+      c_rest_error_t log_rc =
+          hot_reload_log(ctx, "[HOT RELOAD] Failed to join watcher thread");
+      (void)log_rc;
+      ret_rc = rc;
     }
     ctx->watcher_thread = (c_rest_thread_t)0;
   }
@@ -339,7 +346,7 @@ c_rest_error_t c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
 
   C_REST_FREE(ctx);
 
-  return C_REST_OK;
+  return ret_rc;
 }
 
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE

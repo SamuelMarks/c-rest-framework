@@ -43,8 +43,14 @@ c_rest_error_t c_rest_jwt_middleware(struct c_rest_request *req,
   }
 
   if (!user_data) {
-    c_rest_response_set_status(res, 500);
-    c_rest_response_html(res, "Internal Server Error: Missing JWT config");
+    rc = c_rest_response_set_status(res, 500);
+    if (rc != C_REST_OK) {
+      return rc;
+    }
+    rc = c_rest_response_html(res, "Internal Server Error: Missing JWT config");
+    if (rc != C_REST_OK) {
+      return rc;
+    }
     return C_REST_ERROR_GENERIC;
   }
 
@@ -52,9 +58,16 @@ c_rest_error_t c_rest_jwt_middleware(struct c_rest_request *req,
 
   rc = c_rest_request_get_auth_bearer(req, &token);
   if (rc != C_REST_OK) {
-    c_rest_response_set_status(res, 401);
-    c_rest_response_set_header(res, "WWW-Authenticate", "Bearer realm=\"API\"");
-    c_rest_response_html(res, "Unauthorized: Missing Bearer token");
+    rc = c_rest_response_set_status(res, 401);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = c_rest_response_set_header(res, "WWW-Authenticate",
+                                    "Bearer realm=\"API\"");
+    if (rc != C_REST_OK)
+      return rc;
+    rc = c_rest_response_html(res, "Unauthorized: Missing Bearer token");
+    if (rc != C_REST_OK)
+      return rc;
     return C_REST_ERROR_GENERIC;
   }
 
@@ -62,10 +75,17 @@ c_rest_error_t c_rest_jwt_middleware(struct c_rest_request *req,
                                        config->secret_len, &payload);
   if (verify_res != 0) {
     C_REST_FREE((void *)(token));
-    c_rest_response_set_status(res, 401);
-    c_rest_response_set_header(res, "WWW-Authenticate",
-                               "Bearer realm=\"API\", error=\"invalid_token\"");
-    c_rest_response_html(res, "Unauthorized: Invalid token signature");
+    rc = c_rest_response_set_status(res, 401);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = c_rest_response_set_header(
+        res, "WWW-Authenticate",
+        "Bearer realm=\"API\", error=\"invalid_token\"");
+    if (rc != C_REST_OK)
+      return rc;
+    rc = c_rest_response_html(res, "Unauthorized: Invalid token signature");
+    if (rc != C_REST_OK)
+      return rc;
     return C_REST_ERROR_GENERIC;
   }
 
@@ -73,11 +93,17 @@ c_rest_error_t c_rest_jwt_middleware(struct c_rest_request *req,
     if (config->verify_payload(payload, &auth_ctx) != 0) {
       C_REST_FREE((void *)(token));
       C_REST_FREE((void *)(payload));
-      c_rest_response_set_status(res, 401);
-      c_rest_response_set_header(
+      rc = c_rest_response_set_status(res, 401);
+      if (rc != C_REST_OK)
+        return rc;
+      rc = c_rest_response_set_header(
           res, "WWW-Authenticate",
           "Bearer realm=\"API\", error=\"invalid_token\"");
-      c_rest_response_html(res, "Unauthorized: Invalid token payload");
+      if (rc != C_REST_OK)
+        return rc;
+      rc = c_rest_response_html(res, "Unauthorized: Invalid token payload");
+      if (rc != C_REST_OK)
+        return rc;
       return C_REST_ERROR_GENERIC;
     }
   } else {

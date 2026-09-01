@@ -21,7 +21,10 @@ c_rest_error_t c_rest_ts_queue_init(c_rest_ts_queue *queue) {
     return rc;
   }
   rc = c_rest_cond_create(&queue->cond);
-  (void)rc;
+  if (rc != C_REST_OK) {
+    (void)!c_rest_mutex_destroy(queue->mutex);
+    return rc;
+  }
   return C_REST_OK;
 }
 
@@ -67,7 +70,9 @@ c_rest_error_t c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data) {
     (void)!c_rest_mutex_unlock(queue->mutex);
     return rc;
   }
-  (void)c_rest_mutex_unlock(queue->mutex);
+  rc = c_rest_mutex_unlock(queue->mutex);
+  if (rc != C_REST_OK)
+    return rc;
 
   return C_REST_OK;
 }
@@ -85,7 +90,9 @@ c_rest_error_t c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data) {
     return rc;
 
   while (queue->size == 0 && !queue->is_closed) {
-    (void)c_rest_cond_wait(queue->cond, queue->mutex);
+    rc = c_rest_cond_wait(queue->cond, queue->mutex);
+    if (rc != C_REST_OK)
+      return rc;
 #ifdef C_REST_TESTING_MALLOC_HOOK
     break; /* For coverage testing so it doesn't hang forever */
 #endif
@@ -106,7 +113,9 @@ c_rest_error_t c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data) {
   }
   queue->size--;
 
-  (void)c_rest_mutex_unlock(queue->mutex);
+  rc = c_rest_mutex_unlock(queue->mutex);
+  if (rc != C_REST_OK)
+    return rc;
 
   C_REST_FREE((void *)(node));
   *out_data = data;
@@ -127,7 +136,9 @@ c_rest_error_t c_rest_ts_queue_close(c_rest_ts_queue *queue) {
     (void)!c_rest_mutex_unlock(queue->mutex);
     return rc;
   }
-  (void)c_rest_mutex_unlock(queue->mutex);
+  rc = c_rest_mutex_unlock(queue->mutex);
+  if (rc != C_REST_OK)
+    return rc;
 
   return C_REST_OK;
 }
@@ -156,9 +167,13 @@ c_rest_error_t c_rest_ts_queue_destroy(c_rest_ts_queue *queue,
   queue->head = NULL;
   queue->tail = NULL;
   queue->size = 0;
-  (void)c_rest_mutex_unlock(queue->mutex);
+  rc = c_rest_mutex_unlock(queue->mutex);
+  if (rc != C_REST_OK)
+    return rc;
 
-  (void)c_rest_mutex_destroy(queue->mutex);
+  rc = c_rest_mutex_destroy(queue->mutex);
+  if (rc != C_REST_OK)
+    return rc;
   rc = c_rest_cond_destroy(queue->cond);
   if (rc != C_REST_OK)
     return rc;

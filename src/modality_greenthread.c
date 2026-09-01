@@ -60,7 +60,7 @@ static c_rest_error_t greenthread_destroy(struct c_rest_context *ctx) {
   if (state->server_sock != C_REST_INVALID_SOCKET) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     if (ctx->cm_env) {
-      cm_socket_close(ctx->cm_env, state->server_sock);
+      rc = cm_socket_close(ctx->cm_env, state->server_sock);
     } else {
       rc = c_rest_socket_close(state->server_sock);
       if (rc != C_REST_OK)
