@@ -83,7 +83,11 @@ c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock, const char *host,
 }
 
 c_rest_error_t c_rest_socket_listen(c_rest_socket_t sock, int backlog) {
-#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#if defined(__EMSCRIPTEN__)
+  (void)sock;
+  (void)backlog;
+  return C_REST_ERROR_NOT_SUPPORTED;
+#elif defined(__unix__) || defined(__APPLE__)
   int s = (int)sock;
   int res = listen(s, backlog);
   if (res < 0)
@@ -96,7 +100,11 @@ c_rest_error_t c_rest_socket_listen(c_rest_socket_t sock, int backlog) {
 
 c_rest_error_t c_rest_socket_accept(c_rest_socket_t server_sock,
                                     c_rest_socket_t *out_client_sock) {
-#if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#if defined(__EMSCRIPTEN__)
+  (void)server_sock;
+  (void)out_client_sock;
+  return C_REST_ERROR_NOT_SUPPORTED;
+#elif defined(__unix__) || defined(__APPLE__)
   int s = (int)server_sock;
   int client;
   struct sockaddr_in client_addr;
@@ -347,17 +355,20 @@ c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
   (void)executable;
   (void)argv;
   return C_REST_ERROR_NOT_SUPPORTED;
-#elif defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#elif defined(__unix__) || defined(__APPLE__)
   pid_t pid;
 
   if (!out_proc || !executable)
     return C_REST_ERROR_GENERIC;
 
   pid = fork();
+  if (pid < 0)
+    return C_REST_ERROR_GENERIC;
+
   if (pid == 0) {
     /* Child */
     execvp(executable, argv);
-    exit(127); /* Should not reach */
+    _exit(127); /* Should not reach */
   }
 
   *out_proc = (c_rest_process_t)pid;
@@ -372,11 +383,15 @@ c_rest_error_t c_rest_process_wait(c_rest_process_t proc, int *out_exit_code) {
   (void)proc;
   (void)out_exit_code;
   return C_REST_ERROR_NOT_SUPPORTED;
-#elif defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+#elif defined(__unix__) || defined(__APPLE__)
   pid_t pid = (pid_t)proc;
-  int status;
+  int status = 0;
 
-  waitpid(pid, &status, 0);
+  if (pid <= 0)
+    return C_REST_ERROR_GENERIC;
+
+  if (waitpid(pid, &status, 0) < 0)
+    return C_REST_ERROR_GENERIC;
 
   if (out_exit_code) {
     if (WIFEXITED(status)) {

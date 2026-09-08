@@ -70,17 +70,23 @@ target_include_directories(test-response-mock PRIVATE ${CMAKE_CURRENT_BINARY_DIR
 target_link_libraries(test-response-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-response-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-response-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-response-mock COMMAND test-response-mock)
 
+if(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART AND NOT EMSCRIPTEN)
 add_executable(test-hot-reload-mock test_hot_reload_mock.c)
 target_include_directories(test-hot-reload-mock PRIVATE ../include ${CMAKE_CURRENT_SOURCE_DIR} ${greatest_SOURCE_DIR})
 target_include_directories(test-hot-reload-mock PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../)
 target_link_libraries(test-hot-reload-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-hot-reload-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-hot-reload-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-hot-reload-mock COMMAND test-hot-reload-mock)
+endif()
 
 add_executable(test-crypto-mock test_crypto_mock.c)
 target_include_directories(test-crypto-mock PRIVATE ../include ${CMAKE_CURRENT_SOURCE_DIR} ${greatest_SOURCE_DIR})
@@ -88,6 +94,8 @@ target_include_directories(test-crypto-mock PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/
 target_link_libraries(test-crypto-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-crypto-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-crypto-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-crypto-mock COMMAND test-crypto-mock)
 
@@ -97,6 +105,8 @@ target_include_directories(test-orm-crud-mock PRIVATE ${CMAKE_CURRENT_BINARY_DIR
 target_link_libraries(test-orm-crud-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-orm-crud-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-orm-crud-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-orm-crud-mock COMMAND test-orm-crud-mock)
 
@@ -106,6 +116,8 @@ target_include_directories(test-graphql-mock PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
 target_link_libraries(test-graphql-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-graphql-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-graphql-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-graphql-mock COMMAND test-graphql-mock)
 
@@ -115,6 +127,8 @@ target_include_directories(test-http23-mock PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/
 target_link_libraries(test-http23-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-http23-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-http23-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-http23-mock COMMAND test-http23-mock)
 
@@ -124,6 +138,8 @@ target_include_directories(test-jwt-middleware-mock PRIVATE ${CMAKE_CURRENT_BINA
 target_link_libraries(test-jwt-middleware-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-jwt-middleware-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-jwt-middleware-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-jwt-middleware-mock COMMAND test-jwt-middleware-mock)
 
@@ -133,6 +149,8 @@ target_include_directories(test-openapi-mock PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
 target_link_libraries(test-openapi-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-openapi-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-openapi-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-openapi-mock COMMAND test-openapi-mock)
 
@@ -142,6 +160,8 @@ target_include_directories(test-sse-mock PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../
 target_link_libraries(test-sse-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-sse-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-sse-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-sse-mock COMMAND test-sse-mock)
 
@@ -151,6 +171,8 @@ target_include_directories(test-rate-limit-mock PRIVATE ${CMAKE_CURRENT_BINARY_D
 target_link_libraries(test-rate-limit-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-rate-limit-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-rate-limit-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-rate-limit-mock COMMAND test-rate-limit-mock)
 
@@ -160,6 +182,8 @@ target_include_directories(test-misc-mock PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..
 target_link_libraries(test-misc-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-misc-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-misc-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-misc-mock COMMAND test-misc-mock)
 
@@ -172,6 +196,8 @@ target_include_directories(test-mem-mock PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../
 target_link_libraries(test-mem-mock PRIVATE c-rest-framework)
 if(C_REST_GNU_FLAGS)
     target_compile_options(test-mem-mock PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(test-mem-mock PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 add_test(NAME test-mem-mock COMMAND test-mem-mock)
 
@@ -181,11 +207,13 @@ target_include_directories(c-rest-framework-tests PRIVATE ${CMAKE_CURRENT_BINARY
 target_link_libraries(c-rest-framework-tests PRIVATE c-rest-framework)
 
 if(EMSCRIPTEN)
-    target_link_options(c-rest-framework-tests PRIVATE "-sALLOW_MEMORY_GROWTH=1")
+    target_link_options(c-rest-framework-tests PRIVATE "-sALLOW_MEMORY_GROWTH=1" "-sSTACK_SIZE=1048576")
 endif()
 
 if(C_REST_GNU_FLAGS)
     target_compile_options(c-rest-framework-tests PRIVATE ${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    target_compile_options(c-rest-framework-tests PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 
 if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "MSVC" AND MSVC_VERSION LESS 1500)

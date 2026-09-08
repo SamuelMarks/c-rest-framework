@@ -44,7 +44,9 @@ C_REST_EXPORT extern const struct c_rest_modality_vtable multi_thread_vtable;
 C_REST_EXPORT extern const struct c_rest_modality_vtable async_vtable;
 C_REST_EXPORT extern const struct c_rest_modality_vtable greenthread_vtable;
 C_REST_EXPORT extern const struct c_rest_modality_vtable message_passing_vtable;
+#if !defined(__EMSCRIPTEN__) && !defined(CDD_DOS)
 C_REST_EXPORT extern const struct c_rest_modality_vtable multi_process_vtable;
+#endif
 
 #ifdef __cplusplus
 }

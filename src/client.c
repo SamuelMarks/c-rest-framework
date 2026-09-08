@@ -11,6 +11,8 @@
 #endif
 #elif defined(__APPLE__)
 #include <c_abstract_http/http_apple.h>
+#elif defined(__EMSCRIPTEN__)
+#include <c_abstract_http/http_wasm.h>
 #else
 #if !defined(CDD_DOS) && !defined(__EMSCRIPTEN__)
 #include <c_abstract_http/http_curl.h>
@@ -110,6 +112,10 @@ c_rest_error_t c_rest_client_init(c_rest_client_context **out_client) {
   (void)!http_apple_context_init(
       (struct HttpTransportContext **)&ctx->client.transport);
   ctx->client.send = http_apple_send;
+#elif defined(__EMSCRIPTEN__)
+  (void)!http_wasm_context_init(
+      (struct HttpTransportContext **)&ctx->client.transport);
+  ctx->client.send = http_wasm_send;
 #else
 #if !defined(CDD_DOS) && !defined(__EMSCRIPTEN__)
   (void)!http_curl_context_init(
@@ -142,6 +148,8 @@ c_rest_error_t c_rest_client_destroy(c_rest_client_context *client) {
 #endif
 #elif defined(__APPLE__)
   http_apple_context_free(client->client.transport);
+#elif defined(__EMSCRIPTEN__)
+  http_wasm_context_free(client->client.transport);
 #else
 #if !defined(CDD_DOS) && !defined(__EMSCRIPTEN__)
   http_curl_context_free(client->client.transport);

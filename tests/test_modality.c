@@ -378,11 +378,12 @@ static char *hook_strdup_modality(const char *str) {
 }
 #endif
 
+#if !defined(__EMSCRIPTEN__)
 struct test_client_args {
   struct c_rest_context *ctx;
   int port;
 };
-#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
+#if (defined(__unix__) || defined(__APPLE__))
 static void my_sigalrm(int sig) { (void)sig; }
 #endif
 static c_rest_error_t test_client_thread(void *arg) {
@@ -479,6 +480,7 @@ static c_rest_error_t test_client_thread(void *arg) {
   c_rest_platform_cleanup();
   return C_REST_OK;
 }
+#endif
 
 static int g_async_logger_calls = 0;
 static c_rest_error_t mock_logger_fail_on_second(const char *msg) {
@@ -502,6 +504,7 @@ int test_modality(void) {
   int failed = 0;
   struct c_rest_context *ctx = NULL;
   struct c_rest_router *router = NULL;
+#if !defined(__EMSCRIPTEN__) && !defined(CDD_DOS)
   enum c_rest_modality_type modalities[] = {C_REST_MODALITY_SYNC,
                                             C_REST_MODALITY_ASYNC,
                                             C_REST_MODALITY_MULTI_THREAD,
@@ -511,6 +514,15 @@ int test_modality(void) {
                                             C_REST_MODALITY_MESSAGE_PASSING,
                                             C_REST_MODALITY_SINGLE_PROCESS};
   int num_modalities = 8;
+#else
+  enum c_rest_modality_type modalities[] = {C_REST_MODALITY_SYNC,
+                                            C_REST_MODALITY_ASYNC,
+                                            C_REST_MODALITY_SINGLE_THREAD,
+                                            C_REST_MODALITY_GREENTHREAD,
+                                            C_REST_MODALITY_MESSAGE_PASSING,
+                                            C_REST_MODALITY_SINGLE_PROCESS};
+  int num_modalities = 6;
+#endif
   int i;
   c_rest_error_t rc;
   c_rest_socket_t client_sock = C_REST_INVALID_SOCKET;
@@ -1239,6 +1251,7 @@ int test_modality(void) {
     }
   }
 
+#if !defined(__EMSCRIPTEN__) && !defined(CDD_DOS)
   /* multi_process modality direct tests */
   {
 
@@ -1358,7 +1371,9 @@ int test_modality(void) {
       multi_process_vtable.destroy(&dummy_ctx_mproc);
     }
   }
+#endif
 
+#if !defined(__EMSCRIPTEN__)
   /* Extra run tests with thread connection to hit accept success */
   {
 
@@ -1366,7 +1381,7 @@ int test_modality(void) {
     c_rest_thread_t client_thread;
     struct test_client_args args;
 
-#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
+#if (defined(__unix__) || defined(__APPLE__))
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = my_sigalrm;
@@ -1421,6 +1436,7 @@ int test_modality(void) {
       multi_thread_vtable.destroy(&dummy_ctx);
     }
   }
+#endif
 
   {
 

@@ -1,6 +1,10 @@
+remove_definitions(-D_CRT_SECURE_NO_WARNINGS)
+
 add_subdirectory(app_node_style)
 add_subdirectory(app_threaded)
-add_subdirectory(app_multi_process)
+if(NOT EMSCRIPTEN AND NOT CMAKE_SYSTEM_NAME STREQUAL "DOS")
+    add_subdirectory(app_multi_process)
+endif()
 add_subdirectory(app_https_server)
 add_subdirectory(notes)
 add_subdirectory(app_template_engine)
@@ -17,6 +21,6 @@ add_subdirectory(app_jwt_json_w)
 
 add_subdirectory(app_full_multi)
 
-if(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART)
+if(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART AND NOT EMSCRIPTEN)
   add_subdirectory(app_hot_reload)
 endif()

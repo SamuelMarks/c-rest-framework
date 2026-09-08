@@ -75,10 +75,10 @@ int test_orm_integration(void) {
   /* Mock database config */
   ctx->db_config.connection_string = "sqlite://:memory:";
   ret = c_rest_run(ctx); /* Will trigger c-orm pool mock init */
-  if (ret != 0 &&
-      ret !=
-          1) { /* 1 is expected because no modality run loop is implemented */
-    printf("c_rest_run returned unexpected error\n");
+  if (ret != 0 && ret != 1 && ret != C_REST_ERROR_NOT_SUPPORTED) {
+    /* 1 is expected because no modality run loop is implemented,
+       or NOT_SUPPORTED on platforms without socket accept */
+    printf("c_rest_run returned unexpected error: %d\n", (int)ret);
     return 1;
   }
 

@@ -560,7 +560,7 @@ elseif(C_REST_MSVC_FLAGS)
     target_compile_options(c-rest-framework PRIVATE ${C_REST_MSVC_FLAGS})
 endif()
 
-if(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART)
+if(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART AND NOT EMSCRIPTEN)
     target_sources(c-rest-framework PRIVATE src/c_rest_hot_reload.c)
     target_compile_definitions(c-rest-framework PUBLIC C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART)
 endif()

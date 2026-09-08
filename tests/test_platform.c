@@ -17,6 +17,7 @@
 #endif
 /* clang-format on */
 
+#ifndef __EMSCRIPTEN__
 static c_rest_error_t cond_thread_func(void *arg) {
   c_rest_cond_t cond = (c_rest_cond_t)arg;
 #if defined(__unix__) || defined(__APPLE__)
@@ -30,6 +31,7 @@ static c_rest_error_t cond_thread_func(void *arg) {
   c_rest_cond_signal(cond);
   return C_REST_OK;
 }
+#endif
 
 static c_rest_error_t thread_func(void *arg) {
   int *val = (int *)arg;
@@ -84,7 +86,11 @@ int test_platform(void) {
   c_rest_socket_listen((c_rest_socket_t)-1, 10);
   c_rest_socket_accept(sock, NULL);
   c_rest_socket_accept((c_rest_socket_t)-1, &client_sock);
+#ifndef __EMSCRIPTEN__
   failed += ((rc != C_REST_OK) != 0);
+#else
+  failed += ((rc != C_REST_ERROR_NOT_SUPPORTED) != 0);
+#endif
 
   rc = c_rest_socket_set_nonblocking(sock, 1);
 
@@ -112,7 +118,7 @@ int test_platform(void) {
   }
 
   {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
     int fds[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
       /*c_rest_socket_send(s1, "hello", 5, &wr);*/
@@ -224,11 +230,13 @@ int test_platform(void) {
   /* if (c_rest_cond_wait((c_rest_cond_t)0, mutex) == C_REST_OK) return
    * __LINE__; */
   failed += ((c_rest_cond_wait(cond, (c_rest_mutex_t)0) == C_REST_OK) != 0);
+#ifndef __EMSCRIPTEN__
   c_rest_mutex_lock(mutex);
   c_rest_thread_create(&thread, cond_thread_func, (void *)cond);
   c_rest_cond_wait(cond, mutex);
   c_rest_mutex_unlock(mutex);
   c_rest_thread_join(thread);
+#endif
   /* Skip actual wait so we don't hang */
 
   failed += ((c_rest_cond_signal((c_rest_cond_t)0) == C_REST_OK) != 0);

@@ -77,7 +77,8 @@ int test_router(void);
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
 int test_template(void);
 #endif
-#ifdef C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART
+#if defined(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART) &&                       \
+    !defined(__EMSCRIPTEN__)
 SUITE_EXTERN(suite_hot_reload);
 int test_hot_reload(void) {
   RUN_SUITE(suite_hot_reload);
@@ -387,7 +388,8 @@ int main(int argc, char **argv) {
     return res;
 #endif
 
-#ifdef C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART
+#if defined(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART) &&                       \
+    !defined(__EMSCRIPTEN__)
   fflush(stdout);
   printf("Running test_hot_reload...\n");
   res = test_hot_reload();
