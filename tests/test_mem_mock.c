@@ -23,7 +23,11 @@ extern c_rest_error_t c_rest_cond_wait(c_rest_cond_t cond, c_rest_mutex_t mutex)
 
 static c_rest_error_t mock_c_rest_mutex_unlock(c_rest_mutex_t mutex) {
     if (g_mock_mutex_unlock_countdown >= 0) {
-        if (g_mock_mutex_unlock_countdown == 0) return C_REST_ERROR_GENERIC;
+        if (g_mock_mutex_unlock_countdown == 0) {
+            g_mock_mutex_unlock_countdown = -1;
+            c_rest_mutex_unlock(mutex);
+            return C_REST_ERROR_GENERIC;
+        }
         g_mock_mutex_unlock_countdown--;
     }
     return c_rest_mutex_unlock(mutex);
@@ -31,7 +35,10 @@ static c_rest_error_t mock_c_rest_mutex_unlock(c_rest_mutex_t mutex) {
 
 static c_rest_error_t mock_c_rest_mutex_lock(c_rest_mutex_t mutex) {
     if (g_mock_mutex_lock_countdown >= 0) {
-        if (g_mock_mutex_lock_countdown == 0) return C_REST_ERROR_GENERIC;
+        if (g_mock_mutex_lock_countdown == 0) {
+            g_mock_mutex_lock_countdown = -1;
+            return C_REST_ERROR_GENERIC;
+        }
         g_mock_mutex_lock_countdown--;
     }
     return c_rest_mutex_lock(mutex);
@@ -39,7 +46,10 @@ static c_rest_error_t mock_c_rest_mutex_lock(c_rest_mutex_t mutex) {
 
 static c_rest_error_t mock_c_rest_mutex_destroy(c_rest_mutex_t mutex) {
     if (g_mock_mutex_destroy_countdown >= 0) {
-        if (g_mock_mutex_destroy_countdown == 0) return C_REST_ERROR_GENERIC;
+        if (g_mock_mutex_destroy_countdown == 0) {
+            g_mock_mutex_destroy_countdown = -1;
+            return C_REST_ERROR_GENERIC;
+        }
         g_mock_mutex_destroy_countdown--;
     }
     return c_rest_mutex_destroy(mutex);
@@ -47,7 +57,10 @@ static c_rest_error_t mock_c_rest_mutex_destroy(c_rest_mutex_t mutex) {
 
 static c_rest_error_t mock_c_rest_cond_create(c_rest_cond_t *cond) {
     if (g_mock_cond_create_countdown >= 0) {
-        if (g_mock_cond_create_countdown == 0) return C_REST_ERROR_GENERIC;
+        if (g_mock_cond_create_countdown == 0) {
+            g_mock_cond_create_countdown = -1;
+            return C_REST_ERROR_GENERIC;
+        }
         g_mock_cond_create_countdown--;
     }
     return c_rest_cond_create(cond);
@@ -55,7 +68,10 @@ static c_rest_error_t mock_c_rest_cond_create(c_rest_cond_t *cond) {
 
 static c_rest_error_t mock_c_rest_cond_wait(c_rest_cond_t cond, c_rest_mutex_t mutex) {
     if (g_mock_cond_wait_countdown >= 0) {
-        if (g_mock_cond_wait_countdown == 0) return C_REST_ERROR_GENERIC;
+        if (g_mock_cond_wait_countdown == 0) {
+            g_mock_cond_wait_countdown = -1;
+            return C_REST_ERROR_GENERIC;
+        }
         g_mock_cond_wait_countdown--;
     }
     return c_rest_cond_wait(cond, mutex);
@@ -78,6 +94,20 @@ static c_rest_error_t mock_c_rest_cond_wait(c_rest_cond_t cond, c_rest_mutex_t m
 #define c_rest_ts_queue_pop test_c_rest_ts_queue_pop
 #define c_rest_ts_queue_close test_c_rest_ts_queue_close
 #define c_rest_ts_queue_destroy test_c_rest_ts_queue_destroy
+
+c_rest_error_t test_c_rest_mem_tracker_init(void);
+c_rest_error_t test_c_rest_mem_malloc(size_t size, const char *file, int line,
+                                      void *out_ptr);
+c_rest_error_t test_c_rest_mem_free(void *ptr);
+c_rest_error_t test_c_rest_mem_tracker_print_leaks(void);
+c_rest_error_t test_c_rest_mem_tracker_cleanup(void);
+
+c_rest_error_t test_c_rest_ts_queue_init(c_rest_ts_queue *queue);
+c_rest_error_t test_c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data);
+c_rest_error_t test_c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data);
+c_rest_error_t test_c_rest_ts_queue_close(c_rest_ts_queue *queue);
+c_rest_error_t test_c_rest_ts_queue_destroy(c_rest_ts_queue *queue,
+                                            void (*free_data)(void *));
 
 /* Include the source files directly */
 #include "../src/c_rest_mem.c"
@@ -153,9 +183,15 @@ TEST test_ts_queue_error_branches(void) {
   g_mock_mutex_unlock_countdown = 0;
   ASSERT_EQ(C_REST_ERROR_GENERIC, test_c_rest_ts_queue_push(q, (void *)1));
 
+  /* Pop the item so queue is empty for cond_wait test */
+  test_c_rest_ts_queue_pop(q, &item);
+
   /* test c_rest_cond_wait failure in pop */
   g_mock_cond_wait_countdown = 0;
   ASSERT_EQ(C_REST_ERROR_GENERIC, test_c_rest_ts_queue_pop(q, &item));
+
+  /* Push an item so queue is not empty when testing unlock failure in pop */
+  test_c_rest_ts_queue_push(q, (void *)2);
 
   /* test c_rest_mutex_unlock failure in pop */
   g_mock_mutex_unlock_countdown = 0;

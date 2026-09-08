@@ -50,6 +50,20 @@ static c_rest_error_t mock_c_rest_base64_decode(const char *src, size_t src_len,
 #define c_rest_jwt_sign_hs256 test_c_rest_jwt_sign_hs256
 #define c_rest_jwt_verify_hs256 test_c_rest_jwt_verify_hs256
 
+c_rest_error_t test_c_rest_hash_password(const char *password,
+                                         enum c_rest_password_hash_alg alg,
+                                         char **out_hash);
+c_rest_error_t test_c_rest_verify_password(const char *password,
+                                           const char *hash);
+c_rest_error_t test_c_rest_jwt_sign_hs256(const char *json_payload,
+                                          const unsigned char *secret,
+                                          size_t secret_len,
+                                          char **out_token);
+c_rest_error_t test_c_rest_jwt_verify_hs256(const char *token,
+                                            const unsigned char *secret,
+                                            size_t secret_len,
+                                            char **out_payload);
+
 #include "../src/c_rest_crypto.c"
 
 #undef c_rest_pbkdf2_hmac_sha256

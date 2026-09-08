@@ -1,13 +1,16 @@
 
+/* clang-format off */
 #include "c_rest_str_utils.h"
 #include "c_rest_error.h"
 #include "c_rest_log.h"
 #include "c_rest_mem.h"
 
-#include "c_rest_log.h"
 #include <ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+/* clang-format on */
 
 c_rest_error_t c_rest_strcasecmp(const char *s1, const char *s2, int *out_cmp) {
   int done = 0;
@@ -184,11 +187,6 @@ c_rest_error_t c_rest_url_decode(char *dst, const char *src, size_t len) {
   return C_REST_OK;
 }
 
-/* clang-format off */
-#include <stdarg.h>
-#include <stdio.h>
-/* clang-format on */
-
 c_rest_error_t c_rest_sprintf_s(char *buffer, size_t sizeOfBuffer,
                                 const char *format, ...) {
   int ret;
@@ -208,7 +206,6 @@ c_rest_error_t c_rest_strcpy_s(char *dest, size_t dest_size, const char *src) {
 #if defined(_MSC_VER)
   return (strcpy_s(dest, dest_size, src) == 0) ? C_REST_OK
                                                : C_REST_ERROR_INVALID_ARG;
-  (dest, dest_size, src);
 #else
   (void)dest_size;
   strcpy(dest, src);
@@ -222,7 +219,6 @@ c_rest_error_t c_rest_strncpy_s(char *dest, size_t dest_size, const char *src,
   return (strncpy_s(dest, dest_size, src, count) == 0)
              ? C_REST_OK
              : C_REST_ERROR_INVALID_ARG;
-  (dest, dest_size, src, count);
 #else
   (void)dest_size;
   strncpy(dest, src, count);

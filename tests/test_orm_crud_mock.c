@@ -39,6 +39,22 @@ static c_rest_error_t mock_c_rest_response_set_status(struct c_rest_response *re
 #define c_rest_orm_crud_delete test_c_rest_orm_crud_delete
 #define c_rest_orm_crud_get_list test_c_rest_orm_crud_get_list
 
+c_rest_error_t test_c_rest_orm_crud_create(struct c_rest_request *req,
+                                           struct c_rest_response *res,
+                                           void *user_data);
+c_rest_error_t test_c_rest_orm_crud_get_one(struct c_rest_request *req,
+                                            struct c_rest_response *res,
+                                            void *user_data);
+c_rest_error_t test_c_rest_orm_crud_update(struct c_rest_request *req,
+                                           struct c_rest_response *res,
+                                           void *user_data);
+c_rest_error_t test_c_rest_orm_crud_delete(struct c_rest_request *req,
+                                           struct c_rest_response *res,
+                                           void *user_data);
+c_rest_error_t test_c_rest_orm_crud_get_list(struct c_rest_request *req,
+                                             struct c_rest_response *res,
+                                             void *user_data);
+
 #include "../src/c_orm_crud.c"
 
 #undef c_rest_response_json

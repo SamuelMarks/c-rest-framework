@@ -27,6 +27,9 @@ static c_rest_error_t mock_c_rest_graphql_node_free(struct c_rest_graphql_node *
 #define parse_operation test_parse_operation
 #define list_append test_list_append
 
+c_rest_error_t test_c_rest_graphql_parse(const char *query, size_t query_len,
+                                         struct c_rest_graphql_node **out_doc);
+
 #include "../src/c_rest_graphql.c"
 
 #undef c_rest_graphql_node_free
@@ -40,7 +43,6 @@ static void reset_mocks(void *data) {
 
 TEST test_graphql_error_branches(void) {
   struct c_rest_graphql_node *doc = NULL;
-  struct c_rest_graphql_node_list list = {0};
 
   /* list_append error branch */
   g_mock_free_countdown = 0;

@@ -29,7 +29,10 @@ static c_rest_error_t mock_c_rest_mutex_lock(c_rest_mutex_t mutex) {
 
 static c_rest_error_t mock_c_rest_mutex_unlock(c_rest_mutex_t mutex) {
     if (g_mock_mutex_unlock_countdown >= 0) {
-        if (g_mock_mutex_unlock_countdown == 0) return C_REST_ERROR_GENERIC;
+        if (g_mock_mutex_unlock_countdown == 0) {
+            c_rest_mutex_unlock(mutex);
+            return C_REST_ERROR_GENERIC;
+        }
         g_mock_mutex_unlock_countdown--;
     }
     return c_rest_mutex_unlock(mutex);
@@ -52,9 +55,9 @@ static c_rest_error_t mock_c_rest_hashmap_destroy(struct c_rest_hashmap *map, vo
 }
 
 static int g_mock_mutex_create_countdown = -1;
-extern c_rest_error_t c_rest_mutex_create(c_rest_mutex_t **mutex);
+extern c_rest_error_t c_rest_mutex_create(c_rest_mutex_t *mutex);
 
-static c_rest_error_t mock_c_rest_mutex_create(c_rest_mutex_t **mutex) {
+static c_rest_error_t mock_c_rest_mutex_create(c_rest_mutex_t *mutex) {
     if (g_mock_mutex_create_countdown >= 0) {
         if (g_mock_mutex_create_countdown == 0) return C_REST_ERROR_GENERIC;
         g_mock_mutex_create_countdown--;
@@ -72,6 +75,15 @@ static c_rest_error_t mock_c_rest_mutex_create(c_rest_mutex_t **mutex) {
 #define c_rest_rate_limiter_init test_c_rest_rate_limiter_init
 #define c_rest_rate_limiter_check test_c_rest_rate_limiter_check
 #define c_rest_rate_limiter_destroy test_c_rest_rate_limiter_destroy
+
+c_rest_error_t test_c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
+                                             size_t capacity, size_t fill_rate,
+                                             size_t max_entities);
+c_rest_error_t test_c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
+                                              const char *identifier,
+                                              size_t tokens_needed,
+                                              size_t *out_remaining);
+c_rest_error_t test_c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter);
 
 #include "../src/c_rest_rate_limit.c"
 
@@ -94,7 +106,6 @@ static void reset_mocks(void *data) {
 
 TEST test_rate_limit_error_branches(void) {
   c_rest_rate_limiter rl = {0};
-  struct c_rest_request req = {0};
   size_t tokens = 0;
 
   /* init: fails on hashmap_destroy (via mutex_create fail) */

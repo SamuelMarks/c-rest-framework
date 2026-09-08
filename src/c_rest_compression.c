@@ -1,5 +1,5 @@
-#include "c_rest_testing_mocks.h"
 /* clang-format off */
+#include "c_rest_testing_mocks.h"
 #include "c_rest_error.h"
 #include "../include/c_rest_compression.h"
 #include "../include/c_rest_mem.h"

@@ -1,4 +1,3 @@
-#include <string.h>
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
@@ -7,6 +6,7 @@
 #include "c_rest_tls.h"
 #include "c_rest_platform.h"
 #include <parson.h>
+#include <c_abstract_http/http_types.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,8 +24,6 @@ static void async_callback(struct c_rest_client_response *res, void *data) {
   (void)data;
   async_called = 1;
 }
-
-#include <c_abstract_http/http_types.h>
 
 struct c_rest_client_context {
   struct HttpClient client;

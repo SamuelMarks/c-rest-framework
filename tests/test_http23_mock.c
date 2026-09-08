@@ -24,6 +24,8 @@ static c_rest_error_t mock_c_rest_request_cleanup(struct c_rest_request *req) {
 #define c_rest_request_cleanup mock_c_rest_request_cleanup
 #define c_rest_http23_ctx_destroy test_c_rest_http23_ctx_destroy
 
+c_rest_error_t test_c_rest_http23_ctx_destroy(c_rest_http23_ctx_t *ctx);
+
 #include "../src/c_rest_http23.c"
 
 #undef c_rest_request_cleanup

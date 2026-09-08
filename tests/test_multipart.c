@@ -1,10 +1,10 @@
-#include <stdlib.h>
 /* clang-format off */
 #include "c_rest_error.h"
 #include "test_protos.h"
 #include "c_rest_multipart.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 /* clang-format on */
 

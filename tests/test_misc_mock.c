@@ -39,6 +39,16 @@ static c_rest_error_t mock_c_rest_response_set_header(struct c_rest_response *re
 #define c_rest_cors_middleware test_c_rest_cors_middleware
 #define c_rest_hsts_middleware test_c_rest_hsts_middleware
 
+c_rest_error_t test_c_rest_https_redirect_middleware(struct c_rest_request *req,
+                                                     struct c_rest_response *res,
+                                                     void *user_data);
+c_rest_error_t test_c_rest_cors_middleware(struct c_rest_request *req,
+                                           struct c_rest_response *res,
+                                           void *user_data);
+c_rest_error_t test_c_rest_hsts_middleware(struct c_rest_request *req,
+                                           struct c_rest_response *res,
+                                           void *user_data);
+
 #include "../src/middleware.c"
 
 #undef c_rest_response_redirect

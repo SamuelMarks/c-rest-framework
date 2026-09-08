@@ -1,7 +1,7 @@
-#include <signal.h>
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_http23.h"
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 /* clang-format on */

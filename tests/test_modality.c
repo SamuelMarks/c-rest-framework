@@ -1,7 +1,6 @@
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif
-#include <string.h>
 
 /* clang-format off */
 #include "c_rest_error.h"
@@ -411,14 +410,19 @@ static c_rest_error_t test_client_thread(void *arg) {
       srv_addr.sin_family = AF_INET;
       srv_addr.sin_port = htons((unsigned short)args->port);
       srv_addr.sin_addr.s_addr = htonl(0x7F000001);
-      if (connect((int)(size_t)sock, (struct sockaddr *)&srv_addr,
+#if defined(_WIN32)
+      if (connect((SOCKET)sock, (struct sockaddr *)&srv_addr,
                   sizeof(srv_addr)) == 0) {
+#else
+      if (connect((int)sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) ==
+          0) {
+#endif
         const char *req =
             "GET / HTTP/1.1\r\nHost: loc\r\nConnection: close\r\n\r\n";
 #if defined(_WIN32)
-        send((int)(size_t)sock, req, (int)strlen(req), 0);
+        send((SOCKET)sock, req, (int)strlen(req), 0);
 #else
-        send((int)(size_t)sock, req, strlen(req), 0);
+        send((int)sock, req, strlen(req), 0);
 #endif
 #if defined(_WIN32)
         Sleep(50);
@@ -432,7 +436,7 @@ static c_rest_error_t test_client_thread(void *arg) {
 #endif
         c_rest_stop(args->ctx);
 #if defined(_WIN32)
-        closesocket(sock);
+        closesocket((SOCKET)sock);
 #else
         close((int)sock);
 #endif
@@ -441,11 +445,13 @@ static c_rest_error_t test_client_thread(void *arg) {
           for (j = 0; j < 8; j++) {
             sock = (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
             if (sock != C_REST_INVALID_SOCKET) {
-              connect((int)(size_t)sock, (struct sockaddr *)&srv_addr,
-                      sizeof(srv_addr));
 #if defined(_WIN32)
-              closesocket(sock);
+              connect((SOCKET)sock, (struct sockaddr *)&srv_addr,
+                      sizeof(srv_addr));
+              closesocket((SOCKET)sock);
 #else
+              connect((int)sock, (struct sockaddr *)&srv_addr,
+                      sizeof(srv_addr));
               close((int)sock);
 #endif
             }
@@ -454,7 +460,7 @@ static c_rest_error_t test_client_thread(void *arg) {
         break;
       }
 #if defined(_WIN32)
-      closesocket(sock);
+      closesocket((SOCKET)sock);
 #else
       close((int)sock);
 #endif

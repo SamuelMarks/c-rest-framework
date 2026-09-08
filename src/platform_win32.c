@@ -54,8 +54,13 @@ c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock, const char *host,
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
+  if (!host)
+    return C_REST_ERROR_GENERIC;
   addr.sin_addr.s_addr =
       inet_addr(host); /* Very basic, INADDR_ANY if "0.0.0.0" */
+  if (addr.sin_addr.s_addr == INADDR_NONE &&
+      strcmp(host, "255.255.255.255") != 0)
+    return C_REST_ERROR_GENERIC;
 
   res = bind(s, (struct sockaddr *)&addr, sizeof(addr));
   if (res == SOCKET_ERROR) {

@@ -1,9 +1,13 @@
-#include "c_rest_testing_mocks.h"
 /* clang-format off */
+#include "c_rest_testing_mocks.h"
 #include "c_rest_orm.h"
+#include "c_rest_error.h"
+#include "c_rest_export.h"
+#include "c_rest_modality.h"
+#include "c_rest_platform.h"
+#include "c_rest_tls.h"
 
 #include <stddef.h>
-#include "c_rest_error.h"
 /* clang-format on */
 
 /* #ifndef C_REST_FRAMEWORK_USE_REAL_C_ORM */
@@ -43,11 +47,6 @@ c_rest_error_t c_rest_orm_cleanup(struct c_orm_pool *pool) {
 /* #endif C_REST_FRAMEWORK_USE_REAL_C_ORM */
 
 typedef int c_orm_mock_dummy_declaration;
-
-#include "c_rest_export.h"
-#include "c_rest_modality.h"
-#include "c_rest_platform.h"
-#include "c_rest_tls.h"
 
 C_REST_EXPORT extern int g_mock_socket_fail;
 C_REST_EXPORT int g_mock_tls_fail = 0;

@@ -1,14 +1,14 @@
-int g_fail_callbacks = 0;
-
-#include <stdlib.h>
 /* clang-format off */
 #include "c_rest_error.h"
 #include "test_protos.h"
 #include "c_rest_parser.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 /* clang-format on */
+
+int g_fail_callbacks = 0;
 
 struct basic_parser_state {
   int state;

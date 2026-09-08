@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
+remove_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 include(FetchContent)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../greatest/greatest.h")

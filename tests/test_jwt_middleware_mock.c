@@ -47,6 +47,10 @@ static c_rest_error_t mock_c_rest_response_set_header(struct c_rest_response *re
 
 #define c_rest_jwt_middleware test_c_rest_jwt_middleware
 
+c_rest_error_t test_c_rest_jwt_middleware(struct c_rest_request *req,
+                                          struct c_rest_response *res,
+                                          void *user_data);
+
 #include "../src/c_rest_jwt_middleware.c"
 
 #undef c_rest_response_set_status

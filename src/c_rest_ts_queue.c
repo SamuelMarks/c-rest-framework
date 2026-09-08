@@ -91,8 +91,10 @@ c_rest_error_t c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data) {
 
   while (queue->size == 0 && !queue->is_closed) {
     rc = c_rest_cond_wait(queue->cond, queue->mutex);
-    if (rc != C_REST_OK)
+    if (rc != C_REST_OK) {
+      (void)!c_rest_mutex_unlock(queue->mutex);
       return rc;
+    }
 #ifdef C_REST_TESTING_MALLOC_HOOK
     break; /* For coverage testing so it doesn't hang forever */
 #endif

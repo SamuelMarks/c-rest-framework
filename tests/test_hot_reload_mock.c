@@ -28,6 +28,8 @@ static c_rest_error_t mock_c_rest_thread_join(c_rest_thread_t thread) {
 /* Rename the tested function */
 #define c_rest_hot_reload_destroy test_c_rest_hot_reload_destroy
 
+c_rest_error_t test_c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx);
+
 /* Include the actual source file */
 #include "../src/c_rest_hot_reload.c"
 
@@ -44,9 +46,9 @@ static c_rest_error_t fail_logger_cb(const char *msg) {
   return C_REST_ERROR_GENERIC; /* Fail the logger to make poll fail */
 }
 
-static c_rest_error_t dummy_on_reload(void *user_data) {
+static int dummy_on_reload(void *user_data) {
   (void)user_data;
-  return C_REST_OK;
+  return 0;
 }
 
 TEST test_watcher_thread_func_poll_fail(void) {
@@ -68,9 +70,16 @@ TEST test_watcher_thread_func_poll_fail(void) {
      Let's fake a file change directly in the ctx struct. */
   ctx->watch_capacity = 1;
   ctx->watch_count = 1;
-  ctx->watched_paths = malloc(sizeof(char *));
-  ctx->watched_paths[0] = strdup("test_file_fake");
-  ctx->last_modified_times = malloc(sizeof(time_t));
+  ASSERT_EQ(C_REST_OK,
+            C_REST_MALLOC(sizeof(char *), (void **)&ctx->watched_paths));
+  ASSERT_EQ(C_REST_OK, C_REST_MALLOC(16, (void **)&ctx->watched_paths[0]));
+#if defined(_MSC_VER)
+  strcpy_s(ctx->watched_paths[0], 16, "test_file_fake");
+#else
+  strcpy(ctx->watched_paths[0], "test_file_fake");
+#endif
+  ASSERT_EQ(C_REST_OK,
+            C_REST_MALLOC(sizeof(time_t), (void **)&ctx->last_modified_times));
   ctx->last_modified_times[0] = 12345; /* Fake mtime */
 
   /* Call the static watcher_thread_func directly */

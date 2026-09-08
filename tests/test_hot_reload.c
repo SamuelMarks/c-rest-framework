@@ -1,4 +1,3 @@
-#include <string.h>
 /* clang-format off */
 #include "c_rest_error.h"
 #include "test_protos.h"
@@ -7,12 +6,17 @@
 #include "greatest.h"
 #include "c_rest_router.h"
 #include "c_rest_sse.h"
+#include "c_rest_request.h"
+#include "c_rest_response.h"
+#include "c_rest_platform.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__) || defined(_MSC_VER)
-void __stdcall Sleep(unsigned long dwMilliseconds);
+#include <winsock2.h>
 #else
+#include <sys/socket.h>
 #include <unistd.h>
 #endif
 /* clang-format on */
@@ -474,16 +478,6 @@ TEST test_hot_reload_oom(void) {
 #endif
 
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
-#include "c_rest_request.h"
-#include "c_rest_response.h"
-#if !defined(_MSC_VER)
-#if defined(_WIN32)
-#include <winsock2.h>
-#else
-#include <sys/socket.h>
-#endif
-#endif
-
 TEST test_hot_reload_sse_routes(void) {
   struct c_rest_router *router = NULL;
   c_rest_hot_reload_ctx_t *hr_ctx = NULL;

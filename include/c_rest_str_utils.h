@@ -6,34 +6,62 @@
 #define C_REST_STR_UTILS_H
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_export.h"
 
 #include <stddef.h>
-#include "c_rest_error.h"
-#include "c_rest_export.h"
 /* clang-format on */
 
 /**
+ * @def C_REST_ATTR_PRINTF
+ * @brief Format attribute macro for printf-style functions.
+ * @param fmt_idx Index of format string parameter.
+ * @param arg_idx Index of first vararg parameter.
+ */
+#if defined(__GNUC__) || defined(__clang__)
+#define C_REST_ATTR_PRINTF(fmt_idx, arg_idx)                                   \
+  __attribute__((__format__(__printf__, fmt_idx, arg_idx)))
+#else
+#define C_REST_ATTR_PRINTF(fmt_idx, arg_idx)
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
  * @brief Safe sprintf.
+ *
+ * @param buffer Destination buffer.
+ * @param sizeOfBuffer Size of destination buffer.
+ * @param format Format string.
+ * @return 0 on success, non-zero on error.
  */
 C_REST_EXPORT extern c_rest_error_t
-c_rest_sprintf_s(char *buffer, size_t sizeOfBuffer, const char *format, ...);
+c_rest_sprintf_s(char *buffer, size_t sizeOfBuffer, const char *format, ...)
+    C_REST_ATTR_PRINTF(3, 4);
 
 /**
  * @brief Safe strcpy.
+ *
+ * @param dest Destination buffer.
+ * @param dest_size Size of destination buffer.
+ * @param src Source string.
+ * @return 0 on success, non-zero on error.
  */
 C_REST_EXPORT extern c_rest_error_t
 c_rest_strcpy_s(char *dest, size_t dest_size, const char *src);
 
 /**
  * @brief Safe strncpy.
+ *
+ * @param dest Destination buffer.
+ * @param dest_size Size of destination buffer.
+ * @param src Source string.
+ * @param count Maximum characters to copy.
+ * @return 0 on success, non-zero on error.
  */
 C_REST_EXPORT extern c_rest_error_t
 c_rest_strncpy_s(char *dest, size_t dest_size, const char *src, size_t count);
-
-#ifdef __cplusplus
-
-extern "C" {
-#endif
 
 /**
  * @brief Compare two strings ignoring case.

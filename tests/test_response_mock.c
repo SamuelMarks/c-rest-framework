@@ -40,6 +40,10 @@ static c_rest_error_t mock_c_rest_tls_write(struct c_rest_tls_connection *conn, 
    If MSVC complains about duplicate symbols with static linking, we can rename the tested function. */
 #define c_rest_response_write_chunk test_c_rest_response_write_chunk
 
+c_rest_error_t test_c_rest_response_write_chunk(struct c_rest_response *res,
+                                                const char *chunk,
+                                                size_t chunk_len);
+
 #include "../src/response.c"
 
 #undef c_rest_socket_send

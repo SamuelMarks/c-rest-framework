@@ -1,4 +1,3 @@
-#include <signal.h>
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_modality.h"
@@ -6,6 +5,7 @@
 #include "c_rest_orm_middleware.h"
 #include "c_rest_response.h"
 #include "c_rest_router.h"
+#include <signal.h>
 #include <stdio.h>
 /* clang-format on */
 

@@ -1,11 +1,11 @@
-#include "c_rest_error.h"
-#include "c_rest_mem.h"
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_request.h" /* For struct c_rest_header */
 #include "c_rest_response.h"
 #define IGNORE_RC(expr) { c_rest_error_t _ign_rc = (expr); (void)_ign_rc; }
 #include "c_rest_modality.h"
+#include "c_rest_template.h"
 #include <parson.h>
 
 #include <stdio.h>
@@ -15,6 +15,7 @@
 
 #include <ctype.h>
 #include "c_rest_str_utils.h"
+/* clang-format on */
 
 #if defined(_MSC_VER)
 #define SAFE_STRCPY(dest, size, src) strcpy_s(dest, size, src)
@@ -22,9 +23,8 @@
 #define SAFE_STRCPY(dest, size, src) strcpy(dest, src)
 #endif
 
-
-c_rest_error_t c_rest_response_set_header(struct c_rest_response *res, const char *key,
-                               const char *value) {
+c_rest_error_t c_rest_response_set_header(struct c_rest_response *res,
+                                          const char *key, const char *value) {
   c_rest_error_t rc;
   struct c_rest_header *h;
   struct c_rest_header *new_h;
@@ -37,19 +37,24 @@ c_rest_error_t c_rest_response_set_header(struct c_rest_response *res, const cha
 
   /* Check if it already exists, replace value if it does */
   rc = c_rest_strcasecmp(key, "Set-Cookie", &cmp);
-  if (rc != C_REST_OK) return rc;
+  if (rc != C_REST_OK)
+    return rc;
 
   if (cmp != 0) {
     for (h = res->headers; h != NULL; h = h->next) {
       int h_cmp;
       rc = c_rest_strcasecmp(h->key, key, &h_cmp);
-      if (rc != C_REST_OK) return rc;
+      if (rc != C_REST_OK)
+        return rc;
       if (h_cmp == 0) {
         char *new_val;
 
-val_len = strlen(value) + 1;
+        val_len = strlen(value) + 1;
 
-        if (C_REST_MALLOC(val_len, &new_val) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_val = NULL; }
+        if (C_REST_MALLOC(val_len, &new_val) != 0) {
+          LOG_DEBUG("C_REST_MALLOC failed");
+          new_val = NULL;
+        }
         if (!new_val) {
           return C_REST_ERROR_GENERIC;
         }
@@ -62,12 +67,21 @@ val_len = strlen(value) + 1;
   }
 
   /* Add new header */
-  if (C_REST_MALLOC(sizeof(struct c_rest_header), &new_h) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h = NULL; }
+  if (C_REST_MALLOC(sizeof(struct c_rest_header), &new_h) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    new_h = NULL;
+  }
   if (!new_h) {
     return C_REST_ERROR_GENERIC;
   }
-  if (C_REST_MALLOC(strlen(key) + 1, &new_h->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->key = NULL; }
-  if (C_REST_MALLOC(strlen(value) + 1, &new_h->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); new_h->value = NULL; }
+  if (C_REST_MALLOC(strlen(key) + 1, &new_h->key) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    new_h->key = NULL;
+  }
+  if (C_REST_MALLOC(strlen(value) + 1, &new_h->value) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    new_h->value = NULL;
+  }
   if (!new_h->key || !new_h->value) {
     C_REST_FREE((void *)(new_h->key));
     C_REST_FREE((void *)(new_h->value));
@@ -75,11 +89,9 @@ val_len = strlen(value) + 1;
     return C_REST_ERROR_GENERIC;
   }
 
-SAFE_STRCPY(new_h->key, strlen(key) + 1, key);
+  SAFE_STRCPY(new_h->key, strlen(key) + 1, key);
 
-
-SAFE_STRCPY(new_h->value, strlen(value) + 1, value);
-
+  SAFE_STRCPY(new_h->value, strlen(value) + 1, value);
 
   new_h->next = res->headers;
   res->headers = new_h;
@@ -87,7 +99,8 @@ SAFE_STRCPY(new_h->value, strlen(value) + 1, value);
   return C_REST_OK;
 }
 
-c_rest_error_t c_rest_response_set_status(struct c_rest_response *res, int status_code) {
+c_rest_error_t c_rest_response_set_status(struct c_rest_response *res,
+                                          int status_code) {
   if (!res) {
     return C_REST_ERROR_GENERIC;
   }
@@ -96,7 +109,8 @@ c_rest_error_t c_rest_response_set_status(struct c_rest_response *res, int statu
 }
 
 c_rest_error_t c_rest_response_check_etag(struct c_rest_request *req,
-                               struct c_rest_response *res, const char *etag) {
+                                          struct c_rest_response *res,
+                                          const char *etag) {
   const char *if_none_match;
   c_rest_error_t rc;
   if (!req || !res || !etag) {
@@ -105,7 +119,8 @@ c_rest_error_t c_rest_response_check_etag(struct c_rest_request *req,
 
   rc = c_rest_response_set_header(res, "ETag", etag);
 
-  if (rc != C_REST_OK) return rc;
+  if (rc != C_REST_OK)
+    return rc;
 
   rc = c_rest_request_get_header(req, "If-None-Match", &if_none_match);
   if (rc == C_REST_OK) {
@@ -119,7 +134,7 @@ c_rest_error_t c_rest_response_check_etag(struct c_rest_request *req,
 }
 
 c_rest_error_t c_rest_response_set_cache_control(struct c_rest_response *res,
-                                      const char *policy) {
+                                                 const char *policy) {
   if (!res || !policy) {
     return C_REST_ERROR_GENERIC;
   }
@@ -154,39 +169,47 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
   if (!res->is_chunked) {
     char cl_buf[32];
 #if defined(_MSC_VER)
-    sprintf_s(cl_buf, sizeof(cl_buf), C_REST_FMT_SIZE_T, CAST_SIZE_T(res->body_len));
+    sprintf_s(cl_buf, sizeof(cl_buf), C_REST_FMT_SIZE_T,
+              CAST_SIZE_T(res->body_len));
 #else
     sprintf(cl_buf, C_REST_FMT_SIZE_T, CAST_SIZE_T(res->body_len));
 #endif
     rc = c_rest_response_set_header(res, "Content-Length", cl_buf);
-    if (rc != C_REST_OK) return rc;
+    if (rc != C_REST_OK)
+      return rc;
   }
 
 #if defined(_MSC_VER)
-  offset += (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
-                      "HTTP/1.1 %d %s\r\n", res->status_code, status_text);
+  offset +=
+      (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
+                        "HTTP/1.1 %d %s\r\n", res->status_code, status_text);
 #else
-  offset += (size_t)sprintf(header_buf + offset, "HTTP/1.1 %d %s\r\n", res->status_code,
-                    status_text);
+  offset += (size_t)sprintf(header_buf + offset, "HTTP/1.1 %d %s\r\n",
+                            res->status_code, status_text);
 #endif
 
   for (h = res->headers; h != NULL; h = h->next) {
 #if defined(_MSC_VER)
-    offset += (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
-                        "%s: %s\r\n", h->key, h->value);
+    offset +=
+        (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
+                          "%s: %s\r\n", h->key, h->value);
 #else
 
 #ifdef _MSC_VER
-/* CDD_SAFE_CRT */ offset += (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset, "%s: %s\r\n", h->key, h->value);
+    /* CDD_SAFE_CRT */ offset +=
+        (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
+                          "%s: %s\r\n", h->key, h->value);
 #else
-/* CDD_SAFE_CRT */ offset += (size_t)sprintf(header_buf + offset, "%s: %s\r\n", h->key, h->value);
+    /* CDD_SAFE_CRT */ offset +=
+        (size_t)sprintf(header_buf + offset, "%s: %s\r\n", h->key, h->value);
 #endif
 
 #endif
   }
 
 #if defined(_MSC_VER)
-  offset += (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset, "\r\n");
+  offset += (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
+                              "\r\n");
 #else
   offset += (size_t)sprintf(header_buf + offset, "\r\n");
 #endif
@@ -196,31 +219,39 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
     if (ctx->tls_conn) {
       IGNORE_RC(c_rest_tls_write(ctx->tls_conn, header_buf, offset, &written));
       if (res->body && res->body_len > 0) {
-        IGNORE_RC(c_rest_tls_write(ctx->tls_conn, res->body, res->body_len, &written));
+        IGNORE_RC(c_rest_tls_write(ctx->tls_conn, res->body, res->body_len,
+                                   &written));
       }
     } else {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
       if (ctx->cm_env) {
-        rc = c_rest_socket_send((c_rest_socket_t)ctx->sock, header_buf, offset, &written);
-        if (rc != C_REST_OK) return rc;
+        rc = c_rest_socket_send((c_rest_socket_t)ctx->sock, header_buf, offset,
+                                &written);
+        if (rc != C_REST_OK)
+          return rc;
         if (res->body && res->body_len > 0) {
-          rc = c_rest_socket_send((c_rest_socket_t)ctx->sock, res->body, res->body_len,
-                         &written);
-          if (rc != C_REST_OK) return rc;
+          rc = c_rest_socket_send((c_rest_socket_t)ctx->sock, res->body,
+                                  res->body_len, &written);
+          if (rc != C_REST_OK)
+            return rc;
         }
       } else {
         rc = c_rest_socket_send(ctx->sock, header_buf, offset, &written);
-        if (rc != C_REST_OK) return rc;
+        if (rc != C_REST_OK)
+          return rc;
         if (res->body && res->body_len > 0) {
-          rc = c_rest_socket_send(ctx->sock, res->body, res->body_len, &written);
-          if (rc != C_REST_OK) return rc;
+          rc =
+              c_rest_socket_send(ctx->sock, res->body, res->body_len, &written);
+          if (rc != C_REST_OK)
+            return rc;
         }
       }
 #else
-        IGNORE_RC(c_rest_socket_send(ctx->sock, header_buf, offset, &written));
-        if (res->body && res->body_len > 0) {
-          IGNORE_RC(c_rest_socket_send(ctx->sock, res->body, res->body_len, &written));
-        }
+      IGNORE_RC(c_rest_socket_send(ctx->sock, header_buf, offset, &written));
+      if (res->body && res->body_len > 0) {
+        IGNORE_RC(
+            c_rest_socket_send(ctx->sock, res->body, res->body_len, &written));
+      }
 #endif
     }
   }
@@ -229,23 +260,28 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
   return C_REST_OK;
 }
 
-c_rest_error_t c_rest_response_json(struct c_rest_response *res, const char *json_str) {
+c_rest_error_t c_rest_response_json(struct c_rest_response *res,
+                                    const char *json_str) {
   size_t len;
   c_rest_error_t rc;
   if (!res || !json_str) {
     return C_REST_ERROR_GENERIC;
   }
 
-len = strlen(json_str);
+  len = strlen(json_str);
 
   rc = c_rest_response_set_header(res, "Content-Type", "application/json");
 
-  if (rc != C_REST_OK) return rc;
+  if (rc != C_REST_OK)
+    return rc;
 
   if (res->body) {
     C_REST_FREE((void *)(res->body));
   }
-  if (C_REST_MALLOC(len + 1, &res->body) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); res->body = NULL; }
+  if (C_REST_MALLOC(len + 1, &res->body) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    res->body = NULL;
+  }
   if (!res->body) {
     return C_REST_ERROR_GENERIC;
   }
@@ -255,7 +291,8 @@ len = strlen(json_str);
   return c_rest_response_send(res);
 }
 
-c_rest_error_t c_rest_response_json_obj(struct c_rest_response *res, void *json_obj) {
+c_rest_error_t c_rest_response_json_obj(struct c_rest_response *res,
+                                        void *json_obj) {
   char *json_str;
   c_rest_error_t rc;
 
@@ -267,16 +304,16 @@ c_rest_error_t c_rest_response_json_obj(struct c_rest_response *res, void *json_
 
   rc = c_rest_response_json(res, json_str);
   if (rc != C_REST_OK) {
-      json_free_serialized_string(json_str);
-      return rc;
+    json_free_serialized_string(json_str);
+    return rc;
   }
   json_free_serialized_string(json_str);
   return C_REST_OK;
-  }
+}
 
-  c_rest_error_t c_rest_response_json_dict(struct c_rest_response *res,
-                              const struct c_rest_json_pair *pairs,
-                              size_t count) {
+c_rest_error_t c_rest_response_json_dict(struct c_rest_response *res,
+                                         const struct c_rest_json_pair *pairs,
+                                         size_t count) {
   JSON_Value *root_val;
   JSON_Object *root_obj;
   size_t i;
@@ -312,9 +349,6 @@ c_rest_error_t c_rest_response_json_obj(struct c_rest_response *res, void *json_
 }
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
-#include "c_rest_template.h"
-/* clang-format on */
-
 c_rest_error_t
 c_rest_response_template(struct c_rest_response *res,
                          const struct c_rest_template_context *ctx,

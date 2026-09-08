@@ -51,6 +51,13 @@ static c_rest_error_t mock_c_rest_response_set_status(struct c_rest_response *re
 #define c_rest_sse_init_response test_c_rest_sse_init_response
 #define c_rest_sse_send_event test_c_rest_sse_send_event
 
+c_rest_error_t test_c_rest_sse_serialize(const struct c_rest_sse_event *ev,
+                                         char **out_buf, size_t *out_len);
+c_rest_error_t test_c_rest_sse_context_destroy(struct c_rest_sse_context *ctx);
+c_rest_error_t test_c_rest_sse_init_response(struct c_rest_response *res);
+c_rest_error_t test_c_rest_sse_send_event(struct c_rest_response *res,
+                                          const struct c_rest_sse_event *ev);
+
 #include "../src/c_rest_sse.c"
 
 #undef c_rest_string_init
