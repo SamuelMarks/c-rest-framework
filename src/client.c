@@ -781,12 +781,10 @@ c_rest_error_t c_rest_client_post_form_sync(
   if (!client || !url)
     return C_REST_ERROR_GENERIC;
 
-  ret = rc =
+  rc =
       c_rest_client_build_form_urlencoded(fields, num_fields, &body, &body_len);
   if (rc != C_REST_OK)
     return rc;
-  if (ret != 0)
-    return ret;
 
   if (headers_count > 0 && headers) {
     for (i = 0; i < headers_count; ++i) {

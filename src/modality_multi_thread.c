@@ -69,8 +69,12 @@ static c_rest_error_t multi_thread_init(struct c_rest_context *ctx) {
 
   state->server_sock = C_REST_INVALID_SOCKET;
   state->is_running = 0;
-  state->workers = NULL;
-  state->worker_count = 4; /* Default to 4 workers for now */
+  state->workers =
+      (c_rest_thread_t *)ctx->allocator.malloc_cb(sizeof(c_rest_thread_t) * 64);
+  if (state->workers) {
+    memset(state->workers, 0, sizeof(c_rest_thread_t) * 64);
+  }
+  state->worker_count = 0;
 
   ctx->internal_state = state;
 
@@ -93,11 +97,22 @@ static c_rest_error_t multi_thread_init(struct c_rest_context *ctx) {
 static c_rest_error_t multi_thread_destroy(struct c_rest_context *ctx) {
   struct multi_thread_state *state;
   c_rest_error_t rc;
+  int i;
   if (!ctx || !ctx->internal_state) {
     return C_REST_ERROR_INVALID_ARG;
   }
 
   state = (struct multi_thread_state *)ctx->internal_state;
+
+  if (state->workers) {
+    for (i = 0; i < state->worker_count; i++) {
+      if (state->workers[i]) {
+        c_rest_thread_join(state->workers[i]);
+        state->workers[i] = (c_rest_thread_t)0;
+      }
+    }
+    state->worker_count = 0;
+  }
 
   if (state->server_sock != C_REST_INVALID_SOCKET) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
@@ -145,12 +160,14 @@ static c_rest_error_t multi_thread_destroy(struct c_rest_context *ctx) {
 struct connection_worker_args {
   struct c_rest_context *ctx;
   c_rest_socket_t client_sock;
+  c_rest_free_fn free_cb;
 };
 
 static c_rest_error_t worker_thread(void *arg) {
   struct connection_worker_args *wargs = (struct connection_worker_args *)arg;
   c_rest_error_t rc;
   c_rest_error_t final_rc;
+  c_rest_free_fn free_cb = wargs ? wargs->free_cb : NULL;
 
   rc = c_rest_handle_connection(wargs->ctx, wargs->client_sock);
   final_rc = rc;
@@ -171,8 +188,8 @@ static c_rest_error_t worker_thread(void *arg) {
   }
 #endif
 
-  if (wargs->ctx->allocator.free_cb) {
-    wargs->ctx->allocator.free_cb(wargs);
+  if (free_cb) {
+    free_cb(wargs);
   } else {
 #if defined(_WIN32)
     C_REST_FREE((void *)(wargs));
@@ -266,19 +283,29 @@ static c_rest_error_t multi_thread_run(struct c_rest_context *ctx) {
     }
 
     if (client_sock != C_REST_INVALID_SOCKET) {
-      c_rest_thread_t thread_handle;
+      c_rest_thread_t thread_handle = (c_rest_thread_t)0;
       struct connection_worker_args *wargs =
           (struct connection_worker_args *)ctx->allocator.malloc_cb(
               sizeof(struct connection_worker_args));
       if (wargs) {
         wargs->ctx = ctx;
         wargs->client_sock = client_sock;
+        wargs->free_cb = ctx->allocator.free_cb;
         rc = c_rest_thread_create(&thread_handle, worker_thread, wargs);
+        if (rc == C_REST_OK) {
+          if (state->workers && state->worker_count < 64) {
+            state->workers[state->worker_count++] = thread_handle;
+          }
+        }
 #if defined(_WIN32)
         if (rc != C_REST_OK) {
           fprintf(stderr, "MULTI_THREAD: Failed to create thread\n");
           /* cleanup and close on failure */
-          ctx->allocator.free_cb(wargs);
+          if (ctx->allocator.free_cb) {
+            ctx->allocator.free_cb(wargs);
+          } else {
+            C_REST_FREE((void *)(wargs));
+          }
           rc = c_rest_socket_close(client_sock);
           if (rc != C_REST_OK)
             return rc;
@@ -298,6 +325,17 @@ static c_rest_error_t multi_thread_run(struct c_rest_context *ctx) {
   }
 
   state->is_running = 0;
+
+  if (state->workers) {
+    int i;
+    for (i = 0; i < state->worker_count; i++) {
+      if (state->workers[i]) {
+        c_rest_thread_join(state->workers[i]);
+        state->workers[i] = (c_rest_thread_t)0;
+      }
+    }
+    state->worker_count = 0;
+  }
 
   /* OpenSSL < 1.1.0 requires locking callbacks for multithreading.
    * We target newer TLS backends (OpenSSL 3+ / mbedTLS 3+), so this is natively
@@ -325,6 +363,17 @@ static c_rest_error_t multi_thread_stop(struct c_rest_context *ctx) {
 
   state = (struct multi_thread_state *)ctx->internal_state;
   state->is_running = 0;
+
+  if (state->workers) {
+    int i;
+    for (i = 0; i < state->worker_count; i++) {
+      if (state->workers[i]) {
+        c_rest_thread_join(state->workers[i]);
+        state->workers[i] = (c_rest_thread_t)0;
+      }
+    }
+    state->worker_count = 0;
+  }
 
   if (state->server_sock != C_REST_INVALID_SOCKET) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION

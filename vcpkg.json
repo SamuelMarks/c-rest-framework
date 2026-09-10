@@ -1,5 +1,10 @@
 {
   "name": "c-rest-framework",
   "version-semver": "0.1.0",
-  "dependencies": []
+  "dependencies": [
+    {
+      "name": "curl",
+      "platform": "!windows & !osx"
+    }
+  ]
 }

@@ -156,6 +156,16 @@ int test_str_utils(void) {
   rc = c_rest_url_decode(buf, NULL, 5);
   failed += (rc != C_REST_ERROR_GENERIC);
 
+  rc = c_rest_sprintf_s(buf, sizeof(buf), "hello %d", 42);
+  failed += (rc != C_REST_OK || strcmp(buf, "hello 42") != 0);
+
+  rc = c_rest_strcpy_s(buf, sizeof(buf), "world");
+  failed += (rc != C_REST_OK || strcmp(buf, "world") != 0);
+
+  rc = c_rest_strncpy_s(buf, sizeof(buf), "testing", 4);
+  buf[4] = '\0';
+  failed += (rc != C_REST_OK || strncmp(buf, "test", 4) != 0);
+
   if (failed) {
     printf("test_str_utils failed: %d\n", failed);
   } else {

@@ -56,6 +56,8 @@ static c_rest_error_t my_mock_logger_ok_cb_internal(const char *msg) {
 struct my_sync_state {
   c_rest_socket_t server_sock;
   int is_running;
+  c_rest_thread_t *workers;
+  int worker_count;
 };
 
 struct my_c_rest_event_loop {
@@ -1563,6 +1565,13 @@ int test_modality(void) {
       sync_st.is_running = 1;
       if (sync_vtable.run)
         sync_vtable.run(&ctx_tls);
+
+      g_mock_socket_fail = 7;
+      ctx_tls.internal_state = &single_st;
+      single_st.server_sock = (c_rest_socket_t)1;
+      single_st.is_running = 1;
+      if (single_thread_vtable.run)
+        single_thread_vtable.run(&ctx_tls);
     }
 
     g_mock_socket_fail = 0;

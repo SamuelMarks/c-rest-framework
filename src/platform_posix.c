@@ -163,12 +163,12 @@ struct thread_wrapper_args {
   void *arg;
 };
 
-static c_rest_error_t thread_wrapper(void *arg) {
+static void *thread_wrapper(void *arg) {
   c_rest_error_t rc;
   struct thread_wrapper_args *args = (struct thread_wrapper_args *)arg;
   rc = args->func(args->arg);
   C_REST_FREE((void *)(args));
-  return rc;
+  return (void *)(ptrdiff_t)rc;
 }
 
 c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
@@ -191,8 +191,7 @@ c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
   args->func = func;
   args->arg = arg;
 
-  pthread_create(&thread, NULL,
-                 (void *(*)(void *))(void (*)(void))thread_wrapper, args);
+  pthread_create(&thread, NULL, thread_wrapper, args);
 
   /* In C89, pthread_t is an opaque type, often an int or a pointer.
    * We cast it via ptrdiff_t. This is technically unportable if pthread_t >
@@ -206,7 +205,11 @@ c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
 
 c_rest_error_t c_rest_thread_join(c_rest_thread_t thread) {
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
-  pthread_t t = (pthread_t)thread;
+  pthread_t t;
+  if (!thread || thread == (c_rest_thread_t)-1) {
+    return C_REST_ERROR_GENERIC;
+  }
+  t = (pthread_t)thread;
   if (pthread_join(t, NULL) != 0) {
     return C_REST_ERROR_GENERIC;
   }

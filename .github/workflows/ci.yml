@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     uses: SamuelMarks/c-ci/.github/workflows/c-cmake-ci.yml@master
+    with:
+      extra_apt_packages: libcurl4-openssl-dev
+      extra_cygwin_packages: libcurl-devel
 
   wasm_build:
     runs-on: ubuntu-latest

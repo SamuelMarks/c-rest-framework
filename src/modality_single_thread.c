@@ -208,18 +208,11 @@ static c_rest_error_t single_thread_run(struct c_rest_context *ctx) {
         rc = c_rest_socket_close(client_sock);
         if (rc != C_REST_OK)
           return rc;
-        if (rc != C_REST_OK) {
-          return rc;
-        }
       }
 #else
       rc = c_rest_socket_close(client_sock);
       if (rc != C_REST_OK)
         return rc;
-      if (rc != C_REST_OK) {
-        return rc;
-      }
-
 #endif
     } else {
       break;

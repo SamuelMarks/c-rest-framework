@@ -185,18 +185,11 @@ static c_rest_error_t sync_run(struct c_rest_context *ctx) {
         rc = c_rest_socket_close(client_sock);
         if (rc != C_REST_OK)
           return rc;
-        if (rc != C_REST_OK) {
-          return rc;
-        }
       }
 #else
       rc = c_rest_socket_close(client_sock);
       if (rc != C_REST_OK)
         return rc;
-      if (rc != C_REST_OK) {
-        return rc;
-      }
-
 #endif
     } else {
       /* Error or interrupt, potentially break loop */

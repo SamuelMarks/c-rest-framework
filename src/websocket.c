@@ -132,17 +132,7 @@ c_rest_error_t c_rest_websocket_parse_frame_header(
           ((unsigned long)data[8] << 8) | ((unsigned long)data[9]);
 
       if (high != 0) {
-        /* We don't support > 4GB payloads on 32-bit systems, and we keep it
-         * safe. */
-        size_t sz = sizeof(size_t);
-        if (sz <= 4) {
-          return C_REST_ERROR_GENERIC;
-        }
-        /* If size_t is 64-bit, we could do this, but C89 lacks standard
-           uint64_t. To stay perfectly standard C89 without assuming unsigned
-           long long exists: */
         return C_REST_ERROR_GENERIC;
-        /* Payload too large for strictly standard C89 fallback. */
       }
       out_header->payload_length = (size_t)low;
       offset += 8;

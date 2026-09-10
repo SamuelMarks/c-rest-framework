@@ -157,5 +157,7 @@ c_rest_error_t mock_c_rest_tls_close(struct c_rest_tls_connection *conn) {
 }
 c_rest_error_t mock_c_rest_handle_connection(struct c_rest_context *ctx,
                                              c_rest_socket_t sock) {
+  if (g_mock_socket_fail == 7 || g_mock_socket_fail == 107)
+    return C_REST_ERROR_GENERIC;
   return c_rest_handle_connection(ctx, sock);
 }
