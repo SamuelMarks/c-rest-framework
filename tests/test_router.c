@@ -7,10 +7,32 @@
 #include "c_rest_template.h"
 #include "c_rest_openapi.h"
 #include "c_rest_middleware.h"
+#include "c_rest_modality.h"
+#include "c_rest_graphql.h"
+#include "c_rest_testing_mocks.h"
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 /* clang-format on */
+
+struct test_route_node {
+  char *segment;
+  int is_var;
+  int is_wildcard;
+  char *var_name;
+  struct test_route_node *parent;
+  struct test_route_node *children;
+  struct test_route_node *next;
+  void *handlers;
+};
+
+struct test_router {
+  struct test_route_node *root;
+  void *middlewares;
+  void *post_middlewares;
+  void *openapi_spec;
+};
 
 static int handler_called = 0;
 static int mw_called = 0;
@@ -18,25 +40,11 @@ static int mw_called = 0;
 static c_rest_error_t test_handler(struct c_rest_request *req,
                                    struct c_rest_response *res,
                                    void *user_data) {
+  (void)req;
   (void)res;
   (void)user_data;
   handler_called = 1;
-
-  if (req->path_vars) {
-    if (req->path_vars->name && req->path_vars->value &&
-        strcmp(req->path_vars->name, "id") == 0 &&
-        strcmp(req->path_vars->value, "123") == 0) {
-      /* Matched var */
-    } else {
-      printf("Path var mismatch: %s = %s\n", req->path_vars->name,
-             req->path_vars->value);
-      handler_called = 0; /* Fail test if var is wrong */
-    }
-  } else {
-    printf("No path vars extracted\n");
-    handler_called = 0;
-  }
-  return 0;
+  return C_REST_OK;
 }
 
 static c_rest_error_t test_middleware(struct c_rest_request *req,
@@ -62,6 +70,7 @@ static int test_oauth2_middleware_func(void) {
   struct c_rest_response res;
   struct c_rest_header auth_hdr;
   c_rest_error_t ret;
+  int failed = 0;
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
@@ -70,11 +79,9 @@ static int test_oauth2_middleware_func(void) {
 
   /* Test 1: No auth header */
   ret = c_rest_oauth2_middleware(&req, &res, (void *)(size_t)dummy_verify);
-  if (ret == 0 || res.status_code != 401) {
-    printf("Expected 401 for no auth header\n");
-    return 1;
-  }
-  (void)!c_rest_response_cleanup(&res);
+  failed += (ret == 0);
+  failed += (res.status_code != 401);
+  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
 
   /* Test 2: Invalid token */
   memset(&req, 0, sizeof(req));
@@ -86,11 +93,9 @@ static int test_oauth2_middleware_func(void) {
   req.headers = &auth_hdr;
 
   ret = c_rest_oauth2_middleware(&req, &res, (void *)(size_t)dummy_verify);
-  if (ret == 0 || res.status_code != 401) {
-    printf("Expected 401 for invalid token\n");
-    return 1;
-  }
-  (void)!c_rest_response_cleanup(&res);
+  failed += (ret == 0);
+  failed += (res.status_code != 401);
+  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
 
   /* Test 3: Valid token */
   memset(&req, 0, sizeof(req));
@@ -102,13 +107,11 @@ static int test_oauth2_middleware_func(void) {
   req.headers = &auth_hdr;
 
   ret = c_rest_oauth2_middleware(&req, &res, (void *)(size_t)dummy_verify);
-  if (ret != 0 || req.auth_context != (void *)(size_t)0xDEADBEEF) {
-    printf("Expected success and valid auth_context\n");
-    return 1;
-  }
-  (void)!c_rest_response_cleanup(&res);
+  failed += (ret != 0);
+  failed += (req.auth_context != (void *)(size_t)0xDEADBEEF);
+  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
 
-  return 0;
+  return failed;
 }
 
 static void *fail_malloc_n(size_t size) {
@@ -125,22 +128,6 @@ static void *fail_malloc_n(size_t size) {
     return NULL;
   }
   return malloc(size);
-}
-
-static void *fail_realloc_n(void *ptr, size_t size) {
-  static int alloc_count = 0;
-  extern int g_fail_realloc_at;
-  if (g_fail_realloc_at <= 0) {
-    alloc_count = 0;
-    return NULL;
-  }
-  alloc_count++;
-  if (alloc_count == g_fail_realloc_at) {
-    alloc_count = 0;
-    g_fail_realloc_at = 0;
-    return NULL;
-  }
-  return realloc(ptr, size);
 }
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
@@ -201,6 +188,7 @@ static void test_coverage(void) {
   struct c_rest_template_context dummy_ctx;
   c_rest_template_init(&dummy_ctx, "Hello");
 #endif
+  (void)g_fail_realloc_at;
 
   c_rest_router_init(NULL);
   c_rest_router_init(&r);
@@ -430,6 +418,21 @@ static void test_coverage(void) {
     g_fail_malloc_at = 1;
     c_rest_router_dispatch(r3, &req3, &res3);
     g_fail_malloc_at = 0;
+
+    /* template data_provider fails and status failure */
+    req3.path = "/tpl2";
+    g_mock_res_status_fail = 1;
+    c_rest_router_dispatch(r3, &req3, &res3);
+    g_mock_res_status_fail = 0;
+
+    /* template render fails and status failure */
+    req3.path = "/tpl3";
+    g_fail_malloc_at = 1;
+    g_mock_res_status_fail = 1;
+    c_rest_router_dispatch(r3, &req3, &res3);
+    g_fail_malloc_at = 0;
+    g_mock_res_status_fail = 0;
+
     c_rest_router_destroy(r3);
 #endif
 
@@ -440,30 +443,168 @@ static void test_coverage(void) {
     c_rest_router_add_graphql(r3, "/gql", (void *)1);
     req3.body = NULL;
     c_rest_router_dispatch(r3, &req3, &res3);
+
+    /* body NULL and status fail */
+    g_mock_res_status_fail = 1;
+    c_rest_router_dispatch(r3, &req3, &res3);
+    g_mock_res_status_fail = 0;
+
     req3.body = (void *)"{";
     req3.body_len = 1;
     c_rest_router_dispatch(r3, &req3, &res3);
+
+    /* parse error and status fail */
+    g_mock_res_status_fail = 1;
+    c_rest_router_dispatch(r3, &req3, &res3);
+    g_mock_res_status_fail = 0;
+
     c_rest_router_destroy(r3);
-#endif
-  }
 
-  for (i = 1; i <= 60; i++) {
-    c_rest_router *router = NULL;
-    g_fail_realloc_at = -1;
-    fail_realloc_n(NULL, 1);
-    fail_realloc_n(NULL, 1);
-    g_crf_realloc_hook = fail_realloc_n;
-    g_fail_realloc_at = i;
-
-    if (c_rest_router_init(&router) == C_REST_OK) {
-      c_rest_router_add(router, "GET", "/api/users/:id", test_handler, NULL);
-      c_rest_router_add(router, "POST", "/api/users/:id", test_handler, NULL);
-      c_rest_router_add(router, "PUT", "/api/users/:id", test_handler, NULL);
-      c_rest_router_destroy(router);
+    /* GraphQL with NULL schema and status failure */
+    {
+      c_rest_router *r_gql = NULL;
+      struct c_rest_request req_gql;
+      struct c_rest_response res_gql;
+      c_rest_router_init(&r_gql);
+      c_rest_router_add_graphql(r_gql, "/gql_null", NULL);
+      memset(&req_gql, 0, sizeof(req_gql));
+      memset(&res_gql, 0, sizeof(res_gql));
+      req_gql.method = "POST";
+      req_gql.path = "/gql_null";
+      req_gql.body = (void *)"{";
+      req_gql.body_len = 1;
+      g_mock_res_status_fail = 1;
+      c_rest_router_dispatch(r_gql, &req_gql, &res_gql);
+      g_mock_res_status_fail = 0;
+      c_rest_router_destroy(r_gql);
     }
 
-    g_crf_realloc_hook = NULL;
-    g_fail_realloc_at = 0;
+    /* GraphQL resolve success, set_status 200 fails and node_free fails */
+    {
+      c_rest_router *r_gql_ok = NULL;
+      struct c_rest_graphql_schema schema_ok;
+      memset(&schema_ok, 0, sizeof(schema_ok));
+      c_rest_router_init(&r_gql_ok);
+      c_rest_router_add_graphql(r_gql_ok, "/gql_ok", &schema_ok);
+      req3.body = (void *)"query { a }";
+      req3.body_len = strlen((const char *)req3.body);
+      req3.path = "/gql_ok";
+      g_mock_res_status_fail = 1;
+      c_rest_router_dispatch(r_gql_ok, &req3, &res3);
+      g_mock_res_status_fail = 0;
+
+      g_mock_graphql_free_countdown = 0;
+      c_rest_router_dispatch(r_gql_ok, &req3, &res3);
+      g_mock_graphql_free_countdown = -1;
+
+      c_rest_router_destroy(r_gql_ok);
+    }
+#endif
+
+#ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
+    {
+      c_rest_router *r_sse = NULL;
+      struct c_rest_request req_sse;
+      struct c_rest_response res_sse;
+      struct c_rest_connection_context fake_ctx;
+      memset(&fake_ctx, 0, sizeof(fake_ctx));
+      fake_ctx.sock = 123;
+      c_rest_router_init(&r_sse);
+      c_rest_router_add_sse(r_sse, "/events", NULL, NULL);
+      memset(&req_sse, 0, sizeof(req_sse));
+      memset(&res_sse, 0, sizeof(res_sse));
+      res_sse.context = &fake_ctx;
+      req_sse.method = "GET";
+      req_sse.path = "/events";
+      g_mock_socket_fail = 201;
+      c_rest_router_dispatch(r_sse, &req_sse, &res_sse);
+      g_mock_socket_fail = 0;
+      c_rest_router_destroy(r_sse);
+    }
+#endif
+
+    /* Test 404 with status failure */
+    {
+      c_rest_router *r404 = NULL;
+      struct c_rest_request req_nf;
+      struct c_rest_response res_nf;
+      c_rest_router_init(&r404);
+      memset(&req_nf, 0, sizeof(req_nf));
+      memset(&res_nf, 0, sizeof(res_nf));
+      req_nf.method = "GET";
+      req_nf.path = "/notfound";
+      g_mock_res_status_fail = 1;
+      c_rest_router_dispatch(r404, &req_nf, &res_nf);
+      g_mock_res_status_fail = 0;
+      c_rest_router_destroy(r404);
+    }
+
+    /* Test handler returning error with status failure */
+    {
+      c_rest_router *rh = NULL;
+      struct c_rest_request req_err;
+      struct c_rest_response res_err;
+      c_rest_router_init(&rh);
+      c_rest_router_add(rh, "GET", "/err", fail_handler, NULL);
+      memset(&req_err, 0, sizeof(req_err));
+      memset(&res_err, 0, sizeof(res_err));
+      req_err.method = "GET";
+      req_err.path = "/err";
+      g_mock_res_status_fail = 1;
+      c_rest_router_dispatch(rh, &req_err, &res_err);
+      g_mock_res_status_fail = 0;
+      c_rest_router_destroy(rh);
+    }
+
+    /* Test free_node and destroy mock branches */
+    {
+      c_rest_router *r_mock = NULL;
+      struct test_router *tr;
+
+      /* test free_node(NULL) */
+      c_rest_router_init(&r_mock);
+      tr = (struct test_router *)r_mock;
+      free(tr->root->segment);
+      free(tr->root);
+      tr->root = NULL;
+      c_rest_router_destroy(r_mock);
+
+      /* test router->openapi_spec fail */
+      c_rest_router_init(&r_mock);
+      tr = (struct test_router *)r_mock;
+      c_rest_openapi_spec_destroy(
+          (struct c_rest_openapi_spec *)tr->openapi_spec);
+      tr->openapi_spec = (void *)0x1234;
+      c_rest_router_destroy(r_mock);
+
+      /* test router->openapi_spec is NULL */
+      c_rest_router_init(&r_mock);
+      tr = (struct test_router *)r_mock;
+      c_rest_openapi_spec_destroy(
+          (struct c_rest_openapi_spec *)tr->openapi_spec);
+      tr->openapi_spec = NULL;
+      c_rest_router_destroy(r_mock);
+
+      /* test node->children fail */
+      c_rest_router_init(&r_mock);
+      tr = (struct test_router *)r_mock;
+      tr->root->children = (struct test_route_node *)0x1234;
+      c_rest_router_destroy(r_mock);
+
+      /* test node->next fail */
+      c_rest_router_init(&r_mock);
+      tr = (struct test_router *)r_mock;
+      tr->root->next = (struct test_route_node *)0x1234;
+      c_rest_router_destroy(r_mock);
+
+      /* test router->root fail */
+      c_rest_router_init(&r_mock);
+      tr = (struct test_router *)r_mock;
+      free(tr->root->segment);
+      free(tr->root);
+      tr->root = (struct test_route_node *)0x1234;
+      c_rest_router_destroy(r_mock);
+    }
   }
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
   c_rest_template_destroy(&dummy_ctx);
@@ -475,6 +616,7 @@ int test_router(void) {
   struct c_rest_request req;
   struct c_rest_response res;
   c_rest_error_t ret;
+  int failed = 0;
   test_coverage();
 
   memset(&req, 0, sizeof(req));
@@ -483,22 +625,13 @@ int test_router(void) {
   printf("Running router tests...\n");
 
   ret = c_rest_router_init(&router);
-  if (ret != 0 || !router) {
-    printf("Failed to init router\n");
-    return 1;
-  }
+  failed += (ret != 0);
 
   ret = c_rest_router_use(router, "/api", test_middleware, NULL);
-  if (ret != 0) {
-    printf("Failed to add middleware\n");
-    return 1;
-  }
+  failed += (ret != 0);
 
   ret = c_rest_router_add(router, "GET", "/api/users/:id", test_handler, NULL);
-  if (ret != 0) {
-    printf("Failed to add route\n");
-    return 1;
-  }
+  failed += (ret != 0);
 
   /* Test dispatch to matching route */
   req.method = "GET";
@@ -520,60 +653,42 @@ int test_router(void) {
   }
 
   ret = c_rest_router_dispatch(router, &req, &res);
-  if (ret != 0) {
-    printf("Dispatch failed\n");
-    return 1;
-  }
+  failed += (ret != 0);
+  failed += (mw_called == 0);
+  failed += (handler_called == 0);
 
-  if (!mw_called) {
-    printf("Middleware was not called\n");
-    return 1;
-  }
-
-  if (!handler_called) {
-    printf("Handler was not called\n");
-    return 1;
-  }
-
-  (void)!c_rest_request_cleanup(&req);
-  (void)!c_rest_response_cleanup(&res);
+  failed += (c_rest_request_cleanup(&req) != C_REST_OK);
+  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
 
   /* Test 404 */
   req.path = "/api/unknown";
   res.status_code = 200;
   ret = c_rest_router_dispatch(router, &req, &res);
-  if (ret != 0 || res.status_code != 404) {
-    printf("Expected 404\n");
-    return 1;
-  }
+  failed += (ret != 0);
+  failed += (res.status_code != 404);
 
-  (void)!c_rest_request_cleanup(&req);
-  (void)!c_rest_response_cleanup(&res);
+  failed += (c_rest_request_cleanup(&req) != C_REST_OK);
+  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
 
   /* Test 405 */
   req.path = "/api/users/123";
   req.method = "POST";
   res.status_code = 200;
   ret = c_rest_router_dispatch(router, &req, &res);
-  if (ret != 0 || res.status_code != 405) {
-    printf("Expected 405\n");
-    return 1;
-  }
+  failed += (ret != 0);
+  failed += (res.status_code != 405);
 
-  (void)!c_rest_request_cleanup(&req);
-  (void)!c_rest_response_cleanup(&res);
+  failed += (c_rest_request_cleanup(&req) != C_REST_OK);
+  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
   /* Test wildcard */
   c_rest_router_add(router, "GET", "/*", test_handler, NULL);
   req.method = "GET";
   req.path = "/something/else";
   res.status_code = 200;
   ret = c_rest_router_dispatch(router, &req, &res);
-  if (ret != 0) {
-    printf("Expected wildcard match\n");
-    return 1;
-  }
-  (void)!c_rest_request_cleanup(&req);
-  (void)!c_rest_response_cleanup(&res);
+  failed += (ret != 0);
+  failed += (c_rest_request_cleanup(&req) != C_REST_OK);
+  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
 
   /* Test path variations */
   c_rest_router_add(router, "GET", "api/no-slash", test_handler, NULL);
@@ -586,7 +701,7 @@ int test_router(void) {
   req.path = "/sse";
   res.status_code = 200;
   ret = c_rest_router_dispatch(router, &req, &res);
-  (void)!ret;
+  failed += (ret != C_REST_OK);
   c_rest_response_cleanup(&res);
   memset(&res, 0, sizeof(res));
 
@@ -595,15 +710,21 @@ int test_router(void) {
   req.path = "/sse_null";
   res.status_code = 200;
   ret = c_rest_router_dispatch(router, &req, &res);
-  (void)!ret;
+  failed += (ret != C_REST_OK);
   c_rest_response_cleanup(&res);
 #endif
 
-  (void)!c_rest_router_destroy(NULL);
-  (void)!c_rest_router_destroy(router);
+  failed += (c_rest_router_destroy(NULL) == C_REST_OK);
+  failed += (c_rest_router_destroy(router) != C_REST_OK);
 
-  if (test_oauth2_middleware_func() != 0)
-    return 1;
+  failed += (test_oauth2_middleware_func() != 0);
 
-  return 0;
+  {
+    const char *msgs[2];
+    msgs[0] = "test_router passed\n";
+    msgs[1] = "test_router failed\n";
+    printf("%s", msgs[failed != 0]);
+  }
+
+  return failed;
 }

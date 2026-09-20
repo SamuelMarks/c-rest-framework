@@ -121,7 +121,9 @@ c_rest_error_t c_rest_auth_middleware(struct c_rest_request *req,
   }
 
   if (!user_data) {
-    (void)!c_rest_response_set_status(res, 500);
+    rc = c_rest_response_set_status(res, 500);
+    if (rc != C_REST_OK)
+      return rc;
     rc = c_rest_response_html(res,
                               "Internal Server Error: Missing auth verifier");
     if (rc != C_REST_OK)
@@ -142,7 +144,9 @@ c_rest_error_t c_rest_auth_middleware(struct c_rest_request *req,
   }
 
   if (!is_bearer && !is_basic) {
-    (void)!c_rest_response_set_status(res, 401);
+    rc = c_rest_response_set_status(res, 401);
+    if (rc != C_REST_OK)
+      return rc;
     rc = c_rest_response_set_header(res, "WWW-Authenticate",
                                     "Bearer realm=\"API\"");
     if (rc != C_REST_OK)
@@ -156,7 +160,9 @@ c_rest_error_t c_rest_auth_middleware(struct c_rest_request *req,
   if (is_bearer) {
     if (!verifier->verify_bearer) {
       C_REST_FREE((void *)(token));
-      (void)!c_rest_response_set_status(res, 500);
+      rc = c_rest_response_set_status(res, 500);
+      if (rc != C_REST_OK)
+        return rc;
       rc = c_rest_response_html(res, "Internal Server Error: Bearer auth not "
                                      "supported by verifier");
       if (rc != C_REST_OK)
@@ -166,7 +172,9 @@ c_rest_error_t c_rest_auth_middleware(struct c_rest_request *req,
     rc = (c_rest_error_t)verifier->verify_bearer(token, &auth_ctx);
     if (rc != C_REST_OK) {
       C_REST_FREE((void *)(token));
-      (void)!c_rest_response_set_status(res, 401);
+      rc = c_rest_response_set_status(res, 401);
+      if (rc != C_REST_OK)
+        return rc;
       rc = c_rest_response_set_header(
           res, "WWW-Authenticate",
           "Bearer realm=\"API\", error=\"invalid_token\"");
@@ -182,7 +190,9 @@ c_rest_error_t c_rest_auth_middleware(struct c_rest_request *req,
     if (!verifier->verify_basic) {
       C_REST_FREE((void *)(user));
       C_REST_FREE((void *)(pass));
-      (void)!c_rest_response_set_status(res, 500);
+      rc = c_rest_response_set_status(res, 500);
+      if (rc != C_REST_OK)
+        return rc;
       rc = c_rest_response_html(res, "Internal Server Error: Basic auth not "
                                      "supported by verifier");
       if (rc != C_REST_OK)
@@ -192,7 +202,9 @@ c_rest_error_t c_rest_auth_middleware(struct c_rest_request *req,
     if (verifier->verify_basic(user, pass, &auth_ctx) != 0) {
       C_REST_FREE((void *)(user));
       C_REST_FREE((void *)(pass));
-      (void)!c_rest_response_set_status(res, 401);
+      rc = c_rest_response_set_status(res, 401);
+      if (rc != C_REST_OK)
+        return rc;
       rc = c_rest_response_set_header(res, "WWW-Authenticate",
                                       "Basic realm=\"API\"");
       if (rc != C_REST_OK)
@@ -227,7 +239,9 @@ c_rest_error_t c_rest_oauth2_middleware(struct c_rest_request *req,
   }
 
   if (!user_data) {
-    (void)!c_rest_response_set_status(res, 500);
+    rc = c_rest_response_set_status(res, 500);
+    if (rc != C_REST_OK)
+      return rc;
     rc = c_rest_response_html(res,
                               "Internal Server Error: Missing OAuth2 verifier");
     if (rc != C_REST_OK)
@@ -240,7 +254,9 @@ c_rest_error_t c_rest_oauth2_middleware(struct c_rest_request *req,
 
   rc = c_rest_request_get_auth_bearer(req, &token);
   if (rc != C_REST_OK) {
-    (void)!c_rest_response_set_status(res, 401);
+    rc = c_rest_response_set_status(res, 401);
+    if (rc != C_REST_OK)
+      return rc;
     rc = c_rest_response_set_header(res, "WWW-Authenticate",
                                     "Bearer realm=\"API\"");
     if (rc != C_REST_OK)
@@ -254,7 +270,9 @@ c_rest_error_t c_rest_oauth2_middleware(struct c_rest_request *req,
 
   if (verify_fn(token, &auth_ctx) != 0) {
     C_REST_FREE((void *)(token));
-    (void)!c_rest_response_set_status(res, 401);
+    rc = c_rest_response_set_status(res, 401);
+    if (rc != C_REST_OK)
+      return rc;
     rc = c_rest_response_set_header(
         res, "WWW-Authenticate",
         "Bearer realm=\"API\", error=\"invalid_token\"");

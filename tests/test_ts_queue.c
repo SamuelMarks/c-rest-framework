@@ -2,20 +2,44 @@
 #include "c_rest_ts_queue.h"
 #include "test_protos.h"
 #include "c_rest_mem.h"
+#include "c_rest_platform.h"
 #include <stdio.h>
 #include <string.h>
+#if defined(_WIN32)
+#include <winsock2.h>
+#else
+#include <sys/select.h>
+#include <sys/time.h>
+#endif
 /* clang-format on */
 
 static int dummy_free_count = 0;
 static void dummy_free(void *ptr) {
-  if (ptr)
-    dummy_free_count++;
+  (void)ptr;
+  dummy_free_count++;
 }
 
 static void *fail_malloc(size_t size) {
   (void)size;
   return NULL;
 }
+
+#if !defined(__EMSCRIPTEN__)
+static c_rest_error_t pusher_thread(void *arg) {
+  c_rest_ts_queue *queue = (c_rest_ts_queue *)arg;
+#if defined(_WIN32)
+  Sleep(20);
+#else
+  {
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 20000;
+    select(0, NULL, NULL, NULL, &tv);
+  }
+#endif
+  return c_rest_ts_queue_push(queue, (void *)"thread_item");
+}
+#endif
 
 int test_ts_queue(void) {
   c_rest_ts_queue q;
@@ -25,6 +49,7 @@ int test_ts_queue(void) {
   c_rest_error_t rc;
   c_rest_cond_t real_cond;
   c_rest_mutex_t real_mutex;
+  const char *msgs[2];
 
   /* Test NULL pointer handling */
   rc = c_rest_ts_queue_init(NULL);
@@ -88,11 +113,13 @@ int test_ts_queue(void) {
 
   /* Pop first item (head->next not NULL) */
   rc = c_rest_ts_queue_pop(&q, &val);
-  failed += (rc != C_REST_OK || strcmp((const char *)val, "test1") != 0);
+  failed += (rc != C_REST_OK);
+  failed += (strcmp((const char *)val, "test1") != 0);
 
   /* Pop second item (head->next is NULL, becomes empty) */
   rc = c_rest_ts_queue_pop(&q, &val);
-  failed += (rc != C_REST_OK || strcmp((const char *)val, "test2") != 0);
+  failed += (rc != C_REST_OK);
+  failed += (strcmp((const char *)val, "test2") != 0);
 
   /* Test pop from empty queue (will block unless closed or cond fails) */
   /* If cond fails, it returns error */
@@ -110,21 +137,42 @@ int test_ts_queue(void) {
      Wait, if cond signal fails, it returns error, but the item IS in the queue!
      Let's pop it! */
   rc = c_rest_ts_queue_pop(&q, &val);
-  failed +=
-      (rc != C_REST_OK || strcmp((const char *)val, "test_cond_fail") != 0);
+  failed += (rc != C_REST_OK);
+  failed += (strcmp((const char *)val, "test_cond_fail") != 0);
+
+  /* Test pop with background thread pushing to hit cond_wait success and break
+   */
+#if !defined(__EMSCRIPTEN__)
+  {
+    c_rest_ts_queue q_bg;
+    c_rest_thread_t th;
+    void *bg_val = NULL;
+    rc = c_rest_ts_queue_init(&q_bg);
+    failed += (rc != C_REST_OK);
+    rc = c_rest_thread_create(&th, pusher_thread, &q_bg);
+    failed += (rc != C_REST_OK);
+    rc = c_rest_ts_queue_pop(&q_bg, &bg_val);
+    failed += (rc != C_REST_OK);
+    failed += (strcmp((const char *)bg_val, "thread_item") != 0);
+    c_rest_thread_join(th);
+    c_rest_ts_queue_destroy(&q_bg, NULL);
+  }
+#endif
 
   /* Close queue */
   rc = c_rest_ts_queue_close(&q);
   failed += (rc != C_REST_OK);
 
   /* Test close with cond signal failure */
-  (void)!c_rest_ts_queue_init(&q2);
+  rc = c_rest_ts_queue_init(&q2);
+  failed += (rc != C_REST_OK);
   real_cond = q2.cond;
   q2.cond = (c_rest_cond_t)0;
   rc = c_rest_ts_queue_close(&q2);
   failed += (rc != C_REST_ERROR_GENERIC);
   q2.cond = real_cond;
-  (void)!c_rest_ts_queue_destroy(&q2, NULL);
+  rc = c_rest_ts_queue_destroy(&q2, NULL);
+  failed += (rc != C_REST_OK);
 
   /* Push to closed queue should fail */
   rc = c_rest_ts_queue_push(&q, "test3");
@@ -172,8 +220,10 @@ int test_ts_queue(void) {
   {
     c_rest_ts_queue q3;
     /* Test destroy failure branches */
-    (void)!c_rest_ts_queue_init(&q3);
-    (void)!c_rest_ts_queue_push(&q3, "test_data");
+    rc = c_rest_ts_queue_init(&q3);
+    failed += (rc != C_REST_OK);
+    rc = c_rest_ts_queue_push(&q3, "test_data");
+    failed += (rc != C_REST_OK);
     real_cond = q3.cond;
     q3.cond = (c_rest_cond_t)0;
     rc = c_rest_ts_queue_destroy(&q3, NULL);
@@ -182,8 +232,10 @@ int test_ts_queue(void) {
      * only the condition variable was left dangling */
     c_rest_cond_destroy(real_cond);
 
-    (void)!c_rest_ts_queue_init(&q3);
-    (void)!c_rest_ts_queue_push(&q3, "test_data");
+    rc = c_rest_ts_queue_init(&q3);
+    failed += (rc != C_REST_OK);
+    rc = c_rest_ts_queue_push(&q3, "test_data");
+    failed += (rc != C_REST_OK);
     real_mutex = q3.mutex;
     q3.mutex = (c_rest_mutex_t)0;
     rc = c_rest_ts_queue_destroy(&q3, NULL);
@@ -194,11 +246,9 @@ int test_ts_queue(void) {
   }
 #endif
 
-  if (failed) {
-    printf("test_ts_queue failed\n");
-  } else {
-    printf("test_ts_queue passed\n");
-  }
+  msgs[0] = "test_ts_queue passed\n";
+  msgs[1] = "test_ts_queue failed\n";
+  printf("%s", msgs[failed != 0]);
 
   return failed;
 }

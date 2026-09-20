@@ -33,17 +33,18 @@ int test_mem(void) {
   char *str1 = NULL;
   int failed = 0;
   c_rest_error_t rc;
+  const char *msgs[2];
 
   void *ptr_leak = NULL;
 
   /* Test cleanup before init */
-  (void)!c_rest_mem_tracker_cleanup();
+  rc = c_rest_mem_tracker_cleanup();
   c_rest_mem_tracker_init();
   c_rest_mem_tracker_cleanup();
-  (void)!c_rest_mem_tracker_cleanup();
+  rc = c_rest_mem_tracker_cleanup();
   c_rest_mem_tracker_init();
   c_rest_mem_tracker_cleanup();
-  (void)!c_rest_mem_tracker_print_leaks();
+  rc = c_rest_mem_tracker_print_leaks();
 
   /* Null checks */
   rc = C_REST_MALLOC(50, NULL);
@@ -74,10 +75,8 @@ int test_mem(void) {
   g_crf_realloc_hook = NULL;
   failed += (rc != C_REST_ERROR_OOM);
 
-  if (ptr1) {
-    free(ptr1);
-    ptr1 = NULL;
-  }
+  free(ptr1);
+  ptr1 = NULL;
 
   /* Init fail */
   g_crf_malloc_hook = fail_malloc;
@@ -105,21 +104,26 @@ int test_mem(void) {
 
   /* Allocations */
   rc = C_REST_MALLOC(50, &ptr_leak);
-  failed += (rc != C_REST_OK || ptr_leak == NULL);
+  failed += (rc != C_REST_OK);
+  failed += (ptr_leak == NULL);
 
   /* Another leak */
   {
     void *ptr_leak2 = NULL;
     rc = C_REST_MALLOC(50, &ptr_leak2);
-    failed += (rc != C_REST_OK || ptr_leak2 == NULL);
-    (void)C_REST_FREE(ptr_leak2);
+    failed += (rc != C_REST_OK);
+    failed += (ptr_leak2 == NULL);
+    rc = C_REST_FREE(ptr_leak2);
+    failed += (rc != C_REST_OK);
   }
 
   rc = C_REST_MALLOC(100, &ptr1);
-  failed += (rc != C_REST_OK || ptr1 == NULL);
+  failed += (rc != C_REST_OK);
+  failed += (ptr1 == NULL);
 
   rc = C_REST_CALLOC(10, 10, &ptr2);
-  failed += (rc != C_REST_OK || ptr2 == NULL);
+  failed += (rc != C_REST_OK);
+  failed += (ptr2 == NULL);
 
   /* Realloc invalid pointer when empty (or when no elements match) */
   g_crf_realloc_hook = fail_realloc;
@@ -128,7 +132,8 @@ int test_mem(void) {
   failed += (rc != C_REST_ERROR_OOM);
 
   rc = c_rest_mem_strdup("test_str", "test.c", 100, &str1);
-  failed += (rc != C_REST_OK || str1 == NULL);
+  failed += (rc != C_REST_OK);
+  failed += (str1 == NULL);
 
   /* Realloc an untracked pointer successfully */
   {
@@ -140,15 +145,18 @@ int test_mem(void) {
 
   /* Realloc with non-null pointer */
   rc = C_REST_REALLOC(ptr1, 200, &ptr1);
-  failed += (rc != C_REST_OK || ptr1 == NULL);
+  failed += (rc != C_REST_OK);
+  failed += (ptr1 == NULL);
 
   /* Realloc with NULL pointer (should malloc) */
   rc = C_REST_REALLOC(NULL, 30, &ptr3);
-  failed += (rc != C_REST_OK || ptr3 == NULL);
+  failed += (rc != C_REST_OK);
+  failed += (ptr3 == NULL);
 
   /* Realloc with size 0 (should free) */
   rc = C_REST_REALLOC(ptr3, 0, &ptr3);
-  failed += (rc != C_REST_OK || ptr3 != NULL);
+  failed += (rc != C_REST_OK);
+  failed += (ptr3 != NULL);
 
   /* Free */
   rc = C_REST_FREE(ptr1);
@@ -290,12 +298,12 @@ int test_mem(void) {
   }
 
   /* Test leaks */
-  (void)!c_rest_mem_tracker_print_leaks();
+  rc = c_rest_mem_tracker_print_leaks();
 
   /* Now there should be ONE leak */
   rc = c_rest_mem_tracker_print_leaks();
 
-  (void)C_REST_FREE(ptr_leak);
+  C_REST_FREE(ptr_leak);
   failed += (rc == C_REST_OK);
 
   /* Test remove_node uninitialized state */
@@ -322,25 +330,26 @@ int test_mem(void) {
   {
     void *leak1 = NULL;
     void *leak2 = NULL;
-    (void)C_REST_MALLOC(10, &leak1);
-    (void)C_REST_MALLOC(10, &leak2);
+    rc = C_REST_MALLOC(10, &leak1);
+    failed += (rc != C_REST_OK);
+    rc = C_REST_MALLOC(10, &leak2);
+    failed += (rc != C_REST_OK);
 
-    (void)!c_rest_mem_tracker_cleanup();
+    rc = c_rest_mem_tracker_cleanup();
+    failed += (rc != C_REST_OK);
     C_REST_FREE(leak1);
     C_REST_FREE(leak2);
   }
 
   c_rest_mem_tracker_init();
   c_rest_mem_tracker_cleanup();
-  (void)!c_rest_mem_tracker_cleanup();
+  rc = c_rest_mem_tracker_cleanup();
   c_rest_mem_tracker_init();
   c_rest_mem_tracker_cleanup();
 
-  if (failed) {
-    printf("test_mem failed\n");
-  } else {
-    printf("test_mem passed\n");
-  }
+  msgs[0] = "test_mem passed\n";
+  msgs[1] = "test_mem failed\n";
+  printf("%s", msgs[failed != 0]);
 
   return failed;
 }

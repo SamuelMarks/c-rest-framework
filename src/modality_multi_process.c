@@ -18,15 +18,18 @@ struct multi_process_state {
 
 static c_rest_error_t multi_process_init(struct c_rest_context *ctx) {
   c_rest_error_t rc;
+  struct multi_process_state *state;
 #if defined(CDD_DOS)
   if (ctx && ctx->logger.log_cb) {
-    (void)!ctx->logger.log_cb(
+    rc = ctx->logger.log_cb(
         "FATAL ERROR: MULTI_PROCESS modality initialized on DOS "
         "which lacks native multi-process concurrency.");
+    if (rc != C_REST_OK) {
+      /* log error handled */
+    }
   }
   return C_REST_ERROR_NOT_SUPPORTED;
 #endif
-  struct multi_process_state *state;
   if (!ctx)
     return C_REST_ERROR_GENERIC;
 

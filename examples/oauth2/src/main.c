@@ -22,7 +22,7 @@ static c_rest_error_t handle_sigint(int sig) {
   (void)sig;
   if (g_ctx) {
     printf("\nCaught SIGINT! Shutting down gracefully...\n");
-    (void)!c_rest_stop(g_ctx);
+    return c_rest_stop(g_ctx);
   }
   return C_REST_OK;
 }
@@ -47,13 +47,55 @@ int main(int argc, char **argv) {
 
   int i;
   c_rest_error_t run_res;
+  c_rest_error_t rc;
+#if defined(_MSC_VER)
+  char env_db_url_buf[256];
+  char env_listen_addr_buf[256];
+  char env_listen_port_buf[32];
+  char env_tls_cert_buf[256];
+  char env_tls_key_buf[256];
+  size_t env_len;
+#else
+  const char *env_db_url;
+  const char *env_listen_addr;
+  const char *env_listen_port;
+  const char *env_tls_cert;
+  const char *env_tls_key;
+#endif
 
   /* 1. Read environment variables first */
-  const char *env_db_url = getenv("OAUTH2_DB_URL");
-  const char *env_listen_addr = getenv("OAUTH2_LISTEN_ADDR");
-  const char *env_listen_port = getenv("OAUTH2_LISTEN_PORT");
-  const char *env_tls_cert = getenv("OAUTH2_TLS_CERT");
-  const char *env_tls_key = getenv("OAUTH2_TLS_KEY");
+#if defined(_MSC_VER)
+  env_len = 0;
+  if (getenv_s(&env_len, env_db_url_buf, sizeof(env_db_url_buf),
+               "OAUTH2_DB_URL") == 0 &&
+      env_len > 0)
+    db_url = env_db_url_buf;
+  env_len = 0;
+  if (getenv_s(&env_len, env_listen_addr_buf, sizeof(env_listen_addr_buf),
+               "OAUTH2_LISTEN_ADDR") == 0 &&
+      env_len > 0)
+    listen_addr = env_listen_addr_buf;
+  env_len = 0;
+  if (getenv_s(&env_len, env_listen_port_buf, sizeof(env_listen_port_buf),
+               "OAUTH2_LISTEN_PORT") == 0 &&
+      env_len > 0)
+    listen_port = (unsigned short)atoi(env_listen_port_buf);
+  env_len = 0;
+  if (getenv_s(&env_len, env_tls_cert_buf, sizeof(env_tls_cert_buf),
+               "OAUTH2_TLS_CERT") == 0 &&
+      env_len > 0)
+    tls_cert = env_tls_cert_buf;
+  env_len = 0;
+  if (getenv_s(&env_len, env_tls_key_buf, sizeof(env_tls_key_buf),
+               "OAUTH2_TLS_KEY") == 0 &&
+      env_len > 0)
+    tls_key = env_tls_key_buf;
+#else
+  env_db_url = getenv("OAUTH2_DB_URL");
+  env_listen_addr = getenv("OAUTH2_LISTEN_ADDR");
+  env_listen_port = getenv("OAUTH2_LISTEN_PORT");
+  env_tls_cert = getenv("OAUTH2_TLS_CERT");
+  env_tls_key = getenv("OAUTH2_TLS_KEY");
 
   if (env_db_url)
     db_url = env_db_url;
@@ -65,6 +107,7 @@ int main(int argc, char **argv) {
     tls_cert = env_tls_cert;
   if (env_tls_key)
     tls_key = env_tls_key;
+#endif
 
   /* 2. Parse command line arguments (override env vars) */
   for (i = 1; i < argc; i++) {
@@ -119,7 +162,9 @@ int main(int argc, char **argv) {
         ctx->tls_ctx = tls_ctx;
       } else {
         printf("Failed to load TLS cert/key.\n");
-        (void)!c_rest_tls_context_destroy(tls_ctx);
+        rc = c_rest_tls_context_destroy(tls_ctx);
+        if (rc != C_REST_OK)
+          return 1;
         tls_ctx = NULL;
       }
     } else {
@@ -129,9 +174,14 @@ int main(int argc, char **argv) {
 
   if (c_rest_router_init(&router) != 0) {
     printf("Failed to init router\n");
-    if (tls_ctx)
-      (void)!c_rest_tls_context_destroy(tls_ctx);
-    (void)!c_rest_destroy(ctx);
+    if (tls_ctx) {
+      rc = c_rest_tls_context_destroy(tls_ctx);
+      if (rc != C_REST_OK)
+        return 1;
+    }
+    rc = c_rest_destroy(ctx);
+    if (rc != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -139,10 +189,17 @@ int main(int argc, char **argv) {
    * db_url */
   if (c_orm_sqlite_connect(db_url, &db) != 0) {
     printf("Failed to connect to SQLite\n");
-    (void)!c_rest_router_destroy(router);
-    if (tls_ctx)
-      (void)!c_rest_tls_context_destroy(tls_ctx);
-    (void)!c_rest_destroy(ctx);
+    rc = c_rest_router_destroy(router);
+    if (rc != C_REST_OK)
+      return 1;
+    if (tls_ctx) {
+      rc = c_rest_tls_context_destroy(tls_ctx);
+      if (rc != C_REST_OK)
+        return 1;
+    }
+    rc = c_rest_destroy(ctx);
+    if (rc != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -151,18 +208,39 @@ int main(int argc, char **argv) {
 
   if (oauth2_server_init(router, db) != 0) {
     printf("Failed to init oauth2 server\n");
-    (void)!c_rest_router_destroy(router);
-    if (tls_ctx)
-      (void)!c_rest_tls_context_destroy(tls_ctx);
-    (void)!c_rest_destroy(ctx);
+    rc = c_rest_router_destroy(router);
+    if (rc != C_REST_OK)
+      return 1;
+    if (tls_ctx) {
+      rc = c_rest_tls_context_destroy(tls_ctx);
+      if (rc != C_REST_OK)
+        return 1;
+    }
+    rc = c_rest_destroy(ctx);
+    if (rc != C_REST_OK)
+      return 1;
     return 1;
   }
 
-  (void)!c_rest_enable_openapi(router, "/api/v0/openapi.json");
-  (void)!c_rest_enable_swagger_ui(router, "/api/v0/docs",
-                                  "/api/v0/openapi.json");
+  rc = c_rest_enable_openapi(router, "/api/v0/openapi.json");
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  rc = c_rest_enable_swagger_ui(router, "/api/v0/docs", "/api/v0/openapi.json");
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
 
-  (void)!c_rest_set_router(ctx, router);
+  rc = c_rest_set_router(ctx, router);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
 
   g_ctx = ctx;
   signal(SIGINT, (void (*)(int))(void (*)(void))handle_sigint);
@@ -178,11 +256,17 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Server failed to run (error code: %d)\n", run_res);
   }
 
-  (void)!c_rest_router_destroy(router);
+  rc = c_rest_router_destroy(router);
+  if (rc != C_REST_OK)
+    return 1;
   if (ctx->tls_ctx) {
-    (void)!c_rest_tls_context_destroy(ctx->tls_ctx);
+    rc = c_rest_tls_context_destroy(ctx->tls_ctx);
+    if (rc != C_REST_OK)
+      return 1;
   }
-  (void)!c_rest_destroy(ctx);
+  rc = c_rest_destroy(ctx);
+  if (rc != C_REST_OK)
+    return 1;
 
   return run_res != 0 ? 1 : 0;
 }

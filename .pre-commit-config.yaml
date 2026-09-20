@@ -91,3 +91,9 @@ repos:
         language: python
         additional_dependencies: [libclang]
         pass_filenames: false
+      - id: check-no-discard-void
+        name: Check No-Discard Void Casts
+        entry: python -c "import clang.cindex, glob, os, sys, urllib.request; lib = next((p for pat in ['/opt/homebrew/Cellar/llvm*/*/lib/libclang.dylib', '/opt/homebrew/lib/libclang.dylib', '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib', '/usr/lib/libclang.so*', '/usr/lib/llvm-*/lib/libclang.so*'] for p in glob.glob(pat)), None); clang.cindex.Config.set_library_file(lib) if lib else None; bdir = 'build_cdb' if os.path.exists('build_cdb/compile_commands.json') else ('build' if os.path.exists('build/compile_commands.json') else None); sys.argv[1:1] = ['--build-dir', bdir] if bdir and '--build-dir' not in sys.argv else []; sys.argv.extend(['src', 'include']) if not [a for a in sys.argv[1:] if not a.startswith('-')] else None; exec(urllib.request.urlopen('https://raw.githubusercontent.com/SamuelMarks/c-ci/refs/heads/master/precommit_hooks/check_no_discard_void_clang.py').read())"
+        language: python
+        additional_dependencies: [libclang]
+        types_or: [c]

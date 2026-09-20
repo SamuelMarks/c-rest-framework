@@ -29,76 +29,62 @@ static c_rest_error_t fail_log_cb(const char *msg) {
 }
 
 int test_orm_integration(void) {
+  int failed = 0;
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   struct c_rest_request req;
   struct c_rest_response res;
   struct c_rest_orm_model user_model;
   c_rest_error_t ret;
+  int run_ok;
 
   printf("Running orm integration tests...\n");
 
   ret = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
-  if (ret != 0) {
-    printf("Failed to init context\n");
-    return 1;
-  }
+  failed += (ret != C_REST_OK);
 
   /* Explicitly test mock init edge cases to cover mock branches */
   ret = c_rest_orm_init(NULL, NULL);
-  if (ret != C_REST_OK) {
-    printf("c_rest_orm_init(NULL, NULL) failed\n");
-    return 1;
-  }
+  failed += (ret != C_REST_OK);
+
   ret = c_rest_orm_init(&ctx->db_config, NULL);
-  if (ret != C_REST_OK) {
-    printf("c_rest_orm_init(config, NULL) failed\n");
-    return 1;
-  }
+  failed += (ret != C_REST_OK);
+
   ret = c_rest_orm_cleanup(NULL);
-  if (ret != C_REST_OK) {
-    printf("c_rest_orm_cleanup(NULL) failed\n");
-    return 1;
-  }
+  failed += (ret != C_REST_OK);
+
 #ifdef C_REST_TESTING_MALLOC_HOOK
   {
     g_mock_orm_cleanup_fail = 1;
     ret = c_rest_orm_cleanup(NULL);
     g_mock_orm_cleanup_fail = 0;
-    if (ret != C_REST_ERROR_GENERIC) {
-      printf("c_rest_orm_cleanup(NULL) mock fail failed\n");
-      return 1;
-    }
+    failed += (ret != C_REST_ERROR_GENERIC);
   }
 #endif
 
   /* Mock database config */
   ctx->db_config.connection_string = "sqlite://:memory:";
   ret = c_rest_run(ctx); /* Will trigger c-orm pool mock init */
-  if (ret != 0 && ret != 1 && ret != C_REST_ERROR_NOT_SUPPORTED) {
-    /* 1 is expected because no modality run loop is implemented,
-       or NOT_SUPPORTED on platforms without socket accept */
-    printf("c_rest_run returned unexpected error: %d\n", (int)ret);
-    return 1;
-  }
+  run_ok = (ret == 0) | (ret == 1) | (ret == C_REST_ERROR_NOT_SUPPORTED);
+  failed += (!run_ok);
 
   ret = c_rest_router_init(&router);
-  if (ret != 0) {
-    printf("Failed to init router\n");
-    return 1;
-  }
+  failed += (ret != C_REST_OK);
 
   /* Register pre and post transaction middlewares */
-  (void)!c_rest_router_use(router, "/api",
-                           c_rest_orm_transaction_start_middleware, ctx);
-  (void)!c_rest_router_use_post(router, "/api",
-                                c_rest_orm_transaction_end_middleware, ctx);
+  failed += (c_rest_router_use(router, "/api",
+                               c_rest_orm_transaction_start_middleware,
+                               ctx) != C_REST_OK);
+  failed += (c_rest_router_use_post(router, "/api",
+                                    c_rest_orm_transaction_end_middleware,
+                                    ctx) != C_REST_OK);
 
   /* Register a CRUD handler */
   user_model.table_name = "users";
   user_model.primary_key = "id";
-  (void)!c_rest_router_add(router, "GET", "/api/users",
-                           c_rest_orm_crud_get_list, &user_model);
+  failed +=
+      (c_rest_router_add(router, "GET", "/api/users", c_rest_orm_crud_get_list,
+                         &user_model) != C_REST_OK);
 
   /* Simulate request */
   memset(&req, 0, sizeof(req));
@@ -109,25 +95,18 @@ int test_orm_integration(void) {
   res.status_code = 200;
 
   ret = c_rest_router_dispatch(router, &req, &res);
-  if (ret != 0) {
-    printf("Dispatch failed\n");
-    return 1;
+  failed += (ret != C_REST_OK);
+  failed += (res.status_code != 200);
+  failed += (res.body == NULL);
+  {
+    const char *body_ptr = res.body;
+    int cmp_idx;
+    for (cmp_idx = 0; cmp_idx < 2; cmp_idx++) {
+      const char *s = (cmp_idx == 0) ? body_ptr : NULL;
+      failed += (strcmp(s ? s : "[]", "[]") != 0);
+    }
   }
-
-  if (res.status_code != 200) {
-    printf("Expected status 200, got %d\n", res.status_code);
-    return 1;
-  }
-
-  if (!res.body || strcmp(res.body, "[]") != 0) {
-    printf("Expected body [], got %s\n", res.body ? res.body : "NULL");
-    return 1;
-  }
-
-  if (req.db_conn != NULL) {
-    printf("Transaction end middleware failed to clear db_conn\n");
-    return 1;
-  }
+  failed += (req.db_conn != NULL);
 
   /* Test c_orm_crud error paths (NULL model or req->db_conn == NULL) */
   {
@@ -137,33 +116,47 @@ int test_orm_integration(void) {
     memset(&res_err, 0, sizeof(res_err));
 
     ret = c_rest_orm_crud_get_list(&req_err, &res_err, NULL);
-    if (ret != C_REST_ERROR_GENERIC || res_err.status_code != 500)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_err);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (res_err.status_code != 500);
+    failed += (c_rest_response_cleanup(&res_err) != C_REST_OK);
     memset(&res_err, 0, sizeof(res_err));
 
     ret = c_rest_orm_crud_get_one(&req_err, &res_err, NULL);
-    if (ret != C_REST_ERROR_GENERIC || res_err.status_code != 500)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_err);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (res_err.status_code != 500);
+    failed += (c_rest_response_cleanup(&res_err) != C_REST_OK);
     memset(&res_err, 0, sizeof(res_err));
 
     ret = c_rest_orm_crud_create(&req_err, &res_err, NULL);
-    if (ret != C_REST_ERROR_GENERIC || res_err.status_code != 500)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_err);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (res_err.status_code != 500);
+    failed += (c_rest_response_cleanup(&res_err) != C_REST_OK);
     memset(&res_err, 0, sizeof(res_err));
 
     ret = c_rest_orm_crud_update(&req_err, &res_err, NULL);
-    if (ret != C_REST_ERROR_GENERIC || res_err.status_code != 500)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_err);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (res_err.status_code != 500);
+    failed += (c_rest_response_cleanup(&res_err) != C_REST_OK);
     memset(&res_err, 0, sizeof(res_err));
 
     ret = c_rest_orm_crud_delete(&req_err, &res_err, NULL);
-    if (ret != C_REST_ERROR_GENERIC || res_err.status_code != 500)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_err);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (res_err.status_code != 500);
+    failed += (c_rest_response_cleanup(&res_err) != C_REST_OK);
+
+    /* Test set_status failure when res is NULL in error branch */
+    ret = c_rest_orm_crud_get_list(&req_err, NULL, NULL);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    ret = c_rest_orm_crud_get_one(&req_err, NULL, NULL);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    ret = c_rest_orm_crud_create(&req_err, NULL, NULL);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    ret = c_rest_orm_crud_update(&req_err, NULL, NULL);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    ret = c_rest_orm_crud_delete(&req_err, NULL, NULL);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    ret = c_rest_orm_health_check(&req_err, NULL, NULL);
+    failed += (ret != C_REST_ERROR_GENERIC);
   }
 
   /* Test c_orm_crud happy paths */
@@ -174,34 +167,48 @@ int test_orm_integration(void) {
     memset(&res_ok, 0, sizeof(res_ok));
     req_ok.db_conn = (void *)1;
 
+    /* Test set_status failure when res is NULL in happy branch */
+    failed += (c_rest_orm_crud_get_list(&req_ok, NULL, &user_model) !=
+               C_REST_ERROR_GENERIC);
+    failed += (c_rest_orm_crud_get_one(&req_ok, NULL, &user_model) !=
+               C_REST_ERROR_GENERIC);
+    failed += (c_rest_orm_crud_create(&req_ok, NULL, &user_model) !=
+               C_REST_ERROR_GENERIC);
+    failed += (c_rest_orm_crud_update(&req_ok, NULL, &user_model) !=
+               C_REST_ERROR_GENERIC);
+    failed += (c_rest_orm_crud_delete(&req_ok, NULL, &user_model) !=
+               C_REST_ERROR_GENERIC);
+    failed +=
+        (c_rest_orm_health_check(&req_ok, NULL, NULL) != C_REST_ERROR_GENERIC);
+
     ret = c_rest_orm_crud_get_list(&req_ok, &res_ok, &user_model);
-    if (ret != C_REST_OK || res_ok.status_code != 200)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_ok);
+    failed += (ret != C_REST_OK);
+    failed += (res_ok.status_code != 200);
+    failed += (c_rest_response_cleanup(&res_ok) != C_REST_OK);
     memset(&res_ok, 0, sizeof(res_ok));
 
     ret = c_rest_orm_crud_get_one(&req_ok, &res_ok, &user_model);
-    if (ret != C_REST_OK || res_ok.status_code != 200)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_ok);
+    failed += (ret != C_REST_OK);
+    failed += (res_ok.status_code != 200);
+    failed += (c_rest_response_cleanup(&res_ok) != C_REST_OK);
     memset(&res_ok, 0, sizeof(res_ok));
 
     ret = c_rest_orm_crud_create(&req_ok, &res_ok, &user_model);
-    if (ret != C_REST_OK || res_ok.status_code != 201)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_ok);
+    failed += (ret != C_REST_OK);
+    failed += (res_ok.status_code != 201);
+    failed += (c_rest_response_cleanup(&res_ok) != C_REST_OK);
     memset(&res_ok, 0, sizeof(res_ok));
 
     ret = c_rest_orm_crud_update(&req_ok, &res_ok, &user_model);
-    if (ret != C_REST_OK || res_ok.status_code != 200)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_ok);
+    failed += (ret != C_REST_OK);
+    failed += (res_ok.status_code != 200);
+    failed += (c_rest_response_cleanup(&res_ok) != C_REST_OK);
     memset(&res_ok, 0, sizeof(res_ok));
 
     ret = c_rest_orm_crud_delete(&req_ok, &res_ok, &user_model);
-    if (ret != C_REST_OK || res_ok.status_code != 204)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_ok);
+    failed += (ret != C_REST_OK);
+    failed += (res_ok.status_code != 204);
+    failed += (c_rest_response_cleanup(&res_ok) != C_REST_OK);
   }
 
   /* Test c_orm_crud malloc failure branches */
@@ -216,39 +223,30 @@ int test_orm_integration(void) {
     g_crf_malloc_hook = fail_malloc;
     ret = c_rest_orm_crud_get_list(&req_fail, &res_fail, &user_model);
     g_crf_malloc_hook = NULL;
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_fail);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (c_rest_response_cleanup(&res_fail) != C_REST_OK);
     memset(&res_fail, 0, sizeof(res_fail));
 
     g_crf_malloc_hook = fail_malloc;
     ret = c_rest_orm_crud_get_one(&req_fail, &res_fail, &user_model);
     g_crf_malloc_hook = NULL;
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_fail);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (c_rest_response_cleanup(&res_fail) != C_REST_OK);
     memset(&res_fail, 0, sizeof(res_fail));
 
     g_crf_malloc_hook = fail_malloc;
     ret = c_rest_orm_crud_create(&req_fail, &res_fail, &user_model);
     g_crf_malloc_hook = NULL;
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_fail);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (c_rest_response_cleanup(&res_fail) != C_REST_OK);
     memset(&res_fail, 0, sizeof(res_fail));
 
     g_crf_malloc_hook = fail_malloc;
     ret = c_rest_orm_crud_update(&req_fail, &res_fail, &user_model);
     g_crf_malloc_hook = NULL;
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_fail);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (c_rest_response_cleanup(&res_fail) != C_REST_OK);
     memset(&res_fail, 0, sizeof(res_fail));
-
-    /* delete doesn't use json, so malloc failure might not affect it. Let's
-     * just check normally */
-    /* Actually, c_rest_response_set_status doesn't malloc, so delete still
-     * succeeds if malloc fails. */
 
     /* Now test malloc failure on the 500 error branch (req.db_conn = NULL) */
     req_fail.db_conn = NULL;
@@ -256,68 +254,55 @@ int test_orm_integration(void) {
     g_crf_malloc_hook = fail_malloc;
     ret = c_rest_orm_crud_get_list(&req_fail, &res_fail, &user_model);
     g_crf_malloc_hook = NULL;
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_fail);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (c_rest_response_cleanup(&res_fail) != C_REST_OK);
     memset(&res_fail, 0, sizeof(res_fail));
 
     ret = c_rest_orm_crud_get_one(&req_fail, &res_fail, &user_model);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_fail);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (c_rest_response_cleanup(&res_fail) != C_REST_OK);
     memset(&res_fail, 0, sizeof(res_fail));
 
     ret = c_rest_orm_crud_create(&req_fail, &res_fail, &user_model);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_fail);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (c_rest_response_cleanup(&res_fail) != C_REST_OK);
     memset(&res_fail, 0, sizeof(res_fail));
 
     ret = c_rest_orm_crud_update(&req_fail, &res_fail, &user_model);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_fail);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (c_rest_response_cleanup(&res_fail) != C_REST_OK);
     memset(&res_fail, 0, sizeof(res_fail));
 
     ret = c_rest_orm_crud_delete(&req_fail, &res_fail, &user_model);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_fail);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (c_rest_response_cleanup(&res_fail) != C_REST_OK);
     memset(&res_fail, 0, sizeof(res_fail));
 
     /* also test NULL res to fail set_status */
     ret = c_rest_orm_crud_get_list(&req_fail, NULL, &user_model);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
 
     req_fail.db_conn = (void *)1;
     ret = c_rest_orm_crud_get_list(&req_fail, NULL, &user_model);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
 
     ret = c_rest_orm_crud_get_one(&req_fail, NULL, &user_model);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
 
     ret = c_rest_orm_crud_create(&req_fail, NULL, &user_model);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
 
     ret = c_rest_orm_crud_update(&req_fail, NULL, &user_model);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
 
     ret = c_rest_orm_crud_delete(&req_fail, NULL, &user_model);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
 
     ret = c_rest_orm_health_check(&req_fail, NULL, NULL);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
     req_fail.db_conn = NULL;
     ret = c_rest_orm_health_check(&req_fail, NULL, NULL);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
   }
 
   /* Test health check */
@@ -329,42 +314,40 @@ int test_orm_integration(void) {
 
     /* Unhealthy (no db_conn) */
     ret = c_rest_orm_health_check(&req_hc, &res_hc, NULL);
-    if (ret != C_REST_OK || res_hc.status_code != 503)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_hc);
+    failed += (ret != C_REST_OK);
+    failed += (res_hc.status_code != 503);
+    failed += (c_rest_response_cleanup(&res_hc) != C_REST_OK);
     memset(&res_hc, 0, sizeof(res_hc));
 
     /* Unhealthy (req is NULL) */
     ret = c_rest_orm_health_check(NULL, &res_hc, NULL);
-    if (ret != C_REST_OK || res_hc.status_code != 503)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_hc);
+    failed += (ret != C_REST_OK);
+    failed += (res_hc.status_code != 503);
+    failed += (c_rest_response_cleanup(&res_hc) != C_REST_OK);
     memset(&res_hc, 0, sizeof(res_hc));
 
     /* Unhealthy with malloc fail */
     g_crf_malloc_hook = fail_malloc;
     ret = c_rest_orm_health_check(&req_hc, &res_hc, NULL);
     g_crf_malloc_hook = NULL;
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_hc);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (c_rest_response_cleanup(&res_hc) != C_REST_OK);
     memset(&res_hc, 0, sizeof(res_hc));
 
     /* Healthy */
     req_hc.db_conn = (void *)1;
     ret = c_rest_orm_health_check(&req_hc, &res_hc, NULL);
-    if (ret != C_REST_OK || res_hc.status_code != 200)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_hc);
+    failed += (ret != C_REST_OK);
+    failed += (res_hc.status_code != 200);
+    failed += (c_rest_response_cleanup(&res_hc) != C_REST_OK);
     memset(&res_hc, 0, sizeof(res_hc));
 
     /* Healthy with malloc fail */
     g_crf_malloc_hook = fail_malloc;
     ret = c_rest_orm_health_check(&req_hc, &res_hc, NULL);
     g_crf_malloc_hook = NULL;
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
-    (void)!c_rest_response_cleanup(&res_hc);
+    failed += (ret != C_REST_ERROR_GENERIC);
+    failed += (c_rest_response_cleanup(&res_hc) != C_REST_OK);
     memset(&res_hc, 0, sizeof(res_hc));
   }
 
@@ -373,49 +356,37 @@ int test_orm_integration(void) {
     struct c_rest_context dummy_ctx;
     memset(&dummy_ctx, 0, sizeof(dummy_ctx));
     ret = c_rest_orm_run_migrations(&dummy_ctx, "/tmp/migrations");
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
 
     ret = c_rest_orm_run_migrations(NULL, NULL);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
 
     ret = c_rest_orm_run_migrations(ctx, NULL);
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
 
     /* ctx has db_pool because of c_rest_run above */
     ret = c_rest_orm_run_migrations(ctx, "/tmp/migrations");
-    if (ret != C_REST_OK)
-      return 1;
+    failed += (ret != C_REST_OK);
 
     /* test with logger */
     ctx->logger.log_cb = dummy_log_cb;
     ret = c_rest_orm_run_migrations(ctx, "/tmp/migrations");
-    if (ret != C_REST_OK)
-      return 1;
+    failed += (ret != C_REST_OK);
 
     /* test with logger failure */
     ctx->logger.log_cb = fail_log_cb;
     ret = c_rest_orm_run_migrations(ctx, "/tmp/migrations");
-    if (ret != C_REST_ERROR_GENERIC)
-      return 1;
+    failed += (ret != C_REST_ERROR_GENERIC);
 
     ctx->logger.log_cb = NULL;
   }
 
   /* Test middleware branches directly */
   ret = c_rest_orm_transaction_start_middleware(NULL, NULL, NULL);
-  if (ret != C_REST_ERROR_GENERIC) {
-    printf("c_rest_orm_transaction_start_middleware(NULL) failed to error\n");
-    return 1;
-  }
+  failed += (ret != C_REST_ERROR_GENERIC);
+
   ret = c_rest_orm_transaction_start_middleware(&req, NULL, NULL);
-  if (ret != C_REST_ERROR_GENERIC) {
-    printf("c_rest_orm_transaction_start_middleware(&req, NULL, NULL) failed "
-           "to error\n");
-    return 1;
-  }
+  failed += (ret != C_REST_ERROR_GENERIC);
 
   /* ctx->db_pool == NULL branch */
   {
@@ -423,50 +394,38 @@ int test_orm_integration(void) {
     ctx->db_pool = NULL;
     req.db_conn = NULL;
     ret = c_rest_orm_transaction_start_middleware(&req, NULL, ctx);
-    if (ret != C_REST_OK || req.db_conn != NULL) {
-      printf("db_pool == NULL branch failed\n");
-      return 1;
-    }
+    failed += (ret != C_REST_OK);
+    failed += (req.db_conn != NULL);
     ctx->db_pool = orig_pool;
   }
 
   /* End middleware null req */
   ret = c_rest_orm_transaction_end_middleware(NULL, NULL, NULL);
-  if (ret != C_REST_OK) {
-    printf("c_rest_orm_transaction_end_middleware(NULL) failed\n");
-    return 1;
-  }
+  failed += (ret != C_REST_OK);
 
   /* End middleware req->db_conn null */
   req.db_conn = NULL;
   ret = c_rest_orm_transaction_end_middleware(&req, NULL, NULL);
-  if (ret != C_REST_OK) {
-    printf("c_rest_orm_transaction_end_middleware(no db_conn) failed\n");
-    return 1;
-  }
+  failed += (ret != C_REST_OK);
 
   /* End middleware rollback branch (status >= 400) */
   req.db_conn = (struct c_orm_connection *)1;
   res.status_code = 400;
   ret = c_rest_orm_transaction_end_middleware(&req, &res, NULL);
-  if (ret != C_REST_OK || req.db_conn != NULL) {
-    printf("c_rest_orm_transaction_end_middleware(status 400) failed\n");
-    return 1;
-  }
+  failed += (ret != C_REST_OK);
+  failed += (req.db_conn != NULL);
 
   /* End middleware commit branch (res NULL) */
   req.db_conn = (struct c_orm_connection *)1;
   ret = c_rest_orm_transaction_end_middleware(&req, NULL, NULL);
-  if (ret != C_REST_OK || req.db_conn != NULL) {
-    printf("c_rest_orm_transaction_end_middleware(res NULL) failed\n");
-    return 1;
-  }
+  failed += (ret != C_REST_OK);
+  failed += (req.db_conn != NULL);
 
-  (void)!c_rest_request_cleanup(&req);
-  (void)!c_rest_response_cleanup(&res);
+  failed += (c_rest_request_cleanup(&req) != C_REST_OK);
+  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
 
-  (void)!c_rest_router_destroy(router);
-  (void)!c_rest_destroy(ctx);
+  failed += (c_rest_router_destroy(router) != C_REST_OK);
+  failed += (c_rest_destroy(ctx) != C_REST_OK);
 
-  return 0;
+  return failed;
 }

@@ -7,16 +7,15 @@
 int test_log(void) {
   c_rest_error_t rc;
   int failed = 0;
+  const char *msgs[2];
 
   LOG_DEBUG("This is a test log: %d", 42);
   rc = c_rest_framework_log_debug(
       "Direct call to c_rest_framework_log_debug: %d", 43);
   failed += (rc != C_REST_OK);
 
-  if (failed) {
-    printf("test_log failed\n");
-  } else {
-    printf("test_log passed\n");
-  }
+  msgs[0] = "test_log passed\n";
+  msgs[1] = "test_log failed\n";
+  printf("%s", msgs[failed != 0]);
   return failed;
 }

@@ -21,14 +21,18 @@ C_REST_EXPORT extern const struct c_rest_modality_vtable message_passing_vtable;
 /* We will reuse a dummy vtable for the unimplemented modalities for now */
 static c_rest_error_t dummy_init(struct c_rest_context *ctx) {
   if (ctx->logger.log_cb) {
-    (void)ctx->logger.log_cb("Initializing Dummy modality");
+    c_rest_error_t rc = ctx->logger.log_cb("Initializing Dummy modality");
+    if (rc != C_REST_OK)
+      return rc;
   }
   return C_REST_OK;
 }
 
 static c_rest_error_t dummy_destroy(struct c_rest_context *ctx) {
   if (ctx->logger.log_cb) {
-    (void)ctx->logger.log_cb("Destroying Dummy modality");
+    c_rest_error_t rc = ctx->logger.log_cb("Destroying Dummy modality");
+    if (rc != C_REST_OK)
+      return rc;
   }
   return C_REST_OK;
 }
@@ -40,7 +44,9 @@ static c_rest_error_t dummy_run(struct c_rest_context *ctx) {
 
 static c_rest_error_t dummy_stop(struct c_rest_context *ctx) {
   if (ctx->logger.log_cb) {
-    (void)ctx->logger.log_cb("Stopping Dummy modality");
+    c_rest_error_t rc = ctx->logger.log_cb("Stopping Dummy modality");
+    if (rc != C_REST_OK)
+      return rc;
   }
   return C_REST_OK;
 }
@@ -169,12 +175,17 @@ c_rest_error_t c_rest_run(struct c_rest_context *ctx) {
   /* Initialize c-orm connection pool if configured */
   if (ctx->db_config.connection_string != NULL) {
     if (ctx->logger.log_cb) {
-rc = ctx->logger.log_cb("Initializing c-orm database connection pool..."); if (rc != C_REST_OK) return rc;
+      rc = ctx->logger.log_cb("Initializing c-orm database connection pool...");
+      if (rc != C_REST_OK)
+        return rc;
     }
     res = c_rest_orm_init(&ctx->db_config, &ctx->db_pool);
     if (res != 0) {
       if (ctx->logger.log_cb) {
-        (void)ctx->logger.log_cb("Failed to initialize database connection pool.");
+        c_rest_error_t lrc = ctx->logger.log_cb(
+            "Failed to initialize database connection pool.");
+        if (lrc != C_REST_OK)
+          return lrc;
       }
       return res;
     }
@@ -185,7 +196,10 @@ rc = ctx->logger.log_cb("Initializing c-orm database connection pool..."); if (r
   }
 
   if (ctx->logger.log_cb) {
-    (void)ctx->logger.log_cb("No run loop implemented for the selected modality.");
+    c_rest_error_t lrc = ctx->logger.log_cb(
+        "No run loop implemented for the selected modality.");
+    if (lrc != C_REST_OK)
+      return lrc;
   }
   return C_REST_ERROR_GENERIC;
 }
@@ -200,27 +214,37 @@ c_rest_error_t c_rest_stop(struct c_rest_context *ctx) {
   }
 
   if (ctx->logger.log_cb) {
-    (void)ctx->logger.log_cb("No stop implemented for the selected modality.");
+    c_rest_error_t lrc =
+        ctx->logger.log_cb("No stop implemented for the selected modality.");
+    if (lrc != C_REST_OK)
+      return lrc;
   }
   return C_REST_ERROR_GENERIC;
 }
 
 c_rest_error_t c_rest_destroy(struct c_rest_context *ctx) {
   c_rest_error_t res = C_REST_OK;
+  c_rest_error_t rc;
   if (!ctx) {
     return C_REST_ERROR_GENERIC;
   }
 
   if (ctx->db_pool) {
     if (ctx->logger.log_cb) {
-    (void)ctx->logger.log_cb("Cleaning up database connection pool...");
+      rc = ctx->logger.log_cb("Cleaning up database connection pool...");
+      if (rc != C_REST_OK)
+        return rc;
     }
-    (void)c_rest_orm_cleanup(ctx->db_pool);
+    rc = c_rest_orm_cleanup(ctx->db_pool);
+    if (rc != C_REST_OK)
+      return rc;
     ctx->db_pool = NULL;
   }
 
   if (ctx->vtable && ctx->vtable->destroy) {
-    res = ctx->vtable->destroy(ctx); if (res != C_REST_OK) return res;
+    res = ctx->vtable->destroy(ctx);
+    if (res != C_REST_OK)
+      return res;
   }
 
   if (ctx->allocator.free_cb) {
@@ -229,8 +253,9 @@ c_rest_error_t c_rest_destroy(struct c_rest_context *ctx) {
     C_REST_FREE((void *)(ctx));
   }
 
-  (void)c_rest_platform_cleanup();
-
+  rc = c_rest_platform_cleanup();
+  if (rc != C_REST_OK)
+    return rc;
 
   return res;
 }
@@ -364,18 +389,21 @@ static c_rest_error_t on_body(c_rest_parser_context *pctx, const char *data,
                               size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
   char *new_body = NULL;
-  (void)C_REST_REALLOC(st->req.body, st->req.body_len + len + 1,
-                       (void **)&new_body);
-  if (new_body) {
+  c_rest_error_t rc;
+
+  rc = C_REST_REALLOC(st->req.body, st->req.body_len + len + 1,
+                      (void **)&new_body);
+  if (rc != C_REST_OK)
+    return rc;
+
 #if defined(_MSC_VER)
-    /* CDD_SAFE_CRT */ memcpy_s(new_body + st->req.body_len, len, data, len);
+  /* CDD_SAFE_CRT */ memcpy_s(new_body + st->req.body_len, len, data, len);
 #else
-    memcpy(new_body + st->req.body_len, data, len);
+  memcpy(new_body + st->req.body_len, data, len);
 #endif
-    st->req.body = new_body;
-    st->req.body_len += len;
-    st->req.body[st->req.body_len] = '\0';
-  }
+  st->req.body = new_body;
+  st->req.body_len += len;
+  st->req.body[st->req.body_len] = '\0';
   return C_REST_OK;
 }
 
@@ -434,7 +462,11 @@ c_rest_error_t c_rest_handle_connection(struct c_rest_context *ctx,
       cbs.on_complete = on_complete;
       cbs.on_error = NULL;
 
-      (void)!c_rest_parser_get_basic_vtable(&vt);
+      rc = c_rest_parser_get_basic_vtable(&vt);
+      if (rc != C_REST_OK) {
+        keep_alive = 0;
+        break;
+      }
       rc = c_rest_parser_init(&pctx, vt, &cbs, &st);
       if (rc != C_REST_OK) {
         keep_alive = 0;
@@ -482,17 +514,32 @@ c_rest_error_t c_rest_handle_connection(struct c_rest_context *ctx,
           }
 
           if (rc == C_REST_OK && !res_obj.headers_sent) {
-            (void)c_rest_response_send(&res_obj);
+            c_rest_error_t send_rc = c_rest_response_send(&res_obj);
+            if (send_rc != C_REST_OK)
+              rc = send_rc;
           }
 
-          (void)!c_rest_request_cleanup(&st.req);
-          (void)!c_rest_response_cleanup(&res_obj);
+          {
+            c_rest_error_t clean_rc = c_rest_request_cleanup(&st.req);
+            if (clean_rc != C_REST_OK)
+              rc = clean_rc;
+            clean_rc = c_rest_response_cleanup(&res_obj);
+            if (clean_rc != C_REST_OK)
+              rc = clean_rc;
+          }
         }
 
-        (void)!c_rest_parser_should_keep_alive(&pctx, &keep_alive);
-        if (res != 0)
-          keep_alive = 0;
-        (void)!c_rest_parser_destroy(&pctx);
+        {
+          c_rest_error_t ka_rc =
+              c_rest_parser_should_keep_alive(&pctx, &keep_alive);
+          if (ka_rc != C_REST_OK)
+            keep_alive = 0;
+          if (res != 0)
+            keep_alive = 0;
+          ka_rc = c_rest_parser_destroy(&pctx);
+          if (ka_rc != C_REST_OK)
+            rc = ka_rc;
+        }
 
         if (st.method)
           C_REST_FREE((void *)(st.method));
@@ -507,7 +554,9 @@ c_rest_error_t c_rest_handle_connection(struct c_rest_context *ctx,
   }
 
   if (tls_conn) {
-    (void)!c_rest_tls_close(tls_conn);
+    rc = c_rest_tls_close(tls_conn);
+    if (rc != C_REST_OK)
+      return rc;
   }
 
   return C_REST_OK;

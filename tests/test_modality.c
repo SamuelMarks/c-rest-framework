@@ -5,17 +5,22 @@
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
+#include "c_rest_endian.h"
 #include "test_protos.h"
 #include "c_rest_modality.h"
 #include "c_rest_router.h"
 #include "c_rest_platform.h"
 #include "c_rest_response.h"
+#include "c_rest_testing_mocks.h"
 #include <stdio.h>
 #include <string.h>
 #if defined(_WIN32)
 #include <winsock2.h>
 #ifndef AF_UNIX
 #define AF_UNIX 1
+#endif
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((unused))
 #endif
 static int socketpair(int domain, int type, int protocol, int sv[2]) {
   (void)domain;
@@ -50,6 +55,11 @@ static c_rest_error_t my_mock_logger_err_cb_internal(const char *msg) {
 
 static c_rest_error_t my_mock_logger_ok_cb_internal(const char *msg) {
   (void)msg;
+  return C_REST_OK;
+}
+
+static c_rest_error_t dummy_modality_worker_fn(void *arg) {
+  (void)arg;
   return C_REST_OK;
 }
 
@@ -96,80 +106,37 @@ static void test_modality_simple(void) {
 
   /* 2. Logger failures for init */
   ctx.logger.log_cb = my_mock_logger_err_cb_internal;
-  if (sync_vtable.init) {
-    sync_vtable.init(&ctx);
-  }
-  if (single_thread_vtable.init) {
-    single_thread_vtable.init(&ctx);
-  }
-  if (multi_thread_vtable.init) {
-    multi_thread_vtable.init(&ctx);
-  }
-  if (async_vtable.init) {
-    async_vtable.init(&ctx);
-  }
+  sync_vtable.init(&ctx);
+  single_thread_vtable.init(&ctx);
+  multi_thread_vtable.init(&ctx);
+  async_vtable.init(&ctx);
 
   /* 3. Null ctx */
-  if (sync_vtable.init) {
-    sync_vtable.init(NULL);
-  }
-  if (sync_vtable.run) {
-    sync_vtable.run(NULL);
-  }
-  if (sync_vtable.stop) {
-    sync_vtable.stop(NULL);
-  }
-  if (sync_vtable.destroy) {
-    sync_vtable.destroy(NULL);
-  }
+  sync_vtable.init(NULL);
+  sync_vtable.run(NULL);
+  sync_vtable.stop(NULL);
+  sync_vtable.destroy(NULL);
 
-  if (single_thread_vtable.init) {
-    single_thread_vtable.init(NULL);
-  }
-  if (single_thread_vtable.run) {
-    single_thread_vtable.run(NULL);
-  }
-  if (single_thread_vtable.stop) {
-    single_thread_vtable.stop(NULL);
-  }
-  if (single_thread_vtable.destroy) {
-    single_thread_vtable.destroy(NULL);
-  }
+  single_thread_vtable.init(NULL);
+  single_thread_vtable.run(NULL);
+  single_thread_vtable.stop(NULL);
+  single_thread_vtable.destroy(NULL);
 
-  if (multi_thread_vtable.init) {
-    multi_thread_vtable.init(NULL);
-  }
-  if (multi_thread_vtable.run) {
-    multi_thread_vtable.run(NULL);
-  }
-  if (multi_thread_vtable.stop) {
-    multi_thread_vtable.stop(NULL);
-  }
-  if (multi_thread_vtable.destroy) {
-    multi_thread_vtable.destroy(NULL);
-  }
+  multi_thread_vtable.init(NULL);
+  multi_thread_vtable.run(NULL);
+  multi_thread_vtable.stop(NULL);
+  multi_thread_vtable.destroy(NULL);
 
-  if (async_vtable.init) {
-    async_vtable.init(NULL);
-  }
-  if (async_vtable.run) {
-    async_vtable.run(NULL);
-  }
-  if (async_vtable.stop) {
-    async_vtable.stop(NULL);
-  }
-  if (async_vtable.destroy) {
-    async_vtable.destroy(NULL);
-  }
+  async_vtable.init(NULL);
+  async_vtable.run(NULL);
+  async_vtable.destroy(NULL);
 
   /* 4. Trigger accept failure in sync_run by passing a 9999 socket */
   ctx.logger.log_cb = NULL;
   ctx.internal_state = &sync_st;
   sync_st.server_sock = (c_rest_socket_t)9999;
   sync_st.is_running = 1;
-  if (sync_vtable.run) {
-    sync_vtable.run(&ctx);
-  }
+  sync_vtable.run(&ctx);
 
   /* Trigger bind failure in single/multi/async run */
   ctx.listen_port = 1;
@@ -177,22 +144,26 @@ static void test_modality_simple(void) {
 
   ctx.internal_state = &single_st;
   single_st.server_sock = C_REST_INVALID_SOCKET;
-  if (single_thread_vtable.run) {
-    single_thread_vtable.run(&ctx);
-  }
+  single_thread_vtable.run(&ctx);
 
   ctx.internal_state = &multi_st;
-  multi_st.server_sock = C_REST_INVALID_SOCKET;
-  if (multi_thread_vtable.run) {
+  multi_st.server_sock = (c_rest_socket_t)1;
+  {
+    c_rest_thread_t workers_arr[3];
+    c_rest_thread_create(&workers_arr[0], dummy_modality_worker_fn, NULL);
+    workers_arr[1] = (c_rest_thread_t)0;
+    c_rest_thread_create(&workers_arr[2], dummy_modality_worker_fn, NULL);
+    multi_st.workers = workers_arr;
+    multi_st.worker_count = 3;
+    g_mock_socket_fail = 8;
     multi_thread_vtable.run(&ctx);
+    g_mock_socket_fail = 0;
   }
 
   ctx.internal_state = &async_st;
   async_st.server_sock = C_REST_INVALID_SOCKET;
   async_st.evloop = &dummy_evloop;
-  if (async_vtable.run) {
-    async_vtable.run(&ctx);
-  }
+  async_vtable.run(&ctx);
 
   /* 5. Trigger logger failure in run */
   ctx.logger.log_cb = my_mock_logger_err_cb_internal;
@@ -200,50 +171,39 @@ static void test_modality_simple(void) {
   ctx.internal_state = &sync_st;
   sync_st.is_running = 1;
   sync_st.server_sock = (c_rest_socket_t)9999;
-  if (sync_vtable.run) {
-    sync_vtable.run(&ctx);
-  }
+  sync_vtable.run(&ctx);
 
   ctx.internal_state = &single_st;
   single_st.is_running = 1;
   single_st.server_sock = (c_rest_socket_t)9999;
-  if (single_thread_vtable.run) {
-    single_thread_vtable.run(&ctx);
-  }
+  single_thread_vtable.run(&ctx);
 
   ctx.internal_state = &multi_st;
   multi_st.is_running = 1;
   multi_st.server_sock = (c_rest_socket_t)9999;
-  if (multi_thread_vtable.run) {
-    multi_thread_vtable.run(&ctx);
-  }
+  multi_thread_vtable.run(&ctx);
 
   ctx.internal_state = &async_st;
   async_st.evloop = &dummy_evloop;
   async_st.server_sock = (c_rest_socket_t)9999;
-  if (async_vtable.run) {
-    async_vtable.run(&ctx);
-  }
+  async_vtable.run(&ctx);
 
   /* 6. Trigger logger failure in stop */
   ctx.internal_state = &sync_st;
-  if (sync_vtable.stop) {
-    sync_vtable.stop(&ctx);
-  }
+  sync_vtable.stop(&ctx);
 
   ctx.internal_state = &single_st;
-  if (single_thread_vtable.stop) {
-    single_thread_vtable.stop(&ctx);
-  }
+  single_thread_vtable.stop(&ctx);
 
   ctx.internal_state = &multi_st;
-  if (multi_thread_vtable.stop) {
+  {
+    c_rest_thread_t workers_arr[3];
+    c_rest_thread_create(&workers_arr[0], dummy_modality_worker_fn, NULL);
+    workers_arr[1] = (c_rest_thread_t)0;
+    c_rest_thread_create(&workers_arr[2], dummy_modality_worker_fn, NULL);
+    multi_st.workers = workers_arr;
+    multi_st.worker_count = 3;
     multi_thread_vtable.stop(&ctx);
-  }
-
-  ctx.internal_state = &async_st;
-  if (async_vtable.stop) {
-    async_vtable.stop(&ctx);
   }
 
   /* 7. Trigger socket close failure in destroy */
@@ -251,79 +211,68 @@ static void test_modality_simple(void) {
 
   ctx.internal_state = &sync_st;
   sync_st.server_sock = (c_rest_socket_t)9999;
-  if (sync_vtable.destroy) {
-    sync_vtable.destroy(&ctx);
-  }
+  sync_vtable.destroy(&ctx);
 
   ctx.internal_state = &single_st;
   single_st.server_sock = (c_rest_socket_t)9999;
-  if (single_thread_vtable.destroy) {
-    single_thread_vtable.destroy(&ctx);
-  }
+  single_thread_vtable.destroy(&ctx);
 
   ctx.internal_state = &multi_st;
   multi_st.server_sock = (c_rest_socket_t)9999;
-  if (multi_thread_vtable.destroy) {
-    multi_thread_vtable.destroy(&ctx);
-  }
+  multi_thread_vtable.destroy(&ctx);
 
   ctx.internal_state = &async_st;
   async_st.evloop = &dummy_evloop;
   async_st.server_sock = (c_rest_socket_t)9999;
-  if (async_vtable.destroy) {
-    async_vtable.destroy(&ctx);
-  }
+  async_vtable.destroy(&ctx);
 
   /* 8. Trigger logger failure in destroy */
   ctx.logger.log_cb = my_mock_logger_err_cb_internal;
 
   ctx.internal_state = &sync_st;
   sync_st.server_sock = C_REST_INVALID_SOCKET;
-  if (sync_vtable.destroy) {
-    sync_vtable.destroy(&ctx);
-  }
+  sync_vtable.destroy(&ctx);
 
   ctx.internal_state = &single_st;
   single_st.server_sock = C_REST_INVALID_SOCKET;
-  if (single_thread_vtable.destroy) {
-    single_thread_vtable.destroy(&ctx);
-  }
+  single_thread_vtable.destroy(&ctx);
 
   ctx.internal_state = &multi_st;
   multi_st.server_sock = C_REST_INVALID_SOCKET;
-  if (multi_thread_vtable.destroy) {
+  {
+    c_rest_thread_t workers_arr[3];
+    c_rest_thread_create(&workers_arr[0], dummy_modality_worker_fn, NULL);
+    workers_arr[1] = (c_rest_thread_t)0;
+    c_rest_thread_create(&workers_arr[2], dummy_modality_worker_fn, NULL);
+    multi_st.workers = workers_arr;
+    multi_st.worker_count = 3;
+    multi_thread_vtable.destroy(&ctx);
+
+    ctx.logger.log_cb = NULL;
+    multi_st.workers = NULL;
+    multi_st.worker_count = 0;
     multi_thread_vtable.destroy(&ctx);
   }
 
   ctx.internal_state = &async_st;
   async_st.server_sock = C_REST_INVALID_SOCKET;
   async_st.evloop = &dummy_evloop;
-  if (async_vtable.destroy) {
-    async_vtable.destroy(&ctx);
-  }
+  async_vtable.destroy(&ctx);
 
   /* 9. Trigger logger SUCCESS in init, run, stop, destroy */
   ctx.logger.log_cb = my_mock_logger_ok_cb_internal;
 
-  if (sync_vtable.init) {
-    sync_vtable.init(&ctx);
-  }
+  sync_vtable.init(&ctx);
 
   ctx.internal_state = &sync_st;
   sync_st.server_sock = (c_rest_socket_t)9999;
   sync_st.is_running = 1;
-  if (sync_vtable.run) {
-    sync_vtable.run(&ctx);
-  }
+  sync_vtable.run(&ctx);
 
-  if (sync_vtable.stop) {
-    sync_vtable.stop(&ctx);
-  }
+  sync_vtable.stop(&ctx);
 
   sync_st.server_sock = C_REST_INVALID_SOCKET;
-  if (sync_vtable.destroy) {
-    sync_vtable.destroy(&ctx);
-  }
+  sync_vtable.destroy(&ctx);
 }
 
 static c_rest_error_t mock_logger_cb(const char *msg) {
@@ -368,15 +317,16 @@ static void *hook_calloc_modality(size_t count, size_t size) {
 }
 
 static char *hook_strdup_modality(const char *str) {
+  size_t len;
+  char *dup;
   if (g_malloc_fail_count == 0)
     return NULL;
   if (g_malloc_fail_count > 0)
     g_malloc_fail_count--;
-#if defined(_WIN32)
-  return (char *)CRF_STRDUP(str);
-#else
-  return (char *)CRF_STRDUP(str);
-#endif
+  len = strlen(str) + 1;
+  dup = (char *)malloc(len);
+  memcpy(dup, str, len);
+  return dup;
 }
 #endif
 
@@ -392,7 +342,8 @@ static c_rest_error_t test_client_thread(void *arg) {
   struct test_client_args *args = (struct test_client_args *)arg;
   c_rest_socket_t sock = C_REST_INVALID_SOCKET;
   struct sockaddr_in srv_addr;
-  int retries = 50;
+  int retries = (args->port == 1) ? 2 : 50;
+  int initial_fail = (args->port == 1) ? 0 : 1;
 
   c_rest_platform_init();
 #if defined(_WIN32)
@@ -407,67 +358,66 @@ static c_rest_error_t test_client_thread(void *arg) {
 #endif
 
   while (retries-- > 0) {
+    unsigned short target_port = (unsigned short)args->port;
     sock = (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
-    if (sock != C_REST_INVALID_SOCKET) {
-      memset(&srv_addr, 0, sizeof(srv_addr));
-      srv_addr.sin_family = AF_INET;
-      srv_addr.sin_port = htons((unsigned short)args->port);
-      srv_addr.sin_addr.s_addr = htonl(0x7F000001);
+    memset(&srv_addr, 0, sizeof(srv_addr));
+    srv_addr.sin_family = AF_INET;
+    if (initial_fail) {
+      target_port = 1;
+      initial_fail = 0;
+    }
+    c_rest_htons(target_port, &srv_addr.sin_port);
+    srv_addr.sin_addr.s_addr = htonl(0x7F000001);
 #if defined(_WIN32)
-      if (connect((SOCKET)sock, (struct sockaddr *)&srv_addr,
-                  sizeof(srv_addr)) == 0) {
+    if (connect((SOCKET)sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) ==
+        0) {
 #else
-      if (connect((int)sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) ==
-          0) {
+    if (connect((int)sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) ==
+        0) {
 #endif
-        const char *req =
-            "GET / HTTP/1.1\r\nHost: loc\r\nConnection: close\r\n\r\n";
+      const char *req =
+          "GET / HTTP/1.1\r\nHost: loc\r\nConnection: close\r\n\r\n";
 #if defined(_WIN32)
-        send((SOCKET)sock, req, (int)strlen(req), 0);
+      send((SOCKET)sock, req, (int)strlen(req), 0);
 #else
-        send((int)sock, req, strlen(req), 0);
+      send((int)sock, req, strlen(req), 0);
 #endif
 #if defined(_WIN32)
-        Sleep(50);
+      Sleep(50);
 #else
-        {
-          struct timeval tv;
-          tv.tv_sec = 0;
-          tv.tv_usec = 50000;
-          select(0, NULL, NULL, NULL, &tv);
-        }
-#endif
-        c_rest_stop(args->ctx);
-#if defined(_WIN32)
-        closesocket((SOCKET)sock);
-#else
-        close((int)sock);
-#endif
-        {
-          int j;
-          for (j = 0; j < 8; j++) {
-            sock = (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
-            if (sock != C_REST_INVALID_SOCKET) {
-#if defined(_WIN32)
-              connect((SOCKET)sock, (struct sockaddr *)&srv_addr,
-                      sizeof(srv_addr));
-              closesocket((SOCKET)sock);
-#else
-              connect((int)sock, (struct sockaddr *)&srv_addr,
-                      sizeof(srv_addr));
-              close((int)sock);
-#endif
-            }
-          }
-        }
-        break;
+      {
+        struct timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 50000;
+        select(0, NULL, NULL, NULL, &tv);
       }
+#endif
+      c_rest_stop(args->ctx);
 #if defined(_WIN32)
       closesocket((SOCKET)sock);
 #else
       close((int)sock);
 #endif
+      {
+        int j;
+        for (j = 0; j < 8; j++) {
+          sock = (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
+#if defined(_WIN32)
+          connect((SOCKET)sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr));
+          closesocket((SOCKET)sock);
+#else
+          connect((int)sock, (struct sockaddr *)&srv_addr, sizeof(srv_addr));
+          close((int)sock);
+#endif
+        }
+      }
+      break;
     }
+#if defined(_WIN32)
+    closesocket((SOCKET)sock);
+#else
+    close((int)sock);
+#endif
 #if defined(_WIN32)
     Sleep(10);
 #else
@@ -490,6 +440,15 @@ static c_rest_error_t mock_logger_fail_on_second(const char *msg) {
   g_async_logger_calls++;
   if (g_async_logger_calls == 2)
     return C_REST_ERROR_GENERIC;
+  return C_REST_OK;
+}
+
+static c_rest_error_t my_dummy_handler_headers_sent(struct c_rest_request *req,
+                                                    struct c_rest_response *res,
+                                                    void *user_data) {
+  (void)req;
+  (void)user_data;
+  res->headers_sent = 1;
   return C_REST_OK;
 }
 
@@ -530,6 +489,9 @@ int test_modality(void) {
   c_rest_socket_t client_sock = C_REST_INVALID_SOCKET;
   c_rest_socket_t accepted_sock = C_REST_INVALID_SOCKET;
 
+  (void)client_sock;
+  (void)accepted_sock;
+
 #ifdef C_REST_TESTING_MALLOC_HOOK
   g_crf_malloc_hook = hook_malloc_modality;
   g_crf_realloc_hook = hook_realloc_modality;
@@ -539,74 +501,155 @@ int test_modality(void) {
 
   c_rest_router_init(&router);
   c_rest_router_add(router, "POST", "/test", my_dummy_handler, NULL);
+  c_rest_router_add(router, "POST", "/headers_sent",
+                    my_dummy_handler_headers_sent, NULL);
 
   /* Test c_rest_handle_connection parsing coverage */
-  rc = c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
-  if (rc == C_REST_OK) {
-    int fds[2];
+  c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
+  {
     ctx->router = router;
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
+    {
+      int fds[2];
+      const char *req = "POST /test HTTP/1.1\r\nHost: loc\r\nContent-Length: "
+                        "5\r\n\r\nhello";
+      size_t wr = 0;
+
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
       accepted_sock = (c_rest_socket_t)fds[0];
       client_sock = (c_rest_socket_t)fds[1];
+      c_rest_socket_send(client_sock, req, strlen(req), &wr);
+      c_rest_socket_close(client_sock);
+      c_rest_handle_connection(ctx, accepted_sock);
+      c_rest_socket_close(accepted_sock);
 
-      /* Send a complete valid request to cover parsing callbacks */
+      /* Test headers_sent handler branch */
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
       {
-        const char *req = "POST /test HTTP/1.1\r\nHost: loc\r\nContent-Length: "
-                          "5\r\n\r\nhello";
-        size_t wr = 0;
-        c_rest_socket_send(client_sock, req, strlen(req), &wr);
+        const char *req_hs = "POST /headers_sent HTTP/1.1\r\nHost: "
+                             "loc\r\nContent-Length: 0\r\n\r\n";
+        c_rest_socket_send(client_sock, req_hs, strlen(req_hs), &wr);
         c_rest_socket_close(client_sock);
         c_rest_handle_connection(ctx, accepted_sock);
         c_rest_socket_close(accepted_sock);
-
-        if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-          accepted_sock = (c_rest_socket_t)fds[0];
-          client_sock = (c_rest_socket_t)fds[1];
-          c_rest_socket_send(client_sock, req, strlen(req), &wr);
-          c_rest_socket_close(client_sock);
-          ctx->router = NULL;
-          c_rest_handle_connection(ctx, accepted_sock);
-          ctx->router = router;
-          c_rest_socket_close(accepted_sock);
-
-          if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-            accepted_sock = (c_rest_socket_t)fds[0];
-            client_sock = (c_rest_socket_t)fds[1];
-            c_rest_socket_send(client_sock, req, strlen(req), &wr);
-            c_rest_socket_close(client_sock);
-            ctx->tls_ctx = (void *)1;
-            c_rest_handle_connection(ctx, accepted_sock);
-            ctx->tls_ctx = NULL;
-            c_rest_socket_close(accepted_sock);
-          }
-        }
       }
+
+      /* Test parser vtable fail */
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
+      c_rest_socket_send(client_sock, req, strlen(req), &wr);
+      c_rest_socket_close(client_sock);
+      g_mock_parser_vtable_fail = 1;
+      c_rest_handle_connection(ctx, accepted_sock);
+      g_mock_parser_vtable_fail = 0;
+      c_rest_socket_close(accepted_sock);
+
+      /* Test req_cleanup fail */
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
+      c_rest_socket_send(client_sock, req, strlen(req), &wr);
+      c_rest_socket_close(client_sock);
+      g_mock_req_cleanup_fail = 1;
+      c_rest_handle_connection(ctx, accepted_sock);
+      g_mock_req_cleanup_fail = 0;
+      c_rest_socket_close(accepted_sock);
+
+      /* Test res_cleanup fail */
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
+      c_rest_socket_send(client_sock, req, strlen(req), &wr);
+      c_rest_socket_close(client_sock);
+      g_mock_res_cleanup_fail = 1;
+      c_rest_handle_connection(ctx, accepted_sock);
+      g_mock_res_cleanup_fail = 0;
+      c_rest_socket_close(accepted_sock);
+
+      /* Test parser should_keep_alive fail */
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
+      c_rest_socket_send(client_sock, req, strlen(req), &wr);
+      c_rest_socket_close(client_sock);
+      g_mock_parser_should_keep_alive_fail = 1;
+      c_rest_handle_connection(ctx, accepted_sock);
+      g_mock_parser_should_keep_alive_fail = 0;
+      c_rest_socket_close(accepted_sock);
+
+      /* Test parser destroy fail */
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
+      c_rest_socket_send(client_sock, req, strlen(req), &wr);
+      c_rest_socket_close(client_sock);
+      g_mock_parser_destroy_fail = 1;
+      c_rest_handle_connection(ctx, accepted_sock);
+      g_mock_parser_destroy_fail = 0;
+      c_rest_socket_close(accepted_sock);
+
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
+      c_rest_socket_send(client_sock, req, strlen(req), &wr);
+      c_rest_socket_close(client_sock);
+      ctx->router = NULL;
+      c_rest_handle_connection(ctx, accepted_sock);
+      ctx->router = router;
+      c_rest_socket_close(accepted_sock);
+
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
+      c_rest_socket_send(client_sock, req, strlen(req), &wr);
+      c_rest_socket_close(client_sock);
+      ctx->tls_ctx = (void *)1;
+      c_rest_handle_connection(ctx, accepted_sock);
+      ctx->tls_ctx = NULL;
+      c_rest_socket_close(accepted_sock);
+
+      /* Test c_rest_tls_close fail in c_rest_handle_connection */
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
+      c_rest_socket_send(client_sock, req, strlen(req), &wr);
+      c_rest_socket_close(client_sock);
+      ctx->tls_ctx = (void *)1;
+      g_mock_tls_fail = 2;
+      c_rest_handle_connection(ctx, accepted_sock);
+      g_mock_tls_fail = 0;
+      ctx->tls_ctx = NULL;
+      c_rest_socket_close(accepted_sock);
     }
+#endif
     c_rest_destroy(ctx);
   }
 
   /* Test c_rest_handle_connection with OOM in parsing callbacks */
-  rc = c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
-  if (rc == C_REST_OK) {
+  c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
+  {
     ctx->router = router;
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
 #ifdef C_REST_TESTING_MALLOC_HOOK
     {
       int oom_idx;
       for (oom_idx = 0; oom_idx < 150; oom_idx++) {
         int fds[2];
-        if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-          accepted_sock = (c_rest_socket_t)fds[0];
-          client_sock = (c_rest_socket_t)fds[1];
-          {
-            const char *req = "POST /test?foo=bar HTTP/1.1\r\nHost: "
-                              "loc\r\nContent-Length: 5\r\n\r\nhello";
-            size_t wr = 0;
-            c_rest_socket_send(client_sock, req, strlen(req), &wr);
-            c_rest_socket_close(client_sock);
-            g_malloc_fail_count = oom_idx;
-            c_rest_handle_connection(ctx, accepted_sock);
-            c_rest_socket_close(accepted_sock);
-          }
+        socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        accepted_sock = (c_rest_socket_t)fds[0];
+        client_sock = (c_rest_socket_t)fds[1];
+        {
+          const char *req = "POST /test?foo=bar HTTP/1.1\r\nHost: "
+                            "loc\r\nContent-Length: 5\r\n\r\nhello";
+          size_t wr = 0;
+          c_rest_socket_send(client_sock, req, strlen(req), &wr);
+          c_rest_socket_close(client_sock);
+          g_malloc_fail_count = oom_idx;
+          c_rest_handle_connection(ctx, accepted_sock);
+          c_rest_socket_close(accepted_sock);
         }
       }
       g_malloc_fail_count = -1;
@@ -616,31 +659,33 @@ int test_modality(void) {
 
       {
         int fds[2];
-        if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-          accepted_sock = (c_rest_socket_t)fds[0];
-          client_sock = (c_rest_socket_t)fds[1];
-          {
-            const char *req = "POST /test?foo=bar HTTP/1.1\r\nHost: "
-                              "loc\r\nContent-Length: 5\r\n\r\nhello";
-            size_t wr = 0;
-            c_rest_socket_send(client_sock, req, strlen(req), &wr);
-            c_rest_socket_close(client_sock);
-            c_rest_handle_connection(ctx, accepted_sock);
-            c_rest_socket_close(accepted_sock);
-          }
+        socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        accepted_sock = (c_rest_socket_t)fds[0];
+        client_sock = (c_rest_socket_t)fds[1];
+        {
+          const char *req = "POST /test?foo=bar HTTP/1.1\r\nHost: "
+                            "loc\r\nContent-Length: 5\r\n\r\nhello";
+          size_t wr = 0;
+          c_rest_socket_send(client_sock, req, strlen(req), &wr);
+          c_rest_socket_close(client_sock);
+          c_rest_handle_connection(ctx, accepted_sock);
+          c_rest_socket_close(accepted_sock);
         }
       }
     }
+#endif
 #endif
     c_rest_destroy(ctx);
   }
 
   /* Test c_rest_handle_connection with TLS coverage */
-  rc = c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
-  if (rc == C_REST_OK) {
-    int fds[2];
+  c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
+  {
     ctx->router = router;
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
+    {
+      int fds[2];
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
       accepted_sock = (c_rest_socket_t)fds[0];
       client_sock = (c_rest_socket_t)fds[1];
 
@@ -662,30 +707,140 @@ int test_modality(void) {
       c_rest_socket_close(accepted_sock);
     }
 
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
+    {
+      int fds[2];
+      const char *req = "INVALID REQUEST\r\n\r\n";
+      size_t wr = 0;
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
       accepted_sock = (c_rest_socket_t)fds[0];
       client_sock = (c_rest_socket_t)fds[1];
 
-      /* Send an invalid request */
-      {
-        const char *req = "INVALID REQUEST\r\n\r\n";
-        size_t wr = 0;
-        c_rest_socket_send(client_sock, req, strlen(req), &wr);
-        c_rest_socket_close(client_sock);
-        c_rest_handle_connection(ctx, accepted_sock);
-        c_rest_socket_close(accepted_sock);
-      }
+      c_rest_socket_send(client_sock, req, strlen(req), &wr);
+      c_rest_socket_close(client_sock);
+      c_rest_handle_connection(ctx, accepted_sock);
+      c_rest_socket_close(accepted_sock);
     }
+#endif
 
     c_rest_destroy(ctx);
   }
 
+#define RECORD_FAIL()                                                          \
+  do {                                                                         \
+    printf("MODALITY FAIL AT LINE %d\n", __LINE__);                            \
+    failed++;                                                                  \
+  } while (0)
+
   /* Test invalid c_rest_handle_connection */
   c_rest_handle_connection(NULL, C_REST_INVALID_SOCKET);
 
+  /* Modality context error branches */
+  {
+    struct c_rest_context mctx;
+    struct c_rest_logger lgr;
+    memset(&mctx, 0, sizeof(mctx));
+    memset(&lgr, 0, sizeof(lgr));
+    lgr.log_cb = my_mock_logger_err_cb_internal;
+    mctx.logger = lgr;
+    mctx.allocator.free_cb = my_dummy_free;
+
+    /* 1. dummy_init log fail */
+    c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
+    mctx.logger = lgr;
+    ctx->vtable->init(&mctx);
+    /* 1b. dummy_init log success */
+    mctx.logger.log_cb = my_mock_logger_ok_cb_internal;
+    ctx->vtable->init(&mctx);
+    c_rest_destroy(ctx);
+    ctx = NULL;
+
+    /* 2. db pool init fail with err logger */
+    mctx.logger = lgr;
+    g_mock_orm_init_fail = 1;
+    mctx.db_config.connection_string = "invalid://";
+    c_rest_run(&mctx);
+
+    /* 2b. db pool init fail with ok logger */
+    mctx.logger.log_cb = my_mock_logger_ok_cb_internal;
+    c_rest_run(&mctx);
+
+    /* 3. db pool init fail without logger */
+    mctx.logger.log_cb = NULL;
+    c_rest_run(&mctx);
+    g_mock_orm_init_fail = 0;
+    mctx.db_config.connection_string = NULL;
+    mctx.logger = lgr;
+
+    /* 4. run with no run callback and logger */
+    mctx.vtable = NULL;
+    c_rest_run(&mctx);
+
+    /* 5. stop with no stop callback and logger */
+    c_rest_stop(&mctx);
+
+    /* 6. destroy with db_pool and failing logger */
+    mctx.db_pool = (void *)1;
+    c_rest_destroy(&mctx);
+
+    /* 6b. destroy with db_pool and ok logger */
+    mctx.db_pool = (void *)1;
+    mctx.logger.log_cb = my_mock_logger_ok_cb_internal;
+    c_rest_destroy(&mctx);
+    mctx.db_pool = NULL;
+
+    /* 7. destroy with db_pool and failing orm_cleanup */
+    mctx.db_pool = (void *)1;
+    mctx.logger.log_cb = NULL;
+    g_mock_orm_cleanup_fail = 1;
+    c_rest_destroy(&mctx);
+    g_mock_orm_cleanup_fail = 0;
+
+    /* 8. destroy with platform_cleanup fail */
+    mctx.db_pool = NULL;
+    g_mock_platform_cleanup_fail = 1;
+    c_rest_destroy(&mctx);
+    g_mock_platform_cleanup_fail = 0;
+  }
+
   /* Test invalid modality */
-  failed +=
-      ((c_rest_init((enum c_rest_modality_type)999, &ctx) == C_REST_OK) != 0);
+  failed += (c_rest_init((enum c_rest_modality_type)999, &ctx) == C_REST_OK);
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  /* Exercise hook_calloc_modality and hook_strdup_modality branches */
+  {
+    char *s;
+    void *p;
+
+    g_malloc_fail_count = 0;
+    failed += (hook_calloc_modality(1, 1) != NULL);
+    g_malloc_fail_count = 0;
+    failed += (hook_strdup_modality("t") != NULL);
+
+    g_malloc_fail_count = 1;
+    p = hook_calloc_modality(1, 1);
+    failed += (p == NULL);
+    free(p);
+
+    g_malloc_fail_count = 1;
+    s = hook_strdup_modality("t");
+    failed += (s == NULL);
+    free(s);
+
+    g_malloc_fail_count = -1;
+    p = hook_calloc_modality(1, 1);
+    failed += (p == NULL);
+    free(p);
+
+    g_malloc_fail_count = -1;
+    s = hook_strdup_modality("t");
+    failed += (s == NULL);
+    free(s);
+  }
+#endif
+
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
+  my_sigalrm(0);
+#endif
 
   for (i = 0; i < num_modalities; i++) {
     enum c_rest_modality_type mod = modalities[i];
@@ -699,53 +854,35 @@ int test_modality(void) {
     printf("Testing modality %d\n", mod);
 
     /* Null checks */
-    if ((c_rest_init(mod, NULL) == C_REST_OK) != 0) {
-      printf("Failed at %d\n", __LINE__);
-      failed++;
-    }
-    /* LCOV_EXCL_LINE */
+    failed += (c_rest_init(mod, NULL) == C_REST_OK);
+
 #ifdef C_REST_TESTING_MALLOC_HOOK
     /* OOM on c_rest_init itself */
     g_malloc_fail_count = 0;
-    if ((c_rest_init(mod, &ctx) == C_REST_OK) != 0) {
-      printf("Failed at %d\n", __LINE__);
-      failed++;
-    }
+    failed += (c_rest_init(mod, &ctx) == C_REST_OK);
 
     if (mod != C_REST_MODALITY_SINGLE_PROCESS) {
       g_malloc_fail_count = 1;
-      if ((c_rest_init(mod, &ctx) == C_REST_OK) != 0) {
-        printf("Failed at %d\n", __LINE__);
-        failed++;
-      }
+      failed += (c_rest_init(mod, &ctx) == C_REST_OK);
+      g_malloc_fail_count = 2;
+      rc = c_rest_init(mod, &ctx);
     }
 #endif
-    /* LCOV_EXCL_LINE */
     g_malloc_fail_count = -1;
 
     rc = c_rest_init(mod, &ctx);
-    if (rc != C_REST_OK) {
-      printf("INIT FAILED %d\n", rc);
-      failed++;
-    }
+    failed += (rc != C_REST_OK);
 
     /* Invalid run */
-    if ((c_rest_run(NULL) == C_REST_OK) != 0) {
-      printf("Failed at %d\n", __LINE__);
-      failed++;
-    }
+    failed += (c_rest_run(NULL) == C_REST_OK);
 
     /* Invalid stop */
-    if ((c_rest_stop(NULL) == C_REST_OK) != 0) {
-      printf("Failed at %d\n", __LINE__);
-      failed++;
-    }
-    /* LCOV_EXCL_LINE */
+    failed += (c_rest_stop(NULL) == C_REST_OK);
+
     /* Stop (should be safe to call before run, or just set flag) */
     c_rest_stop(ctx);
 
-    /* Run with invalid host to fail bind immediately and not hang */ /* LCOV_EXCL_LINE
-                                                                       */
+    /* Run with invalid host to fail bind immediately and not hang */
     ctx->listen_address = "invalid_address_for_test";
     ctx->listen_port = 1;
     ctx->logger.log_cb = mock_logger_cb;
@@ -754,7 +891,6 @@ int test_modality(void) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     /* Run with multiplatform mock */
     {
-
       g_accept_calls = 0;
       ctx->listen_address = "127.0.0.1";
       ctx->listen_port = 8080;
@@ -764,97 +900,81 @@ int test_modality(void) {
 #endif
 
     /* Destroy invalid */
-    if ((c_rest_destroy(NULL) == C_REST_OK) != 0) {
-      printf("Failed at %d\n", __LINE__);
-      failed++;
-    }
+    failed += (c_rest_destroy(NULL) == C_REST_OK);
 
     /* Valid destroy */
     rc = c_rest_destroy(ctx);
-    if ((rc != C_REST_OK) != 0) {
-      printf("Failed at %d\n", __LINE__);
-      failed++;
-    }
+    failed += (rc != C_REST_OK);
 
-    /* Test with logger error on init */ /* LCOV_EXCL_LINE */
-    rc = c_rest_init(mod, &ctx);
-    if (rc == C_REST_OK) {
-      ctx->logger.log_cb = mock_logger_err_cb;
-      c_rest_destroy(ctx);
-    }
+    /* Test with logger error on init */
+    c_rest_init(mod, &ctx);
+    ctx->logger.log_cb = mock_logger_err_cb;
+    c_rest_destroy(ctx);
   }
 
   /* Specifically test dummy modality coverage with logger */
-  rc = c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
-  if (rc == C_REST_OK) {
-    ctx->logger.log_cb = mock_logger_cb;
-    /* run should cover dummy_run */
-    c_rest_run(ctx);
-    /* stop should cover dummy_stop */
-    c_rest_stop(ctx);
-    /* destroy covers dummy_destroy */
-    c_rest_destroy(ctx);
-  }
+  c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
+  ctx->logger.log_cb = mock_logger_cb;
+  /* run should cover dummy_run */
+  c_rest_run(ctx);
+  /* stop should cover dummy_stop */
+  c_rest_stop(ctx);
+  /* destroy covers dummy_destroy */
+  c_rest_destroy(ctx);
 
   /* Test db config in c_rest_run */
-  rc = c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
-  if (rc == C_REST_OK) {
-    ctx->logger.log_cb = mock_logger_cb;
-    ctx->db_config.connection_string = "sqlite://:memory:";
-    c_rest_run(ctx);
+  c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
+  ctx->logger.log_cb = mock_logger_cb;
+  ctx->db_config.connection_string = "sqlite://:memory:";
+  c_rest_run(ctx);
 
-    ctx->vtable = NULL;
-    ctx->logger.log_cb = mock_logger_cb;
-    c_rest_run(ctx);
-    ctx->logger.log_cb = NULL;
-    c_rest_run(ctx);
+  ctx->vtable = NULL;
+  ctx->logger.log_cb = mock_logger_cb;
+  c_rest_run(ctx);
+  ctx->logger.log_cb = NULL;
+  c_rest_run(ctx);
 
-    ctx->logger.log_cb = mock_logger_err_cb;
-    c_rest_run(ctx);
+  ctx->logger.log_cb = mock_logger_err_cb;
+  c_rest_run(ctx);
 
-    /* Induce c_rest_orm_init failure with logger NULL */
-    g_async_logger_calls = 0;
-    ctx->db_config.connection_string = "invalid_url://";
-    g_mock_orm_init_fail = 1;
-    ctx->logger.log_cb = NULL;
-    c_rest_run(ctx);
+  /* Induce c_rest_orm_init failure with logger NULL */
+  g_async_logger_calls = 0;
+  ctx->db_config.connection_string = "invalid_url://";
+  g_mock_orm_init_fail = 1;
+  ctx->logger.log_cb = NULL;
+  c_rest_run(ctx);
 
-    /* Induce c_rest_orm_init failure with mock_logger_fail_on_second */
-    g_async_logger_calls = 0;
-    ctx->logger.log_cb = mock_logger_fail_on_second;
-    c_rest_run(ctx);
-    g_mock_orm_init_fail = 0;
+  /* Induce c_rest_orm_init failure with mock_logger_fail_on_second */
+  g_async_logger_calls = 0;
+  ctx->logger.log_cb = mock_logger_fail_on_second;
+  c_rest_run(ctx);
+  g_mock_orm_init_fail = 0;
 
-    ctx->db_config.connection_string = NULL;
-    ctx->logger.log_cb = mock_logger_err_cb;
-    c_rest_destroy(ctx);
-  }
+  ctx->db_config.connection_string = NULL;
+  ctx->logger.log_cb = mock_logger_err_cb;
+  c_rest_destroy(ctx);
 
   /* Test logger failure on dummy destroy/stop */
-  rc = c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
-  if (rc == C_REST_OK) {
-    ctx->logger.log_cb = mock_logger_err_cb;
-    c_rest_stop(ctx);
-    ctx->vtable = NULL;
-    ctx->logger.log_cb = mock_logger_cb;
-    c_rest_run(ctx);
-    c_rest_stop(ctx);
-    ctx->logger.log_cb = mock_logger_cb;
-    c_rest_run(ctx);
-    c_rest_stop(ctx);
-    ctx->allocator.free_cb = NULL;
-    c_rest_destroy(ctx);
-  }
+  c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
+  ctx->logger.log_cb = mock_logger_err_cb;
+  c_rest_stop(ctx);
+  ctx->vtable = NULL;
+  ctx->logger.log_cb = mock_logger_cb;
+  c_rest_run(ctx);
+  c_rest_stop(ctx);
+  ctx->logger.log_cb = mock_logger_cb;
+  c_rest_run(ctx);
+  c_rest_stop(ctx);
+  ctx->allocator.free_cb = NULL;
+  c_rest_destroy(ctx);
 
   {
     struct c_rest_modality_vtable null_vt = {0};
-    rc = c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
-    if (rc == C_REST_OK) {
-      ctx->vtable = &null_vt;
-      c_rest_run(ctx);
-      c_rest_stop(ctx);
-      c_rest_destroy(ctx);
-    }
+    c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
+    ctx->vtable = &null_vt;
+    c_rest_run(ctx);
+    c_rest_stop(ctx);
+    c_rest_destroy(ctx);
   }
 
   /* Test dummy init logger failure */
@@ -862,35 +982,18 @@ int test_modality(void) {
   {
     struct c_rest_logger err_log;
     err_log.log_cb = mock_logger_err_cb;
-    rc = c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
-    if (rc == C_REST_OK) {
-      ctx->logger = err_log;
-      /* Can't easily test dummy_init logger failure through c_rest_init because
-         it creates a new context each time and sets logger AFTER init. But we
-         can test it indirectly by observing it never hits dummy_init since
-         c_rest_init nulls logger initially. To cover dummy_init logger failure,
-         we would need a hook or mock. Wait, c_rest_init calls
-         ctx->vtable->init(ctx) with an empty logger. So dummy_init log_cb check
-         is never false unless we manually invoke it. Let's manually invoke the
-         vtable. */
-      if (ctx->vtable && ctx->vtable->init) {
-        ctx->vtable->init(ctx);
-      }
-      c_rest_destroy(ctx);
-      ctx = NULL;
-    }
+    c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, &ctx);
+    ctx->logger = err_log;
+    ctx->vtable->init(ctx);
+    c_rest_destroy(ctx);
+    ctx = NULL;
   }
   c_rest_set_router(NULL, NULL);
-  if (ctx)
-    c_rest_set_router(ctx, NULL);
 
   /* Test get_vtable null out_vtable coverage indirectly (would need direct
    * call, but we can't. We can test c_rest_init null context) */
   rc = c_rest_init(C_REST_MODALITY_SINGLE_PROCESS, NULL);
-  if ((rc != C_REST_ERROR_GENERIC) != 0) {
-    printf("Failed at %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_ERROR_GENERIC);
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   g_crf_malloc_hook = NULL;
@@ -906,7 +1009,6 @@ int test_modality(void) {
   {
 
     struct c_rest_context dummy_ctx_gt;
-    c_rest_error_t rc_async;
 #if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
     c_rest_socket_t valid_sock =
         (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
@@ -949,37 +1051,24 @@ int test_modality(void) {
 
     /* async_run logger failure start */
     dummy_ctx_gt.logger.log_cb = mock_logger_cb;
-    rc_async = async_vtable.init(&dummy_ctx_gt);
-    if (rc_async == C_REST_OK) {
-      dummy_ctx_gt.logger.log_cb = mock_logger_err_cb;
-      async_vtable.run(&dummy_ctx_gt);
-      dummy_ctx_gt.logger.log_cb = mock_logger_cb;
-      async_vtable.destroy(&dummy_ctx_gt);
-    }
+    async_vtable.init(&dummy_ctx_gt);
+    dummy_ctx_gt.logger.log_cb = mock_logger_err_cb;
+    async_vtable.run(&dummy_ctx_gt);
+    dummy_ctx_gt.logger.log_cb = mock_logger_cb;
+    async_vtable.destroy(&dummy_ctx_gt);
 
     /* run logger failure end */
-    rc_async = async_vtable.init(&dummy_ctx_gt);
-    if (rc_async == C_REST_OK) {
-      g_async_logger_calls = 0;
-      dummy_ctx_gt.logger.log_cb = mock_logger_fail_on_second;
-      async_vtable.run(&dummy_ctx_gt);
-      dummy_ctx_gt.logger.log_cb = mock_logger_cb;
-      async_vtable.destroy(&dummy_ctx_gt);
-    }
+    async_vtable.init(&dummy_ctx_gt);
+    g_async_logger_calls = 0;
+    dummy_ctx_gt.logger.log_cb = mock_logger_fail_on_second;
+    async_vtable.run(&dummy_ctx_gt);
+    dummy_ctx_gt.logger.log_cb = mock_logger_cb;
+    async_vtable.destroy(&dummy_ctx_gt);
 
     /* destroy logger failure */
-    rc_async = async_vtable.init(&dummy_ctx_gt);
-    if (rc_async == C_REST_OK) {
-      dummy_ctx_gt.logger.log_cb = mock_logger_err_cb;
-      async_vtable.destroy(&dummy_ctx_gt);
-      /* free leaked internal_state since destroy bailed early */
-      if (dummy_ctx_gt.internal_state) {
-        void **ptrs = (void **)dummy_ctx_gt.internal_state;
-        if (ptrs[1])
-          free(ptrs[1]);
-        free(dummy_ctx_gt.internal_state);
-      }
-    }
+    async_vtable.init(&dummy_ctx_gt);
+    dummy_ctx_gt.logger.log_cb = mock_logger_err_cb;
+    async_vtable.destroy(&dummy_ctx_gt);
 
     /* async_destroy NULL */
     async_vtable.destroy(NULL);
@@ -990,59 +1079,48 @@ int test_modality(void) {
 
     /* async_destroy with valid server_sock socket */
     dummy_ctx_gt.logger.log_cb = mock_logger_cb;
-    rc_async = async_vtable.init(&dummy_ctx_gt);
-    if (rc_async == C_REST_OK) {
-      *(c_rest_socket_t *)dummy_ctx_gt.internal_state = valid_sock;
-      async_vtable.destroy(&dummy_ctx_gt);
-    }
+    async_vtable.init(&dummy_ctx_gt);
+    *(c_rest_socket_t *)dummy_ctx_gt.internal_state = valid_sock;
+    async_vtable.destroy(&dummy_ctx_gt);
 
     /* async_destroy with invalid server_sock to trigger socket close error */
-    rc_async = async_vtable.init(&dummy_ctx_gt);
-    if (rc_async == C_REST_OK) {
+    async_vtable.init(&dummy_ctx_gt);
+    {
+      void **ptrs;
 #if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
       *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
 #else
       *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
 #endif
-      rc_async = async_vtable.destroy(&dummy_ctx_gt);
+      async_vtable.destroy(&dummy_ctx_gt);
       /* free leaked internal_state since destroy bailed early */
-      if (dummy_ctx_gt.internal_state) {
-        void **ptrs = (void **)dummy_ctx_gt.internal_state;
-        if (ptrs[1])
-          free(ptrs[1]);
-        free(dummy_ctx_gt.internal_state);
-      }
+      ptrs = (void **)dummy_ctx_gt.internal_state;
+      free(ptrs[1]);
+      free(dummy_ctx_gt.internal_state);
+      dummy_ctx_gt.internal_state = NULL;
     }
 
     /* async_destroy with evloop == NULL */
-    rc_async = async_vtable.init(&dummy_ctx_gt);
-    if (rc_async == C_REST_OK) {
+    async_vtable.init(&dummy_ctx_gt);
+    {
       void **ptrs = (void **)dummy_ctx_gt.internal_state;
-      void *tmp_evloop =
-          ptrs[1]; /* evloop is second member (after size_t or c_rest_socket_t
-                      which is 4 or 8 bytes) wait! c_rest_socket_t could be 4 or
-                      8 bytes, so pointer might be unaligned? No, on 64-bit,
-                      c_rest_socket_t  is 8 bytes, so ptrs[1] is
-                      correct */
+      void *tmp_evloop = ptrs[1];
       ptrs[1] = NULL;
       async_vtable.destroy(&dummy_ctx_gt);
       free(tmp_evloop);
     }
 
     /* async_run with logger == NULL */
-    rc_async = async_vtable.init(&dummy_ctx_gt);
-    if (rc_async == C_REST_OK) {
-      dummy_ctx_gt.logger.log_cb = NULL;
-      async_vtable.run(&dummy_ctx_gt);
-      async_vtable.destroy(&dummy_ctx_gt);
-    }
+    async_vtable.init(&dummy_ctx_gt);
+    dummy_ctx_gt.logger.log_cb = NULL;
+    async_vtable.run(&dummy_ctx_gt);
+    async_vtable.destroy(&dummy_ctx_gt);
   }
 
   /* greenthread modality direct tests */
   {
 
     struct c_rest_context dummy_ctx_gt;
-    c_rest_error_t rc_gt;
 #if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
     c_rest_socket_t valid_sock =
         (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
@@ -1082,42 +1160,33 @@ int test_modality(void) {
 
     /* run logger failure start */
     dummy_ctx_gt.logger.log_cb = mock_logger_cb;
-    rc_gt = greenthread_vtable.init(&dummy_ctx_gt);
-    if (rc_gt == C_REST_OK) {
-      dummy_ctx_gt.logger.log_cb = mock_logger_err_cb;
-      greenthread_vtable.run(&dummy_ctx_gt);
-      dummy_ctx_gt.logger.log_cb = mock_logger_cb;
-      greenthread_vtable.destroy(&dummy_ctx_gt);
-    }
+    greenthread_vtable.init(&dummy_ctx_gt);
+    dummy_ctx_gt.logger.log_cb = mock_logger_err_cb;
+    greenthread_vtable.run(&dummy_ctx_gt);
+    dummy_ctx_gt.logger.log_cb = mock_logger_cb;
+    greenthread_vtable.destroy(&dummy_ctx_gt);
 
     /* run logger failure end */
-    rc_gt = greenthread_vtable.init(&dummy_ctx_gt);
-    if (rc_gt == C_REST_OK) {
-      g_async_logger_calls = 0;
-      dummy_ctx_gt.logger.log_cb = mock_logger_fail_on_second;
-      greenthread_vtable.run(&dummy_ctx_gt);
-      dummy_ctx_gt.logger.log_cb = mock_logger_cb;
-      greenthread_vtable.destroy(&dummy_ctx_gt);
-    }
+    greenthread_vtable.init(&dummy_ctx_gt);
+    g_async_logger_calls = 0;
+    dummy_ctx_gt.logger.log_cb = mock_logger_fail_on_second;
+    greenthread_vtable.run(&dummy_ctx_gt);
+    dummy_ctx_gt.logger.log_cb = mock_logger_cb;
+    greenthread_vtable.destroy(&dummy_ctx_gt);
 
     /* run with logger == NULL */
-    rc_gt = greenthread_vtable.init(&dummy_ctx_gt);
-    if (rc_gt == C_REST_OK) {
-      dummy_ctx_gt.logger.log_cb = NULL;
-      greenthread_vtable.run(&dummy_ctx_gt);
-      greenthread_vtable.destroy(&dummy_ctx_gt);
-    }
+    greenthread_vtable.init(&dummy_ctx_gt);
+    dummy_ctx_gt.logger.log_cb = NULL;
+    greenthread_vtable.run(&dummy_ctx_gt);
+    greenthread_vtable.destroy(&dummy_ctx_gt);
 
     /* destroy logger failure */
-    rc_gt = greenthread_vtable.init(&dummy_ctx_gt);
-    if (rc_gt == C_REST_OK) {
-      dummy_ctx_gt.logger.log_cb = mock_logger_err_cb;
-      greenthread_vtable.destroy(&dummy_ctx_gt);
-      /* free leaked internal_state since destroy bailed early */
-      if (dummy_ctx_gt.internal_state) {
-        free(dummy_ctx_gt.internal_state);
-      }
-    }
+    greenthread_vtable.init(&dummy_ctx_gt);
+    dummy_ctx_gt.logger.log_cb = mock_logger_err_cb;
+    greenthread_vtable.destroy(&dummy_ctx_gt);
+    /* free leaked internal_state since destroy bailed early */
+    free(dummy_ctx_gt.internal_state);
+    dummy_ctx_gt.internal_state = NULL;
 
     /* destroy NULL */
     greenthread_vtable.destroy(NULL);
@@ -1128,33 +1197,27 @@ int test_modality(void) {
 
     /* destroy with valid server_sock socket */
     dummy_ctx_gt.logger.log_cb = mock_logger_cb;
-    rc_gt = greenthread_vtable.init(&dummy_ctx_gt);
-    if (rc_gt == C_REST_OK) {
-      *(c_rest_socket_t *)dummy_ctx_gt.internal_state = valid_sock;
-      greenthread_vtable.destroy(&dummy_ctx_gt);
-    }
+    greenthread_vtable.init(&dummy_ctx_gt);
+    *(c_rest_socket_t *)dummy_ctx_gt.internal_state = valid_sock;
+    greenthread_vtable.destroy(&dummy_ctx_gt);
 
     /* destroy with invalid server_sock to trigger socket close error */
-    rc_gt = greenthread_vtable.init(&dummy_ctx_gt);
-    if (rc_gt == C_REST_OK) {
+    greenthread_vtable.init(&dummy_ctx_gt);
 #if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
-      *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
+    *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
 #else
-      *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
+    *(c_rest_socket_t *)dummy_ctx_gt.internal_state = (c_rest_socket_t)9999;
 #endif
-      rc_gt = greenthread_vtable.destroy(&dummy_ctx_gt);
-      /* free leaked internal_state since destroy bailed early */
-      if (dummy_ctx_gt.internal_state) {
-        free(dummy_ctx_gt.internal_state);
-      }
-    }
+    greenthread_vtable.destroy(&dummy_ctx_gt);
+    /* free leaked internal_state since destroy bailed early */
+    free(dummy_ctx_gt.internal_state);
+    dummy_ctx_gt.internal_state = NULL;
   }
 
   /* message_passing modality direct tests */
   {
 
     struct c_rest_context dummy_ctx_mp;
-    c_rest_error_t rc_mp;
 
     memset(&dummy_ctx_mp, 0, sizeof(dummy_ctx_mp));
     dummy_ctx_mp.allocator.malloc_cb = malloc;
@@ -1186,41 +1249,32 @@ int test_modality(void) {
 
     /* run logger failure start */
     dummy_ctx_mp.logger.log_cb = mock_logger_cb;
-    rc_mp = message_passing_vtable.init(&dummy_ctx_mp);
-    if (rc_mp == C_REST_OK) {
-      dummy_ctx_mp.logger.log_cb = mock_logger_err_cb;
-      message_passing_vtable.run(&dummy_ctx_mp);
-      dummy_ctx_mp.logger.log_cb = mock_logger_cb;
-      message_passing_vtable.destroy(&dummy_ctx_mp);
-    }
+    message_passing_vtable.init(&dummy_ctx_mp);
+    dummy_ctx_mp.logger.log_cb = mock_logger_err_cb;
+    message_passing_vtable.run(&dummy_ctx_mp);
+    dummy_ctx_mp.logger.log_cb = mock_logger_cb;
+    message_passing_vtable.destroy(&dummy_ctx_mp);
 
     /* run logger failure end */
-    rc_mp = message_passing_vtable.init(&dummy_ctx_mp);
-    if (rc_mp == C_REST_OK) {
-      g_async_logger_calls = 0;
-      dummy_ctx_mp.logger.log_cb = mock_logger_fail_on_second;
-      message_passing_vtable.run(&dummy_ctx_mp);
-      dummy_ctx_mp.logger.log_cb = mock_logger_cb;
-      message_passing_vtable.destroy(&dummy_ctx_mp);
-    }
+    message_passing_vtable.init(&dummy_ctx_mp);
+    g_async_logger_calls = 0;
+    dummy_ctx_mp.logger.log_cb = mock_logger_fail_on_second;
+    message_passing_vtable.run(&dummy_ctx_mp);
+    dummy_ctx_mp.logger.log_cb = mock_logger_cb;
+    message_passing_vtable.destroy(&dummy_ctx_mp);
 
     /* run with logger == NULL */
-    rc_mp = message_passing_vtable.init(&dummy_ctx_mp);
-    if (rc_mp == C_REST_OK) {
-      dummy_ctx_mp.logger.log_cb = NULL;
-      message_passing_vtable.run(&dummy_ctx_mp);
-      message_passing_vtable.destroy(&dummy_ctx_mp);
-    }
+    message_passing_vtable.init(&dummy_ctx_mp);
+    dummy_ctx_mp.logger.log_cb = NULL;
+    message_passing_vtable.run(&dummy_ctx_mp);
+    message_passing_vtable.destroy(&dummy_ctx_mp);
 
     /* destroy logger failure */
-    rc_mp = message_passing_vtable.init(&dummy_ctx_mp);
-    if (rc_mp == C_REST_OK) {
-      dummy_ctx_mp.logger.log_cb = mock_logger_err_cb;
-      message_passing_vtable.destroy(&dummy_ctx_mp);
-      if (dummy_ctx_mp.internal_state) {
-        free(dummy_ctx_mp.internal_state);
-      }
-    }
+    message_passing_vtable.init(&dummy_ctx_mp);
+    dummy_ctx_mp.logger.log_cb = mock_logger_err_cb;
+    message_passing_vtable.destroy(&dummy_ctx_mp);
+    free(dummy_ctx_mp.internal_state);
+    dummy_ctx_mp.internal_state = NULL;
 
     /* destroy NULL */
     message_passing_vtable.destroy(NULL);
@@ -1231,26 +1285,21 @@ int test_modality(void) {
 
     /* destroy with valid server_sock socket */
     dummy_ctx_mp.logger.log_cb = mock_logger_cb;
-    rc_mp = message_passing_vtable.init(&dummy_ctx_mp);
-    if (rc_mp == C_REST_OK) {
-      *(c_rest_socket_t *)dummy_ctx_mp.internal_state =
-          (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
-      message_passing_vtable.destroy(&dummy_ctx_mp);
-    }
+    message_passing_vtable.init(&dummy_ctx_mp);
+    *(c_rest_socket_t *)dummy_ctx_mp.internal_state =
+        (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
+    message_passing_vtable.destroy(&dummy_ctx_mp);
 
     /* destroy with invalid server_sock to trigger socket close error */
-    rc_mp = message_passing_vtable.init(&dummy_ctx_mp);
-    if (rc_mp == C_REST_OK) {
+    message_passing_vtable.init(&dummy_ctx_mp);
 #if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
-      *(c_rest_socket_t *)dummy_ctx_mp.internal_state = (c_rest_socket_t)9999;
+    *(c_rest_socket_t *)dummy_ctx_mp.internal_state = (c_rest_socket_t)9999;
 #else
-      *(c_rest_socket_t *)dummy_ctx_mp.internal_state = (c_rest_socket_t)9999;
+    *(c_rest_socket_t *)dummy_ctx_mp.internal_state = (c_rest_socket_t)9999;
 #endif
-      rc_mp = message_passing_vtable.destroy(&dummy_ctx_mp);
-      if (dummy_ctx_mp.internal_state) {
-        free(dummy_ctx_mp.internal_state);
-      }
-    }
+    message_passing_vtable.destroy(&dummy_ctx_mp);
+    free(dummy_ctx_mp.internal_state);
+    dummy_ctx_mp.internal_state = NULL;
   }
 
 #if !defined(__EMSCRIPTEN__) && !defined(CDD_DOS)
@@ -1258,7 +1307,6 @@ int test_modality(void) {
   {
 
     struct c_rest_context dummy_ctx_mproc;
-    c_rest_error_t rc_mproc;
 
     memset(&dummy_ctx_mproc, 0, sizeof(dummy_ctx_mproc));
     dummy_ctx_mproc.allocator.malloc_cb = malloc;
@@ -1290,41 +1338,32 @@ int test_modality(void) {
 
     /* run logger failure start */
     dummy_ctx_mproc.logger.log_cb = mock_logger_cb;
-    rc_mproc = multi_process_vtable.init(&dummy_ctx_mproc);
-    if (rc_mproc == C_REST_OK) {
-      dummy_ctx_mproc.logger.log_cb = mock_logger_err_cb;
-      multi_process_vtable.run(&dummy_ctx_mproc);
-      dummy_ctx_mproc.logger.log_cb = mock_logger_cb;
-      multi_process_vtable.destroy(&dummy_ctx_mproc);
-    }
+    multi_process_vtable.init(&dummy_ctx_mproc);
+    dummy_ctx_mproc.logger.log_cb = mock_logger_err_cb;
+    multi_process_vtable.run(&dummy_ctx_mproc);
+    dummy_ctx_mproc.logger.log_cb = mock_logger_cb;
+    multi_process_vtable.destroy(&dummy_ctx_mproc);
 
     /* run logger failure end */
-    rc_mproc = multi_process_vtable.init(&dummy_ctx_mproc);
-    if (rc_mproc == C_REST_OK) {
-      g_async_logger_calls = 0;
-      dummy_ctx_mproc.logger.log_cb = mock_logger_fail_on_second;
-      multi_process_vtable.run(&dummy_ctx_mproc);
-      dummy_ctx_mproc.logger.log_cb = mock_logger_cb;
-      multi_process_vtable.destroy(&dummy_ctx_mproc);
-    }
+    multi_process_vtable.init(&dummy_ctx_mproc);
+    g_async_logger_calls = 0;
+    dummy_ctx_mproc.logger.log_cb = mock_logger_fail_on_second;
+    multi_process_vtable.run(&dummy_ctx_mproc);
+    dummy_ctx_mproc.logger.log_cb = mock_logger_cb;
+    multi_process_vtable.destroy(&dummy_ctx_mproc);
 
     /* run with logger == NULL */
-    rc_mproc = multi_process_vtable.init(&dummy_ctx_mproc);
-    if (rc_mproc == C_REST_OK) {
-      dummy_ctx_mproc.logger.log_cb = NULL;
-      multi_process_vtable.run(&dummy_ctx_mproc);
-      multi_process_vtable.destroy(&dummy_ctx_mproc);
-    }
+    multi_process_vtable.init(&dummy_ctx_mproc);
+    dummy_ctx_mproc.logger.log_cb = NULL;
+    multi_process_vtable.run(&dummy_ctx_mproc);
+    multi_process_vtable.destroy(&dummy_ctx_mproc);
 
     /* destroy logger failure */
-    rc_mproc = multi_process_vtable.init(&dummy_ctx_mproc);
-    if (rc_mproc == C_REST_OK) {
-      dummy_ctx_mproc.logger.log_cb = mock_logger_err_cb;
-      multi_process_vtable.destroy(&dummy_ctx_mproc);
-      if (dummy_ctx_mproc.internal_state) {
-        free(dummy_ctx_mproc.internal_state);
-      }
-    }
+    multi_process_vtable.init(&dummy_ctx_mproc);
+    dummy_ctx_mproc.logger.log_cb = mock_logger_err_cb;
+    multi_process_vtable.destroy(&dummy_ctx_mproc);
+    free(dummy_ctx_mproc.internal_state);
+    dummy_ctx_mproc.internal_state = NULL;
 
     /* destroy NULL */
     multi_process_vtable.destroy(NULL);
@@ -1335,32 +1374,25 @@ int test_modality(void) {
 
     /* destroy with valid server_sock socket */
     dummy_ctx_mproc.logger.log_cb = mock_logger_cb;
-    rc_mproc = multi_process_vtable.init(&dummy_ctx_mproc);
-    if (rc_mproc == C_REST_OK) {
-      *(c_rest_socket_t *)dummy_ctx_mproc.internal_state =
-          (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
-      multi_process_vtable.destroy(&dummy_ctx_mproc);
-    }
+    multi_process_vtable.init(&dummy_ctx_mproc);
+    *(c_rest_socket_t *)dummy_ctx_mproc.internal_state =
+        (c_rest_socket_t)socket(AF_INET, SOCK_STREAM, 0);
+    multi_process_vtable.destroy(&dummy_ctx_mproc);
 
     /* destroy with invalid server_sock to trigger socket close error */
-    rc_mproc = multi_process_vtable.init(&dummy_ctx_mproc);
-    if (rc_mproc == C_REST_OK) {
+    multi_process_vtable.init(&dummy_ctx_mproc);
 #if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
-      *(c_rest_socket_t *)dummy_ctx_mproc.internal_state =
-          (c_rest_socket_t)9999;
+    *(c_rest_socket_t *)dummy_ctx_mproc.internal_state = (c_rest_socket_t)9999;
 #else
-      *(c_rest_socket_t *)dummy_ctx_mproc.internal_state =
-          (c_rest_socket_t)9999;
+    *(c_rest_socket_t *)dummy_ctx_mproc.internal_state = (c_rest_socket_t)9999;
 #endif
-      rc_mproc = multi_process_vtable.destroy(&dummy_ctx_mproc);
-      if (dummy_ctx_mproc.internal_state) {
-        free(dummy_ctx_mproc.internal_state);
-      }
-    }
+    multi_process_vtable.destroy(&dummy_ctx_mproc);
+    free(dummy_ctx_mproc.internal_state);
+    dummy_ctx_mproc.internal_state = NULL;
 
     /* destroy with workers != NULL */
-    rc_mproc = multi_process_vtable.init(&dummy_ctx_mproc);
-    if (rc_mproc == C_REST_OK) {
+    multi_process_vtable.init(&dummy_ctx_mproc);
+    {
       struct multi_process_state_mock {
         c_rest_socket_t server_sock;
         int is_running;
@@ -1399,11 +1431,20 @@ int test_modality(void) {
 
     args.ctx = &dummy_ctx;
 
+    /* Test client timeout when port is not listening */
+    {
+      struct test_client_args fail_args;
+      fail_args.ctx = &dummy_ctx;
+      fail_args.port = 1;
+      test_client_thread(&fail_args);
+    }
+
     /* sync */
     dummy_ctx.listen_port = 46781;
     args.port = 46781;
     dummy_ctx.vtable = &sync_vtable;
-    if (sync_vtable.init(&dummy_ctx) == C_REST_OK) {
+    sync_vtable.init(&dummy_ctx);
+    {
       struct my_sync_state *state =
           (struct my_sync_state *)dummy_ctx.internal_state;
       c_rest_socket_create(&state->server_sock);
@@ -1420,7 +1461,8 @@ int test_modality(void) {
     dummy_ctx.listen_port = 46779;
     args.port = 46779;
     dummy_ctx.vtable = &single_thread_vtable;
-    if (single_thread_vtable.init(&dummy_ctx) == C_REST_OK) {
+    single_thread_vtable.init(&dummy_ctx);
+    {
       c_rest_thread_create(&client_thread, test_client_thread, &args);
       single_thread_vtable.run(&dummy_ctx);
       c_rest_thread_join(client_thread);
@@ -1431,7 +1473,8 @@ int test_modality(void) {
     dummy_ctx.listen_port = 46780;
     args.port = 46780;
     dummy_ctx.vtable = &multi_thread_vtable;
-    if (multi_thread_vtable.init(&dummy_ctx) == C_REST_OK) {
+    multi_thread_vtable.init(&dummy_ctx);
+    {
       c_rest_thread_create(&client_thread, test_client_thread, &args);
       multi_thread_vtable.run(&dummy_ctx);
       c_rest_thread_join(client_thread);
@@ -1464,6 +1507,32 @@ int test_modality(void) {
     ctx_err.allocator.malloc_cb = malloc;
     multi_thread_vtable.run(&ctx_err);
 
+    {
+      c_rest_thread_t dummy_workers[65];
+      memset(dummy_workers, 0, sizeof(dummy_workers));
+      multi_st.server_sock = (c_rest_socket_t)1;
+      multi_st.is_running = 1;
+      multi_st.workers = dummy_workers;
+      multi_st.worker_count = 64;
+      g_mock_socket_fail = 11;
+      multi_thread_vtable.run(&ctx_err);
+
+      multi_st.server_sock = (c_rest_socket_t)1;
+      multi_st.is_running = 1;
+      multi_st.workers = dummy_workers;
+      multi_st.worker_count = 0;
+      g_mock_socket_fail = 6;
+      multi_thread_vtable.run(&ctx_err);
+
+      multi_st.server_sock = (c_rest_socket_t)1;
+      multi_st.is_running = 1;
+      multi_st.workers = dummy_workers;
+      multi_st.worker_count = 0;
+      g_mock_socket_fail = 13;
+      multi_thread_vtable.run(&ctx_err);
+      g_mock_socket_fail = 0;
+    }
+
     g_mock_socket_fail = 0;
   }
 
@@ -1491,22 +1560,19 @@ int test_modality(void) {
       ctx_tls.internal_state = &sync_st;
       sync_st.server_sock = C_REST_INVALID_SOCKET;
       sync_st.is_running = 1;
-      if (sync_vtable.run)
-        sync_vtable.run(&ctx_tls);
+      sync_vtable.run(&ctx_tls);
 
       g_mock_socket_fail = j_mod;
       ctx_tls.internal_state = &single_st;
       single_st.server_sock = C_REST_INVALID_SOCKET;
       single_st.is_running = 1;
-      if (single_thread_vtable.run)
-        single_thread_vtable.run(&ctx_tls);
+      single_thread_vtable.run(&ctx_tls);
 
       g_mock_socket_fail = j_mod;
       ctx_tls.internal_state = &multi_st;
       multi_st.server_sock = C_REST_INVALID_SOCKET;
       multi_st.is_running = 1;
-      if (multi_thread_vtable.run)
-        multi_thread_vtable.run(&ctx_tls);
+      multi_thread_vtable.run(&ctx_tls);
     }
 
     for (j_mod = 1002; j_mod <= 1003; j_mod++) {
@@ -1514,44 +1580,38 @@ int test_modality(void) {
       ctx_tls.internal_state = &sync_st;
       sync_st.server_sock = C_REST_INVALID_SOCKET;
       sync_st.is_running = 1;
-      if (sync_vtable.run)
-        sync_vtable.run(&ctx_tls);
+      sync_vtable.run(&ctx_tls);
 
       g_mock_socket_fail = j_mod;
       ctx_tls.internal_state = &single_st;
       single_st.server_sock = C_REST_INVALID_SOCKET;
       single_st.is_running = 1;
-      if (single_thread_vtable.run)
-        single_thread_vtable.run(&ctx_tls);
+      single_thread_vtable.run(&ctx_tls);
 
       g_mock_socket_fail = j_mod;
       ctx_tls.internal_state = &multi_st;
       multi_st.server_sock = C_REST_INVALID_SOCKET;
       multi_st.is_running = 1;
-      if (multi_thread_vtable.run)
-        multi_thread_vtable.run(&ctx_tls);
+      multi_thread_vtable.run(&ctx_tls);
     }
 
     g_mock_socket_fail = 109;
     ctx_tls.internal_state = &sync_st;
     sync_st.server_sock = (c_rest_socket_t)1;
     sync_st.is_running = 1;
-    if (sync_vtable.run)
-      sync_vtable.run(&ctx_tls);
+    sync_vtable.run(&ctx_tls);
 
     g_mock_socket_fail = 109;
     ctx_tls.internal_state = &single_st;
     single_st.server_sock = (c_rest_socket_t)1;
     single_st.is_running = 1;
-    if (single_thread_vtable.run)
-      single_thread_vtable.run(&ctx_tls);
+    single_thread_vtable.run(&ctx_tls);
 
     g_mock_socket_fail = 109;
     ctx_tls.internal_state = &multi_st;
     multi_st.server_sock = (c_rest_socket_t)1;
     multi_st.is_running = 1;
-    if (multi_thread_vtable.run)
-      multi_thread_vtable.run(&ctx_tls);
+    multi_thread_vtable.run(&ctx_tls);
 
     g_mock_socket_fail = 0;
 
@@ -1563,15 +1623,25 @@ int test_modality(void) {
       ctx_tls.internal_state = &sync_st;
       sync_st.server_sock = (c_rest_socket_t)1;
       sync_st.is_running = 1;
-      if (sync_vtable.run)
-        sync_vtable.run(&ctx_tls);
+      sync_vtable.run(&ctx_tls);
+
+      g_mock_socket_fail = 107;
+      ctx_tls.internal_state = &sync_st;
+      sync_st.server_sock = (c_rest_socket_t)1;
+      sync_st.is_running = 1;
+      sync_vtable.run(&ctx_tls);
 
       g_mock_socket_fail = 7;
       ctx_tls.internal_state = &single_st;
       single_st.server_sock = (c_rest_socket_t)1;
       single_st.is_running = 1;
-      if (single_thread_vtable.run)
-        single_thread_vtable.run(&ctx_tls);
+      single_thread_vtable.run(&ctx_tls);
+
+      g_mock_socket_fail = 107;
+      ctx_tls.internal_state = &single_st;
+      single_st.server_sock = (c_rest_socket_t)1;
+      single_st.is_running = 1;
+      single_thread_vtable.run(&ctx_tls);
     }
 
     g_mock_socket_fail = 0;
@@ -1676,6 +1746,7 @@ int test_modality(void) {
 
   {
     c_rest_socket_t client;
+    c_rest_thread_t thread;
 
     g_mock_socket_fail = 11;
     mock_c_rest_socket_accept(C_REST_INVALID_SOCKET, &client);
@@ -1688,6 +1759,21 @@ int test_modality(void) {
     mock_c_rest_socket_close(C_REST_INVALID_SOCKET);
     g_mock_socket_fail = 106;
     mock_c_rest_socket_close(C_REST_INVALID_SOCKET);
+
+    g_mock_socket_fail = 6;
+    mock_c_rest_handle_connection(NULL, C_REST_INVALID_SOCKET);
+    g_mock_socket_fail = 106;
+    mock_c_rest_handle_connection(NULL, C_REST_INVALID_SOCKET);
+
+    g_mock_socket_fail = 7;
+    mock_c_rest_handle_connection(NULL, C_REST_INVALID_SOCKET);
+    g_mock_socket_fail = 107;
+    mock_c_rest_handle_connection(NULL, C_REST_INVALID_SOCKET);
+
+    g_mock_socket_fail = 13;
+    mock_c_rest_thread_create(&thread, NULL, NULL);
+    g_mock_socket_fail = 113;
+    mock_c_rest_thread_create(&thread, NULL, NULL);
 
     g_mock_socket_fail = 0;
   }

@@ -326,9 +326,9 @@ c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser) {
 c_rest_error_t
 c_rest_multipart_parser_get_user_data(c_rest_multipart_parser *parser,
                                       void **out_user_data) {
-  if (!out_user_data)
+  if (!parser || !out_user_data)
     return C_REST_ERROR_GENERIC;
-  *out_user_data = parser ? parser->user_data : NULL;
+  *out_user_data = parser->user_data;
   return C_REST_OK;
 }
 

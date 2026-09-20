@@ -31,13 +31,12 @@ static c_rest_error_t protected_route_handler(struct c_rest_request *req,
                                               void *user_data) {
   (void)user_data;
   if (req->auth_context == (void *)1) {
-    c_rest_response_html(res,
-                         "Hello, User 123! Welcome to the protected route.");
+    return c_rest_response_html(
+        res, "Hello, User 123! Welcome to the protected route.");
   } else {
-    c_rest_response_html(
+    return c_rest_response_html(
         res, "Hello, Unknown User! Welcome to the protected route.");
   }
-  return 0;
 }
 
 static c_rest_error_t generate_token_handler(struct c_rest_request *req,
@@ -46,6 +45,7 @@ static c_rest_error_t generate_token_handler(struct c_rest_request *req,
   const unsigned char *secret = (const unsigned char *)user_data;
   char *token = NULL;
   char response_buf[1024];
+  c_rest_error_t res_rc;
 
   (void)req;
   if (c_rest_jwt_sign_hs256("{\"sub\":\"user123\"}", secret,
@@ -55,14 +55,20 @@ static c_rest_error_t generate_token_handler(struct c_rest_request *req,
 #else
     sprintf(response_buf, "Your token is: %s", token);
 #endif
-    (void)!c_rest_response_html(res, response_buf);
+    res_rc = c_rest_response_html(res, response_buf);
     CRF_FREE(token);
+    if (res_rc != C_REST_OK)
+      return res_rc;
   } else {
-    (void)!c_rest_response_set_status(res, 500);
-    (void)!c_rest_response_html(res, "Failed to generate token");
+    res_rc = c_rest_response_set_status(res, 500);
+    if (res_rc != C_REST_OK)
+      return res_rc;
+    res_rc = c_rest_response_html(res, "Failed to generate token");
+    if (res_rc != C_REST_OK)
+      return res_rc;
   }
 
-  return 0;
+  return C_REST_OK;
 }
 
 static void sig_handler(int sig) {
@@ -71,12 +77,12 @@ static void sig_handler(int sig) {
 }
 
 int main(void) {
-
   struct c_rest_context *ctx = NULL;
   struct c_rest_router *router = NULL;
   struct c_rest_jwt_middleware_config jwt_config;
   const unsigned char secret[] = "my_super_secret_key";
   c_rest_error_t res;
+  c_rest_error_t rc;
 
   printf("Initializing c-rest-framework...\n");
   signal(SIGTERM, sig_handler);
@@ -90,7 +96,9 @@ int main(void) {
   res = c_rest_router_init(&router);
   if (res != 0) {
     printf("Failed to initialize router.\n");
-    (void)!c_rest_destroy(ctx);
+    rc = c_rest_destroy(ctx);
+    if (rc != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -99,14 +107,29 @@ int main(void) {
                                     my_verify_payload);
 
   /* Set up routes */
-  c_rest_router_add(router, "GET", "/token", generate_token_handler,
-                    (void *)secret);
+  rc = c_rest_router_add(router, "GET", "/token", generate_token_handler,
+                         (void *)secret);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
 
   /* Add middleware to the protected route */
-  (void)!c_rest_router_use(router, "/protected", c_rest_jwt_middleware,
-                           &jwt_config);
-  (void)!c_rest_router_add(router, "GET", "/protected", protected_route_handler,
-                           NULL);
+  rc = c_rest_router_use(router, "/protected", c_rest_jwt_middleware,
+                         &jwt_config);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  rc = c_rest_router_add(router, "GET", "/protected", protected_route_handler,
+                         NULL);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
 
   /* Attach router to context */
   ctx->router = router;
@@ -116,8 +139,14 @@ int main(void) {
   printf("Run the application and navigate to /token to get a token, then pass "
          "it to /protected as a Bearer token.\n");
 
-  (void)!c_rest_router_destroy(router);
-  (void)!c_rest_destroy(ctx);
+  rc = c_rest_router_destroy(router);
+  if (rc != C_REST_OK) {
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  rc = c_rest_destroy(ctx);
+  if (rc != C_REST_OK)
+    return 1;
   return 0;
 }
 

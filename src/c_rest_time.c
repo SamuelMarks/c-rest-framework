@@ -11,9 +11,8 @@ static const char *const wdays[] = {"Sun", "Mon", "Tue", "Wed",
 static const char *const months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-static c_rest_error_t is_leap(int year, int *out_is_leap) {
+static void is_leap(int year, int *out_is_leap) {
   *out_is_leap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
-  return C_REST_OK;
 }
 
 static c_rest_error_t portable_timegm(struct tm *tm, time_t *out_time) {
@@ -33,11 +32,11 @@ static c_rest_error_t portable_timegm(struct tm *tm, time_t *out_time) {
 
   for (y = 1970; y < year; y++) {
     int lp;
-    (void)is_leap(y, &lp);
+    is_leap(y, &lp);
     days += 365 + lp;
   }
 
-  (void)is_leap(year, &leap);
+  is_leap(year, &leap);
   days += days_before_month[leap][month];
   days += tm->tm_mday - 1;
 

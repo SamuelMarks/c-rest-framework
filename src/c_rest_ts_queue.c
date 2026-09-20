@@ -9,6 +9,7 @@
 
 c_rest_error_t c_rest_ts_queue_init(c_rest_ts_queue *queue) {
   c_rest_error_t rc;
+  c_rest_error_t destroy_rc;
   if (!queue)
     return C_REST_ERROR_GENERIC;
   queue->head = NULL;
@@ -22,7 +23,9 @@ c_rest_error_t c_rest_ts_queue_init(c_rest_ts_queue *queue) {
   }
   rc = c_rest_cond_create(&queue->cond);
   if (rc != C_REST_OK) {
-    (void)!c_rest_mutex_destroy(queue->mutex);
+    destroy_rc = c_rest_mutex_destroy(queue->mutex);
+    if (destroy_rc != C_REST_OK)
+      return destroy_rc;
     return rc;
   }
   return C_REST_OK;
@@ -31,6 +34,7 @@ c_rest_error_t c_rest_ts_queue_init(c_rest_ts_queue *queue) {
 c_rest_error_t c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data) {
   c_rest_ts_queue_node *node;
   c_rest_error_t rc;
+  c_rest_error_t unlock_rc;
 
   if (!queue)
     return C_REST_ERROR_GENERIC;
@@ -52,8 +56,10 @@ c_rest_error_t c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data) {
   }
 
   if (queue->is_closed) {
-    (void)!c_rest_mutex_unlock(queue->mutex);
+    unlock_rc = c_rest_mutex_unlock(queue->mutex);
     C_REST_FREE((void *)(node));
+    if (unlock_rc != C_REST_OK)
+      return unlock_rc;
     return C_REST_ERROR_GENERIC;
   }
 
@@ -67,7 +73,9 @@ c_rest_error_t c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data) {
 
   rc = c_rest_cond_signal(queue->cond);
   if (rc != C_REST_OK) {
-    (void)!c_rest_mutex_unlock(queue->mutex);
+    unlock_rc = c_rest_mutex_unlock(queue->mutex);
+    if (unlock_rc != C_REST_OK)
+      return unlock_rc;
     return rc;
   }
   rc = c_rest_mutex_unlock(queue->mutex);
@@ -81,6 +89,7 @@ c_rest_error_t c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data) {
   c_rest_ts_queue_node *node;
   void *data;
   c_rest_error_t rc;
+  c_rest_error_t unlock_rc;
 
   if (!queue || !out_data)
     return C_REST_ERROR_GENERIC;
@@ -92,7 +101,9 @@ c_rest_error_t c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data) {
   while (queue->size == 0 && !queue->is_closed) {
     rc = c_rest_cond_wait(queue->cond, queue->mutex);
     if (rc != C_REST_OK) {
-      (void)!c_rest_mutex_unlock(queue->mutex);
+      unlock_rc = c_rest_mutex_unlock(queue->mutex);
+      if (unlock_rc != C_REST_OK)
+        return unlock_rc;
       return rc;
     }
 #ifdef C_REST_TESTING_MALLOC_HOOK
@@ -101,8 +112,10 @@ c_rest_error_t c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data) {
   }
 
   if (queue->size == 0) {
-    (void)!c_rest_mutex_unlock(queue->mutex);
+    rc = c_rest_mutex_unlock(queue->mutex);
     *out_data = NULL;
+    if (rc != C_REST_OK)
+      return rc;
     return C_REST_ERROR_GENERIC;
   }
 
@@ -126,6 +139,7 @@ c_rest_error_t c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data) {
 
 c_rest_error_t c_rest_ts_queue_close(c_rest_ts_queue *queue) {
   c_rest_error_t rc;
+  c_rest_error_t unlock_rc;
   if (!queue)
     return C_REST_ERROR_GENERIC;
 
@@ -135,7 +149,9 @@ c_rest_error_t c_rest_ts_queue_close(c_rest_ts_queue *queue) {
   queue->is_closed = 1;
   rc = c_rest_cond_signal(queue->cond);
   if (rc != C_REST_OK) {
-    (void)!c_rest_mutex_unlock(queue->mutex);
+    unlock_rc = c_rest_mutex_unlock(queue->mutex);
+    if (unlock_rc != C_REST_OK)
+      return unlock_rc;
     return rc;
   }
   rc = c_rest_mutex_unlock(queue->mutex);

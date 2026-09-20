@@ -41,41 +41,111 @@ static void sig_handler(int sig) {
 }
 
 int main(void) {
-
   struct c_rest_context *ctx;
   c_rest_router *router;
   c_rest_hot_reload_ctx_t *hr_ctx = NULL;
+  c_rest_error_t rc;
 
-  (void)!c_rest_platform_init();
+  rc = c_rest_platform_init();
+  if (rc != C_REST_OK)
+    return 1;
   signal(SIGTERM, sig_handler);
   signal(SIGINT, sig_handler);
-  (void)!c_rest_init(C_REST_MODALITY_MULTI_THREAD, &ctx);
+  rc = c_rest_init(C_REST_MODALITY_MULTI_THREAD, &ctx);
+  if (rc != C_REST_OK) {
+    c_rest_platform_cleanup();
+    return 1;
+  }
 
-  (void)!c_rest_router_init(&router);
-  (void)!c_rest_router_add(router, "GET", "/", handle_home, NULL);
+  rc = c_rest_router_init(&router);
+  if (rc != C_REST_OK) {
+    c_rest_destroy(ctx);
+    c_rest_platform_cleanup();
+    return 1;
+  }
+  rc = c_rest_router_add(router, "GET", "/", handle_home, NULL);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    c_rest_platform_cleanup();
+    return 1;
+  }
 
-  (void)!c_rest_hot_reload_init(&hr_ctx, NULL);
-  (void)!c_rest_hot_reload_add_watch(hr_ctx, "examples/app_hot_reload/main.c");
-  (void)!c_rest_hot_reload_register_routes(router, "/_hot_reload");
-  (void)!c_rest_hot_reload_start(hr_ctx, on_file_changed, NULL);
+  rc = c_rest_hot_reload_init(&hr_ctx, NULL);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    c_rest_platform_cleanup();
+    return 1;
+  }
+  rc = c_rest_hot_reload_add_watch(hr_ctx, "examples/app_hot_reload/main.c");
+  if (rc != C_REST_OK) {
+    rc = c_rest_hot_reload_add_watch(hr_ctx,
+                                     "../examples/app_hot_reload/main.c");
+  }
+  if (rc != C_REST_OK) {
+    rc = c_rest_hot_reload_add_watch(hr_ctx,
+                                     "../../examples/app_hot_reload/main.c");
+  }
+  if (rc != C_REST_OK) {
+    c_rest_hot_reload_destroy(hr_ctx);
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    c_rest_platform_cleanup();
+    return 1;
+  }
+  rc = c_rest_hot_reload_register_routes(router, "/_hot_reload");
+  if (rc != C_REST_OK) {
+    c_rest_hot_reload_destroy(hr_ctx);
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    c_rest_platform_cleanup();
+    return 1;
+  }
+  rc = c_rest_hot_reload_start(hr_ctx, on_file_changed, NULL);
+  if (rc != C_REST_OK) {
+    c_rest_hot_reload_destroy(hr_ctx);
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    c_rest_platform_cleanup();
+    return 1;
+  }
 
   /* Associate with framework context if needed. */
 #ifdef C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART
   ctx->hot_reload_ctx = hr_ctx;
 #endif
 
-  (void)!c_rest_set_router(ctx, router);
+  rc = c_rest_set_router(ctx, router);
+  if (rc != C_REST_OK) {
+    c_rest_hot_reload_destroy(hr_ctx);
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    c_rest_platform_cleanup();
+    return 1;
+  }
 
   ctx->listen_port = 8080;
   ctx->listen_address = "127.0.0.1";
 
   printf("Server running at http://127.0.0.1:8080\n");
-  (void)!c_rest_run(ctx);
+  rc = c_rest_run(ctx);
+  if (rc != C_REST_OK) {
+    printf("Server stopped with error: %d\n", rc);
+  }
 
-  (void)!c_rest_hot_reload_destroy(hr_ctx);
-  (void)!c_rest_router_destroy(router);
-  (void)!c_rest_destroy(ctx);
-  (void)!c_rest_platform_cleanup();
+  rc = c_rest_hot_reload_destroy(hr_ctx);
+  if (rc != C_REST_OK)
+    return 1;
+  rc = c_rest_router_destroy(router);
+  if (rc != C_REST_OK)
+    return 1;
+  rc = c_rest_destroy(ctx);
+  if (rc != C_REST_OK)
+    return 1;
+  rc = c_rest_platform_cleanup();
+  if (rc != C_REST_OK)
+    return 1;
 
   return 0;
 }

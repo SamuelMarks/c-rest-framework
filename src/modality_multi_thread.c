@@ -71,9 +71,11 @@ static c_rest_error_t multi_thread_init(struct c_rest_context *ctx) {
   state->is_running = 0;
   state->workers =
       (c_rest_thread_t *)ctx->allocator.malloc_cb(sizeof(c_rest_thread_t) * 64);
-  if (state->workers) {
-    memset(state->workers, 0, sizeof(c_rest_thread_t) * 64);
+  if (!state->workers) {
+    ctx->allocator.free_cb(state);
+    return C_REST_ERROR_OOM;
   }
+  memset(state->workers, 0, sizeof(c_rest_thread_t) * 64);
   state->worker_count = 0;
 
   ctx->internal_state = state;
@@ -136,10 +138,7 @@ static c_rest_error_t multi_thread_destroy(struct c_rest_context *ctx) {
 #endif
   }
 
-  if (state->workers) {
-    ctx->allocator.free_cb(state->workers);
-  }
-
+  ctx->allocator.free_cb(state->workers);
   ctx->allocator.free_cb(state);
   ctx->internal_state = NULL;
 
@@ -167,7 +166,7 @@ static c_rest_error_t worker_thread(void *arg) {
   struct connection_worker_args *wargs = (struct connection_worker_args *)arg;
   c_rest_error_t rc;
   c_rest_error_t final_rc;
-  c_rest_free_fn free_cb = wargs ? wargs->free_cb : NULL;
+  c_rest_free_fn free_cb = wargs->free_cb;
 
   rc = c_rest_handle_connection(wargs->ctx, wargs->client_sock);
   final_rc = rc;

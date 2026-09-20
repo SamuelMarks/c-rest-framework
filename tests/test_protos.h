@@ -36,6 +36,7 @@ int test_template(void);
 int test_hot_reload(void);
 int test_response_compression_gzip_brotli(void);
 int test_jwt_json_web_tokens_authentication_middleware(void);
+int test_examples(void);
 
 #ifdef __cplusplus
 }

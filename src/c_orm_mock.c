@@ -18,6 +18,7 @@
 C_REST_EXPORT int g_mock_orm_init_fail = 0;
 C_REST_EXPORT int g_mock_orm_cleanup_fail = 0;
 C_REST_EXPORT int g_mock_socket_fail = 0;
+C_REST_EXPORT int g_mock_fork_fail = 0;
 #endif
 
 c_rest_error_t c_rest_orm_init(struct c_rest_db_config *config,
@@ -50,6 +51,9 @@ typedef int c_orm_mock_dummy_declaration;
 
 C_REST_EXPORT extern int g_mock_socket_fail;
 C_REST_EXPORT int g_mock_tls_fail = 0;
+C_REST_EXPORT int g_mock_client_fail = 0;
+C_REST_EXPORT int g_mock_platform_cleanup_fail = 0;
+C_REST_EXPORT int g_mock_crypto_fail = 0;
 
 #undef c_rest_socket_create
 #undef c_rest_socket_bind
@@ -108,7 +112,8 @@ c_rest_error_t mock_c_rest_socket_accept(c_rest_socket_t server,
     *out_client = C_REST_INVALID_SOCKET;
     return C_REST_OK;
   }
-  if (g_mock_socket_fail == 11 || g_mock_socket_fail == 12) {
+  if (g_mock_socket_fail == 11 || g_mock_socket_fail == 12 ||
+      g_mock_socket_fail == 13) {
     g_mock_socket_fail += 100;
     *out_client = (c_rest_socket_t)12345;
     return C_REST_OK;
@@ -122,6 +127,10 @@ c_rest_error_t mock_c_rest_thread_create(c_rest_thread_t *thread,
                                          void *arg) {
 
   if (g_mock_socket_fail > 0) {
+    if (g_mock_socket_fail == 13)
+      return C_REST_ERROR_GENERIC;
+    if (g_mock_socket_fail == 113)
+      return C_REST_ERROR_GENERIC;
     func(arg);
     return C_REST_OK;
   }
@@ -157,6 +166,8 @@ c_rest_error_t mock_c_rest_tls_close(struct c_rest_tls_connection *conn) {
 }
 c_rest_error_t mock_c_rest_handle_connection(struct c_rest_context *ctx,
                                              c_rest_socket_t sock) {
+  if (g_mock_socket_fail == 6 || g_mock_socket_fail == 106)
+    return C_REST_OK;
   if (g_mock_socket_fail == 7 || g_mock_socket_fail == 107)
     return C_REST_ERROR_GENERIC;
   return c_rest_handle_connection(ctx, sock);

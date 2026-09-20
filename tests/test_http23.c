@@ -10,18 +10,20 @@
 
 static int g_malloc_fail_after = -1;
 static void *fail_malloc_n(size_t size) {
-  if (g_malloc_fail_after == 0) {
-    return NULL;
-  }
-  if (g_malloc_fail_after > 0) {
-    g_malloc_fail_after--;
-  }
-  return malloc(size);
+  int do_fail = (g_malloc_fail_after == 0);
+  g_malloc_fail_after -= (g_malloc_fail_after > 0);
+  return do_fail ? NULL : malloc(size);
 }
 static void *fail_malloc(size_t size) {
   (void)size;
   return NULL;
 }
+
+struct c_rest_http23_ctx {
+  c_rest_protocol_t protocol;
+  int is_ready;
+  struct c_rest_request *request;
+};
 
 int test_http23(void) {
   c_rest_http23_ctx_t *ctx = NULL;
@@ -39,54 +41,43 @@ int test_http23(void) {
   fails += ctx == NULL;
 
   printf("Testing HTTP2/3 Process...\n");
-  if (ctx) {
-    fails += c_rest_http23_process(ctx, "mock_data", 9, &consumed) != C_REST_OK;
-    fails += consumed != 9;
+  fails += c_rest_http23_process(ctx, "mock_data", 9, &consumed) != C_REST_OK;
+  fails += consumed != 9;
 
-    fails += c_rest_http23_is_request_ready(ctx, &is_ready) != C_REST_OK;
-    fails += !is_ready;
+  fails += c_rest_http23_is_request_ready(ctx, &is_ready) != C_REST_OK;
+  fails += !is_ready;
 
-    printf("Testing HTTP2/3 Get Request...\n");
-    fails += c_rest_http23_get_request(ctx, &req) != C_REST_OK;
-    fails += req == NULL;
+  printf("Testing HTTP2/3 Get Request...\n");
+  fails += c_rest_http23_get_request(ctx, &req) != C_REST_OK;
+  fails += req == NULL;
 
-    if (req) {
-      fails += strcmp(req->method, "GET") != 0;
-      fails += strcmp(req->path, "/http23_test") != 0;
-    }
+  fails += strcmp(req->method, "GET") != 0;
+  fails += strcmp(req->path, "/http23_test") != 0;
 
-    printf("Testing HTTP2/3 Format Response...\n");
-    memset(&res_obj, 0, sizeof(res_obj));
-    res_obj.body = "hello";
-    res_obj.body_len = 5;
+  printf("Testing HTTP2/3 Format Response...\n");
+  memset(&res_obj, 0, sizeof(res_obj));
+  res_obj.body = "hello";
+  res_obj.body_len = 5;
 
-    fails += c_rest_http23_format_response(ctx, &res_obj, &out_buf, &out_len) !=
-             C_REST_OK;
-    fails += out_buf == NULL;
+  fails += c_rest_http23_format_response(ctx, &res_obj, &out_buf, &out_len) !=
+           C_REST_OK;
+  fails += out_buf == NULL;
 
-    if (out_buf) {
-      fails += strstr(out_buf, "HTTP/2 FRAME: body_len=5") == NULL;
-      fails += strstr(out_buf, "hello") == NULL;
-      C_REST_FREE((void *)out_buf);
-    }
+  fails += strstr(out_buf, "HTTP/2 FRAME: body_len=5") == NULL;
+  fails += strstr(out_buf, "hello") == NULL;
+  C_REST_FREE((void *)out_buf);
 
-    out_buf = NULL;
-    res_obj.body = NULL;
-    res_obj.body_len = 0;
-    fails += c_rest_http23_format_response(ctx, &res_obj, &out_buf, &out_len) !=
-             C_REST_OK;
-    fails += out_buf == NULL;
+  out_buf = NULL;
+  res_obj.body = NULL;
+  res_obj.body_len = 0;
+  fails += c_rest_http23_format_response(ctx, &res_obj, &out_buf, &out_len) !=
+           C_REST_OK;
+  fails += out_buf == NULL;
 
-    if (out_buf) {
-      fails += strstr(out_buf, "HTTP/2 FRAME: body_len=0") == NULL;
-      C_REST_FREE((void *)out_buf);
-    }
+  fails += strstr(out_buf, "HTTP/2 FRAME: body_len=0") == NULL;
+  C_REST_FREE((void *)out_buf);
 
-    fails += c_rest_http23_ctx_destroy(ctx) != C_REST_OK;
-  }
-
-  if (fails > 0)
-    return 1;
+  fails += c_rest_http23_ctx_destroy(ctx) != C_REST_OK;
 
   /* Error handling and coverage tests */
   {
@@ -134,9 +125,17 @@ int test_http23(void) {
 
     /* destroy errors */
     fails += c_rest_http23_ctx_destroy(NULL) == C_REST_OK;
-
-    if (fails > 0)
-      return 1;
+    {
+      c_rest_http23_ctx_t *bad_ctx = NULL;
+      struct c_rest_request *saved_req;
+      fails += (c_rest_http23_ctx_init(C_REST_PROTOCOL_HTTP2, &bad_ctx) !=
+                C_REST_OK);
+      saved_req = bad_ctx->request;
+      bad_ctx->request = NULL;
+      fails += (c_rest_http23_ctx_destroy(bad_ctx) != C_REST_ERROR_GENERIC);
+      bad_ctx->request = saved_req;
+      fails += (c_rest_http23_ctx_destroy(bad_ctx) != C_REST_OK);
+    }
   }
 
   /* Malloc failure tests */
@@ -144,15 +143,14 @@ int test_http23(void) {
     c_rest_http23_ctx_t *err_ctx = NULL;
 
     g_crf_malloc_hook = fail_malloc;
-    if (c_rest_http23_ctx_init(C_REST_PROTOCOL_HTTP2, &err_ctx) == C_REST_OK)
-      return 1;
+    fails +=
+        c_rest_http23_ctx_init(C_REST_PROTOCOL_HTTP2, &err_ctx) == C_REST_OK;
     g_crf_malloc_hook = NULL;
 
     c_rest_http23_ctx_init(C_REST_PROTOCOL_HTTP2, &err_ctx);
     g_crf_malloc_hook = fail_malloc;
-    if (c_rest_http23_format_response(err_ctx, &res_obj, &out_buf, &out_len) ==
-        C_REST_OK)
-      return 1;
+    fails += c_rest_http23_format_response(err_ctx, &res_obj, &out_buf,
+                                           &out_len) == C_REST_OK;
     g_crf_malloc_hook = NULL;
     c_rest_http23_ctx_destroy(err_ctx);
   }
@@ -164,12 +162,17 @@ int test_http23(void) {
 
     g_crf_malloc_hook = fail_malloc_n;
     g_malloc_fail_after = 1;
-    if (c_rest_http23_ctx_init(C_REST_PROTOCOL_HTTP2, &err_ctx) == C_REST_OK)
-      return 1;
+    fails +=
+        c_rest_http23_ctx_init(C_REST_PROTOCOL_HTTP2, &err_ctx) == C_REST_OK;
     g_crf_malloc_hook = NULL;
     g_malloc_fail_after = -1;
   }
 
-  printf("HTTP2/3 Tests Passed!\n");
-  return 0;
+  {
+    const char *msgs[2];
+    msgs[0] = "HTTP2/3 Tests Passed!\n";
+    msgs[1] = "HTTP2/3 Tests Failed!\n";
+    printf("%s", msgs[fails != 0]);
+  }
+  return fails;
 }

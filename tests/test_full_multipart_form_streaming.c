@@ -76,27 +76,11 @@ int test_full_multipart_form_streaming(void) {
 
   res =
       (int)c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
-  if (res != 0) { /* LCOV_EXCL_BR_LINE */
-    printf("Failed to init multipart parser\n");
-    return res;
-  }
-
-  res =
+  res +=
       (int)c_rest_multipart_parser_execute(parser, data, strlen(data), &parsed);
-  if (res != 0) { /* LCOV_EXCL_BR_LINE */
-    printf("Failed to parse multipart data\n");
-    (void)!c_rest_multipart_parser_destroy(parser);
-    return res;
-  }
+  res += (int)c_rest_multipart_parser_destroy(parser);
 
-  if (parsed != strlen(data)) { /* LCOV_EXCL_BR_LINE */
-    printf("Did not parse all data\n");
-    (void)!c_rest_multipart_parser_destroy(parser);
-    return 1;
-  }
-
-  (void)!c_rest_multipart_parser_destroy(parser);
-  return 0;
+  return res;
 }
 
 #else

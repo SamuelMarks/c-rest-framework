@@ -22,8 +22,7 @@ static c_rest_error_t handle_db_query(struct c_rest_request *req,
   (void)req;
   (void)user_data;
   /* Simulate a blocking DB query */
-  (void)!c_rest_response_json(res, "{\"status\": \"success\", \"rows\": 42}");
-  return 0;
+  return c_rest_response_json(res, "{\"status\": \"success\", \"rows\": 42}");
 }
 
 static void sig_handler(int sig) {
@@ -32,7 +31,6 @@ static void sig_handler(int sig) {
 }
 
 int main(void) {
-
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   c_rest_error_t rc;
@@ -52,13 +50,23 @@ int main(void) {
   rc = c_rest_router_init(&router);
   if (rc != 0) {
     fprintf(stderr, "Failed to initialize router.\n");
-    (void)!c_rest_destroy(ctx);
+    c_rest_destroy(ctx);
     return 1;
   }
 
-  (void)!c_rest_set_router(ctx, router);
-  (void)!c_rest_router_add(router, "GET", "/api/v0/db/query", handle_db_query,
-                           NULL);
+  rc = c_rest_set_router(ctx, router);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  rc = c_rest_router_add(router, "GET", "/api/v0/db/query", handle_db_query,
+                         NULL);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
 
   printf("Starting framework thread pool...\n");
   rc = c_rest_run(ctx);
@@ -67,8 +75,14 @@ int main(void) {
   }
 
   printf("Shutting down...\n");
-  (void)!c_rest_router_destroy(router);
-  (void)!c_rest_destroy(ctx);
+  rc = c_rest_router_destroy(router);
+  if (rc != C_REST_OK) {
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  rc = c_rest_destroy(ctx);
+  if (rc != C_REST_OK)
+    return 1;
 
   return 0;
 }

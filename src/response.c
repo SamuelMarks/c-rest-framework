@@ -3,9 +3,9 @@
 #include "c_rest_mem.h"
 #include "c_rest_request.h" /* For struct c_rest_header */
 #include "c_rest_response.h"
-#define IGNORE_RC(expr) { c_rest_error_t _ign_rc = (expr); (void)_ign_rc; }
 #include "c_rest_modality.h"
 #include "c_rest_template.h"
+#include "c_rest_testing_mocks.h"
 #include <parson.h>
 
 #include <stdio.h>
@@ -99,11 +99,20 @@ c_rest_error_t c_rest_response_set_header(struct c_rest_response *res,
   return C_REST_OK;
 }
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT int g_mock_res_status_fail = 0;
+#endif
+
 c_rest_error_t c_rest_response_set_status(struct c_rest_response *res,
                                           int status_code) {
   if (!res) {
     return C_REST_ERROR_GENERIC;
   }
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_res_status_fail) {
+    return C_REST_ERROR_GENERIC;
+  }
+#endif
   res->status_code = status_code;
   return C_REST_OK;
 }
@@ -125,7 +134,9 @@ c_rest_error_t c_rest_response_check_etag(struct c_rest_request *req,
   rc = c_rest_request_get_header(req, "If-None-Match", &if_none_match);
   if (rc == C_REST_OK) {
     if (strcmp(if_none_match, etag) == 0) {
-      IGNORE_RC(c_rest_response_set_status(res, 304));
+      rc = c_rest_response_set_status(res, 304);
+      if (rc != C_REST_OK)
+        return rc;
       return C_REST_ERROR_GENERIC; /* Match found */
     }
   }
@@ -217,10 +228,14 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
   ctx = (struct c_rest_connection_context *)res->context;
   if (ctx) {
     if (ctx->tls_conn) {
-      IGNORE_RC(c_rest_tls_write(ctx->tls_conn, header_buf, offset, &written));
+      rc = c_rest_tls_write(ctx->tls_conn, header_buf, offset, &written);
+      if (rc != C_REST_OK)
+        return rc;
       if (res->body && res->body_len > 0) {
-        IGNORE_RC(c_rest_tls_write(ctx->tls_conn, res->body, res->body_len,
-                                   &written));
+        rc =
+            c_rest_tls_write(ctx->tls_conn, res->body, res->body_len, &written);
+        if (rc != C_REST_OK)
+          return rc;
       }
     } else {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
@@ -247,10 +262,16 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
         }
       }
 #else
-      IGNORE_RC(c_rest_socket_send(ctx->sock, header_buf, offset, &written));
-      if (res->body && res->body_len > 0) {
-        IGNORE_RC(
-            c_rest_socket_send(ctx->sock, res->body, res->body_len, &written));
+      rc = c_rest_socket_send(ctx->sock, header_buf, offset, &written);
+      if (rc != C_REST_OK)
+        return rc;
+      if (res->body) {
+        if (res->body_len > 0) {
+          rc =
+              c_rest_socket_send(ctx->sock, res->body, res->body_len, &written);
+          if (rc != C_REST_OK)
+            return rc;
+        }
       }
 #endif
     }
@@ -358,11 +379,11 @@ c_rest_response_template(struct c_rest_response *res,
   if (!res || !ctx) {
     return C_REST_ERROR_GENERIC;
   }
-  IGNORE_RC(c_rest_template_render(ctx, keys, values, count, &rendered));
+  rc = c_rest_template_render(ctx, keys, values, count, &rendered);
+  if (rc != C_REST_OK)
+    return rc;
   rc = c_rest_response_html(res, rendered);
-  if (rendered) {
-    C_REST_FREE(rendered);
-  }
+  C_REST_FREE(rendered);
   return rc;
 }
 #endif /* C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING */
@@ -412,9 +433,13 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
   }
 
   if (!res->headers_sent) {
-    IGNORE_RC(c_rest_response_set_header(res, "Transfer-Encoding", "chunked"));
+    rc = c_rest_response_set_header(res, "Transfer-Encoding", "chunked");
+    if (rc != C_REST_OK)
+      return rc;
     res->is_chunked = 1;
-    IGNORE_RC(c_rest_response_send(res));
+    rc = c_rest_response_send(res);
+    if (rc != C_REST_OK)
+      return rc;
   }
 
   ctx = (struct c_rest_connection_context *)res->context;
@@ -519,14 +544,19 @@ c_rest_error_t c_rest_response_write_chunk(struct c_rest_response *res,
 
 c_rest_error_t c_rest_response_redirect(struct c_rest_response *res,
                                         const char *url, int status_code) {
+  c_rest_error_t rc;
   if (!res || !url) {
     return C_REST_ERROR_GENERIC;
   }
   if (status_code < 300 || status_code > 399) {
     status_code = 302; /* Default to temporary redirect */
   }
-  IGNORE_RC(c_rest_response_set_status(res, status_code));
-  IGNORE_RC(c_rest_response_set_header(res, "Location", url));
+  rc = c_rest_response_set_status(res, status_code);
+  if (rc != C_REST_OK)
+    return rc;
+  rc = c_rest_response_set_header(res, "Location", url);
+  if (rc != C_REST_OK)
+    return rc;
   return c_rest_response_send(res);
 }
 
@@ -602,6 +632,10 @@ c_rest_error_t c_rest_response_send_file(struct c_rest_response *res,
   return C_REST_OK;
 }
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT int g_mock_res_cleanup_fail = 0;
+#endif
+
 c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res) {
   struct c_rest_header *h;
   struct c_rest_header *next_h;
@@ -609,6 +643,11 @@ c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res) {
   if (!res) {
     return C_REST_ERROR_GENERIC;
   }
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_res_cleanup_fail) {
+    return C_REST_ERROR_GENERIC;
+  }
+#endif
 
   h = res->headers;
   while (h) {
@@ -628,6 +667,11 @@ c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res) {
 }
 
 static c_rest_error_t get_status_text(int status_code, const char **out_text) {
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (status_code == 9999) {
+    return C_REST_ERROR_GENERIC;
+  }
+#endif
   switch (status_code) {
   case 200:
     *out_text = "OK";
@@ -730,8 +774,9 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
   if (!buf)
     return C_REST_ERROR_GENERIC;
 
-  IGNORE_RC(
-      get_status_text(res->status_code ? res->status_code : 200, &status_text));
+  rc = get_status_text(res->status_code ? res->status_code : 200, &status_text);
+  if (rc != C_REST_OK)
+    return rc;
 
 #if defined(_MSC_VER)
   offset +=
@@ -787,6 +832,7 @@ c_rest_error_t c_rest_response_oauth2_error(struct c_rest_response *res,
                                             const char *error,
                                             const char *error_description) {
   struct c_rest_json_pair pairs[2];
+  c_rest_error_t rc;
   if (!res || !error)
     return C_REST_ERROR_GENERIC;
 
@@ -794,14 +840,16 @@ c_rest_error_t c_rest_response_oauth2_error(struct c_rest_response *res,
   pairs[0].type = C_REST_JSON_TYPE_STRING;
   pairs[0].str_val = error;
 
+  rc = c_rest_response_set_status(res, 400);
+  if (rc != C_REST_OK)
+    return rc;
+
   if (error_description) {
     pairs[1].key = "error_description";
     pairs[1].type = C_REST_JSON_TYPE_STRING;
     pairs[1].str_val = error_description;
-    IGNORE_RC(c_rest_response_set_status(res, 400));
     return c_rest_response_json_dict(res, pairs, 2);
   } else {
-    IGNORE_RC(c_rest_response_set_status(res, 400));
     return c_rest_response_json_dict(res, pairs, 1);
   }
 }

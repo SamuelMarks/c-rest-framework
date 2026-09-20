@@ -32,7 +32,16 @@
 
 c_rest_error_t c_rest_platform_init(void) { return C_REST_OK; }
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT extern int g_mock_platform_cleanup_fail;
+c_rest_error_t c_rest_platform_cleanup(void) {
+  if (g_mock_platform_cleanup_fail)
+    return C_REST_ERROR_GENERIC;
+  return C_REST_OK;
+}
+#else
 c_rest_error_t c_rest_platform_cleanup(void) { return C_REST_OK; }
+#endif
 
 c_rest_error_t c_rest_socket_create(c_rest_socket_t *out_sock) {
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
@@ -350,6 +359,11 @@ c_rest_error_t c_rest_cond_destroy(c_rest_cond_t c) {
 #endif
 }
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+extern int g_mock_fork_fail;
+extern int g_mock_socket_fail;
+#endif
+
 c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
                                      const char *executable,
                                      char *const argv[]) {
@@ -364,14 +378,21 @@ c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
   if (!out_proc || !executable)
     return C_REST_ERROR_GENERIC;
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_fork_fail)
+    pid = -1;
+  else
+    pid = fork();
+#else
   pid = fork();
+#endif
   if (pid < 0)
     return C_REST_ERROR_GENERIC;
 
   if (pid == 0) {
     /* Child */
     execvp(executable, argv);
-    _exit(127); /* Should not reach */
+    exit(127);
   }
 
   *out_proc = (c_rest_process_t)pid;
@@ -466,6 +487,25 @@ c_rest_error_t c_rest_socket_send(c_rest_socket_t sock, const void *buf,
   if (!buf || !out_written)
     return C_REST_ERROR_GENERIC;
   *out_written = 0;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_socket_fail == 200) {
+    *out_written = len;
+    return C_REST_OK;
+  }
+  if (g_mock_socket_fail == 201) {
+    return C_REST_ERROR_GENERIC;
+  }
+  if (g_mock_socket_fail == 202) {
+    g_mock_socket_fail = 201;
+    *out_written = len;
+    return C_REST_OK;
+  }
+  if (g_mock_socket_fail == 203) {
+    g_mock_socket_fail = 202;
+    *out_written = len;
+    return C_REST_OK;
+  }
+#endif
 #ifdef MSG_NOSIGNAL
   ret = send((int)sock, buf, len, MSG_NOSIGNAL);
 #elif defined(SO_NOSIGPIPE)

@@ -3,6 +3,7 @@
 #include "c_rest_mem.h"
 #include "c_rest_hot_reload.h"
 #include "c_rest_platform.h"
+#include "c_rest_testing_mocks.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -19,7 +20,9 @@
 #endif
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__) || defined(_MSC_VER)
-/* NOLINT */ void __stdcall Sleep(unsigned long dwMilliseconds);
+#if !defined(_SYNCHAPI_H_) && !defined(_INC_SYNCHAPI)
+__declspec(dllimport) void __stdcall Sleep(unsigned long dwMilliseconds);
+#endif
 #else
 #include <unistd.h>
 #endif
@@ -63,8 +66,14 @@ static c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
   cfs_path p = {0};
   cfs_file_time_type ftime = 0;
   cfs_error_code ec = {0};
+#if defined(CFS_OS_WINDOWS) && defined(CFS_UNICODE)
+  wchar_t wpath[CFS_MAX_PATH];
+  cfs_size_t req = 0;
+#endif
 
   (void)ctx;
+  if (!path)
+    return C_REST_ERROR_INVALID_ARG;
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
   if (ctx && ctx->cm_env) {
     unsigned long mtime_ul;
@@ -75,9 +84,28 @@ static c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
   }
 #endif
 
-  if (cfs_path_init_str(&p, (const cfs_char_t *)path) != 0) {
+#if defined(CFS_OS_WINDOWS) && defined(CFS_UNICODE)
+  if (cfs_utf8_to_utf16(path, wpath, sizeof(wpath) / sizeof(wpath[0]), &req) !=
+      cfs_errc_success) {
     return C_REST_ERROR_GENERIC;
   }
+  if (cfs_path_init_str(&p, wpath) != cfs_errc_success) {
+    return C_REST_ERROR_GENERIC;
+  }
+#else
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if ((g_mock_lib_fail == 10
+           ? cfs_errc_not_enough_memory
+           : cfs_path_init_str(&p, (const cfs_char_t *)path)) !=
+      cfs_errc_success) {
+    return C_REST_ERROR_GENERIC;
+  }
+#else
+  if (cfs_path_init_str(&p, (const cfs_char_t *)path) != cfs_errc_success) {
+    return C_REST_ERROR_GENERIC;
+  }
+#endif
+#endif
   if (cfs_last_write_time(&p, &ftime, &ec) == 0) {
     *out_mtime = (time_t)ftime;
     cfs_path_destroy(&p);
@@ -327,8 +355,10 @@ c_rest_error_t c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
     if (rc != C_REST_OK) {
       c_rest_error_t log_rc =
           hot_reload_log(ctx, "[HOT RELOAD] Failed to join watcher thread");
-      (void)log_rc;
-      ret_rc = rc;
+      if (log_rc != C_REST_OK)
+        ret_rc = log_rc;
+      else
+        ret_rc = rc;
     }
     ctx->watcher_thread = (c_rest_thread_t)0;
   }
@@ -369,14 +399,13 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
     const char *msg = "Hot reload context not available";
     res->status_code = 503;
     res->body_len = strlen(msg);
-    if (C_REST_MALLOC(res->body_len + 1, (void **)&res->body)) {
-      /* handle OOM implicitly */
-    }
+    if (C_REST_MALLOC(res->body_len + 1, (void **)&res->body) == 0) {
 #if defined(_MSC_VER)
-    strcpy_s(res->body, res->body_len + 1, msg);
+      strcpy_s(res->body, res->body_len + 1, msg);
 #else
-    memcpy(res->body, msg, res->body_len + 1);
+      memcpy(res->body, msg, res->body_len + 1);
 #endif
+    }
     return C_REST_OK;
   }
 
@@ -394,7 +423,16 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
 
   if (hr_ctx->state == C_REST_HOT_RELOAD_STATE_CHANGED) {
     struct c_rest_sse_event ev;
-    (void)!c_rest_sse_event_init(&ev);
+    c_rest_error_t ev_rc;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+    rc = (g_mock_sse_append_fail == -4 ? C_REST_ERROR_GENERIC
+                                       : c_rest_sse_event_init(&ev));
+#else
+    rc = c_rest_sse_event_init(&ev);
+#endif
+    if (rc != C_REST_OK)
+      return rc;
+
     /* We must dup strings if we rely on c_rest_sse_event_destroy */
     if (C_REST_MALLOC(7, (void **)&ev.event)) {
     }
@@ -417,7 +455,14 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
     }
 
     rc = c_rest_sse_send_event(res, &ev);
-    (void)!c_rest_sse_event_destroy(&ev);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+    ev_rc = (g_mock_sse_append_fail == -3 ? C_REST_ERROR_GENERIC
+                                          : c_rest_sse_event_destroy(&ev));
+#else
+    ev_rc = c_rest_sse_event_destroy(&ev);
+#endif
+    if (ev_rc != C_REST_OK)
+      return ev_rc;
     if (rc != C_REST_OK)
       return rc;
   }

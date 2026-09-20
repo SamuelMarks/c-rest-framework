@@ -330,12 +330,23 @@ c_rest_error_t c_rest_graphql_parse(const char *query, size_t query_len,
   return C_REST_OK;
 }
 
-#undef c_rest_graphql_node_free
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT int g_mock_graphql_free_countdown = -1;
+#endif
+
 c_rest_error_t c_rest_graphql_node_free(struct c_rest_graphql_node *node) {
   size_t i;
 
   if (!node)
     return C_REST_OK;
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_graphql_free_countdown >= 0) {
+    if (g_mock_graphql_free_countdown == 0)
+      return C_REST_ERROR_GENERIC;
+    g_mock_graphql_free_countdown--;
+  }
+#endif
 
   if (node->name)
     C_REST_FREE(node->name);

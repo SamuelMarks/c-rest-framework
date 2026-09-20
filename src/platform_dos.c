@@ -26,7 +26,7 @@ c_rest_error_t c_rest_platform_init(void) {
 #ifdef C_REST_WATT32
   sock_init();
 #endif
-  srand((unsigned int)(time(NULL) ^ clock()));
+  srand((unsigned int)((unsigned long)time(NULL) ^ (unsigned long)clock()));
   return C_REST_OK;
 }
 
@@ -34,7 +34,7 @@ c_rest_error_t c_rest_platform_cleanup(void) { return C_REST_OK; }
 
 c_rest_error_t c_rest_socket_create(c_rest_socket_t *out_sock) {
   if (!out_sock)
-    return C_REST_ERROR_INVALID_PARAM;
+    return C_REST_ERROR_INVALID_ARG;
 #ifdef C_REST_WATT32
   *out_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (*out_sock < 0) {
@@ -92,7 +92,7 @@ c_rest_error_t c_rest_socket_accept(c_rest_socket_t server_sock,
   c_rest_socket_t client_sock;
 
   if (!out_client_sock)
-    return C_REST_ERROR_INVALID_PARAM;
+    return C_REST_ERROR_INVALID_ARG;
 
   client_sock = accept(server_sock, (struct sockaddr *)&client_addr, &addr_len);
   if (client_sock < 0) {
@@ -216,7 +216,7 @@ c_rest_error_t c_rest_process_wait(c_rest_process_t proc, int *out_exit_code) {
 
 c_rest_error_t c_rest_timer_get_ms(unsigned long *out_ms) {
   if (!out_ms)
-    return C_REST_ERROR_INVALID_PARAM;
+    return C_REST_ERROR_INVALID_ARG;
 #ifdef __DJGPP__
   {
     struct timeval tv;
@@ -231,7 +231,7 @@ c_rest_error_t c_rest_timer_get_ms(unsigned long *out_ms) {
 
 c_rest_error_t c_rest_random_get(void *buffer, size_t size) {
   if (!buffer || size == 0)
-    return C_REST_ERROR_INVALID_PARAM;
+    return C_REST_ERROR_INVALID_ARG;
   {
     size_t i;
     unsigned char *buf = (unsigned char *)buffer;
@@ -244,7 +244,7 @@ c_rest_error_t c_rest_random_get(void *buffer, size_t size) {
 
 c_rest_error_t c_rest_get_last_error(int *out_error) {
   if (!out_error)
-    return C_REST_ERROR_INVALID_PARAM;
+    return C_REST_ERROR_INVALID_ARG;
   *out_error = errno;
   return C_REST_OK;
 }
@@ -252,7 +252,7 @@ c_rest_error_t c_rest_get_last_error(int *out_error) {
 c_rest_error_t c_rest_socket_recv(c_rest_socket_t sock, void *buf, size_t len,
                                   size_t *out_read) {
   if (!out_read)
-    return C_REST_ERROR_INVALID_PARAM;
+    return C_REST_ERROR_INVALID_ARG;
 #ifdef C_REST_WATT32
   {
     int res = recv(sock, buf, len, 0);
@@ -274,7 +274,7 @@ c_rest_error_t c_rest_socket_recv(c_rest_socket_t sock, void *buf, size_t len,
 c_rest_error_t c_rest_socket_send(c_rest_socket_t sock, const void *buf,
                                   size_t len, size_t *out_written) {
   if (!out_written)
-    return C_REST_ERROR_INVALID_PARAM;
+    return C_REST_ERROR_INVALID_ARG;
 #ifdef C_REST_WATT32
   {
     int res = send(sock, buf, len, 0);

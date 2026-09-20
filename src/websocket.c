@@ -33,13 +33,23 @@ c_rest_error_t c_rest_websocket_upgrade(struct c_rest_request *req,
   if (rc != C_REST_OK)
     return rc;
 
-  (void)!c_rest_websocket_generate_accept(ws_key, strlen(ws_key), accept_buf,
-                                          &accept_len);
+  rc = c_rest_websocket_generate_accept(ws_key, strlen(ws_key), accept_buf,
+                                        &accept_len);
+  if (rc != C_REST_OK)
+    return rc;
 
-  (void)!c_rest_response_set_status(res, 101);
-  (void)!c_rest_response_set_header(res, "Upgrade", "websocket");
-  (void)!c_rest_response_set_header(res, "Connection", "Upgrade");
-  (void)!c_rest_response_set_header(res, "Sec-WebSocket-Accept", accept_buf);
+  rc = c_rest_response_set_status(res, 101);
+  if (rc != C_REST_OK)
+    return rc;
+  rc = c_rest_response_set_header(res, "Upgrade", "websocket");
+  if (rc != C_REST_OK)
+    return rc;
+  rc = c_rest_response_set_header(res, "Connection", "Upgrade");
+  if (rc != C_REST_OK)
+    return rc;
+  rc = c_rest_response_set_header(res, "Sec-WebSocket-Accept", accept_buf);
+  if (rc != C_REST_OK)
+    return rc;
 
   return C_REST_OK;
 }
@@ -51,6 +61,7 @@ c_rest_error_t c_rest_websocket_generate_accept(const char *ws_key,
   char concat_buf[128];
   unsigned char sha1_hash[20];
   size_t concat_len;
+  c_rest_error_t rc;
 
   if (!ws_key || !out_accept || !out_accept_len) {
     return C_REST_ERROR_GENERIC;
@@ -72,10 +83,14 @@ c_rest_error_t c_rest_websocket_generate_accept(const char *ws_key,
   memcpy(concat_buf + ws_key_len, C_REST_WS_MAGIC_STRING, C_REST_WS_MAGIC_LEN);
 #endif
 
-  (void)!c_rest_sha1((const unsigned char *)concat_buf, concat_len, sha1_hash);
+  rc = c_rest_sha1((const unsigned char *)concat_buf, concat_len, sha1_hash);
+  if (rc != C_REST_OK)
+    return rc;
 
-  (void)!c_rest_base64_encode(sha1_hash, sizeof(sha1_hash), out_accept,
-                              out_accept_len);
+  rc = c_rest_base64_encode(sha1_hash, sizeof(sha1_hash), out_accept,
+                            out_accept_len);
+  if (rc != C_REST_OK)
+    return rc;
 
   return C_REST_OK;
 }

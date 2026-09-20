@@ -39,10 +39,10 @@ static void sig_handler(int sig) {
 }
 
 int main(void) {
-
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   struct c_rest_template_context tpl_ctx;
+  c_rest_error_t rc;
 
   /* Initialize framework context in Single Thread mode */
   signal(SIGTERM, sig_handler);
@@ -55,7 +55,9 @@ int main(void) {
   /* Initialize Router */
   if (c_rest_router_init(&router) != 0) {
     printf("Failed to init router\n");
-    (void)!c_rest_destroy(ctx);
+    rc = c_rest_destroy(ctx);
+    if (rc != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -65,24 +67,53 @@ int main(void) {
           "<html><head><title>{{title}}</title></head>"
           "<body><h1>{{heading}}</h1><p>{{message}}</p></body></html>") != 0) {
     printf("Failed to init template\n");
-    (void)!c_rest_router_destroy(router);
-    (void)!c_rest_destroy(ctx);
+    rc = c_rest_router_destroy(router);
+    if (rc != C_REST_OK) {
+      c_rest_destroy(ctx);
+      return 1;
+    }
+    rc = c_rest_destroy(ctx);
+    if (rc != C_REST_OK)
+      return 1;
     return 1;
   }
 
   /* Register Template Route */
-  (void)!c_rest_router_add_template(router, "GET", "/", &tpl_ctx,
-                                    provide_template_data, NULL);
+  rc = c_rest_router_add_template(router, "GET", "/", &tpl_ctx,
+                                  provide_template_data, NULL);
+  if (rc != C_REST_OK) {
+    c_rest_template_destroy(&tpl_ctx);
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
 
   /* Run Server */
   printf("Starting server at http://127.0.0.1:8080/\n");
-  (void)!c_rest_set_router(ctx, router);
+  rc = c_rest_set_router(ctx, router);
+  if (rc != C_REST_OK) {
+    c_rest_template_destroy(&tpl_ctx);
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
   /* c_rest_run(ctx); Uncomment to block and run server */
 
   /* Cleanup */
-  (void)!c_rest_template_destroy(&tpl_ctx);
-  (void)!c_rest_router_destroy(router);
-  (void)!c_rest_destroy(ctx);
+  rc = c_rest_template_destroy(&tpl_ctx);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  rc = c_rest_router_destroy(router);
+  if (rc != C_REST_OK) {
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  rc = c_rest_destroy(ctx);
+  if (rc != C_REST_OK)
+    return 1;
 
   return 0;
 }

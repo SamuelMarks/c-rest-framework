@@ -13,7 +13,7 @@ if(NOT MSVC)
 endif()
 
 # Threading support
-if(CMAKE_SYSTEM_NAME STREQUAL "DOS")
+if(CMAKE_SYSTEM_NAME STREQUAL "DOS" OR EMSCRIPTEN OR (DEFINED CDD_THREADING AND NOT CDD_THREADING))
     option(OAUTH2_MULTI_THREADED "Enable multi-threading" OFF)
 else()
     option(OAUTH2_MULTI_THREADED "Enable multi-threading" ON)
@@ -67,6 +67,11 @@ endif()
 add_library(oauth2_example_static STATIC src/oauth2_server.c src/oauth2_client.c)
 add_library(oauth2_example_shared SHARED src/oauth2_server.c src/oauth2_client.c)
 
+if(CRF_DEMO_HAD_COVERAGE)
+    target_compile_options(oauth2_example_static PRIVATE --coverage)
+    target_compile_options(oauth2_example_shared PRIVATE --coverage)
+endif()
+
 # Add "header-only" interface
 add_library(oauth2_example_header_only INTERFACE)
 
@@ -110,16 +115,24 @@ if(OAUTH2_BUILD_TESTS AND BUILD_TESTING)
     endif()
     FetchContent_MakeAvailable(greatest)
 
-    add_executable(oauth2_tests tests/test_oauth2.c)
+    set(RUNNER_OAUTH2_SRC "${CMAKE_CURRENT_BINARY_DIR}/runner_oauth2.c")
+    file(WRITE "${RUNNER_OAUTH2_SRC}"
+"/* clang-format off */\n#include \"greatest.h\"\n#include <stdlib.h>\n/* clang-format on */\nSUITE_EXTERN(oauth2_suite);\nGREATEST_MAIN_DEFS();\n#if defined(__EMSCRIPTEN__)\nextern void emscripten_force_exit(int status);\n#endif\nint main(int argc, char **argv) {\n  int greatest_passed = 0;\n  GREATEST_MAIN_BEGIN();\n  RUN_SUITE(oauth2_suite);\n  GREATEST_PRINT_REPORT();\n  greatest_all_passed(&greatest_passed);\n#if defined(__EMSCRIPTEN__)\n  emscripten_force_exit(greatest_passed ? 0 : 1);\n#endif\n  return (greatest_passed ? EXIT_SUCCESS : EXIT_FAILURE);\n}\n")
+    add_executable(oauth2_tests tests/test_oauth2.c "${RUNNER_OAUTH2_SRC}")
     target_include_directories(oauth2_tests PRIVATE ${greatest_SOURCE_DIR})
     target_link_libraries(oauth2_tests PRIVATE oauth2_example_static)
+    if(CRF_DEMO_HAD_COVERAGE)
+        target_compile_options(oauth2_tests PRIVATE --coverage)
+        target_link_libraries(oauth2_tests PRIVATE --coverage)
+    endif()
     if(EMSCRIPTEN)
-        target_link_options(oauth2_tests PRIVATE "-sALLOW_MEMORY_GROWTH=1")
+        target_link_options(oauth2_tests PRIVATE "-sALLOW_MEMORY_GROWTH=1" "-sSTACK_SIZE=1048576" "-sEXIT_RUNTIME=1")
     endif()
     if(OAUTH2_MULTI_THREADED)
         target_link_libraries(oauth2_tests PRIVATE Threads::Threads)
     endif()
     add_test(NAME oauth2_test COMMAND oauth2_tests)
+    set_tests_properties(oauth2_test PROPERTIES TIMEOUT 300)
 
     if(WIN32 AND BUILD_SHARED_LIBS)
         if(TARGET cfs)

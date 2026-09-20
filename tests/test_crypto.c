@@ -71,17 +71,13 @@ int test_crypto(void) {
   failed += (res != 0);
   failed += (jwt_token == NULL);
 
-  if (jwt_token) {
-    res = (int)c_rest_jwt_verify_hs256(jwt_token, hmac_key, 6, &jwt_payload);
-    failed += (res != 0);
-    failed += (jwt_payload == NULL);
+  res = (int)c_rest_jwt_verify_hs256(jwt_token, hmac_key, 6, &jwt_payload);
+  failed += (res != 0);
+  failed += (jwt_payload == NULL);
 
-    if (jwt_payload) {
-      failed += (strcmp(jwt_payload, "{\"sub\":\"123\"}") != 0);
-      CRF_FREE(jwt_payload);
-    }
-    CRF_FREE(jwt_token);
-  }
+  failed += (strcmp(jwt_payload, "{\"sub\":\"123\"}") != 0);
+  CRF_FREE(jwt_payload);
+  CRF_FREE(jwt_token);
 
   {
     const unsigned char pwd[] = "password";
@@ -95,9 +91,7 @@ int test_crypto(void) {
       res = (int)c_rest_random_string_generate(32, &rand_str);
       failed += (res != 0);
       failed += (rand_str == NULL);
-      if (rand_str) {
-        CRF_FREE(rand_str);
-      }
+      CRF_FREE(rand_str);
     }
   }
 
@@ -210,6 +204,8 @@ static int test_crypto_errors(void) {
   res = (int)c_rest_verify_password("pwd", "invalid");
   failed += (res == C_REST_OK);
   res = (int)c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$saltonly");
+  failed += (res == C_REST_OK);
+  res = (int)c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$bad$hash");
   failed += (res == C_REST_OK);
   res = (int)c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$sal~$hash");
   failed += (res == C_REST_OK);
@@ -354,9 +350,9 @@ static int test_crypto_malloc_failures(void) {
   g_crf_malloc_hook = fail_malloc_n;
 
   {
-    int sizes[] = {25, 45, 110};
+    int sizes[] = {25, 26, 45, 46, 110, 112};
     int j;
-    for (j = 0; j < 3; j++) {
+    for (j = 0; j < 6; j++) {
       g_malloc_fail_size = sizes[j];
       g_malloc_fail_after = 0;
       res = (int)c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256,
@@ -383,11 +379,14 @@ static int test_crypto_malloc_failures(void) {
   g_malloc_fail_after = -1;
   /* Malloc failure when encoding hash/salt */
   for (i = 0; i < 20; i++) {
-    g_malloc_fail_after = i;
+    g_malloc_fail_after = (i == 0 ? -1 : i);
     res =
         (int)c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
-    if (res == C_REST_OK)
+    if (res != C_REST_OK) {
+      /* expected failure */
+    } else {
       CRF_FREE(hash);
+    }
   }
 
   for (i = 0; i < 15; i++) {
@@ -400,18 +399,18 @@ static int test_crypto_malloc_failures(void) {
 
   {
     char *valid_token = NULL;
-    if (c_rest_jwt_sign_hs256("{\"sub\":\"123\"}", (const unsigned char *)"key",
-                              3, &valid_token) == C_REST_OK) {
-      for (i = 0; i < 10; i++) {
-        g_malloc_fail_size = -1;
-        g_malloc_fail_after = i;
-        res = (int)c_rest_jwt_verify_hs256(
-            valid_token, (const unsigned char *)"key", 3, &hash);
-        if (res == C_REST_OK)
-          CRF_FREE(hash);
-      }
-      CRF_FREE(valid_token);
+    res = (int)c_rest_jwt_sign_hs256(
+        "{\"sub\":\"123\"}", (const unsigned char *)"key", 3, &valid_token);
+    (void)res;
+    for (i = 0; i < 10; i++) {
+      g_malloc_fail_size = -1;
+      g_malloc_fail_after = i;
+      res = (int)c_rest_jwt_verify_hs256(
+          valid_token, (const unsigned char *)"key", 3, &hash);
+      if (res == C_REST_OK)
+        CRF_FREE(hash);
     }
+    CRF_FREE(valid_token);
   }
 
   for (i = 0; i < 5; i++) {

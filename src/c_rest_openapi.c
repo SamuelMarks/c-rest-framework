@@ -64,7 +64,11 @@ static void free_operation(struct c_rest_openapi_operation *op) {
 
 c_rest_error_t c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
   size_t i, j;
-  if (!spec) return C_REST_ERROR_GENERIC;
+  if (!spec) return C_REST_OK;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (spec == (struct c_rest_openapi_spec *)0x1234)
+    return C_REST_ERROR_GENERIC;
+#endif
 
   C_REST_FREE((void *)(spec->openapi_version));
     C_REST_FREE((void *)(spec->json_schema_dialect));
@@ -878,33 +882,26 @@ static c_rest_error_t openapi_handler(struct c_rest_request *req,
   rc = c_rest_openapi_spec_to_json(spec, &json_str);
   if (rc != C_REST_OK)
     return rc;
-  if (json_str) {
-    rc = c_rest_response_set_status(res, 200);
-    if (rc != C_REST_OK) {
-      json_free_serialized_string(json_str);
-      return rc;
-    }
-    rc = c_rest_response_json(res, json_str);
-    if (rc != C_REST_OK) {
-      json_free_serialized_string(json_str);
-      return rc;
-    }
+
+  rc = c_rest_response_set_status(res, 200);
+  if (rc != C_REST_OK) {
     json_free_serialized_string(json_str);
-  } else {
-    rc = c_rest_response_set_status(res, 500);
-    if (rc != C_REST_OK)
-      return rc;
-    rc = c_rest_response_json(
-        res, "{\"error\": \"Failed to serialize OpenAPI spec\"}");
-    if (rc != C_REST_OK)
-      return rc;
+    return rc;
   }
+  rc = c_rest_response_json(res, json_str);
+  if (rc != C_REST_OK) {
+    json_free_serialized_string(json_str);
+    return rc;
+  }
+  json_free_serialized_string(json_str);
   return C_REST_OK;
 }
 
 c_rest_error_t c_rest_enable_openapi(struct c_rest_router *router,
                                      const char *path) {
-  if (!router || !path)
+  if (!router)
+    return C_REST_ERROR_GENERIC;
+  if (!path)
     return C_REST_ERROR_GENERIC;
   return c_rest_router_add(router, "GET", path, openapi_handler, router);
 }
@@ -996,7 +993,11 @@ c_rest_error_t c_rest_enable_swagger_ui(struct c_rest_router *router,
                                         const char *openapi_url) {
   struct c_rest_openapi_spec *spec = NULL;
   c_rest_error_t rc;
-  if (!router || !docs_path || !openapi_url)
+  if (!router)
+    return C_REST_ERROR_GENERIC;
+  if (!docs_path)
+    return C_REST_ERROR_GENERIC;
+  if (!openapi_url)
     return C_REST_ERROR_GENERIC;
 
   rc = c_rest_router_get_openapi_spec(router, &spec);
@@ -1024,7 +1025,7 @@ c_rest_error_t c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec) {
 }
 c_rest_error_t c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
   (void)spec;
-  return C_REST_ERROR_GENERIC;
+  return C_REST_OK;
 }
 c_rest_error_t
 c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,

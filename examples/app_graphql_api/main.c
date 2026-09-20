@@ -62,11 +62,11 @@ static void sig_handler(int sig) {
 }
 
 int main(void) {
-
   struct c_rest_context *ctx = NULL;
   struct c_rest_router *router = NULL;
   struct c_rest_graphql_schema *schema = NULL;
   c_rest_error_t res;
+  c_rest_error_t rc;
 
 #if defined(_WIN32)
   WSADATA wsa;
@@ -93,7 +93,9 @@ int main(void) {
     return 1;
   }
 
-  (void)!c_rest_router_use(router, NULL, c_rest_cors_middleware, NULL);
+  rc = c_rest_router_use(router, NULL, c_rest_cors_middleware, NULL);
+  if (rc != C_REST_OK)
+    return 1;
 
   /* Set up GraphQL schema */
   printf("Setting up GraphQL schema...\n");
@@ -102,26 +104,39 @@ int main(void) {
     return 1;
   }
 
-  (void)!c_rest_graphql_schema_add_resolver(schema, "user", resolve_user, NULL);
-  (void)!c_rest_graphql_schema_add_resolver(schema, "posts", resolve_posts,
-                                            NULL);
+  rc = c_rest_graphql_schema_add_resolver(schema, "user", resolve_user, NULL);
+  if (rc != C_REST_OK)
+    return 1;
+  rc = c_rest_graphql_schema_add_resolver(schema, "posts", resolve_posts, NULL);
+  if (rc != C_REST_OK)
+    return 1;
 
   /* Register GraphQL route */
-  (void)!c_rest_router_add_graphql(router, "/graphql", schema);
+  rc = c_rest_router_add_graphql(router, "/graphql", schema);
+  if (rc != C_REST_OK)
+    return 1;
 
   printf("Starting server on http://localhost:8080/graphql\n");
   printf("Try sending a POST request to /graphql with a body like:\n");
   printf("  query { user { id } }\n");
 
-  ctx->internal_state = router;
+  rc = c_rest_set_router(ctx, router);
+  if (rc != C_REST_OK)
+    return 1;
   res = c_rest_run(ctx);
   if (res != 0) {
     printf("Server failed to start or crashed.\n");
   }
 
-  (void)!c_rest_graphql_schema_free(schema);
-  (void)!c_rest_router_destroy(router);
-  (void)!c_rest_destroy(ctx);
+  rc = c_rest_graphql_schema_free(schema);
+  if (rc != C_REST_OK)
+    return 1;
+  rc = c_rest_router_destroy(router);
+  if (rc != C_REST_OK)
+    return 1;
+  rc = c_rest_destroy(ctx);
+  if (rc != C_REST_OK)
+    return 1;
 
 #if defined(_WIN32)
   WSACleanup();

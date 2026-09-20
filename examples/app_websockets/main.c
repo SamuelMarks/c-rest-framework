@@ -63,7 +63,7 @@ int main(void) {
   res = c_rest_router_init(&router);
   if (res != 0) {
     printf("Failed to init router\n");
-    (void)!c_rest_destroy(ctx);
+    c_rest_destroy(ctx);
     return 1;
   }
 
@@ -72,8 +72,8 @@ int main(void) {
                                     my_ws_on_close, NULL);
   if (res != 0) {
     printf("Failed to add WebSocket route\n");
-    (void)!c_rest_router_destroy(router);
-    (void)!c_rest_destroy(ctx);
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
     return 1;
   }
 
@@ -82,11 +82,20 @@ int main(void) {
 
   /* 4. Run the server loop (simulated by modality for now) */
   printf("Server listening on ws://localhost:8080/ws\n");
-  (void)!c_rest_run(ctx);
+  res = c_rest_run(ctx);
+  if (res != C_REST_OK) {
+    printf("Server stopped with code: %d\n", res);
+  }
 
   /* 5. Cleanup */
-  (void)!c_rest_router_destroy(router);
-  (void)!c_rest_destroy(ctx);
+  res = c_rest_router_destroy(router);
+  if (res != C_REST_OK) {
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  res = c_rest_destroy(ctx);
+  if (res != C_REST_OK)
+    return 1;
 
   printf("Server stopped.\n");
   return 0;

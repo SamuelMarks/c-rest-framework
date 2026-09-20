@@ -9,6 +9,10 @@ if(BUILD_TESTING)
     # Wait, I can just build test_notes.c and define note_model there.
     add_executable(test_notes test_notes.c)
     target_link_libraries(test_notes PRIVATE c-rest-framework)
+    if(CRF_DEMO_HAD_COVERAGE)
+        target_compile_options(test_notes PRIVATE --coverage)
+        target_link_libraries(test_notes PRIVATE --coverage)
+    endif()
     add_test(NAME test_notes COMMAND test_notes)
 
     if(WIN32 AND BUILD_SHARED_LIBS)

@@ -31,6 +31,10 @@
 #endif
 /* clang-format on */
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+extern int g_mock_tls_fail;
+#endif
+
 c_rest_error_t c_rest_tls_init(void) {
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL)
   SSL_library_init();
@@ -529,6 +533,22 @@ c_rest_error_t c_rest_tls_write(struct c_rest_tls_connection *conn,
   }
   return C_REST_ERROR_GENERIC;
 #else
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_tls_fail == 3) {
+    *out_written = len;
+    return C_REST_OK;
+  }
+  if (g_mock_tls_fail == 4) {
+    g_mock_tls_fail = 0;
+    *out_written = len;
+    return C_REST_OK;
+  }
+  if (g_mock_tls_fail == 5) {
+    g_mock_tls_fail = 4;
+    *out_written = len;
+    return C_REST_OK;
+  }
+#endif
   *out_written = 0;
   return C_REST_ERROR_GENERIC;
 #endif
@@ -537,6 +557,12 @@ c_rest_error_t c_rest_tls_write(struct c_rest_tls_connection *conn,
 c_rest_error_t c_rest_tls_close(struct c_rest_tls_connection *conn) {
   if (!conn)
     return C_REST_OK;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_tls_fail == 2) {
+    C_REST_FREE((void *)(conn));
+    return C_REST_ERROR_GENERIC;
+  }
+#endif
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   SSL_shutdown(conn->ssl);

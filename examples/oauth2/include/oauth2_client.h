@@ -44,6 +44,14 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
  */
 c_rest_error_t oauth2_client_cleanup(void);
 
+/**
+ * @brief Get the internal client context.
+ *
+ * @param out_ctx Pointer to store the client context.
+ * @return 0 on success, non-zero on failure.
+ */
+c_rest_error_t oauth2_client_get_context(c_rest_client_context **out_ctx);
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */

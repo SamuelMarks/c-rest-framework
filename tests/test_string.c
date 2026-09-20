@@ -23,6 +23,7 @@ int test_string(void) {
   int failed = 0;
   char large_buf[100];
   int i;
+  const char *msgs[2];
 
   /* Test NULL pointer in init */
   rc = c_rest_string_init(NULL, 16);
@@ -36,8 +37,10 @@ int test_string(void) {
 
   /* Test initial capacity 0 */
   rc = c_rest_string_init(&str, 0);
-  failed += (rc != C_REST_OK || str.capacity != 16);
-  (void)!c_rest_string_destroy(&str);
+  failed += (rc != C_REST_OK);
+  failed += (str.capacity != 16);
+  rc = c_rest_string_destroy(&str);
+  failed += (rc != C_REST_OK);
 
   /* Normal init */
   rc = c_rest_string_init(&str, 16);
@@ -114,7 +117,8 @@ int test_string(void) {
   rc = c_rest_string_append_cstr(&str, "test");
   failed += (rc != C_REST_OK);
   failed += (str.capacity != 16);
-  (void)!c_rest_string_destroy(&str);
+  rc = c_rest_string_destroy(&str);
+  failed += (rc != C_REST_OK);
 
   /* Test capacity overflow */
   str.data = NULL;
@@ -127,11 +131,8 @@ int test_string(void) {
   g_crf_realloc_hook = NULL;
   failed += (rc != C_REST_ERROR_GENERIC);
 
-  if (failed) {
-
-    printf("test_string failed\n");
-  } else {
-    printf("test_string passed\n");
-  }
+  msgs[0] = "test_string passed\n";
+  msgs[1] = "test_string failed\n";
+  printf("%s", msgs[failed != 0]);
   return failed;
 }

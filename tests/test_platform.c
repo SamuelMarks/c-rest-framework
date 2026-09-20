@@ -2,6 +2,7 @@
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_platform.h"
+#include "c_rest_testing_mocks.h"
 #include "test_protos.h"
 #include "c_rest_mem.h"
 
@@ -10,6 +11,7 @@
 #if defined(_WIN32)
 #include <winsock2.h>
 #else
+#include <pthread.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/time.h>
@@ -45,9 +47,6 @@ static void *hook_malloc_platform(size_t size) {
   if (g_malloc_fail_count == 0) {
     return NULL;
   }
-  if (g_malloc_fail_count > 0) {
-    g_malloc_fail_count--;
-  }
   return malloc(size);
 }
 #endif
@@ -81,6 +80,7 @@ int test_platform(void) {
 
   rc = c_rest_socket_bind(sock, "127.0.0.1", 0);
   failed += ((rc != C_REST_OK) != 0);
+  failed += ((c_rest_socket_bind(sock, NULL, 0) == C_REST_OK) != 0);
 
   rc = c_rest_socket_listen(sock, 10);
   c_rest_socket_listen((c_rest_socket_t)-1, 10);
@@ -118,21 +118,12 @@ int test_platform(void) {
   }
 
   {
-#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
-    int fds[2];
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0) {
-      /*c_rest_socket_send(s1, "hello", 5, &wr);*/
-      /*c_rest_socket_recv(s2, buf, 5, &rd);*/
-    }
-#endif
-  }
-
-  {
     c_rest_socket_t tsock;
     c_rest_socket_create(&tsock);
     c_rest_socket_bind(tsock, "256.256.256.256", 0);
+    c_rest_socket_bind(tsock, "255.255.255.255", 0);
     c_rest_socket_listen(tsock, 10);
-    /**/
+    c_rest_socket_close(tsock);
   }
 
   {
@@ -166,7 +157,15 @@ int test_platform(void) {
     failed +=
         ((c_rest_thread_create(NULL, thread_func, &val) == C_REST_OK) != 0);
     failed += ((c_rest_thread_create(&thread2, NULL, &val) == C_REST_OK) != 0);
-    /* c_rest_thread_join((c_rest_thread_t)NULL); */
+    failed += ((c_rest_thread_join((c_rest_thread_t)NULL) == C_REST_OK) != 0);
+    failed += ((c_rest_thread_join((c_rest_thread_t)-1) == C_REST_OK) != 0);
+#if defined(_WIN32)
+    failed +=
+        ((c_rest_thread_join((c_rest_thread_t)9999999) == C_REST_OK) != 0);
+#else
+    failed += ((c_rest_thread_join((c_rest_thread_t)pthread_self()) ==
+                C_REST_OK) != 0);
+#endif
 
     failed += ((c_rest_mutex_create(NULL) == C_REST_OK) != 0);
     failed += ((c_rest_cond_create(NULL) == C_REST_OK) != 0);
@@ -251,29 +250,27 @@ int test_platform(void) {
   /* Process */
   {
     char *argv[] = {"echo", "hello", NULL};
-#ifndef __EMSCRIPTEN__
-    char *argv_bin[] = {"/bin/echo", "hello", NULL};
-#endif
+    int exit_code = -1;
+    (void)exit_code;
     failed += ((c_rest_process_create(NULL, "echo", argv) == C_REST_OK) != 0);
     failed += ((c_rest_process_create(&proc, NULL, argv) == C_REST_OK) != 0);
-#ifndef __EMSCRIPTEN__
-    /* Try with /bin/echo to improve reliability on POSIX */
-    rc = c_rest_process_create(&proc, "/bin/echo", argv_bin);
-    if (rc == C_REST_OK) {
-      int exit_code = -1;
+#if defined(_WIN32)
+    {
+      char *argv_win[] = {"cmd.exe", "/c", "echo", "hello", NULL};
+      rc = c_rest_process_create(&proc, "cmd.exe", argv_win);
+      failed += (rc != C_REST_OK);
       rc = c_rest_process_wait(proc, &exit_code);
-      if (rc != C_REST_OK) {
-        printf("Warning: c_rest_process_wait failed with %d\n", rc);
-      } else if (exit_code != 0) {
-        printf("Warning: process exited with %d\n", exit_code);
-      }
-    } else {
-      /* Fallback to simple echo */
-      rc = c_rest_process_create(&proc, "echo", argv);
-      if (rc == C_REST_OK) {
-        int exit_code = -1;
-        (void)!c_rest_process_wait(proc, &exit_code);
-      }
+      rc = c_rest_process_create(&proc, "cmd.exe", argv_win);
+      failed += (rc != C_REST_OK);
+      rc = c_rest_process_wait(proc, NULL);
+    }
+#elif !defined(__EMSCRIPTEN__)
+    {
+      char *argv_bin[] = {"/bin/echo", "hello", NULL};
+      rc = c_rest_process_create(&proc, "/bin/echo", argv_bin);
+      failed += (rc != C_REST_OK);
+      rc = c_rest_process_wait(proc, &exit_code);
+      rc = c_rest_process_wait(proc, NULL);
     }
 #endif
   }
@@ -281,14 +278,41 @@ int test_platform(void) {
   {
     int exit_code = 0;
     char *argv_fake[] = {"does_not_exist_xyz123", NULL};
+    char big_arg[1050];
+    char *argv_big[3];
+    memset(big_arg, 'a', sizeof(big_arg) - 1);
+    big_arg[sizeof(big_arg) - 1] = '\0';
+    argv_big[0] = "does_not_exist_xyz123";
+    argv_big[1] = big_arg;
+    argv_big[2] = NULL;
+    c_rest_process_create(&proc, "does_not_exist_xyz123", argv_big);
     c_rest_process_create(&proc, "does_not_exist_xyz123", argv_fake);
+    c_rest_process_create(&proc, "does_not_exist_xyz123", NULL);
     c_rest_process_wait(proc, &exit_code);
 
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
     {
       char *argv_kill[] = {"sh", "-c", "kill -9 $$", NULL};
-      c_rest_process_create(&proc, "sh", argv_kill);
+      rc = c_rest_process_create(&proc, "/bin/sh", argv_kill);
+      failed += (rc != C_REST_OK);
+      rc = c_rest_process_wait(proc, &exit_code);
+      failed += (rc != C_REST_OK);
     }
-    c_rest_process_wait(proc, &exit_code);
+#endif
+
+    failed += ((c_rest_process_wait((c_rest_process_t)0, &exit_code) ==
+                C_REST_OK) != 0);
+    failed += ((c_rest_process_wait((c_rest_process_t)-1, &exit_code) ==
+                C_REST_OK) != 0);
+    failed += ((c_rest_process_wait((c_rest_process_t)9999999, &exit_code) ==
+                C_REST_OK) != 0);
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+    g_mock_fork_fail = 1;
+    failed +=
+        ((c_rest_process_create(&proc, "echo", argv_fake) == C_REST_OK) != 0);
+    g_mock_fork_fail = 0;
+#endif
   }
 
   /* Timer */
@@ -313,6 +337,13 @@ int test_platform(void) {
 #ifdef C_REST_TESTING_MALLOC_HOOK
   g_crf_malloc_hook = NULL;
 #endif
+
+  {
+    const char *msgs[2];
+    msgs[0] = "test_platform passed\n";
+    msgs[1] = "test_platform failed\n";
+    printf("%s", msgs[failed != 0]);
+  }
 
   return failed;
 }

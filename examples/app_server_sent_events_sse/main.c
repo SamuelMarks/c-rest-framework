@@ -13,17 +13,28 @@
 #include <string.h>
 
 #if defined(_WIN32)
-void __stdcall Sleep(unsigned long dwMilliseconds);
+#if !defined(_SYNCHAPI_H_) && !defined(_INC_SYNCHAPI)
+__declspec(dllimport) void __stdcall Sleep(unsigned long dwMilliseconds);
+#endif
 #else
+#include <sys/select.h>
+#include <sys/time.h>
 #include <unistd.h>
 #endif
 /* clang-format on */
+
+static int g_sse_delay_ms = 1000;
 
 static c_rest_error_t sleep_ms(int milliseconds) {
 #if defined(_WIN32)
   Sleep((unsigned long)milliseconds);
 #else
-  usleep((useconds_t)milliseconds * 1000);
+  {
+    struct timeval tv;
+    tv.tv_sec = milliseconds / 1000;
+    tv.tv_usec = (milliseconds % 1000) * 1000;
+    select(0, NULL, NULL, NULL, &tv);
+  }
 #endif
   return C_REST_OK;
 }
@@ -32,6 +43,7 @@ static c_rest_error_t my_sse_handler(struct c_rest_request *req,
                                      struct c_rest_response *res,
                                      void *user_data) {
   struct c_rest_sse_event ev;
+  c_rest_error_t ev_rc;
   int i;
   (void)req;
   (void)user_data;
@@ -44,7 +56,9 @@ static c_rest_error_t my_sse_handler(struct c_rest_request *req,
   for (i = 0; i < 5; i++) {
     char data_buf[128];
 
-    (void)!c_rest_sse_event_init(&ev);
+    ev_rc = c_rest_sse_event_init(&ev);
+    if (ev_rc != C_REST_OK)
+      return ev_rc;
     ev.event = "ping";
 
 #if defined(_MSC_VER)
@@ -66,7 +80,7 @@ static c_rest_error_t my_sse_handler(struct c_rest_request *req,
       break;
     }
 
-    sleep_ms(1000);
+    sleep_ms(g_sse_delay_ms);
   }
 
   printf("SSE stream closed by server.\n");
@@ -79,10 +93,10 @@ static void sig_handler(int sig) {
 }
 
 int main(void) {
-
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   c_rest_error_t res;
+  c_rest_error_t rc;
 
   printf("Starting Server-Sent Events (SSE) Example...\n");
 
@@ -99,7 +113,7 @@ int main(void) {
   res = c_rest_router_init(&router);
   if (res != 0) {
     printf("Failed to init router\n");
-    (void)!c_rest_destroy(ctx);
+    c_rest_destroy(ctx);
     return 1;
   }
 
@@ -107,8 +121,8 @@ int main(void) {
   res = c_rest_router_add_sse(router, "/events", my_sse_handler, NULL);
   if (res != 0) {
     printf("Failed to add SSE route\n");
-    (void)!c_rest_router_destroy(router);
-    (void)!c_rest_destroy(ctx);
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
     return 1;
   }
 
@@ -117,11 +131,20 @@ int main(void) {
 
   /* 4. Run the server loop (simulated by modality for now) */
   printf("Server listening on http://localhost:8080/events\n");
-  (void)!c_rest_run(ctx);
+  rc = c_rest_run(ctx);
+  if (rc != C_REST_OK) {
+    printf("c_rest_run returned: %d\n", rc);
+  }
 
   /* 5. Cleanup */
-  (void)!c_rest_router_destroy(router);
-  (void)!c_rest_destroy(ctx);
+  rc = c_rest_router_destroy(router);
+  if (rc != C_REST_OK) {
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  rc = c_rest_destroy(ctx);
+  if (rc != C_REST_OK)
+    return 1;
 
   printf("Server stopped.\n");
   return 0;

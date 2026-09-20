@@ -18,6 +18,11 @@ c_rest_error_t c_rest_strcasecmp(const char *s1, const char *s2, int *out_cmp) {
     LOG_DEBUG("c_rest_strcasecmp: invalid arguments");
     return C_REST_ERROR_GENERIC;
   }
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (strcmp(s1, "TEST_MOCK_STRCASECMP_FAIL") == 0) {
+    return C_REST_ERROR_GENERIC;
+  }
+#endif
   while (!done) {
     if (*s1 == '\0' || *s2 == '\0') {
       done = 1;
@@ -161,6 +166,11 @@ c_rest_error_t c_rest_url_decode(char *dst, const char *src, size_t len) {
     LOG_DEBUG("c_rest_url_decode: invalid dst or src");
     return C_REST_ERROR_GENERIC;
   }
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (strncmp(src, "TEST_MOCK_URL_DECODE_FAIL", 25) == 0) {
+    return C_REST_ERROR_GENERIC;
+  }
+#endif
 
   p = dst;
   for (i = 0; i < len; i++) {

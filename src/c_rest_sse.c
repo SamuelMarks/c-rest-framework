@@ -124,7 +124,7 @@ c_rest_error_t c_rest_sse_event_clone(const struct c_rest_sse_event *src,
   return C_REST_OK;
 
 err:
-  (void)!c_rest_sse_event_destroy(dest); /* Best effort destroy on error path */
+  c_rest_sse_event_destroy(dest);
   return rc;
 }
 
@@ -221,7 +221,7 @@ c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **ou
   return C_REST_OK;
 
 err:
-(void)!c_rest_string_destroy(&s);
+  c_rest_string_destroy(&s);
   return rc;
 }
 
@@ -241,7 +241,7 @@ c_rest_error_t c_rest_sse_context_init(struct c_rest_sse_context **out_ctx) {
   ctx->buffer = NULL;
   ctx->buffer_len = 0;
   ctx->buffer_cap = 0;
-  rc = c_rest_sse_event_init(&ctx->current_event);
+  rc = INTERNAL_EVENT_INIT(&ctx->current_event);
   if (rc != C_REST_OK) {
     C_REST_FREE(ctx);
     return rc;
@@ -481,17 +481,13 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
         rc = c_rest_sse_strdup("", &ctx->current_event.event);
         if (rc != C_REST_OK) return rc;
       } else if (line_len == 4 && memcmp(line_start, "data", 4) == 0) {
-        c_rest_error_t rc;
         if (ctx->current_event.data) {
+          c_rest_error_t rc;
           rc = append_to_string(&ctx->current_event.data, "\n", 1);
-
-        if (rc != C_REST_OK) {
-          return rc;
+          if (rc != C_REST_OK) {
+            return rc;
+          }
         }
-
-        }
-        (void)append_to_string(&ctx->current_event.data, "", 0);
-
       }
 
     }
@@ -534,9 +530,7 @@ c_rest_error_t c_rest_sse_init_response(struct c_rest_response *res) {
     return C_REST_ERROR_GENERIC;
   }
 
-  rc = c_rest_response_set_status(res, 200);
-  if (rc != C_REST_OK)
-    return rc;
+  c_rest_response_set_status(res, 200);
   rc = c_rest_response_set_header(res, "Content-Type", "text/event-stream");
   if (rc != C_REST_OK)
     return rc;

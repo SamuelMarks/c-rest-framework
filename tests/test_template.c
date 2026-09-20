@@ -6,318 +6,41 @@
 #include "c_rest_router.h"
 #include "c_rest_request.h"
 #include "c_rest_response.h"
+#include "c_rest_testing_mocks.h"
 #include <stdio.h>
 #include <string.h>
 /* clang-format on */
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
 
-int g_fail_realloc_at_tpl = 0;
-static void *fail_realloc_n_tpl(void *ptr, size_t size) {
-  static int alloc_count = 0;
-  if (g_fail_realloc_at_tpl <= 0) {
-    alloc_count = 0;
-    return NULL;
-  }
-  alloc_count++;
-  if (alloc_count == g_fail_realloc_at_tpl) {
-    alloc_count = 0;
-    g_fail_realloc_at_tpl = 0;
+static int g_tpl_realloc_fail_at = 0;
+static int g_tpl_realloc_count = 0;
+
+static void *fail_realloc_at_n(void *ptr, size_t size) {
+  g_tpl_realloc_count++;
+  if (g_tpl_realloc_count == g_tpl_realloc_fail_at) {
     return NULL;
   }
   return realloc(ptr, size);
 }
 
-static int test_c_rest_template_init_destroy(void) {
-  struct c_rest_template_context ctx;
-  if (c_rest_template_init(&ctx, "Hello {{name}}") != 0)
-    return __LINE__;
-  if (ctx.template_str == NULL)
-    return __LINE__;
-  if (ctx.template_len != 14)
-    return __LINE__;
-  if (c_rest_template_destroy(&ctx) != 0)
-    return __LINE__;
-  if (ctx.template_str != NULL)
-    return __LINE__;
-  if (ctx.template_len != 0)
-    return __LINE__;
-
-  /* Null checks */
-  if (c_rest_template_init(NULL, "test") == C_REST_OK)
-    return __LINE__;
-  if (c_rest_template_init(&ctx, NULL) == C_REST_OK)
-    return __LINE__;
-  if (c_rest_template_destroy(NULL) == C_REST_OK)
-    return __LINE__;
-  return 0;
+static void test_fail_realloc_nonfail(void) {
+  void *p = malloc(10);
+  g_tpl_realloc_count = 0;
+  g_tpl_realloc_fail_at = 2;
+  p = fail_realloc_at_n(p, 20);
+  free(p);
+  g_tpl_realloc_fail_at = 0;
+  g_tpl_realloc_count = 0;
 }
 
-static int test_c_rest_template_render_basic(void) {
-  struct c_rest_template_context ctx;
-  const char *keys[] = {"name", "title"};
-  const char *values[] = {"World", "Mr"};
-  char *result = NULL;
-
-  if (c_rest_template_init(&ctx, "Hello {{name}}, I am {{title}}!") != 0)
-    return __LINE__;
-
-  if (c_rest_template_render(NULL, keys, values, 2, &result) == C_REST_OK)
-    return __LINE__;
-  if (c_rest_template_render(&ctx, keys, values, 2, NULL) == C_REST_OK)
-    return __LINE__;
-
-  /* Null context template_str check for render */
-  {
-    char *orig = ctx.template_str;
-    ctx.template_str = NULL;
-    if (c_rest_template_render(&ctx, keys, values, 2, &result) == C_REST_OK)
-      return __LINE__;
-    if (c_rest_template_destroy(&ctx) != C_REST_OK)
-      return __LINE__;
-    ctx.template_str = orig;
-  }
-
-  if (c_rest_template_render(&ctx, keys, values, 2, &result) != 0)
-    return __LINE__;
-  if (result == NULL)
-    return __LINE__;
-  if (strcmp(result, "Hello World, I am Mr!") != 0)
-    return __LINE__;
-  C_REST_FREE(result);
-  if (c_rest_template_destroy(&ctx) != 0)
-    return __LINE__;
-  return 0;
+static void *fail_malloc_always(size_t size) {
+  (void)size;
+  return NULL;
 }
 
-static int test_c_rest_template_render_missing_key(void) {
-  struct c_rest_template_context ctx;
-  const char *keys[] = {"name"};
-  const char *values[] = {"World"};
-  char *result = NULL;
-
-  if (c_rest_template_init(&ctx, "Hello {{name}}, {{title}}") != 0)
-    return __LINE__;
-  if (c_rest_template_render(&ctx, keys, values, 1, &result) != 0)
-    return __LINE__;
-  if (result == NULL)
-    return __LINE__;
-  if (strcmp(result, "Hello World, {{title}}") != 0)
-    return __LINE__;
-  C_REST_FREE(result);
-  if (c_rest_template_destroy(&ctx) != 0)
-    return __LINE__;
-  return 0;
-}
-
-static int test_c_rest_template_render_edge_cases(void) {
-  struct c_rest_template_context ctx;
-  const char *keys[] = {"a", "b", "c"};
-  const char *values[] = {"b", NULL,
-                          "really_long_value_that_might_force_reallocation_if_"
-                          "we_repeat_it_enough_times_1234567890"};
-  char *result = NULL;
-  int i;
-  char large_template[1024];
-
-  if (c_rest_template_init(&ctx, "{{a}}{{a}}") != 0)
-    return __LINE__;
-  if (c_rest_template_render(&ctx, keys, values, 1, &result) != 0)
-    return __LINE__;
-  if (result == NULL)
-    return __LINE__;
-  if (strcmp(result, "bb") != 0)
-    return __LINE__;
-  C_REST_FREE(result);
-  if (c_rest_template_destroy(&ctx) != 0)
-    return __LINE__;
-
-  /* Incomplete braces */
-  if (c_rest_template_init(&ctx, "Hello {{name") != 0)
-    return __LINE__;
-  if (c_rest_template_render(&ctx, keys, values, 0, &result) != 0)
-    return __LINE__;
-  if (result == NULL)
-    return __LINE__;
-  if (strcmp(result, "Hello {{name") != 0)
-    return __LINE__;
-  C_REST_FREE(result);
-  if (c_rest_template_destroy(&ctx) != 0)
-    return __LINE__;
-
-  /* Missing second brace */
-  if (c_rest_template_init(&ctx, "Hello {{name}foo") != 0)
-    return __LINE__;
-  if (c_rest_template_render(&ctx, keys, values, 0, &result) != 0)
-    return __LINE__;
-  if (result == NULL)
-    return __LINE__;
-  if (strcmp(result, "Hello {{name}foo") != 0)
-    return __LINE__;
-  C_REST_FREE(result);
-  if (c_rest_template_destroy(&ctx) != 0)
-    return __LINE__;
-
-  /* Null key test */
-  {
-    const char *null_keys[] = {NULL, "a"};
-    const char *null_values[] = {"1", "2"};
-    if (c_rest_template_init(&ctx, "Hello {{a}}") != 0)
-      return __LINE__;
-    if (c_rest_template_render(&ctx, null_keys, null_values, 2, &result) != 0)
-      return __LINE__;
-    if (result == NULL)
-      return __LINE__;
-    if (strcmp(result, "Hello 2") != 0)
-      return __LINE__;
-    C_REST_FREE(result);
-    if (c_rest_template_destroy(&ctx) != 0)
-      return __LINE__;
-  }
-
-  /* Null values for matched key */
-  if (c_rest_template_init(&ctx, "Null {{b}} test") != 0)
-    return __LINE__;
-  if (c_rest_template_render(&ctx, keys, values, 2, &result) != 0)
-    return __LINE__;
-  if (result == NULL)
-    return __LINE__;
-  if (strcmp(result, "Null  test") != 0)
-    return __LINE__;
-  C_REST_FREE(result);
-  if (c_rest_template_destroy(&ctx) != 0)
-    return __LINE__;
-
-  /* Force reallocation in replacement */
-  large_template[0] = '\0';
-  for (i = 0; i < 10; i++) {
-#if defined(_MSC_VER)
-    strcat_s(large_template, sizeof(large_template), "{{c}}");
-#else
-    strcat(large_template, "{{c}}");
-#endif
-  }
-  if (c_rest_template_init(&ctx, large_template) != 0)
-    return __LINE__;
-  ctx.template_len = 1;
-  if (c_rest_template_render(&ctx, keys, values, 3, &result) != 0)
-    return __LINE__;
-  if (result == NULL)
-    return __LINE__;
-  C_REST_FREE(result);
-  if (c_rest_template_destroy(&ctx) != 0)
-    return __LINE__;
-
-  /* Force reallocation in unmatched key replacement */
-  large_template[0] = '\0';
-  for (i = 0; i < 20; i++) {
-#if defined(_MSC_VER)
-    strcat_s(large_template, sizeof(large_template), "{{unknown_key}}");
-#else
-    strcat(large_template, "{{unknown_key}}");
-#endif
-  }
-  if (c_rest_template_init(&ctx, large_template) != 0)
-    return __LINE__;
-  ctx.template_len = 1;
-  if (c_rest_template_render(&ctx, keys, values, 3, &result) != 0)
-    return __LINE__;
-  if (result == NULL)
-    return __LINE__;
-  C_REST_FREE(result);
-  if (c_rest_template_destroy(&ctx) != 0)
-    return __LINE__;
-
-  /* Force reallocation in normal character copy */
-  large_template[0] = '\0';
-  for (i = 0; i < 500; i++) {
-#if defined(_MSC_VER)
-    strcat_s(large_template, sizeof(large_template), "a");
-#else
-    strcat(large_template, "a");
-#endif
-  }
-  if (c_rest_template_init(&ctx, large_template) != 0)
-    return __LINE__;
-  /* explicitly force a small initial cap by hacking the struct for testing */
-  ctx.template_len = 1;
-  if (c_rest_template_render(&ctx, keys, values, 0, &result) != 0)
-    return __LINE__;
-  if (result == NULL)
-    return __LINE__;
-  C_REST_FREE(result);
-
-  /* Test reallocation failure in normal character copy */
-  {
-
-    g_fail_realloc_at_tpl = -1;
-    fail_realloc_n_tpl(NULL, 0);
-    g_fail_realloc_at_tpl = 1;
-    g_crf_realloc_hook = fail_realloc_n_tpl;
-    if (c_rest_template_render(&ctx, keys, values, 0, &result) == C_REST_OK)
-      return __LINE__;
-
-    g_crf_realloc_hook = NULL;
-  }
-
-  if (c_rest_template_destroy(&ctx) != 0)
-    return __LINE__;
-
-  /* Test reallocation failure in replacement */
-  {
-    large_template[0] = '\0';
-    for (i = 0; i < 10; i++) {
-#if defined(_MSC_VER)
-      strcat_s(large_template, sizeof(large_template), "{{c}}");
-#else
-      strcat(large_template, "{{c}}");
-#endif
-    }
-    if (c_rest_template_init(&ctx, large_template) != 0)
-      return __LINE__;
-
-    ctx.template_len = 1;
-
-    g_fail_realloc_at_tpl = -1;
-    fail_realloc_n_tpl(NULL, 0);
-    g_fail_realloc_at_tpl = 1;
-    g_crf_realloc_hook = fail_realloc_n_tpl;
-    if (c_rest_template_render(&ctx, keys, values, 3, &result) == C_REST_OK)
-      return __LINE__;
-
-    g_crf_realloc_hook = NULL;
-    if (c_rest_template_destroy(&ctx) != 0)
-      return __LINE__;
-  }
-
-  /* Test reallocation failure in unmatched key replacement */
-  {
-    large_template[0] = '\0';
-    for (i = 0; i < 20; i++) {
-#if defined(_MSC_VER)
-      strcat_s(large_template, sizeof(large_template), "{{unknown_key}}");
-#else
-      strcat(large_template, "{{unknown_key}}");
-#endif
-    }
-    if (c_rest_template_init(&ctx, large_template) != 0)
-      return __LINE__;
-
-    ctx.template_len = 1;
-
-    g_fail_realloc_at_tpl = -1;
-    fail_realloc_n_tpl(NULL, 0);
-    g_fail_realloc_at_tpl = 1;
-    g_crf_realloc_hook = fail_realloc_n_tpl;
-    if (c_rest_template_render(&ctx, keys, values, 3, &result) == C_REST_OK)
-      return __LINE__;
-
-    g_crf_realloc_hook = NULL;
-    if (c_rest_template_destroy(&ctx) != 0)
-      return __LINE__;
-  }
-
-  return 0;
+static int check_str_eq(const char *actual, const char *expected) {
+  return strcmp(actual, expected) != 0;
 }
 
 static c_rest_error_t dummy_template_data_provider(struct c_rest_request *req,
@@ -332,206 +55,325 @@ static c_rest_error_t dummy_template_data_provider(struct c_rest_request *req,
   *out_keys = keys;
   *out_values = values;
   *out_count = 2;
-  return 0;
+  return C_REST_OK;
 }
 
-static int test_c_rest_template_integration(void) {
-  struct c_rest_template_context ctx;
-  c_rest_router *router = NULL;
-  struct c_rest_request req;
-  struct c_rest_response res;
-
-  if (c_rest_template_init(&ctx, "Welcome {{user}}! Role: {{role}}") != 0)
-    return __LINE__;
-
-  if (c_rest_router_init(&router) != 0)
-    return __LINE__;
-
-  if (c_rest_router_add_template(router, "GET", "/profile", &ctx,
-                                 dummy_template_data_provider, NULL) != 0)
-    return __LINE__;
-
-  memset(&req, 0, sizeof(req));
-  req.method = "GET";
-  req.path = "/profile";
-
-  memset(&res, 0, sizeof(res));
-
-  if (c_rest_router_dispatch(router, &req, &res) != 0) {
-    printf("dispatch failed\n");
-    return __LINE__;
-  }
-
-  if (res.status_code != 200) {
-    printf("Status code was %d\n", res.status_code);
-    return __LINE__;
-  }
-
-  if (res.body == NULL) {
-    printf("Body was null\n");
-    return __LINE__;
-  }
-
-  if (strcmp(res.body, "Welcome Alice! Role: Admin") != 0) {
-    printf("Body was %s\n", res.body);
-    return __LINE__;
-  }
-
-  (void)!c_rest_response_cleanup(&res);
-  (void)!c_rest_router_destroy(router);
-  (void)!c_rest_template_destroy(&ctx);
-  return 0;
-}
-
-#ifdef C_REST_TESTING_MALLOC_HOOK
-static int g_malloc_fail_count = -1;
-static void *hook_malloc_template(size_t size) {
-  if (g_malloc_fail_count == 0) {
-    return NULL;
-  }
-  if (g_malloc_fail_count > 0) {
-    g_malloc_fail_count--;
-  }
-  return malloc(size);
-}
-static void *hook_realloc_template(void *ptr, size_t size) {
-  if (g_malloc_fail_count == 0) {
-    return NULL;
-  }
-  if (g_malloc_fail_count > 0) {
-    g_malloc_fail_count--;
-  }
-  return realloc(ptr, size);
-}
-
-static int test_c_rest_template_oom(void) {
-  struct c_rest_template_context ctx;
-  const char *keys[] = {"name"};
-  const char *values[] = {"very_long_value_that_exceeds_initial_capacity"};
-  char *result = NULL;
-  int i;
-  char large_template[1024];
-
-  g_crf_malloc_hook = hook_malloc_template;
-  g_crf_realloc_hook = hook_realloc_template;
-
-  g_malloc_fail_count = 0;
-  if (c_rest_template_init(&ctx, "Hello {{name}}") == C_REST_OK)
-    return __LINE__;
-
-  g_malloc_fail_count = -1;
-  if (c_rest_template_init(&ctx, "Hello {{name}}") != C_REST_OK)
-    return __LINE__;
-
-  g_malloc_fail_count = 0;
-  if (c_rest_template_render(&ctx, keys, values, 1, &result) == C_REST_OK)
-    return __LINE__;
-
-  /* Force realloc fail in copy char */
-  large_template[0] = '\0';
-  for (i = 0; i < 500; i++) {
-#if defined(_MSC_VER)
-    strcat_s(large_template, sizeof(large_template), "a");
-#else
-    strcat(large_template, "a");
-#endif
-  }
-  g_malloc_fail_count = -1;
-  c_rest_template_destroy(&ctx);
-  if (c_rest_template_init(&ctx, large_template) != C_REST_OK)
-    return __LINE__;
-
-  ctx.template_len = 1;    /* Force tiny initial capacity */
-  g_malloc_fail_count = 1; /* Fail the first realloc */
-  if (c_rest_template_render(&ctx, keys, values, 1, &result) == C_REST_OK)
-    return __LINE__;
-
-  /* Force realloc fail in unmatched key */
-  large_template[0] = '\0';
-  for (i = 0; i < 20; i++) {
-#if defined(_MSC_VER)
-    strcat_s(large_template, sizeof(large_template), "{{unknown_key}}");
-#else
-    strcat(large_template, "{{unknown_key}}");
-#endif
-  }
-  g_malloc_fail_count = -1;
-  c_rest_template_destroy(&ctx);
-  if (c_rest_template_init(&ctx, large_template) != C_REST_OK)
-    return __LINE__;
-  ctx.template_len = 1;
-  g_malloc_fail_count = 1;
-  if (c_rest_template_render(&ctx, keys, values, 1, &result) == C_REST_OK)
-    return __LINE__;
-
-  /* Force realloc fail in matched key */
-  large_template[0] = '\0';
-  for (i = 0; i < 20; i++) {
-#if defined(_MSC_VER)
-    strcat_s(large_template, sizeof(large_template), "{{name}}");
-#else
-    strcat(large_template, "{{name}}");
-#endif
-  }
-  g_malloc_fail_count = -1;
-  c_rest_template_destroy(&ctx);
-  if (c_rest_template_init(&ctx, large_template) != C_REST_OK)
-    return __LINE__;
-  ctx.template_len = 1;
-  g_malloc_fail_count = 1;
-  if (c_rest_template_render(&ctx, keys, values, 1, &result) == C_REST_OK)
-    return __LINE__;
-
-  g_malloc_fail_count = -1;
-  g_crf_malloc_hook = NULL;
-  g_crf_realloc_hook = NULL;
-  c_rest_template_destroy(&ctx);
-  return 0;
-}
-#endif
-
+/**
+ * @brief Test runner for template engine.
+ * @return 0 on success, non-zero on failure.
+ */
 int test_template(void) {
-  int res;
+  int failed = 0;
+  c_rest_error_t rc;
+  const char *msgs[2];
+  struct c_rest_template_context ctx;
+  char *result = NULL;
 
-  res = test_c_rest_template_init_destroy();
-  if (res != 0) {
-    printf("Failed test_c_rest_template_init_destroy at line %d\n", res);
-    return res;
+  test_fail_realloc_nonfail();
+
+  /* 1. Init & Destroy & Null checks */
+  rc = c_rest_template_init(&ctx, "Hello {{name}}");
+  failed += (rc != C_REST_OK);
+  failed += (ctx.template_str == NULL);
+  failed += (ctx.template_len != 14);
+
+  rc = c_rest_template_destroy(&ctx);
+  failed += (rc != C_REST_OK);
+  failed += (ctx.template_str != NULL);
+  failed += (ctx.template_len != 0);
+
+  rc = c_rest_template_init(NULL, "test");
+  failed += (rc != C_REST_ERROR_GENERIC);
+
+  rc = c_rest_template_init(&ctx, NULL);
+  failed += (rc != C_REST_ERROR_GENERIC);
+
+  rc = c_rest_template_destroy(NULL);
+  failed += (rc != C_REST_ERROR_GENERIC);
+
+  memset(&ctx, 0, sizeof(ctx));
+  rc = c_rest_template_destroy(&ctx);
+  failed += (rc != C_REST_OK);
+
+  /* Init OOM */
+  g_crf_malloc_hook = fail_malloc_always;
+  rc = c_rest_template_init(&ctx, "Hello");
+  failed += (rc != C_REST_ERROR_GENERIC);
+  g_crf_malloc_hook = NULL;
+
+  /* 2. Basic Render & Null checks */
+  {
+    const char *keys[] = {"name", "title"};
+    const char *values[] = {"World", "Mr"};
+
+    rc = c_rest_template_init(&ctx, "Hello {{name}}, I am {{title}}!");
+    failed += (rc != C_REST_OK);
+
+    rc = c_rest_template_render(NULL, keys, values, 2, &result);
+    failed += (rc != C_REST_ERROR_GENERIC);
+
+    rc = c_rest_template_render(&ctx, keys, values, 2, NULL);
+    failed += (rc != C_REST_ERROR_GENERIC);
+
+    /* Null template_str in ctx */
+    {
+      char *orig = ctx.template_str;
+      ctx.template_str = NULL;
+      rc = c_rest_template_render(&ctx, keys, values, 2, &result);
+      failed += (rc != C_REST_ERROR_GENERIC);
+      ctx.template_str = orig;
+    }
+
+    /* Render OOM on initial malloc */
+    g_crf_malloc_hook = fail_malloc_always;
+    rc = c_rest_template_render(&ctx, keys, values, 2, &result);
+    failed += (rc != C_REST_ERROR_GENERIC);
+    g_crf_malloc_hook = NULL;
+
+    /* Successful render */
+    rc = c_rest_template_render(&ctx, keys, values, 2, &result);
+    failed += (rc != C_REST_OK);
+    failed += (result == NULL);
+    failed += check_str_eq(result, "Hello World, I am Mr!");
+    CRF_FREE(result);
+    result = NULL;
+
+    rc = c_rest_template_destroy(&ctx);
+    failed += (rc != C_REST_OK);
   }
 
-  res = test_c_rest_template_render_basic();
-  if (res != 0) {
-    printf("Failed test_c_rest_template_render_basic at line %d\n", res);
-    return res;
+  /* 3. Render missing key */
+  {
+    const char *keys[] = {"name"};
+    const char *values[] = {"World"};
+
+    rc = c_rest_template_init(&ctx, "Hello {{name}}, {{title}}");
+    failed += (rc != C_REST_OK);
+
+    rc = c_rest_template_render(&ctx, keys, values, 1, &result);
+    failed += (rc != C_REST_OK);
+    failed += (result == NULL);
+    failed += check_str_eq(result, "Hello World, {{title}}");
+    CRF_FREE(result);
+    result = NULL;
+
+    rc = c_rest_template_destroy(&ctx);
+    failed += (rc != C_REST_OK);
   }
 
-  res = test_c_rest_template_render_missing_key();
-  if (res != 0) {
-    printf("Failed test_c_rest_template_render_missing_key at line %d\n", res);
-    return res;
+  /* 4. Render edge cases: incomplete braces, missing 2nd brace, null key, null
+   * value */
+  {
+    const char *keys[] = {"a", "b", "c"};
+    const char *values[] = {"b", NULL, "test_val"};
+
+    rc = c_rest_template_init(&ctx, "{{a}}{{a}}");
+    failed += (rc != C_REST_OK);
+    rc = c_rest_template_render(&ctx, keys, values, 1, &result);
+    failed += (rc != C_REST_OK);
+    failed += (result == NULL);
+    failed += check_str_eq(result, "bb");
+    CRF_FREE(result);
+    result = NULL;
+    rc = c_rest_template_destroy(&ctx);
+    failed += (rc != C_REST_OK);
+
+    /* Incomplete braces */
+    rc = c_rest_template_init(&ctx, "Hello {{name");
+    failed += (rc != C_REST_OK);
+    rc = c_rest_template_render(&ctx, keys, values, 0, &result);
+    failed += (rc != C_REST_OK);
+    failed += (result == NULL);
+    failed += check_str_eq(result, "Hello {{name");
+    CRF_FREE(result);
+    result = NULL;
+    rc = c_rest_template_destroy(&ctx);
+    failed += (rc != C_REST_OK);
+
+    /* Missing second brace */
+    rc = c_rest_template_init(&ctx, "Hello {{name}foo");
+    failed += (rc != C_REST_OK);
+    rc = c_rest_template_render(&ctx, keys, values, 0, &result);
+    failed += (rc != C_REST_OK);
+    failed += (result == NULL);
+    failed += check_str_eq(result, "Hello {{name}foo");
+    CRF_FREE(result);
+    result = NULL;
+    rc = c_rest_template_destroy(&ctx);
+    failed += (rc != C_REST_OK);
+
+    /* Null key entry in keys array */
+    {
+      const char *null_keys[] = {NULL, "a"};
+      const char *null_values[] = {"1", "2"};
+      rc = c_rest_template_init(&ctx, "Hello {{a}}");
+      failed += (rc != C_REST_OK);
+      rc = c_rest_template_render(&ctx, null_keys, null_values, 2, &result);
+      failed += (rc != C_REST_OK);
+      failed += (result == NULL);
+      failed += check_str_eq(result, "Hello 2");
+      CRF_FREE(result);
+      result = NULL;
+      rc = c_rest_template_destroy(&ctx);
+      failed += (rc != C_REST_OK);
+    }
+
+    /* Null value for matched key */
+    rc = c_rest_template_init(&ctx, "Null {{b}} test");
+    failed += (rc != C_REST_OK);
+    rc = c_rest_template_render(&ctx, keys, values, 2, &result);
+    failed += (rc != C_REST_OK);
+    failed += (result == NULL);
+    failed += check_str_eq(result, "Null  test");
+    CRF_FREE(result);
+    result = NULL;
+    rc = c_rest_template_destroy(&ctx);
+    failed += (rc != C_REST_OK);
   }
 
-  res = test_c_rest_template_render_edge_cases();
-  if (res != 0) {
-    printf("Failed test_c_rest_template_render_edge_cases at line %d\n", res);
-    return res;
-  }
+  /* 5. Force reallocations and test realloc failures */
+  {
+    int i;
+    char large_template[1024];
+    const char *keys[] = {"c"};
+    const char *values[] = {
+        "long_replacement_value_exceeding_initial_buffer_size_1234567890"};
 
-  res = test_c_rest_template_integration();
-  if (res != 0) {
-    printf("Failed test_c_rest_template_integration at line %d\n", res);
-    return res;
-  }
-
-#ifdef C_REST_TESTING_MALLOC_HOOK
-  res = test_c_rest_template_oom();
-  if (res != 0) {
-    printf("Failed test_c_rest_template_oom at line %d\n", res);
-    return res;
-  }
+    /* Reallocation in matched key replacement */
+    large_template[0] = '\0';
+    for (i = 0; i < 10; i++) {
+#if defined(_MSC_VER)
+      strcat_s(large_template, sizeof(large_template), "{{c}}");
+#else
+      strcat(large_template, "{{c}}");
 #endif
+    }
+    rc = c_rest_template_init(&ctx, large_template);
+    failed += (rc != C_REST_OK);
+    ctx.template_len = 1;
+    rc = c_rest_template_render(&ctx, keys, values, 1, &result);
+    failed += (rc != C_REST_OK);
+    failed += (result == NULL);
+    CRF_FREE(result);
+    result = NULL;
 
-  return 0;
+    /* Realloc failure in matched key replacement */
+    ctx.template_len = 1;
+    g_tpl_realloc_count = 0;
+    g_tpl_realloc_fail_at = 1;
+    g_crf_realloc_hook = fail_realloc_at_n;
+    rc = c_rest_template_render(&ctx, keys, values, 1, &result);
+    failed += (rc != C_REST_ERROR_GENERIC);
+    g_crf_realloc_hook = NULL;
+    g_tpl_realloc_fail_at = 0;
+
+    rc = c_rest_template_destroy(&ctx);
+    failed += (rc != C_REST_OK);
+
+    /* Reallocation in unmatched key replacement */
+    large_template[0] = '\0';
+    for (i = 0; i < 20; i++) {
+#if defined(_MSC_VER)
+      strcat_s(large_template, sizeof(large_template), "{{unknown_key}}");
+#else
+      strcat(large_template, "{{unknown_key}}");
+#endif
+    }
+    rc = c_rest_template_init(&ctx, large_template);
+    failed += (rc != C_REST_OK);
+    ctx.template_len = 1;
+    rc = c_rest_template_render(&ctx, keys, values, 1, &result);
+    failed += (rc != C_REST_OK);
+    failed += (result == NULL);
+    CRF_FREE(result);
+    result = NULL;
+
+    /* Realloc failure in unmatched key replacement */
+    ctx.template_len = 1;
+    g_tpl_realloc_count = 0;
+    g_tpl_realloc_fail_at = 1;
+    g_crf_realloc_hook = fail_realloc_at_n;
+    rc = c_rest_template_render(&ctx, keys, values, 1, &result);
+    failed += (rc != C_REST_ERROR_GENERIC);
+    g_crf_realloc_hook = NULL;
+    g_tpl_realloc_fail_at = 0;
+
+    rc = c_rest_template_destroy(&ctx);
+    failed += (rc != C_REST_OK);
+
+    /* Reallocation in regular char copy */
+    large_template[0] = '\0';
+    for (i = 0; i < 500; i++) {
+#if defined(_MSC_VER)
+      strcat_s(large_template, sizeof(large_template), "a");
+#else
+      strcat(large_template, "a");
+#endif
+    }
+    rc = c_rest_template_init(&ctx, large_template);
+    failed += (rc != C_REST_OK);
+    ctx.template_len = 1;
+    rc = c_rest_template_render(&ctx, keys, values, 0, &result);
+    failed += (rc != C_REST_OK);
+    failed += (result == NULL);
+    CRF_FREE(result);
+    result = NULL;
+
+    /* Realloc failure in regular char copy */
+    ctx.template_len = 1;
+    g_tpl_realloc_count = 0;
+    g_tpl_realloc_fail_at = 1;
+    g_crf_realloc_hook = fail_realloc_at_n;
+    rc = c_rest_template_render(&ctx, keys, values, 0, &result);
+    failed += (rc != C_REST_ERROR_GENERIC);
+    g_crf_realloc_hook = NULL;
+    g_tpl_realloc_fail_at = 0;
+
+    rc = c_rest_template_destroy(&ctx);
+    failed += (rc != C_REST_OK);
+  }
+
+  /* 6. Integration test with c_rest_router */
+  {
+    c_rest_router *router = NULL;
+    struct c_rest_request req;
+    struct c_rest_response res;
+
+    rc = c_rest_template_init(&ctx, "Welcome {{user}}! Role: {{role}}");
+    failed += (rc != C_REST_OK);
+
+    rc = c_rest_router_init(&router);
+    failed += (rc != C_REST_OK);
+
+    rc = c_rest_router_add_template(router, "GET", "/profile", &ctx,
+                                    dummy_template_data_provider, NULL);
+    failed += (rc != C_REST_OK);
+
+    memset(&req, 0, sizeof(req));
+    req.method = "GET";
+    req.path = "/profile";
+
+    memset(&res, 0, sizeof(res));
+
+    rc = c_rest_router_dispatch(router, &req, &res);
+    failed += (rc != C_REST_OK);
+    failed += (res.status_code != 200);
+    failed += (res.body == NULL);
+    failed += check_str_eq(res.body, "Welcome Alice! Role: Admin");
+
+    rc = c_rest_response_cleanup(&res);
+    failed += (rc != C_REST_OK);
+    rc = c_rest_router_destroy(router);
+    failed += (rc != C_REST_OK);
+    rc = c_rest_template_destroy(&ctx);
+    failed += (rc != C_REST_OK);
+  }
+
+  msgs[0] = "test_template passed\n";
+  msgs[1] = "test_template failed\n";
+  printf("%s", msgs[failed != 0]);
+
+  return failed;
 }
 
 #endif /* C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING */

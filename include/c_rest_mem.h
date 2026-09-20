@@ -51,41 +51,23 @@ C_REST_EXPORT void *test_c_rest_internal_realloc(void *ptr, size_t size);
 #define CRF_FREE free
 #endif
 
-/** @brief Internal wrapper for strdup to allow mocking. */
-#ifndef CRF_STRDUP
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT extern char *(*g_crf_strdup_hook)(const char *);
+#endif
 
 #ifdef _MSC_VER
 /** @brief Internal strdup implementation */
-#define CRF_STRDUP(s) (g_crf_strdup_hook ? g_crf_strdup_hook(s) : _strdup(s))
-#else
-/**
- * @brief Internal strdup implementation.
- * @param s String to duplicate.
- * @return Duplicated string.
- */
-C_REST_EXPORT extern char *c_rest_internal_strdup(const char *s);
-/** @brief Internal strdup implementation */
-#define CRF_STRDUP(s)                                                          \
-  (g_crf_strdup_hook ? g_crf_strdup_hook(s) : c_rest_internal_strdup(s))
-#endif
-#else
-#ifdef _MSC_VER
-/** @brief Internal strdup implementation */
 #define CRF_STRDUP _strdup
-#else
+#endif
+
 /**
  * @brief Internal strdup implementation.
  * @param s String to duplicate.
- * @return Duplicated string.
+ * @param out_str Pointer to store duplicated string.
+ * @return C_REST_OK on success, error enum on failure.
  */
-C_REST_EXPORT extern char *c_rest_internal_strdup(const char *s);
-/** @brief Internal strdup implementation */
-#define CRF_STRDUP c_rest_internal_strdup
-#endif
-#endif
-#endif
+C_REST_EXPORT extern c_rest_error_t c_rest_internal_strdup(const char *s,
+                                                           char **out_str);
 
 #ifdef __cplusplus
 extern "C" {

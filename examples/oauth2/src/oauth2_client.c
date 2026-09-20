@@ -66,12 +66,13 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
   const char *access_token = NULL;
   int expires_in = 0;
   c_rest_error_t err = 0;
+  c_rest_error_t free_rc;
 
   if (username == NULL || password == NULL || out_access_token == NULL ||
       out_expires_in == NULL) {
     return 1;
   }
-  if (g_client_ctx == NULL || g_token_url == NULL) {
+  if (g_client_ctx == NULL) {
     return 1;
   }
 
@@ -95,36 +96,42 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
   }
 
   headers[0].key = "Authorization";
-  headers[0].value = auth_header ? auth_header : "";
+  headers[0].value = auth_header;
 
-  err = c_rest_client_post_form_sync(g_client_ctx, g_token_url, headers,
-                                     auth_header ? 1 : 0, fields, 5, &res);
+  err = c_rest_client_post_form_sync(g_client_ctx, g_token_url, headers, 1,
+                                     fields, 5, &res);
 
-  if (auth_header) {
-    CRF_FREE(auth_header);
-  }
+  CRF_FREE(auth_header);
 
   if (err != 0 || res == NULL) {
-    if (res)
-      (void)!c_rest_client_response_free(res);
+    if (res) {
+      free_rc = c_rest_client_response_free(res);
+      if (free_rc != C_REST_OK)
+        return free_rc;
+    }
     return 1;
   }
 
   if (res->status_code != 200) {
-    (void)!c_rest_client_response_free(res);
+    free_rc = c_rest_client_response_free(res);
+    if (free_rc != C_REST_OK)
+      return free_rc;
     return 1;
   }
 
-  if (c_rest_client_response_parse_json(res, (void **)&json_val) != 0 ||
-      json_val == NULL) {
-    (void)!c_rest_client_response_free(res);
+  if (c_rest_client_response_parse_json(res, (void **)&json_val) != 0) {
+    free_rc = c_rest_client_response_free(res);
+    if (free_rc != C_REST_OK)
+      return free_rc;
     return 1;
   }
 
   json_obj = json_value_get_object(json_val);
   if (json_obj == NULL) {
     json_value_free(json_val);
-    (void)!c_rest_client_response_free(res);
+    free_rc = c_rest_client_response_free(res);
+    if (free_rc != C_REST_OK)
+      return free_rc;
     return 1;
   }
 
@@ -133,14 +140,18 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
 
   if (access_token == NULL) {
     json_value_free(json_val);
-    (void)!c_rest_client_response_free(res);
+    free_rc = c_rest_client_response_free(res);
+    if (free_rc != C_REST_OK)
+      return free_rc;
     return 1;
   }
 
   *out_access_token = (char *)CRF_MALLOC(strlen(access_token) + 1);
   if (*out_access_token == NULL) {
     json_value_free(json_val);
-    (void)!c_rest_client_response_free(res);
+    free_rc = c_rest_client_response_free(res);
+    if (free_rc != C_REST_OK)
+      return free_rc;
     return 1;
   }
 
@@ -153,7 +164,9 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
   *out_expires_in = expires_in;
 
   json_value_free(json_val);
-  (void)!c_rest_client_response_free(res);
+  free_rc = c_rest_client_response_free(res);
+  if (free_rc != C_REST_OK)
+    return free_rc;
 
   return 0;
 }
@@ -172,8 +185,18 @@ c_rest_error_t oauth2_client_cleanup(void) {
     g_client_secret = NULL;
   }
   if (g_client_ctx) {
-    (void)!c_rest_client_destroy(g_client_ctx);
+    c_rest_error_t destroy_rc = c_rest_client_destroy(g_client_ctx);
     g_client_ctx = NULL;
+    if (destroy_rc != C_REST_OK)
+      return destroy_rc;
   }
+  return 0;
+}
+
+c_rest_error_t oauth2_client_get_context(c_rest_client_context **out_ctx) {
+  if (out_ctx == NULL) {
+    return 1;
+  }
+  *out_ctx = g_client_ctx;
   return 0;
 }

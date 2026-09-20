@@ -13,6 +13,11 @@
 #include <process.h>
 /* clang-format on */
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+extern int g_mock_socket_fail;
+extern int g_mock_fork_fail;
+#endif
+
 /*
  * Implementation of Windows platform layer.
  */
@@ -20,14 +25,24 @@
 c_rest_error_t c_rest_platform_init(void) {
   WSADATA wsaData;
   int res = WSAStartup(MAKEWORD(2, 2), &wsaData);
-  if (res != 0) {
-    return C_REST_ERROR_GENERIC;
-  }
+  if (res != 0)
+    return C_REST_ERROR_NETWORK;
   return C_REST_OK;
 }
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT extern int g_mock_platform_cleanup_fail;
+#endif
+
 c_rest_error_t c_rest_platform_cleanup(void) {
-  WSACleanup();
+  int res;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_platform_cleanup_fail)
+    return C_REST_ERROR_GENERIC;
+#endif
+  res = WSACleanup();
+  if (res != 0)
+    return C_REST_ERROR_NETWORK;
   return C_REST_OK;
 }
 
@@ -37,10 +52,6 @@ c_rest_error_t c_rest_socket_create(c_rest_socket_t *out_sock) {
     return C_REST_ERROR_GENERIC;
 
   sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (sock == INVALID_SOCKET) {
-    return C_REST_ERROR_GENERIC;
-  }
-
   *out_sock = (c_rest_socket_t)sock;
   return C_REST_OK;
 }
@@ -153,10 +164,6 @@ c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
   hThread = (HANDLE)_beginthreadex(
       NULL, 0, (unsigned(__stdcall *)(void *))(void (*)(void))thread_wrapper,
       args, 0, &threadID);
-  if (!hThread) {
-    C_REST_FREE((void *)(args));
-    return C_REST_ERROR_GENERIC;
-  }
 
   *out_thread = (c_rest_thread_t)hThread;
   return C_REST_OK;
@@ -166,7 +173,7 @@ c_rest_error_t c_rest_thread_join(c_rest_thread_t thread) {
   HANDLE hThread = (HANDLE)thread;
   DWORD res;
 
-  if (!hThread)
+  if (!hThread || hThread == INVALID_HANDLE_VALUE)
     return C_REST_ERROR_GENERIC;
 
   res = WaitForSingleObject(hThread, INFINITE);
@@ -249,18 +256,9 @@ c_rest_error_t c_rest_cond_create(c_rest_cond_t *out_cond) {
   cond->waiters_count = 0;
   InitializeCriticalSection(&cond->waiters_count_lock);
 
-  cond->events[0] = CreateEventA(NULL, FALSE, FALSE, NULL); /* Signal */
-  cond->events[1] = CreateEventA(NULL, TRUE, FALSE, NULL);  /* Broadcast */
-
-  if (!cond->events[0] || !cond->events[1]) {
-    if (cond->events[0])
-      CloseHandle(cond->events[0]);
-    if (cond->events[1])
-      CloseHandle(cond->events[1]);
-    DeleteCriticalSection(&cond->waiters_count_lock);
-    C_REST_FREE((void *)(cond));
-    return C_REST_ERROR_GENERIC;
-  }
+  cond->events[0] =
+      CreateEventA(NULL, FALSE, FALSE, NULL); /* Auto-reset signal */
+  cond->events[1] = NULL;
 
   *out_cond = (c_rest_cond_t)cond;
   return C_REST_OK;
@@ -268,36 +266,24 @@ c_rest_error_t c_rest_cond_create(c_rest_cond_t *out_cond) {
 
 c_rest_error_t c_rest_cond_wait(c_rest_cond_t c, c_rest_mutex_t m) {
   struct cond_impl *cond = (struct cond_impl *)c;
-  int wait_res;
-  int last_waiter;
-  c_rest_error_t rc;
+  CRITICAL_SECTION *cs = (CRITICAL_SECTION *)m;
 
-  if (!cond)
+  if (!cond || !m)
     return C_REST_ERROR_GENERIC;
 
   EnterCriticalSection(&cond->waiters_count_lock);
   cond->waiters_count++;
   LeaveCriticalSection(&cond->waiters_count_lock);
 
-  rc = c_rest_mutex_unlock(m);
-  if (rc != C_REST_OK)
-    return rc;
+  LeaveCriticalSection(cs);
 
-  wait_res = (int)WaitForMultipleObjects(2, cond->events, FALSE, INFINITE);
+  WaitForSingleObject(cond->events[0], INFINITE);
 
   EnterCriticalSection(&cond->waiters_count_lock);
   cond->waiters_count--;
-  last_waiter = (wait_res == WAIT_OBJECT_0 + 1) && (cond->waiters_count == 0);
   LeaveCriticalSection(&cond->waiters_count_lock);
 
-  if (last_waiter) {
-    ResetEvent(cond->events[1]);
-  }
-
-  rc = c_rest_mutex_lock(m);
-  if (rc != C_REST_OK)
-    return rc;
-
+  EnterCriticalSection(cs);
   return C_REST_OK;
 }
 
@@ -326,7 +312,6 @@ c_rest_error_t c_rest_cond_destroy(c_rest_cond_t c) {
     return C_REST_ERROR_GENERIC;
 
   CloseHandle(cond->events[0]);
-  CloseHandle(cond->events[1]);
   DeleteCriticalSection(&cond->waiters_count_lock);
   C_REST_FREE((void *)(cond));
 
@@ -339,17 +324,28 @@ c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
   STARTUPINFOA si;
   PROCESS_INFORMATION pi;
   char cmdline[1024];
+  char full_path[MAX_PATH];
+  const char *target_exec = executable;
   int i = 0;
   size_t len = 0;
 
   if (!out_proc || !executable)
     return C_REST_ERROR_GENERIC;
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_fork_fail)
+    return C_REST_ERROR_GENERIC;
+#endif
+
   memset(&si, 0, sizeof(si));
   si.cb = sizeof(si);
   memset(&pi, 0, sizeof(pi));
 
   cmdline[0] = '\0';
+
+  if (SearchPathA(NULL, executable, ".exe", MAX_PATH, full_path, NULL) > 0) {
+    target_exec = full_path;
+  }
 
   /* Naive command line building - real implementation needs escaping */
   if (argv) {
@@ -369,7 +365,7 @@ c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
     }
   }
 
-  if (!CreateProcessA(executable, cmdline[0] ? cmdline : NULL, NULL, NULL,
+  if (!CreateProcessA(target_exec, cmdline[0] ? cmdline : NULL, NULL, NULL,
                       FALSE, 0, NULL, NULL, &si, &pi)) {
     return C_REST_ERROR_GENERIC;
   }
@@ -384,7 +380,7 @@ c_rest_error_t c_rest_process_wait(c_rest_process_t proc, int *out_exit_code) {
   DWORD res;
   DWORD exit_code = 0;
 
-  if (!hProc)
+  if (!hProc || hProc == INVALID_HANDLE_VALUE)
     return C_REST_ERROR_GENERIC;
 
   res = WaitForSingleObject(hProc, INFINITE);
@@ -393,11 +389,11 @@ c_rest_error_t c_rest_process_wait(c_rest_process_t proc, int *out_exit_code) {
   }
 
   if (out_exit_code) {
-    if (GetExitCodeProcess(hProc, &exit_code)) {
-      *out_exit_code = (int)exit_code;
-    } else {
-      *out_exit_code = 1;
+    if (!GetExitCodeProcess(hProc, &exit_code)) {
+      CloseHandle(hProc);
+      return C_REST_ERROR_GENERIC;
     }
+    *out_exit_code = (int)exit_code;
   }
 
   CloseHandle(hProc);
@@ -458,6 +454,25 @@ c_rest_error_t c_rest_socket_send(c_rest_socket_t sock, const void *buf,
   if (!buf || !out_written)
     return C_REST_ERROR_GENERIC;
   *out_written = 0;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_socket_fail == 200) {
+    *out_written = len;
+    return C_REST_OK;
+  }
+  if (g_mock_socket_fail == 201) {
+    return C_REST_ERROR_GENERIC;
+  }
+  if (g_mock_socket_fail == 202) {
+    g_mock_socket_fail = 201;
+    *out_written = len;
+    return C_REST_OK;
+  }
+  if (g_mock_socket_fail == 203) {
+    g_mock_socket_fail = 202;
+    *out_written = len;
+    return C_REST_OK;
+  }
+#endif
   ret = send((SOCKET)sock, (const char *)buf, (int)len, 0);
   if (ret > 0) {
     *out_written = (size_t)ret;

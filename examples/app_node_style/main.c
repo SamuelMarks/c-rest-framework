@@ -22,9 +22,8 @@ static c_rest_error_t handle_hello_world(struct c_rest_request *req,
                                          void *user_data) {
   (void)req;
   (void)user_data;
-  (void)!c_rest_response_json(
+  return c_rest_response_json(
       res, "{\"message\": \"Hello from Async Node Style!\"}");
-  return 0;
 }
 
 static c_rest_error_t handle_echo(struct c_rest_request *req,
@@ -47,8 +46,7 @@ static c_rest_error_t handle_echo(struct c_rest_request *req,
   sprintf(buf, "{\"echo\": \"Hello %s\"}", name);
 #endif
 
-  (void)!c_rest_response_json(res, buf);
-  return 0;
+  return c_rest_response_json(res, buf);
 }
 
 static void sig_handler(int sig) {
@@ -57,7 +55,6 @@ static void sig_handler(int sig) {
 }
 
 int main(void) {
-
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   c_rest_error_t rc;
@@ -77,14 +74,29 @@ int main(void) {
   rc = c_rest_router_init(&router);
   if (rc != 0) {
     fprintf(stderr, "Failed to initialize router.\n");
-    (void)!c_rest_destroy(ctx);
+    c_rest_destroy(ctx);
     return 1;
   }
 
-  (void)!c_rest_set_router(ctx, router);
-  (void)!c_rest_router_add(router, "GET", "/api/v0/hello", handle_hello_world,
-                           NULL);
-  (void)!c_rest_router_add(router, "GET", "/api/v0/echo", handle_echo, NULL);
+  rc = c_rest_set_router(ctx, router);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  rc = c_rest_router_add(router, "GET", "/api/v0/hello", handle_hello_world,
+                         NULL);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  rc = c_rest_router_add(router, "GET", "/api/v0/echo", handle_echo, NULL);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    c_rest_destroy(ctx);
+    return 1;
+  }
 
   /* In a real app, router is hooked into ctx here */
 
@@ -95,8 +107,14 @@ int main(void) {
   }
 
   printf("Shutting down...\n");
-  (void)!c_rest_router_destroy(router);
-  (void)!c_rest_destroy(ctx);
+  rc = c_rest_router_destroy(router);
+  if (rc != C_REST_OK) {
+    c_rest_destroy(ctx);
+    return 1;
+  }
+  rc = c_rest_destroy(ctx);
+  if (rc != C_REST_OK)
+    return 1;
 
   return 0;
 }

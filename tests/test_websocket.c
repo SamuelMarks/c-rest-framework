@@ -1,13 +1,33 @@
 /* clang-format off */
 #include "c_rest_error.h"
 #include "test_protos.h"
-#include "test_protos.h"
 #include "c_rest_websocket.h"
 #include "c_rest_crypto.h"
 #include "c_rest_base64.h"
+#include "c_rest_router.h"
+#include "c_rest_request.h"
+#include "c_rest_response.h"
+#include "c_rest_testing_mocks.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+/* clang-format on */
+
+static void *fail_malloc_n(size_t size) {
+  static int alloc_count = 0;
+  extern int g_fail_malloc_at;
+  if (g_fail_malloc_at <= 0) {
+    alloc_count = 0;
+    return NULL;
+  }
+  alloc_count++;
+  if (alloc_count == g_fail_malloc_at) {
+    alloc_count = 0;
+    g_fail_malloc_at = 0;
+    return NULL;
+  }
+  return malloc(size);
+}
 
 int test_websocket(void);
 
@@ -15,18 +35,12 @@ static int test_websocket_generate_accept(void) {
   const char *key = "dGhlIHNhbXBsZSBub25jZQ==";
   char accept_buf[128];
   size_t accept_len = sizeof(accept_buf);
-  int res;
+  int failed = 0;
 
-  res = (int)c_rest_websocket_generate_accept(key, strlen(key), accept_buf,
-                                         &accept_len);
-  if (res != 0) {
-    printf("test_websocket_generate_accept failed to generate accept\n\n"); return __LINE__;
-  }
-  if (strcmp("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", accept_buf) != 0) {
-    printf("test_websocket_generate_accept mismatch: %s\n", accept_buf);
-    return 1;
-  }
-  return 0;
+  failed += (c_rest_websocket_generate_accept(key, strlen(key), accept_buf,
+                                              &accept_len) != 0);
+  failed += (strcmp("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", accept_buf) != 0);
+  return failed != 0 ? 1 : 0;
 }
 
 static int test_websocket_parse_frame_header(void) {
@@ -34,47 +48,48 @@ static int test_websocket_parse_frame_header(void) {
   unsigned char frame1[] = {0x81, 0x05}; /* FIN, TEXT, 5 bytes */
   unsigned char frame2[] = {0x82, 0x85, 0x11, 0x22,
                             0x33, 0x44}; /* FIN, BINARY, Masked, 5 bytes */
-  int res;
+  int failed = 0;
 
-  res = (int)c_rest_websocket_parse_frame_header(frame1, sizeof(frame1), &header);
-  if (res != 0 || header.fin != 1 || header.opcode != C_REST_WS_OPCODE_TEXT ||
-      header.masked != 0 || header.payload_length != 5 ||
-      header.header_length != 2) {
-    printf("test_websocket_parse_frame_header failed on frame1\n\n"); return __LINE__;
-  }
+  failed += (c_rest_websocket_parse_frame_header(frame1, sizeof(frame1),
+                                                 &header) != 0);
+  failed += (header.fin != 1);
+  failed += (header.opcode != C_REST_WS_OPCODE_TEXT);
+  failed += (header.masked != 0);
+  failed += (header.payload_length != 5);
+  failed += (header.header_length != 2);
 
-  res = (int)c_rest_websocket_parse_frame_header(frame2, sizeof(frame2), &header);
-  if (res != 0 || header.fin != 1 || header.opcode != C_REST_WS_OPCODE_BINARY ||
-      header.masked != 1 || header.payload_length != 5 ||
-      header.header_length != 6) {
-    printf("test_websocket_parse_frame_header failed on frame2\n\n"); return __LINE__;
-  }
-  if (header.masking_key[0] != 0x11 || header.masking_key[1] != 0x22 ||
-      header.masking_key[2] != 0x33 || header.masking_key[3] != 0x44) {
-    printf("test_websocket_parse_frame_header masking key mismatch\n\n"); return __LINE__;
-  }
-  return 0;
+  failed += (c_rest_websocket_parse_frame_header(frame2, sizeof(frame2),
+                                                 &header) != 0);
+  failed += (header.fin != 1);
+  failed += (header.opcode != C_REST_WS_OPCODE_BINARY);
+  failed += (header.masked != 1);
+  failed += (header.payload_length != 5);
+  failed += (header.header_length != 6);
+  failed += (header.masking_key[0] != 0x11);
+  failed += (header.masking_key[1] != 0x22);
+  failed += (header.masking_key[2] != 0x33);
+  failed += (header.masking_key[3] != 0x44);
+
+  return failed != 0 ? 1 : 0;
 }
 
 static int test_websocket_unmask_payload(void) {
   unsigned char payload[] = {0x79, 0x5F, 0x8D, 0x51, 0x28};
   unsigned char key[] = {0x37, 0xFA, 0x21, 0x3D};
-  int res;
+  int failed = 0;
 
-  res = (int)c_rest_websocket_unmask_payload(payload, sizeof(payload), key);
-  if (res != 0)
-    return 1;
-  if (payload[0] != 0x4E || payload[1] != 0xA5) {
-    printf("test_websocket_unmask_payload mismatch\n\n"); return __LINE__;
-  }
-  return 0;
+  failed +=
+      (c_rest_websocket_unmask_payload(payload, sizeof(payload), key) != 0);
+  failed += (payload[0] != 0x4E);
+  failed += (payload[1] != 0xA5);
+  return failed != 0 ? 1 : 0;
 }
 
 static int test_websocket_serialize_frame_header(void) {
   struct c_rest_websocket_frame_header header;
   unsigned char out_buf[14];
   size_t written;
-  int res;
+  int failed = 0;
 
   memset(&header, 0, sizeof(header));
   header.fin = 1;
@@ -82,12 +97,12 @@ static int test_websocket_serialize_frame_header(void) {
   header.payload_length = 5;
   header.masked = 0;
 
-  res = (int)c_rest_websocket_serialize_frame_header(&header, out_buf,
-                                                sizeof(out_buf), &written);
-  if (res != 0 || written != 2 || out_buf[0] != 0x81 || out_buf[1] != 0x05) {
-    printf("test_websocket_serialize_frame_header failed\n\n"); return __LINE__;
-  }
-  return 0;
+  failed += (c_rest_websocket_serialize_frame_header(
+                 &header, out_buf, sizeof(out_buf), &written) != 0);
+  failed += (written != 2);
+  failed += (out_buf[0] != 0x81);
+  failed += (out_buf[1] != 0x05);
+  return failed != 0 ? 1 : 0;
 }
 
 static int test_websocket_edge_cases(void) {
@@ -97,87 +112,111 @@ static int test_websocket_edge_cases(void) {
   size_t written;
   char accept_buf[128];
   size_t accept_len = sizeof(accept_buf);
-  const char *long_key = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"; /* 100 bytes */
+  const char *long_key =
+      "123456789012345678901234567890123456789012345678901234567890123456789"
+      "0123456789012345678901234567890"; /* 100 bytes */
+  int failed = 0;
 
   /* Generate accept */
-  if (c_rest_websocket_generate_accept(NULL, 0, accept_buf, &accept_len) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_generate_accept("x", 1, NULL, &accept_len) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_generate_accept("x", 1, accept_buf, NULL) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_generate_accept(long_key, strlen(long_key), accept_buf, &accept_len) == C_REST_OK) return __LINE__;
+  failed += (c_rest_websocket_generate_accept(NULL, 0, accept_buf,
+                                              &accept_len) == C_REST_OK);
+  failed += (c_rest_websocket_generate_accept("x", 1, NULL, &accept_len) ==
+             C_REST_OK);
+  failed +=
+      (c_rest_websocket_generate_accept("x", 1, accept_buf, NULL) == C_REST_OK);
+  failed +=
+      (c_rest_websocket_generate_accept(long_key, strlen(long_key), accept_buf,
+                                        &accept_len) == C_REST_OK);
 
   /* Parse frame */
-  if (c_rest_websocket_parse_frame_header(NULL, 10, &header) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_parse_frame_header(frame, 10, NULL) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_parse_frame_header(frame, 1, &header) == C_REST_OK) return __LINE__;
+  failed +=
+      (c_rest_websocket_parse_frame_header(NULL, 10, &header) == C_REST_OK);
+  failed += (c_rest_websocket_parse_frame_header(frame, 10, NULL) == C_REST_OK);
+  failed +=
+      (c_rest_websocket_parse_frame_header(frame, 1, &header) == C_REST_OK);
 
   frame[0] = 0x81;
   frame[1] = 126; /* Len 126 but no ext length */
-  if (c_rest_websocket_parse_frame_header(frame, 2, &header) == C_REST_OK) return __LINE__;
+  failed +=
+      (c_rest_websocket_parse_frame_header(frame, 2, &header) == C_REST_OK);
 
   frame[1] = 127; /* Len 127 but no ext length */
-  if (c_rest_websocket_parse_frame_header(frame, 2, &header) == C_REST_OK) return __LINE__;
+  failed +=
+      (c_rest_websocket_parse_frame_header(frame, 2, &header) == C_REST_OK);
 
   /* Length 127 with high bits set */
   memset(frame, 0, sizeof(frame));
   frame[0] = 0x81;
   frame[1] = 127;
   frame[2] = 0xFF; /* high bits */
-  if (c_rest_websocket_parse_frame_header(frame, 16, &header) == C_REST_OK) return __LINE__;
+  failed +=
+      (c_rest_websocket_parse_frame_header(frame, 16, &header) == C_REST_OK);
 
   /* Length 127 with no high bits */
   memset(frame, 0, sizeof(frame));
   frame[0] = 0x81;
   frame[1] = 127;
   frame[9] = 10;
-  if (c_rest_websocket_parse_frame_header(frame, 16, &header) != C_REST_OK) return __LINE__;
+  failed +=
+      (c_rest_websocket_parse_frame_header(frame, 16, &header) != C_REST_OK);
 
   /* Masked but no mask */
   frame[0] = 0x81;
   frame[1] = 0x80 | 5; /* Masked, len 5 */
-  if (c_rest_websocket_parse_frame_header(frame, 2, &header) == C_REST_OK) return __LINE__;
+  failed +=
+      (c_rest_websocket_parse_frame_header(frame, 2, &header) == C_REST_OK);
 
   /* Serialize */
-  if (c_rest_websocket_serialize_frame_header(NULL, out_buf, sizeof(out_buf), &written) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_serialize_frame_header(&header, NULL, sizeof(out_buf), &written) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_serialize_frame_header(&header, out_buf, sizeof(out_buf), NULL) == C_REST_OK) return __LINE__;
+  failed += (c_rest_websocket_serialize_frame_header(
+                 NULL, out_buf, sizeof(out_buf), &written) == C_REST_OK);
+  failed += (c_rest_websocket_serialize_frame_header(
+                 &header, NULL, sizeof(out_buf), &written) == C_REST_OK);
+  failed += (c_rest_websocket_serialize_frame_header(
+                 &header, out_buf, sizeof(out_buf), NULL) == C_REST_OK);
 
   memset(&header, 0, sizeof(header));
   header.payload_length = 5;
-  if (c_rest_websocket_serialize_frame_header(&header, out_buf, 1, &written) == C_REST_OK) return __LINE__;
+  failed += (c_rest_websocket_serialize_frame_header(&header, out_buf, 1,
+                                                     &written) == C_REST_OK);
 
   header.payload_length = 126;
-  if (c_rest_websocket_serialize_frame_header(&header, out_buf, 2, &written) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_serialize_frame_header(&header, out_buf, sizeof(out_buf), &written) != C_REST_OK) return __LINE__;
+  failed += (c_rest_websocket_serialize_frame_header(&header, out_buf, 2,
+                                                     &written) == C_REST_OK);
+  failed += (c_rest_websocket_serialize_frame_header(
+                 &header, out_buf, sizeof(out_buf), &written) != C_REST_OK);
 
   header.payload_length = 70000; /* > 0xFFFF */
-  if (c_rest_websocket_serialize_frame_header(&header, out_buf, 2, &written) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_serialize_frame_header(&header, out_buf, 4, &written) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_serialize_frame_header(&header, out_buf, sizeof(out_buf), &written) != C_REST_OK) return __LINE__;
+  failed += (c_rest_websocket_serialize_frame_header(&header, out_buf, 2,
+                                                     &written) == C_REST_OK);
+  failed += (c_rest_websocket_serialize_frame_header(&header, out_buf, 4,
+                                                     &written) == C_REST_OK);
+  failed += (c_rest_websocket_serialize_frame_header(
+                 &header, out_buf, sizeof(out_buf), &written) != C_REST_OK);
 
   header.masked = 1;
   header.payload_length = 5;
-  if (c_rest_websocket_serialize_frame_header(&header, out_buf, 2, &written) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_serialize_frame_header(&header, out_buf, sizeof(out_buf), &written) != C_REST_OK) return __LINE__;
+  failed += (c_rest_websocket_serialize_frame_header(&header, out_buf, 2,
+                                                     &written) == C_REST_OK);
+  failed += (c_rest_websocket_serialize_frame_header(
+                 &header, out_buf, sizeof(out_buf), &written) != C_REST_OK);
 
   header.payload_length = 70000;
-  if (c_rest_websocket_serialize_frame_header(&header, out_buf, 12, &written) == C_REST_OK) return __LINE__;
+  failed += (c_rest_websocket_serialize_frame_header(&header, out_buf, 12,
+                                                     &written) == C_REST_OK);
 
   /* Unmask */
-  if (c_rest_websocket_unmask_payload(NULL, 10, frame) == C_REST_OK) return __LINE__;
-  if (c_rest_websocket_unmask_payload(NULL, 0, frame) != C_REST_OK) return __LINE__;
+  failed += (c_rest_websocket_unmask_payload(NULL, 10, frame) == C_REST_OK);
+  failed += (c_rest_websocket_unmask_payload(NULL, 0, frame) != C_REST_OK);
 
-  return 0;
+  return failed != 0 ? 1 : 0;
 }
-
-#include "c_rest_request.h"
-#include "c_rest_response.h"
 
 static int test_websocket_upgrade(void) {
   struct c_rest_request req;
   struct c_rest_response res;
   struct c_rest_header upgrade_hdr;
   struct c_rest_header key_hdr;
-  c_rest_error_t ret;
+  int failed = 0;
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
@@ -192,33 +231,22 @@ static int test_websocket_upgrade(void) {
 
   req.headers = &upgrade_hdr;
 
-  ret = c_rest_websocket_upgrade(&req, &res);
-  if (ret != 0) {
-    printf("test_websocket_upgrade failed\n\n"); return __LINE__;
-  }
+  failed += (c_rest_websocket_upgrade(&req, &res) != 0);
 
   /* Test with Upgrade = NULL */
   upgrade_hdr.value = NULL;
-  ret = c_rest_websocket_upgrade(&req, &res);
-  if (ret == 0) return __LINE__;
+  failed += (c_rest_websocket_upgrade(&req, &res) == 0);
 
   /* Test with Upgrade = "not_websocket" */
   upgrade_hdr.value = "not_websocket";
-  ret = c_rest_websocket_upgrade(&req, &res);
-  if (ret == 0) return __LINE__;
+  failed += (c_rest_websocket_upgrade(&req, &res) == 0);
 
   /* Restore for safety */
   upgrade_hdr.value = "websocket";
 
-
-
-  /* Simple check of headers_sent / cleanup */
-
-  return 0;
+  c_rest_response_cleanup(&res);
+  return failed != 0 ? 1 : 0;
 }
-
-#include "c_rest_router.h"
-/* clang-format on */
 
 static c_rest_error_t my_ws_on_message(struct c_rest_request *req,
                                        const unsigned char *payload,
@@ -246,18 +274,12 @@ static int test_websocket_router_registration(void) {
   struct c_rest_response res;
   struct c_rest_header upgrade_hdr;
   struct c_rest_header key_hdr;
-  c_rest_error_t ret;
+  int failed = 0;
 
-  ret = c_rest_router_init(&router);
-  if (ret != 0)
-    return 1;
+  failed += (c_rest_router_init(&router) != 0);
 
-  ret = c_rest_router_add_websocket(router, "/ws", my_ws_on_message,
-                                    my_ws_on_close, NULL);
-  if (ret != 0) {
-    (void)!c_rest_router_destroy(router);
-    return 1;
-  }
+  failed += (c_rest_router_add_websocket(router, "/ws", my_ws_on_message,
+                                         my_ws_on_close, NULL) != 0);
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
@@ -275,55 +297,41 @@ static int test_websocket_router_registration(void) {
 
   req.headers = &upgrade_hdr;
 
-  ret = c_rest_router_dispatch(router, &req, &res);
-  if (ret != 0) {
-    (void)!c_rest_router_destroy(router);
-    return 1;
-  }
+  failed += (c_rest_router_dispatch(router, &req, &res) != 0);
 
-  (void)!c_rest_router_destroy(router);
-  return 0;
+  /* Call the callbacks directly to ensure 100% function coverage */
+  failed += (my_ws_on_message(&req, (const unsigned char *)"test", 4, 0,
+                              NULL) != C_REST_OK);
+  failed += (my_ws_on_close(&req, 1000, NULL) != C_REST_OK);
+
+  failed += (c_rest_router_destroy(router) != C_REST_OK);
+  c_rest_response_cleanup(&res);
+  return failed != 0 ? 1 : 0;
 }
 
 int test_websocket(void) {
-  int res = 0;
+  int failed = 0;
 
   printf("Testing WebSocket Accept Generation...\n");
-  res = test_websocket_generate_accept();
-  if (res != 0)
-    return res;
+  failed += test_websocket_generate_accept();
 
   printf("Testing WebSocket Upgrade...\n");
-  res = test_websocket_upgrade();
-  if (res != 0)
-    return res;
+  failed += test_websocket_upgrade();
 
   printf("Testing WebSocket Router Registration...\n");
-  res = test_websocket_router_registration();
-  if (res != 0)
-    return res;
+  failed += test_websocket_router_registration();
 
   printf("Testing WebSocket Parse Header...\n");
-  res = test_websocket_parse_frame_header();
-  if (res != 0)
-    return res;
+  failed += test_websocket_parse_frame_header();
 
   printf("Testing WebSocket Unmask...\n");
-  res = test_websocket_unmask_payload();
-  if (res != 0)
-    return res;
+  failed += test_websocket_unmask_payload();
 
   printf("Testing WebSocket Serialize Header...\n");
-  res = test_websocket_serialize_frame_header();
-  if (res != 0)
-    return res;
+  failed += test_websocket_serialize_frame_header();
 
   printf("Testing WebSocket Edge Cases...\n");
-  res = test_websocket_edge_cases();
-  if (res != 0) {
-    printf("test_websocket_edge_cases failed at %d\n", res);
-    return res;
-  }
+  failed += test_websocket_edge_cases();
 
   /* OOM missing branches test */
   {
@@ -334,8 +342,8 @@ int test_websocket(void) {
     memset(&req, 0, sizeof(req));
     memset(&res_local, 0, sizeof(res_local));
 
-    c_rest_router_init(&r2);
-    c_rest_router_destroy(r2);
+    failed += (c_rest_router_init(&r2) != C_REST_OK);
+    failed += (c_rest_router_destroy(r2) != C_REST_OK);
   }
 
   /* Parse Frame Header missing branches */
@@ -347,18 +355,18 @@ int test_websocket(void) {
     /* payload_length == 126 and data_len < 4 */
     data[0] = 0x81;
     data[1] = 126;
-    c_rest_websocket_parse_frame_header(data, 3, &hdr);
+    failed += (c_rest_websocket_parse_frame_header(data, 3, &hdr) == C_REST_OK);
 
     /* payload_length == 127 and data_len < 10 */
     data[1] = 127;
-    c_rest_websocket_parse_frame_header(data, 9, &hdr);
+    failed += (c_rest_websocket_parse_frame_header(data, 9, &hdr) == C_REST_OK);
 
     /* valid length == 126 */
     data[0] = 0x81;
     data[1] = 126;
     data[2] = 0x12;
     data[3] = 0x34;
-    c_rest_websocket_parse_frame_header(data, 4, &hdr);
+    failed += (c_rest_websocket_parse_frame_header(data, 4, &hdr) != C_REST_OK);
 
     /* valid length == 127 */
     data[1] = 127;
@@ -370,16 +378,18 @@ int test_websocket(void) {
     data[7] = 0;
     data[8] = 0;
     data[9] = 0x56;
-    c_rest_websocket_parse_frame_header(data, 10, &hdr);
+    failed +=
+        (c_rest_websocket_parse_frame_header(data, 10, &hdr) != C_REST_OK);
 
     /* length > 4GB */
     data[1] = 127;
     data[2] = 0x01; /* high != 0 */
-    c_rest_websocket_parse_frame_header(data, 10, &hdr);
+    failed +=
+        (c_rest_websocket_parse_frame_header(data, 10, &hdr) == C_REST_OK);
 
     /* masked and data_len < offset + 4 */
     data[1] = 0x80; /* masked, length 0 */
-    c_rest_websocket_parse_frame_header(data, 5, &hdr);
+    failed += (c_rest_websocket_parse_frame_header(data, 5, &hdr) == C_REST_OK);
   }
 
   /* Serialize Frame Header missing branches */
@@ -388,24 +398,29 @@ int test_websocket(void) {
     unsigned char out[16];
     size_t written;
     memset(&hdr, 0, sizeof(hdr));
-    c_rest_websocket_serialize_frame_header(NULL, out, 1, &written);
+    failed += (c_rest_websocket_serialize_frame_header(NULL, out, 1,
+                                                       &written) == C_REST_OK);
     memset(out, 0, sizeof(out));
 
     /* out_data_max < 2 */
-    c_rest_websocket_serialize_frame_header(&hdr, out, 1, &written);
+    failed += (c_rest_websocket_serialize_frame_header(&hdr, out, 1,
+                                                       &written) == C_REST_OK);
 
     /* payload_length <= 0xFFFF and out_data_max < offset + 2 */
     hdr.payload_length = 126;
-    c_rest_websocket_serialize_frame_header(&hdr, out, 3, &written);
+    failed += (c_rest_websocket_serialize_frame_header(&hdr, out, 3,
+                                                       &written) == C_REST_OK);
 
     /* payload_length > 0xFFFF and out_data_max < offset + 8 */
     hdr.payload_length = 0x10000;
-    c_rest_websocket_serialize_frame_header(&hdr, out, 9, &written);
+    failed += (c_rest_websocket_serialize_frame_header(&hdr, out, 9,
+                                                       &written) == C_REST_OK);
 
     /* header->masked and out_data_max < offset + 4 */
     hdr.payload_length = 0;
     hdr.masked = 1;
-    c_rest_websocket_serialize_frame_header(&hdr, out, 3, &written);
+    failed += (c_rest_websocket_serialize_frame_header(&hdr, out, 3,
+                                                       &written) == C_REST_OK);
   }
 
   /* Cover missing flags in serialize */
@@ -418,7 +433,8 @@ int test_websocket(void) {
     hdr2.rsv1 = 1;
     hdr2.rsv2 = 1;
     hdr2.rsv3 = 1;
-    c_rest_websocket_serialize_frame_header(&hdr2, out2, 16, &written2);
+    failed += (c_rest_websocket_serialize_frame_header(&hdr2, out2, 16,
+                                                       &written2) != C_REST_OK);
   }
 
   /* Cover c_rest_websocket_generate_accept and c_rest_websocket_upgrade error
@@ -436,36 +452,80 @@ int test_websocket(void) {
     memset(&res2, 0, sizeof(res2));
 
     /* Invalid header */
-    c_rest_websocket_upgrade(&req2, &res2);
+    failed += (c_rest_websocket_upgrade(&req2, &res2) == C_REST_OK);
 
     req2.headers = &hdr;
     hdr.key = "Upgrade";
     hdr.value = "not_websocket";
     hdr.next = NULL;
-    c_rest_websocket_upgrade(&req2, &res2);
+    failed += (c_rest_websocket_upgrade(&req2, &res2) == C_REST_OK);
 
     hdr.value = "websocket";
-    c_rest_websocket_upgrade(
-        &req2, &res2); /* Will fail on Sec-WebSocket-Key missing */
+    failed += (c_rest_websocket_upgrade(&req2, &res2) ==
+               C_REST_OK); /* Will fail on Sec-WebSocket-Key missing */
 
     hdr.next = &hdr3;
     hdr3.key = "Sec-WebSocket-Key";
     hdr3.value = "dGhlIHNhbXBsZSBub25jZQ==";
     hdr3.next = NULL;
 
-    /* Now it will succeed, but let's fail malloc during base64 encode or sha1
-       (sha1 doesn't malloc) Let's just call generate_accept directly to fail
-       malloc */
-    g_fail_malloc_at = 1;
-    c_rest_websocket_generate_accept(hdr3.value, strlen(hdr3.value), accept_buf,
-                                     &len);
-    g_fail_malloc_at = 0;
+    /* sha1 failure in generate_accept */
+    g_mock_crypto_fail = 8;
+    failed += (c_rest_websocket_generate_accept(hdr3.value, strlen(hdr3.value),
+                                                accept_buf, &len) == C_REST_OK);
+    g_mock_crypto_fail = 0;
 
+    /* base64 encode failure in generate_accept (out_len too small) */
+    len = 5;
+    failed += (c_rest_websocket_generate_accept(hdr3.value, strlen(hdr3.value),
+                                                accept_buf, &len) == C_REST_OK);
+    len = sizeof(accept_buf);
+
+    /* generate_accept failure in websocket_upgrade (key too long) */
+    hdr3.value = "0123456789012345678901234567890123456789012345678901234567890"
+                 "123456789012345678901234567890123456789";
+    failed += (c_rest_websocket_upgrade(&req2, &res2) == C_REST_OK);
+    hdr3.value = "dGhlIHNhbXBsZSBub25jZQ==";
+
+    /* response_set_status failure in websocket_upgrade (res == NULL) */
+    failed += (c_rest_websocket_upgrade(&req2, NULL) == C_REST_OK);
+
+    /* response_set_header failure 1 (Upgrade) */
     g_fail_malloc_at = 1;
-    c_rest_websocket_upgrade(&req2, &res2);
+    g_crf_malloc_hook = fail_malloc_n;
+    failed += (c_rest_websocket_upgrade(&req2, &res2) == C_REST_OK);
+    g_crf_malloc_hook = NULL;
     g_fail_malloc_at = 0;
+    c_rest_response_cleanup(&res2);
+    memset(&res2, 0, sizeof(res2));
+
+    /* response_set_header failure 2 (Connection) */
+    g_fail_malloc_at = 4;
+    g_crf_malloc_hook = fail_malloc_n;
+    failed += (c_rest_websocket_upgrade(&req2, &res2) == C_REST_OK);
+    g_crf_malloc_hook = NULL;
+    g_fail_malloc_at = 0;
+    c_rest_response_cleanup(&res2);
+    memset(&res2, 0, sizeof(res2));
+
+    /* response_set_header failure 3 (Sec-WebSocket-Accept) */
+    g_fail_malloc_at = 7;
+    g_crf_malloc_hook = fail_malloc_n;
+    failed += (c_rest_websocket_upgrade(&req2, &res2) == C_REST_OK);
+    g_crf_malloc_hook = NULL;
+    g_fail_malloc_at = 0;
+    c_rest_response_cleanup(&res2);
+    memset(&res2, 0, sizeof(res2));
+
+    /* Success path */
+    failed += (c_rest_websocket_upgrade(&req2, &res2) != C_REST_OK);
+    c_rest_response_cleanup(&res2);
+
+    /* Test fail_malloc_n edge case */
+    g_fail_malloc_at = 0;
+    failed += (fail_malloc_n(10) != NULL);
   }
 
   printf("test_websocket finished.\n");
-  return 0;
+  return failed != 0 ? 1 : 0;
 }

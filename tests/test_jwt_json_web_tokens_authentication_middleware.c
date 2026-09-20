@@ -13,253 +13,278 @@
 
 #ifdef C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE
 
+/**
+ * @brief Mock verification callback that succeeds for matching subject.
+ * @param payload JWT payload json.
+ * @param out_auth_context Output authentication context pointer.
+ * @return C_REST_OK on match, error code otherwise.
+ */
 static c_rest_error_t mock_verify_payload_success(const char *payload,
                                                   void **out_auth_context) {
-  if (strcmp(payload, "{\"sub\":\"12345\"}") == 0) {
-    *out_auth_context = (void *)1;
-    return 0;
-  }
-  return 1;
+  int match;
+  match = strcmp(payload, "{\"sub\":\"12345\"}");
+  *out_auth_context = (void *)(size_t)(match == 0);
+  return (match == 0) ? C_REST_OK : C_REST_ERROR_GENERIC;
 }
 
+/**
+ * @brief Mock verification callback that always fails.
+ * @param payload JWT payload json.
+ * @param out_auth_context Output authentication context pointer.
+ * @return C_REST_ERROR_GENERIC.
+ */
 static c_rest_error_t mock_verify_payload_fail(const char *payload,
                                                void **out_auth_context) {
   (void)payload;
   (void)out_auth_context;
-  return 1;
+  return C_REST_ERROR_GENERIC;
 }
 
-static int test_jwt_middleware_config_init(void) {
+/**
+ * @brief Test suite runner for JWT middleware.
+ * @return 0 on success, non-zero on failure.
+ */
+int test_jwt_json_web_tokens_authentication_middleware(void) {
+  int failed = 0;
   struct c_rest_jwt_middleware_config config;
-  const unsigned char secret[] = "supersecret";
-
-  if (c_rest_jwt_middleware_config_init(NULL, secret, sizeof(secret), NULL) ==
-      0)
-    return 1;
-  if (c_rest_jwt_middleware_config_init(&config, NULL, sizeof(secret), NULL) ==
-      0)
-    return 1;
-  if (c_rest_jwt_middleware_config_init(&config, secret, 0, NULL) == 0)
-    return 1;
-
-  if (c_rest_jwt_middleware_config_init(&config, secret, sizeof(secret),
-                                        mock_verify_payload_success) != 0)
-    return 1;
-  if (config.secret != secret)
-    return 1;
-  if (config.secret_len != sizeof(secret))
-    return 1;
-  if (config.verify_payload != mock_verify_payload_success)
-    return 1;
-
-  return 0;
-}
-
-static int test_jwt_middleware_success(void) {
-  struct c_rest_jwt_middleware_config config;
-  struct c_rest_request req;
-  struct c_rest_response res;
-  struct c_rest_header auth_hdr;
-  char *jwt_token;
-  char header_val[512];
-  const unsigned char secret[] = "supersecret";
-  c_rest_error_t ret;
-
-  memset(&req, 0, sizeof(req));
-  memset(&res, 0, sizeof(res));
-
-  ret = c_rest_jwt_middleware_config_init(&config, secret, sizeof(secret) - 1,
-                                          mock_verify_payload_success);
-  if (ret != 0)
-    return 1;
-
-  ret = c_rest_jwt_sign_hs256("{\"sub\":\"12345\"}", secret, sizeof(secret) - 1,
-                              &jwt_token);
-  if (ret != 0)
-    return 1;
-
-#if defined(_MSC_VER)
-  sprintf_s(header_val, sizeof(header_val), "Bearer %s", jwt_token);
-#else
-  sprintf(header_val, "Bearer %s", jwt_token);
-#endif
-
-  auth_hdr.key = "Authorization";
-  auth_hdr.value = header_val;
-  auth_hdr.next = NULL;
-  req.headers = &auth_hdr;
-
-  ret = c_rest_jwt_middleware(&req, &res, &config);
-  if (ret != 0) {
-    CRF_FREE(jwt_token);
-    return 1;
-  }
-
-  if (req.auth_context != (void *)1) {
-    CRF_FREE(jwt_token);
-    return 1;
-  }
-
-  CRF_FREE(jwt_token);
-  (void)!c_rest_response_cleanup(&res);
-  return 0;
-}
-
-static int test_jwt_middleware_missing_token(void) {
-  struct c_rest_jwt_middleware_config config;
-  struct c_rest_request req;
-  struct c_rest_response res;
-  const unsigned char secret[] = "supersecret";
-  c_rest_error_t ret;
-
-  memset(&req, 0, sizeof(req));
-  memset(&res, 0, sizeof(res));
-
-  (void)!c_rest_jwt_middleware_config_init(&config, secret, sizeof(secret) - 1,
-                                           mock_verify_payload_success);
-
-  ret = c_rest_jwt_middleware(&req, &res, &config);
-  if (ret == 0)
-    return 1;
-  if (res.status_code != 401)
-    return 1;
-
-  (void)!c_rest_response_cleanup(&res);
-  return 0;
-}
-
-static int test_jwt_middleware_invalid_signature(void) {
-  struct c_rest_jwt_middleware_config config;
-  struct c_rest_request req;
-  struct c_rest_response res;
-  struct c_rest_header auth_hdr;
-  char *jwt_token;
-  char header_val[512];
   const unsigned char secret[] = "supersecret";
   const unsigned char wrong_secret[] = "wrongsecret";
-  c_rest_error_t ret;
+  c_rest_error_t rc;
+  const char *msgs[2];
 
-  memset(&req, 0, sizeof(req));
-  memset(&res, 0, sizeof(res));
+  /* 1. c_rest_jwt_middleware_config_init tests */
+  rc = c_rest_jwt_middleware_config_init(NULL, secret, sizeof(secret), NULL);
+  failed += (rc != C_REST_ERROR_GENERIC);
 
-  (void)!c_rest_jwt_middleware_config_init(&config, secret, sizeof(secret) - 1,
+  rc = c_rest_jwt_middleware_config_init(&config, NULL, sizeof(secret), NULL);
+  failed += (rc != C_REST_ERROR_GENERIC);
+
+  rc = c_rest_jwt_middleware_config_init(&config, secret, 0, NULL);
+  failed += (rc != C_REST_ERROR_GENERIC);
+
+  rc = c_rest_jwt_middleware_config_init(&config, secret, sizeof(secret),
+                                         mock_verify_payload_success);
+  failed += (rc != C_REST_OK);
+  failed += (config.secret != secret);
+  failed += (config.secret_len != sizeof(secret));
+  failed += (config.verify_payload != mock_verify_payload_success);
+
+  /* 2. c_rest_jwt_middleware NULL argument tests */
+  {
+    struct c_rest_request req;
+    struct c_rest_response res;
+
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+
+    rc = c_rest_jwt_middleware(NULL, &res, NULL);
+    failed += (rc != C_REST_ERROR_GENERIC);
+
+    rc = c_rest_jwt_middleware(&req, NULL, NULL);
+    failed += (rc != C_REST_ERROR_GENERIC);
+
+    rc = c_rest_jwt_middleware(&req, &res, NULL);
+    failed += (rc != C_REST_ERROR_GENERIC);
+    failed += (res.status_code != 500);
+
+    rc = c_rest_response_cleanup(&res);
+    failed += (rc != C_REST_OK);
+  }
+
+  /* 3. Missing bearer token */
+  {
+    struct c_rest_request req;
+    struct c_rest_response res;
+
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+
+    rc = c_rest_jwt_middleware(&req, &res, &config);
+    failed += (rc != C_REST_ERROR_GENERIC);
+    failed += (res.status_code != 401);
+
+    rc = c_rest_response_cleanup(&res);
+    failed += (rc != C_REST_OK);
+  }
+
+  /* 4. Success path */
+  {
+    struct c_rest_request req;
+    struct c_rest_response res;
+    struct c_rest_header auth_hdr;
+    char *jwt_token = NULL;
+    char header_val[512];
+
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+
+    rc = c_rest_jwt_middleware_config_init(&config, secret, sizeof(secret) - 1,
                                            mock_verify_payload_success);
+    failed += (rc != C_REST_OK);
 
-  /* Sign with wrong secret */
-  ret = c_rest_jwt_sign_hs256("{\"sub\":\"12345\"}", wrong_secret,
-                              sizeof(wrong_secret) - 1, &jwt_token);
-  if (ret != 0)
-    return 1;
+    rc = c_rest_jwt_sign_hs256("{\"sub\":\"12345\"}", secret,
+                               sizeof(secret) - 1, &jwt_token);
+    failed += (rc != C_REST_OK);
 
 #if defined(_MSC_VER)
-  sprintf_s(header_val, sizeof(header_val), "Bearer %s", jwt_token);
+    sprintf_s(header_val, sizeof(header_val), "Bearer %s", jwt_token);
 #else
-  sprintf(header_val, "Bearer %s", jwt_token);
+    sprintf(header_val, "Bearer %s", jwt_token);
 #endif
 
-  auth_hdr.key = "Authorization";
-  auth_hdr.value = header_val;
-  auth_hdr.next = NULL;
-  req.headers = &auth_hdr;
+    auth_hdr.key = "Authorization";
+    auth_hdr.value = header_val;
+    auth_hdr.next = NULL;
+    req.headers = &auth_hdr;
 
-  ret = c_rest_jwt_middleware(&req, &res, &config);
-  if (ret == 0) {
+    rc = c_rest_jwt_middleware(&req, &res, &config);
+    failed += (rc != C_REST_OK);
+    failed += (req.auth_context != (void *)1);
+
     CRF_FREE(jwt_token);
-    return 1;
+    rc = c_rest_response_cleanup(&res);
+    failed += (rc != C_REST_OK);
   }
 
-  if (res.status_code != 401) {
+  /* 5. Invalid signature */
+  {
+    struct c_rest_request req;
+    struct c_rest_response res;
+    struct c_rest_header auth_hdr;
+    char *jwt_token = NULL;
+    char header_val[512];
+
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+
+    rc = c_rest_jwt_middleware_config_init(&config, secret, sizeof(secret) - 1,
+                                           mock_verify_payload_success);
+    failed += (rc != C_REST_OK);
+
+    rc = c_rest_jwt_sign_hs256("{\"sub\":\"12345\"}", wrong_secret,
+                               sizeof(wrong_secret) - 1, &jwt_token);
+    failed += (rc != C_REST_OK);
+
+#if defined(_MSC_VER)
+    sprintf_s(header_val, sizeof(header_val), "Bearer %s", jwt_token);
+#else
+    sprintf(header_val, "Bearer %s", jwt_token);
+#endif
+
+    auth_hdr.key = "Authorization";
+    auth_hdr.value = header_val;
+    auth_hdr.next = NULL;
+    req.headers = &auth_hdr;
+
+    rc = c_rest_jwt_middleware(&req, &res, &config);
+    failed += (rc != C_REST_ERROR_GENERIC);
+    failed += (res.status_code != 401);
+
     CRF_FREE(jwt_token);
-    return 1;
+    rc = c_rest_response_cleanup(&res);
+    failed += (rc != C_REST_OK);
   }
 
-  CRF_FREE(jwt_token);
-  (void)!c_rest_response_cleanup(&res);
-  return 0;
-}
+  /* 6. Invalid payload */
+  {
+    struct c_rest_request req;
+    struct c_rest_response res;
+    struct c_rest_header auth_hdr;
+    char *jwt_token = NULL;
+    char header_val[512];
 
-static int test_jwt_middleware_invalid_payload(void) {
-  struct c_rest_jwt_middleware_config config;
-  struct c_rest_request req;
-  struct c_rest_response res;
-  struct c_rest_header auth_hdr;
-  char *jwt_token;
-  char header_val[512];
-  const unsigned char secret[] = "supersecret";
-  c_rest_error_t ret;
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
 
-  memset(&req, 0, sizeof(req));
-  memset(&res, 0, sizeof(res));
-
-  (void)!c_rest_jwt_middleware_config_init(&config, secret, sizeof(secret) - 1,
+    rc = c_rest_jwt_middleware_config_init(&config, secret, sizeof(secret) - 1,
                                            mock_verify_payload_fail);
+    failed += (rc != C_REST_OK);
 
-  ret = c_rest_jwt_sign_hs256("{\"sub\":\"12345\"}", secret, sizeof(secret) - 1,
-                              &jwt_token);
-  if (ret != 0)
-    return 1;
+    rc = c_rest_jwt_sign_hs256("{\"sub\":\"12345\"}", secret,
+                               sizeof(secret) - 1, &jwt_token);
+    failed += (rc != C_REST_OK);
 
 #if defined(_MSC_VER)
-  sprintf_s(header_val, sizeof(header_val), "Bearer %s", jwt_token);
+    sprintf_s(header_val, sizeof(header_val), "Bearer %s", jwt_token);
 #else
-  sprintf(header_val, "Bearer %s", jwt_token);
+    sprintf(header_val, "Bearer %s", jwt_token);
 #endif
 
-  auth_hdr.key = "Authorization";
-  auth_hdr.value = header_val;
-  auth_hdr.next = NULL;
-  req.headers = &auth_hdr;
+    auth_hdr.key = "Authorization";
+    auth_hdr.value = header_val;
+    auth_hdr.next = NULL;
+    req.headers = &auth_hdr;
 
-  ret = c_rest_jwt_middleware(&req, &res, &config);
-  if (ret == 0) {
+    rc = c_rest_jwt_middleware(&req, &res, &config);
+    failed += (rc != C_REST_ERROR_GENERIC);
+    failed += (res.status_code != 401);
+
     CRF_FREE(jwt_token);
-    return 1;
+    rc = c_rest_response_cleanup(&res);
+    failed += (rc != C_REST_OK);
   }
 
-  if (res.status_code != 401) {
+  /* 7. Payload verification callback returning failure via mismatch in
+   * mock_verify_payload_success */
+  {
+    struct c_rest_request req;
+    struct c_rest_response res;
+    struct c_rest_header auth_hdr;
+    char *jwt_token = NULL;
+    char header_val[512];
+
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+
+    rc = c_rest_jwt_middleware_config_init(&config, secret, sizeof(secret) - 1,
+                                           mock_verify_payload_success);
+    failed += (rc != C_REST_OK);
+
+    rc = c_rest_jwt_sign_hs256("{\"sub\":\"mismatch\"}", secret,
+                               sizeof(secret) - 1, &jwt_token);
+    failed += (rc != C_REST_OK);
+
+#if defined(_MSC_VER)
+    sprintf_s(header_val, sizeof(header_val), "Bearer %s", jwt_token);
+#else
+    sprintf(header_val, "Bearer %s", jwt_token);
+#endif
+
+    auth_hdr.key = "Authorization";
+    auth_hdr.value = header_val;
+    auth_hdr.next = NULL;
+    req.headers = &auth_hdr;
+
+    rc = c_rest_jwt_middleware(&req, &res, &config);
+    failed += (rc != C_REST_ERROR_GENERIC);
+    failed += (res.status_code != 401);
+
     CRF_FREE(jwt_token);
-    return 1;
+    rc = c_rest_response_cleanup(&res);
+    failed += (rc != C_REST_OK);
   }
 
-  CRF_FREE(jwt_token);
-  (void)!c_rest_response_cleanup(&res);
-  return 0;
-}
-
-int test_jwt_json_web_tokens_authentication_middleware(void) {
-  if (test_jwt_middleware_config_init() != 0)
-    return 1;
-  if (test_jwt_middleware_success() != 0)
-    return 1;
-  if (test_jwt_middleware_missing_token() != 0)
-    return 1;
-  if (test_jwt_middleware_invalid_signature() != 0)
-    return 1;
-  if (test_jwt_middleware_invalid_payload() != 0)
-    return 1;
-
-  /* Test missing verify_payload function */
+  /* 8. Missing verify_payload function */
   {
     struct c_rest_jwt_middleware_config config_no_verify;
     struct c_rest_request req_no_verify;
     struct c_rest_response res_no_verify;
     struct c_rest_header auth_hdr_no_verify;
-    char *jwt_token_no_verify;
+    char *jwt_token_no_verify = NULL;
     char header_val_no_verify[512];
     const unsigned char secret_no_verify[] = "supersecret";
 
     memset(&req_no_verify, 0, sizeof(req_no_verify));
     memset(&res_no_verify, 0, sizeof(res_no_verify));
 
-    if (c_rest_jwt_middleware_config_init(&config_no_verify, secret_no_verify,
-                                          sizeof(secret_no_verify) - 1,
-                                          NULL) != 0)
-      return 1;
+    rc = c_rest_jwt_middleware_config_init(&config_no_verify, secret_no_verify,
+                                           sizeof(secret_no_verify) - 1, NULL);
+    failed += (rc != C_REST_OK);
 
-    if (c_rest_jwt_sign_hs256("{\"sub\":\"12345\"}", secret_no_verify,
-                              sizeof(secret_no_verify) - 1,
-                              &jwt_token_no_verify) != 0)
-      return 1;
+    rc = c_rest_jwt_sign_hs256("{\"sub\":\"12345\"}", secret_no_verify,
+                               sizeof(secret_no_verify) - 1,
+                               &jwt_token_no_verify);
+    failed += (rc != C_REST_OK);
 
 #if defined(_MSC_VER)
     sprintf_s(header_val_no_verify, sizeof(header_val_no_verify), "Bearer %s",
@@ -269,31 +294,23 @@ int test_jwt_json_web_tokens_authentication_middleware(void) {
 #endif
     auth_hdr_no_verify.key = "Authorization";
     auth_hdr_no_verify.value = header_val_no_verify;
+    auth_hdr_no_verify.next = NULL;
     req_no_verify.headers = &auth_hdr_no_verify;
 
-    if (c_rest_jwt_middleware(&req_no_verify, &res_no_verify,
-                              &config_no_verify) != C_REST_OK) {
-      CRF_FREE(jwt_token_no_verify);
-      return 1;
-    }
+    rc = c_rest_jwt_middleware(&req_no_verify, &res_no_verify,
+                               &config_no_verify);
+    failed += (rc != C_REST_OK);
+
     CRF_FREE(jwt_token_no_verify);
-    c_rest_response_cleanup(&res_no_verify);
+    rc = c_rest_response_cleanup(&res_no_verify);
+    failed += (rc != C_REST_OK);
   }
 
-  {
-    struct c_rest_request req;
-    struct c_rest_response res;
-    memset(&req, 0, sizeof(req));
-    memset(&res, 0, sizeof(res));
-    if (c_rest_jwt_middleware(NULL, &res, NULL) == C_REST_OK)
-      return 1;
-    if (c_rest_jwt_middleware(&req, NULL, NULL) == C_REST_OK)
-      return 1;
-    if (c_rest_jwt_middleware(&req, &res, NULL) == C_REST_OK)
-      return 1;
-    c_rest_response_cleanup(&res);
-  }
-  return 0;
+  msgs[0] = "test_jwt_json_web_tokens_authentication_middleware passed\n";
+  msgs[1] = "test_jwt_json_web_tokens_authentication_middleware failed\n";
+  printf("%s", msgs[failed != 0]);
+
+  return failed;
 }
 
 #endif /* C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE */

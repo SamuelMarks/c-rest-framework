@@ -18,9 +18,8 @@ static c_rest_error_t handle_hello_world(struct c_rest_request *req,
                                          void *user_data) {
   (void)req;
   (void)user_data;
-  (void)!c_rest_response_json(res,
+  return c_rest_response_json(res,
                               "{\"message\": \"Hello from OpenAPI Example!\"}");
-  return 0;
 }
 
 static void sig_handler(int sig) {
@@ -41,22 +40,47 @@ int main(void) {
   struct c_rest_openapi_media_type res_mt_hello;
   const char *res_keys_hello[] = {"application/json"};
 
-  (void)!c_rest_router_init(&router);
-  (void)!c_rest_enable_openapi(router, "/openapi.json");
-  (void)!c_rest_enable_swagger_ui(router, "/docs", "/openapi.json");
+  rc = c_rest_router_init(&router);
+  if (rc != C_REST_OK)
+    return 1;
+  rc = c_rest_enable_openapi(router, "/openapi.json");
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    return 1;
+  }
+  rc = c_rest_enable_swagger_ui(router, "/docs", "/openapi.json");
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    return 1;
+  }
 
-  (void)!c_rest_router_get_openapi_spec(router, &spec);
+  rc = c_rest_router_get_openapi_spec(router, &spec);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    return 1;
+  }
 
   if (spec) {
-    c_rest_openapi_spec_add_component_schema(
+    rc = c_rest_openapi_spec_add_component_schema(
         spec, "HelloResponse",
         "{\"type\": \"object\", \"properties\": {\"message\": {\"type\": "
         "\"string\"}}}");
+    if (rc != C_REST_OK) {
+      c_rest_router_destroy(router);
+      return 1;
+    }
   }
 
-  (void)!c_rest_enable_openapi(router, "/api/v0/openapi.json");
-  (void)!c_rest_enable_swagger_ui(router, "/api/v0/docs",
-                                  "/api/v0/openapi.json");
+  rc = c_rest_enable_openapi(router, "/api/v0/openapi.json");
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    return 1;
+  }
+  rc = c_rest_enable_swagger_ui(router, "/api/v0/docs", "/api/v0/openapi.json");
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    return 1;
+  }
 
   memset(&op, 0, sizeof(op));
   op.operation_id = "helloWorld";
@@ -76,21 +100,36 @@ int main(void) {
   op.responses = &res_hello;
   op.n_responses = 1;
 
-  c_rest_router_add_openapi(router, "GET", "/api/hello", handle_hello_world,
-                            NULL, &op);
+  rc = c_rest_router_add_openapi(router, "GET", "/api/hello",
+                                 handle_hello_world, NULL, &op);
+  if (rc != C_REST_OK) {
+    c_rest_router_destroy(router);
+    return 1;
+  }
 
   /* Note: c_rest_init logic omitted to keep it small, but let's assume ctx is
    * used */
   signal(SIGTERM, sig_handler);
   signal(SIGINT, sig_handler);
   rc = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
-  if (rc == 0 && ctx) {
-    (void)!c_rest_set_router(ctx, router);
+  if (rc == 0) {
+    rc = c_rest_set_router(ctx, router);
+    if (rc != C_REST_OK) {
+      c_rest_destroy(ctx);
+      c_rest_router_destroy(router);
+      return 1;
+    }
 
     /* Normally we would c_rest_run(ctx) here but it blocks */
-    (void)!c_rest_destroy(ctx);
+    rc = c_rest_destroy(ctx);
+    if (rc != C_REST_OK) {
+      c_rest_router_destroy(router);
+      return 1;
+    }
   }
 
-  (void)!c_rest_router_destroy(router);
+  rc = c_rest_router_destroy(router);
+  if (rc != C_REST_OK)
+    return 1;
   return 0;
 }

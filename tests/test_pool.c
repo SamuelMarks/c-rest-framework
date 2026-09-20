@@ -13,6 +13,7 @@ int test_pool(void) {
   void *ptr2 = NULL;
   int failed = 0;
   c_rest_error_t rc;
+  const char *msgs[2];
 
   /* Null checks */
   rc = c_rest_pool_init(NULL, 32);
@@ -40,7 +41,8 @@ int test_pool(void) {
   rc = c_rest_pool_init(&pool, 1);
   failed += (rc != C_REST_OK);
   failed += (pool.object_size < sizeof(c_rest_pool_block));
-  (void)!c_rest_pool_destroy(&pool);
+  rc = c_rest_pool_destroy(&pool);
+  failed += (rc != C_REST_OK);
 
   /* Normal flow */
   rc = c_rest_pool_init(&pool, 32);
@@ -55,11 +57,13 @@ int test_pool(void) {
   /* Malloc path */
   g_crf_malloc_hook = mock_malloc;
   rc = c_rest_pool_allocate(&pool, &ptr1);
-  failed += (rc != C_REST_OK || ptr1 == NULL);
+  failed += (rc != C_REST_OK);
+  failed += (ptr1 == NULL);
   g_crf_malloc_hook = NULL;
 
   rc = c_rest_pool_allocate(&pool, &ptr2);
-  failed += (rc != C_REST_OK || ptr2 == NULL);
+  failed += (rc != C_REST_OK);
+  failed += (ptr2 == NULL);
 
   rc = c_rest_pool_free(&pool, ptr1);
   failed += (rc != C_REST_OK);
@@ -70,15 +74,14 @@ int test_pool(void) {
   /* Free list path */
   ptr1 = NULL;
   rc = c_rest_pool_allocate(&pool, &ptr1);
-  failed += (rc != C_REST_OK || ptr1 == NULL);
+  failed += (rc != C_REST_OK);
+  failed += (ptr1 == NULL);
 
   rc = c_rest_pool_destroy(&pool);
   failed += (rc != C_REST_OK);
 
-  if (failed) {
-    printf("test_pool failed\n");
-  } else {
-    printf("test_pool passed\n");
-  }
+  msgs[0] = "test_pool passed\n";
+  msgs[1] = "test_pool failed\n";
+  printf("%s", msgs[failed != 0]);
   return failed;
 }

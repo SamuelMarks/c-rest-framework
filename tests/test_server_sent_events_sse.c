@@ -7,70 +7,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define ASSERT_EQ(expected, actual)                                            \
-  do {                                                                         \
-    if ((expected) != (actual)) {                                              \
-      printf("%s:%d: Assertion failed: expected %d, got %d\n", __FILE__,       \
-             __LINE__, (int)(expected), (int)(actual));                        \
-      return 1;                                                                \
-    }                                                                          \
-  } while (0)
-
-#define ASSERT_STR_EQ(expected, actual)                                        \
-  do {                                                                         \
-    if ((const void *)(expected) == NULL && (const void *)(actual) == NULL) break; \
-    if ((const void *)(actual) == NULL) {                                      \
-      printf("%s:%d: Assertion failed: expected '%s', got NULL\n", __FILE__,   \
-             __LINE__, ((const void *)(expected) != NULL) ? (expected) : "NULL");                      \
-      return 1;                                                                \
-    }                                                                          \
-    if ((const void *)(expected) == NULL) {                                    \
-      printf("%s:%d: Assertion failed: expected NULL, got '%s'\n", __FILE__,   \
-             __LINE__, (actual));                                              \
-      return 1;                                                                \
-    }                                                                          \
-    if (strcmp((expected), (actual)) != 0) {                                   \
-      printf("%s:%d: Assertion failed: expected '%s', got '%s'\n", __FILE__,   \
-             __LINE__, (expected), (actual));                                  \
-      return 1;                                                                \
-    }                                                                          \
-  } while (0)
-
-#define ASSERT(condition)                                                      \
-  do {                                                                         \
-    if (!(condition)) {                                                        \
-      printf("%s:%d: Assertion failed: %s\n", __FILE__, __LINE__, #condition); \
-      return 1;                                                                \
-    }                                                                          \
-  } while (0)
-
-#define ASSERT_NULL(actual)                                                    \
-  do {                                                                         \
-    if ((actual) != NULL) {                                                    \
-      printf("%s:%d: Assertion failed: expected NULL\n", __FILE__, __LINE__);  \
-      return 1;                                                                \
-    }                                                                          \
-  } while (0)
-
-#define ASSERT_NOT_NULL(actual)                                                \
-  do {                                                                         \
-    if ((actual) == NULL) {                                                    \
-      printf("%s:%d: Assertion failed: expected NOT NULL\n", __FILE__,         \
-             __LINE__);                                                        \
-      return 1;                                                                \
-    }                                                                          \
-  } while (0)
-
 static int test_sse_event_init_destroy(void) {
   struct c_rest_sse_event ev;
-  ASSERT_EQ(C_REST_OK, c_rest_sse_event_init(&ev));
-  ASSERT_NULL(ev.id);
-  ASSERT_NULL(ev.event);
-  ASSERT_NULL(ev.data);
-  ASSERT_EQ(-1, ev.retry);
+  int failed = 0;
+  failed += (c_rest_sse_event_init(&ev) != C_REST_OK);
+  failed += (ev.id != NULL);
+  failed += (ev.event != NULL);
+  failed += (ev.data != NULL);
+  failed += (ev.retry != -1);
 
-  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
-  return 0;
+  failed += (c_rest_sse_event_destroy(&ev) != C_REST_OK);
+  return failed;
 }
 
 static int test_sse_event_clone(void) {
@@ -79,96 +26,98 @@ static int test_sse_event_clone(void) {
   char *id = "123";
   char *event = "message";
   char *data = "hello world";
+  int failed = 0;
 
-  (void)!c_rest_sse_event_init(&src);
-  (void)!c_rest_sse_event_init(&dest);
+  failed += (c_rest_sse_event_init(&src) != C_REST_OK);
+  failed += (c_rest_sse_event_init(&dest) != C_REST_OK);
 
-  src.id = CRF_STRDUP(id);
-  src.event = CRF_STRDUP(event);
-  src.data = CRF_STRDUP(data);
+  failed += (c_rest_internal_strdup(id, &src.id) != C_REST_OK);
+  failed += (c_rest_internal_strdup(event, &src.event) != C_REST_OK);
+  failed += (c_rest_internal_strdup(data, &src.data) != C_REST_OK);
   src.retry = 1000;
 
-  ASSERT_EQ(C_REST_OK, c_rest_sse_event_clone(&src, &dest));
+  failed += (c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
 
-  ASSERT_STR_EQ(src.id, dest.id);
-  ASSERT_STR_EQ(src.event, dest.event);
-  ASSERT_STR_EQ(src.data, dest.data);
-  ASSERT_EQ(src.retry, dest.retry);
+  failed += (strcmp(src.id, dest.id) != 0);
+  failed += (strcmp(src.event, dest.event) != 0);
+  failed += (strcmp(src.data, dest.data) != 0);
+  failed += (src.retry != dest.retry);
 
-  ASSERT(src.id != dest.id);
+  failed += (src.id == dest.id);
 
   CRF_FREE(src.id);
   CRF_FREE(src.event);
   CRF_FREE(src.data);
 
-  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&dest));
-  return 0;
+  failed += (c_rest_sse_event_destroy(&dest) != C_REST_OK);
+  return failed;
 }
 
 static int test_sse_serialize(void) {
   struct c_rest_sse_event ev;
   char *out = NULL;
   size_t len = 0;
+  int failed = 0;
 
-  (void)!c_rest_sse_event_init(&ev);
-  ev.id = CRF_STRDUP("42");
-  ev.event = CRF_STRDUP("ping");
-  ev.data = CRF_STRDUP("line1\nline2");
+  failed += (c_rest_sse_event_init(&ev) != C_REST_OK);
+  failed += (c_rest_internal_strdup("42", &ev.id) != C_REST_OK);
+  failed += (c_rest_internal_strdup("ping", &ev.event) != C_REST_OK);
+  failed += (c_rest_internal_strdup("line1\nline2", &ev.data) != C_REST_OK);
   ev.retry = 3000;
 
-  ASSERT_EQ(C_REST_OK, c_rest_sse_serialize(&ev, &out, &len));
-  ASSERT(out != NULL);
+  failed += (c_rest_sse_serialize(&ev, &out, &len) != C_REST_OK);
+  failed += (out == NULL);
 
-  ASSERT_STR_EQ(
-      "id: 42\nevent: ping\nretry: 3000\ndata: line1\ndata: line2\n\n", out);
+  failed += (strcmp("id: 42\nevent: ping\nretry: 3000\ndata: line1\ndata: line2\n\n", out) != 0);
 
   CRF_FREE(ev.id);
   CRF_FREE(ev.event);
   CRF_FREE(ev.data);
   CRF_FREE(out);
-  return 0;
+  return failed;
 }
 
 static int test_sse_parse_complete(void) {
   struct c_rest_sse_context *ctx = NULL;
   struct c_rest_sse_event ev;
   const char *payload = "id: 1\nevent: custom\nretry: 500\ndata: test data\n\n";
+  int failed = 0;
 
-  ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&ctx));
-  (void)!c_rest_sse_event_init(&ev);
+  failed += (c_rest_sse_context_init(&ctx) != C_REST_OK);
+  failed += (c_rest_sse_event_init(&ev) != C_REST_OK);
 
-  ASSERT_EQ(C_REST_OK,
-            c_rest_sse_parse(ctx, payload, strlen(payload), &ev));
+  failed += (c_rest_sse_parse(ctx, payload, strlen(payload), &ev) != C_REST_OK);
 
-  ASSERT_STR_EQ("1", ev.id);
-  ASSERT_STR_EQ("custom", ev.event);
-  ASSERT_EQ(500, ev.retry);
-  ASSERT_STR_EQ("test data", ev.data);
+  failed += (strcmp("1", ev.id) != 0);
+  failed += (strcmp("custom", ev.event) != 0);
+  failed += (ev.retry != 500);
+  failed += (strcmp("test data", ev.data) != 0);
 
-  (void)!c_rest_sse_event_destroy(&ev);
-  (void)!c_rest_sse_context_destroy(ctx);
-  return 0;
+  failed += (c_rest_sse_event_destroy(&ev) != C_REST_OK);
+  failed += (c_rest_sse_context_destroy(ctx) != C_REST_OK);
+  return failed;
 }
 
 static int test_sse_parse_fragmented(void) {
   struct c_rest_sse_context *ctx = NULL;
   struct c_rest_sse_event ev;
+  int failed = 0;
 
-  ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&ctx));
-  (void)!c_rest_sse_event_init(&ev);
+  failed += (c_rest_sse_context_init(&ctx) != C_REST_OK);
+  failed += (c_rest_sse_event_init(&ev) != C_REST_OK);
 
-  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_sse_parse(ctx, "id: 2\nev", 8, &ev));
-  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_sse_parse(ctx, "ent: partial\ndat", 16, &ev));
-  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_sse_parse(ctx, "a: hello", 8, &ev));
-  ASSERT_EQ(C_REST_OK, c_rest_sse_parse(ctx, "\n\n", 2, &ev));
+  failed += (c_rest_sse_parse(ctx, "id: 2\nev", 8, &ev) != C_REST_ERROR_GENERIC);
+  failed += (c_rest_sse_parse(ctx, "ent: partial\ndat", 16, &ev) != C_REST_ERROR_GENERIC);
+  failed += (c_rest_sse_parse(ctx, "a: hello", 8, &ev) != C_REST_ERROR_GENERIC);
+  failed += (c_rest_sse_parse(ctx, "\n\n", 2, &ev) != C_REST_OK);
 
-  ASSERT_STR_EQ("2", ev.id);
-  ASSERT_STR_EQ("partial", ev.event);
-  ASSERT_STR_EQ("hello", ev.data);
+  failed += (strcmp("2", ev.id) != 0);
+  failed += (strcmp("partial", ev.event) != 0);
+  failed += (strcmp("hello", ev.data) != 0);
 
-  (void)!c_rest_sse_event_destroy(&ev);
-  (void)!c_rest_sse_context_destroy(ctx);
-  return 0;
+  failed += (c_rest_sse_event_destroy(&ev) != C_REST_OK);
+  failed += (c_rest_sse_context_destroy(ctx) != C_REST_OK);
+  return failed;
 }
 
 #include "c_rest_response.h"
@@ -178,26 +127,27 @@ static int test_sse_wrappers(void) {
   struct c_rest_response res;
   struct c_rest_sse_event ev;
   c_rest_error_t ret;
+  int failed = 0;
 
   memset(&res, 0, sizeof(res));
 
   /* Test init response without context (will succeed but not write) */
   ret = c_rest_sse_init_response(&res);
-  ASSERT_EQ(0, ret);
-  ASSERT_EQ(1, res.headers_sent);
-  ASSERT_EQ(200, res.status_code);
+  failed += (ret != 0);
+  failed += (res.headers_sent != 1);
+  failed += (res.status_code != 200);
 
   /* Test send event without context (will fail at write_chunk context check) */
-  (void)!c_rest_sse_event_init(&ev);
+  failed += (c_rest_sse_event_init(&ev) != C_REST_OK);
   ev.event = "test";
   ret = c_rest_sse_send_event(&res, &ev);
-  ASSERT_EQ(1, ret); /* Should fail because ctx is NULL */
+  failed += (ret != 1); /* Should fail because ctx is NULL */
 
   ret = c_rest_sse_send_keepalive(&res);
-  ASSERT_EQ(1, ret); /* Should fail because ctx is NULL */
+  failed += (ret != 1); /* Should fail because ctx is NULL */
 
-  (void)!c_rest_response_cleanup(&res);
-  return 0;
+  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
+  return failed;
 }
 
 static void *fail_malloc_n(size_t size) {
@@ -252,16 +202,10 @@ static void test_coverage(void) {
   c_rest_sse_event_clone(&ev, NULL);
   out = NULL;
   c_rest_sse_serialize(NULL, &out, &olen);
-  if (out)
-    CRF_FREE(out);
   out = NULL;
   c_rest_sse_serialize(&ev, NULL, &olen);
-  if (out)
-    CRF_FREE(out);
   out = NULL;
   c_rest_sse_serialize(&ev, &out, NULL);
-  if (out)
-    CRF_FREE(out);
 
   {
 
@@ -303,8 +247,7 @@ static void test_coverage(void) {
       c_rest_sse_serialize(&ev, &out, &olen);
       g_crf_realloc_hook = NULL;
       g_fail_realloc_at = -1;
-      if (out)
-        CRF_FREE(out);
+      CRF_FREE(out);
     }
 
     for (i = 1; i <= 100; i++) {
@@ -314,8 +257,7 @@ static void test_coverage(void) {
       c_rest_sse_serialize(&ev, &out, &olen);
       g_crf_malloc_hook = NULL;
       g_fail_malloc_at = -1;
-      if (out)
-        CRF_FREE(out);
+      CRF_FREE(out);
     }
 
     for (i = 0; i <= 30; i++) {
@@ -323,16 +265,14 @@ static void test_coverage(void) {
       g_mock_sse_append_fail = i;
       c_rest_sse_serialize(&ev, &out, &olen);
       g_mock_sse_append_fail = -1;
-      if (out)
-        CRF_FREE(out);
+      CRF_FREE(out);
     }
     {
       out = NULL;
       g_mock_sse_append_fail = -2;
       c_rest_sse_serialize(&ev, &out, &olen);
       g_mock_sse_append_fail = -1;
-      if (out)
-        CRF_FREE(out);
+      CRF_FREE(out);
     }
   }
 
@@ -549,17 +489,16 @@ static void test_coverage(void) {
     ev.event = NULL;
     ev.data = NULL;
 
-    if (c_rest_sse_context_init(&ctx) == C_REST_OK) {
-      c_rest_sse_parse(ctx,
-                       "retry: 1000\nid: 1\nid: 2\nevent: e\nevent: f\ndata: "
-                       "d\ndata: d2\ndata\ndata\nevent\nevent\n\n"
-                       "event: e\n\n"
-                       "id: 1\n\n"
-                       "retry: 100\n\n",
-                       112, &ev);
-      c_rest_sse_event_destroy(&ev);
-      c_rest_sse_context_destroy(ctx);
-    }
+    c_rest_sse_context_init(&ctx);
+    c_rest_sse_parse(ctx,
+                     "retry: 1000\nid: 1\nid: 2\nevent: e\nevent: f\ndata: "
+                     "d\ndata: d2\ndata\ndata\nevent\nevent\n\n"
+                     "event: e\n\n"
+                     "id: 1\n\n"
+                     "retry: 100\n\n",
+                     112, &ev);
+    c_rest_sse_event_destroy(&ev);
+    c_rest_sse_context_destroy(ctx);
 
     g_crf_realloc_hook = NULL;
     g_fail_realloc_at = 0;
@@ -567,17 +506,21 @@ static void test_coverage(void) {
 
   {
     g_mock_sse_append_fail = -3;
-    if (c_rest_sse_context_init(&ctx) == C_REST_OK) {
-      c_rest_sse_parse(ctx, "data: d\n\n", 9, &ev);
-      c_rest_sse_event_destroy(&ev);
-      c_rest_sse_context_destroy(ctx);
-    }
+    c_rest_sse_context_init(&ctx);
+    c_rest_sse_parse(ctx, "data: d\n\n", 9, &ev);
+    c_rest_sse_event_destroy(&ev);
+    c_rest_sse_context_destroy(ctx);
+
     g_mock_sse_append_fail = -4;
-    if (c_rest_sse_context_init(&ctx) == C_REST_OK) {
-      c_rest_sse_parse(ctx, "data: d\n\n", 9, &ev);
-      c_rest_sse_event_destroy(&ev);
-      c_rest_sse_context_destroy(ctx);
-    }
+    c_rest_sse_context_init(&ctx);
+    g_mock_sse_append_fail = -1;
+
+    c_rest_sse_context_init(&ctx);
+    c_rest_sse_parse(ctx, "data: d\n", 8, &ev);
+    g_mock_sse_append_fail = -4;
+    c_rest_sse_parse(ctx, "\n", 1, &ev);
+    g_mock_sse_append_fail = -1;
+    c_rest_sse_context_destroy(ctx);
     g_mock_sse_append_fail = -1;
   }
 
@@ -652,8 +595,9 @@ static void test_coverage(void) {
   c_rest_sse_parse(ctx, "data\n\n", 7, &ev);
   c_rest_sse_parse(ctx, "id\n\n", 5, &ev);
   c_rest_sse_parse(ctx, "id\r\n\n", 6, &ev);
-  c_rest_sse_parse(ctx, "id:\n\n", 5, &ev);
-  c_rest_sse_parse(ctx, "retry\n\n", 7, &ev);
+  c_rest_sse_parse(ctx, "id: 1\n\n", 7, &ev);
+  c_rest_sse_parse(ctx, "data:\n\n", 7, &ev);
+  c_rest_sse_parse(ctx, "retry: 10\n\n", 11, &ev);
   c_rest_sse_parse(ctx, "event\n\n", 7, &ev);
   c_rest_sse_parse(ctx, "invalid: foo\n\n", 14, &ev);
 
@@ -714,29 +658,30 @@ static void test_coverage(void) {
 
 static int test_sse_event_clone_nulls(void) {
   struct c_rest_sse_event src, dest;
+  int failed = 0;
   memset(&src, 0, sizeof(src));
   memset(&dest, 0, sizeof(dest));
 
   /* All NULLs */
-  ASSERT_EQ(C_REST_OK, c_rest_sse_event_clone(&src, &dest));
-  c_rest_sse_event_destroy(&dest);
+  failed += (c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
+  failed += (c_rest_sse_event_destroy(&dest) != C_REST_OK);
 
   /* Some NULLs */
   src.id = "test";
-  ASSERT_EQ(C_REST_OK, c_rest_sse_event_clone(&src, &dest));
-  c_rest_sse_event_destroy(&dest);
+  failed += (c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
+  failed += (c_rest_sse_event_destroy(&dest) != C_REST_OK);
 
   src.id = NULL;
   src.event = "test";
-  ASSERT_EQ(C_REST_OK, c_rest_sse_event_clone(&src, &dest));
-  c_rest_sse_event_destroy(&dest);
+  failed += (c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
+  failed += (c_rest_sse_event_destroy(&dest) != C_REST_OK);
 
   src.event = NULL;
   src.data = "test";
-  ASSERT_EQ(C_REST_OK, c_rest_sse_event_clone(&src, &dest));
-  c_rest_sse_event_destroy(&dest);
+  failed += (c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
+  failed += (c_rest_sse_event_destroy(&dest) != C_REST_OK);
 
-  return 0;
+  return failed;
 }
 
 int test_server_sent_events_sse(void) {
@@ -750,10 +695,11 @@ int test_server_sent_events_sse(void) {
   res |= test_sse_parse_fragmented();
   res |= test_sse_wrappers();
 
-  if (res == 0) {
-    printf("test_server_sent_events_sse passed.\n");
-  } else {
-    printf("test_server_sent_events_sse failed.\n");
+  {
+    const char *msgs[2];
+    msgs[0] = "test_server_sent_events_sse passed.\n";
+    msgs[1] = "test_server_sent_events_sse failed.\n";
+    printf("%s", msgs[res != 0]);
   }
   return res;
 }

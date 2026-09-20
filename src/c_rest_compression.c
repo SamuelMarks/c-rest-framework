@@ -333,6 +333,7 @@ c_rest_error_t c_rest_compress_buffer(c_rest_compression_type_t type,
   size_t len1 = 0;
   unsigned char *data2 = NULL;
   size_t len2 = 0;
+  size_t i;
 
   if (!in_data || !out_data || !out_len)
     return C_REST_ERROR_GENERIC;
@@ -347,44 +348,29 @@ c_rest_error_t c_rest_compress_buffer(c_rest_compression_type_t type,
     return rc;
 
   rc = c_rest_compress_data(ctx, in_data, in_len, &data1, &len1);
-  if (rc != C_REST_OK) {
-    (void)!c_rest_compression_ctx_destroy(ctx);
-    return rc;
+  if (rc == C_REST_OK) {
+    rc = c_rest_compress_finish(ctx, &data2, &len2);
+    if (rc == C_REST_OK) {
+      if (C_REST_MALLOC(len1 + len2, (void **)&(*out_data)) != 0) {
+        rc = C_REST_ERROR_GENERIC;
+      } else {
+        if (len1 > 0) {
+          for (i = 0; i < len1; ++i) {
+            (*out_data)[i] = data1[i];
+          }
+        }
+        for (i = 0; i < len2; ++i) {
+          (*out_data)[len1 + i] = data2[i];
+        }
+        *out_len = len1 + len2;
+      }
+    }
   }
 
-  rc = c_rest_compress_finish(ctx, &data2, &len2);
-  if (rc != C_REST_OK) {
+  if (data1)
     C_REST_FREE(data1);
-    (void)!c_rest_compression_ctx_destroy(ctx);
-    return rc;
-  }
-
-  rc = C_REST_MALLOC(len1 + len2, (void **)&(*out_data));
-  if (rc != C_REST_OK) {
-    C_REST_FREE(data1);
+  if (data2)
     C_REST_FREE(data2);
-    (void)!c_rest_compression_ctx_destroy(ctx);
-    return C_REST_ERROR_GENERIC;
-  }
-
-  if (len1 > 0) {
-    /* c_rest_mem does not have a memcpy directly, using loop or standard memcpy
-     */
-    size_t i;
-    for (i = 0; i < len1; ++i) {
-      (*out_data)[i] = data1[i];
-    }
-  }
-  {
-    size_t i;
-    for (i = 0; i < len2; ++i) {
-      (*out_data)[len1 + i] = data2[i];
-    }
-  }
-  *out_len = len1 + len2;
-
-  C_REST_FREE(data1);
-  C_REST_FREE(data2);
-  (void)!c_rest_compression_ctx_destroy(ctx);
-  return C_REST_OK;
+  c_rest_compression_ctx_destroy(ctx);
+  return rc;
 }

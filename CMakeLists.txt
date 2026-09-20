@@ -651,9 +651,9 @@ c_rest_framework_apply_crypto(c-rest-framework PUBLIC)
 
 include(GenerateExportHeader)
 generate_export_header(c-rest-framework EXPORT_MACRO_NAME C_REST_EXPORT EXPORT_FILE_NAME c_rest_export.h)
-target_include_directories(c-rest-framework PUBLIC "\${CMAKE_CURRENT_BINARY_DIR}")
+target_include_directories(c-rest-framework PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 if(NOT BUILD_SHARED_LIBS)
-    target_compile_definitions(c-rest-framework PUBLIC ${PROJECT_NAME_SAFE}_STATIC=1)
+    target_compile_definitions(c-rest-framework PUBLIC ${PROJECT_NAME_SAFE}_STATIC=1 C_REST_FRAMEWORK_STATIC_DEFINE=1)
 endif()
 c_rest_framework_resolve_parson()
 

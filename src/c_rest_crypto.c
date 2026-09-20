@@ -155,6 +155,11 @@ c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char 
   unsigned char buffer[64];
   size_t i;
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_crypto_fail == 8)
+    return C_REST_ERROR_GENERIC;
+#endif
+
   state[0] = 0x67452301;
   state[1] = 0xEFCDAB89;
   state[2] = 0x98BADCFE;
@@ -293,6 +298,14 @@ c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
   c_rest_uint32_t count[2];
   unsigned char buffer[64];
   size_t i;
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_crypto_fail == 10)
+    return C_REST_ERROR_GENERIC;
+  if (g_mock_crypto_fail == 11) {
+    g_mock_crypto_fail = 10;
+  }
+#endif
 
   state[0] = 0x6a09e667;
   state[1] = 0xbb67ae85;
@@ -611,13 +624,13 @@ c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
                                   const unsigned char *data, size_t data_len,
                                   unsigned char hash[32]) {
   unsigned char k_ipad[64];
-  c_rest_error_t rc;
   unsigned char k_opad[64];
   unsigned char actual_key[64];
   unsigned char inner_hash[32];
   unsigned char *inner_buf;
   unsigned char *outer_buf;
   size_t i;
+  c_rest_error_t rc;
 
   if (!key || !data || !hash)
     return C_REST_ERROR_GENERIC;
@@ -658,9 +671,9 @@ c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
 #endif
 
   rc = c_rest_sha256(inner_buf, 64 + data_len, inner_hash);
+  C_REST_FREE((void *)(inner_buf));
   if (rc != C_REST_OK)
     return rc;
-  C_REST_FREE((void *)(inner_buf));
 
   if (C_REST_MALLOC(64 + 32, &outer_buf) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
@@ -680,9 +693,9 @@ c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
 #endif
 
   rc = c_rest_sha256(outer_buf, 64 + 32, hash);
+  C_REST_FREE((void *)(outer_buf));
   if (rc != C_REST_OK)
     return rc;
-  C_REST_FREE((void *)(outer_buf));
 
   return C_REST_OK;
 }
@@ -766,15 +779,14 @@ c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
 #endif
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT extern int g_mock_crypto_fail;
 #define c_rest_rand_bytes(b, l)                                                \
   (g_mock_crypto_fail == 4 ? C_REST_ERROR_GENERIC : c_rest_rand_bytes(b, l))
 #endif
 c_rest_error_t c_rest_random_string_generate(size_t entropy_bytes,
                                              char **out_str) {
-  c_rest_error_t rc;
   unsigned char *rand_buf;
   size_t out_len = 0;
+  c_rest_error_t rc;
 
   if (!out_str || entropy_bytes == 0)
     return C_REST_ERROR_GENERIC;
@@ -789,8 +801,10 @@ c_rest_error_t c_rest_random_string_generate(size_t entropy_bytes,
   }
 
   rc = c_rest_base64url_encode(rand_buf, entropy_bytes, NULL, &out_len);
-  if (rc != C_REST_OK)
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(rand_buf));
     return rc;
+  }
 
   if (C_REST_MALLOC(out_len + 1, out_str) != 0) {
     C_REST_FREE((void *)(rand_buf));
@@ -798,8 +812,12 @@ c_rest_error_t c_rest_random_string_generate(size_t entropy_bytes,
   }
 
   rc = c_rest_base64url_encode(rand_buf, entropy_bytes, *out_str, &out_len);
-  if (rc != C_REST_OK)
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(*out_str));
+    *out_str = NULL;
+    C_REST_FREE((void *)(rand_buf));
     return rc;
+  }
   (*out_str)[out_len] = '\0';
 
   C_REST_FREE((void *)(rand_buf));
@@ -1027,7 +1045,6 @@ c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
 #define C_REST_PBKDF2_HASH_LEN 32
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_crypto_fail = 0;
 #undef c_rest_pbkdf2_hmac_sha256
 #define c_rest_pbkdf2_hmac_sha256(a, b, c, d, e, f, g)                         \
   (g_mock_crypto_fail == 2 ? C_REST_ERROR_GENERIC                              \

@@ -38,20 +38,24 @@ C_REST_EXPORT void *test_c_rest_internal_realloc(void *ptr, size_t size) {
 #include "c_rest_log.h"
 /* clang-format on */
 
-#ifndef _MSC_VER
-char *c_rest_internal_strdup(const char *s) {
+c_rest_error_t c_rest_internal_strdup(const char *s, char **out_str) {
   size_t len;
   char *dup;
-  if (!s)
-    return NULL;
+  if (!s || !out_str)
+    return C_REST_ERROR_GENERIC;
+  *out_str = NULL;
   len = strlen(s) + 1;
-  dup = (char *)malloc(len);
-  if (dup) {
-    memcpy(dup, s, len);
-  }
-  return dup;
-}
+  dup = (char *)CRF_MALLOC(len);
+  if (!dup)
+    return C_REST_ERROR_OOM;
+#if defined(_MSC_VER)
+  strcpy_s(dup, len, s);
+#else
+  memcpy(dup, s, len);
 #endif
+  *out_str = dup;
+  return C_REST_OK;
+}
 
 typedef struct c_rest_mem_node {
   void *ptr;
@@ -244,13 +248,14 @@ end_search2:
     new_ptr = NULL;
   }
   if (new_ptr && curr) {
-    rc = c_rest_mutex_lock(mem_mutex);
-    if (rc != C_REST_OK)
-      return rc;
     curr->ptr = new_ptr;
     curr->size = size;
     curr->file = file;
     curr->line = line;
+    *real_out = new_ptr;
+    rc = c_rest_mutex_lock(mem_mutex);
+    if (rc != C_REST_OK)
+      return rc;
     rc = c_rest_mutex_unlock(mem_mutex);
     if (rc != C_REST_OK)
       return rc;
@@ -261,16 +266,25 @@ end_search2:
 c_rest_error_t c_rest_mem_strdup(const char *str, const char *file, int line,
                                  char **out_str) {
   size_t len;
-  char *ptr;
+  char *ptr = NULL;
   c_rest_error_t rc;
 
   if (!str || !out_str)
     return C_REST_ERROR_GENERIC;
 
   len = strlen(str) + 1;
-  ptr = CRF_STRDUP(str);
-  if (!ptr)
-    return C_REST_ERROR_OOM;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_crf_strdup_hook) {
+    ptr = g_crf_strdup_hook(str);
+    if (!ptr)
+      return C_REST_ERROR_OOM;
+  } else
+#endif
+  {
+    rc = c_rest_internal_strdup(str, &ptr);
+    if (rc != C_REST_OK)
+      return rc;
+  }
 
   rc = add_node(ptr, len, file, line);
   if (rc != C_REST_OK) {

@@ -21,19 +21,26 @@ static c_rest_error_t encode_internal(const unsigned char *src, size_t src_len,
   size_t out_len = 4 * ((src_len + 2) / 3);
   size_t val;
   size_t pad_len;
+  size_t needed;
 
   if (!dst_len)
     return C_REST_ERROR_GENERIC;
+
+  val = src_len % 3;
+  pad_len = (val == 0) ? 0 : (3 - val);
+  if (use_padding) {
+    needed = out_len + 1;
+  } else {
+    needed = out_len - pad_len + 1;
+  }
+
   if (!dst) {
-    if (use_padding) {
-      *dst_len = out_len + 1;
-    } else {
-      val = src_len % 3;
-      pad_len = (val == 0) ? 0 : (3 - val);
-      *dst_len = out_len - pad_len + 1;
-    }
+    *dst_len = needed;
     return C_REST_OK;
   }
+
+  if (*dst_len < needed)
+    return C_REST_ERROR_GENERIC;
 
   for (i = 0; i < src_len;) {
     unsigned int octet_a = (unsigned char)src[i++];
@@ -134,6 +141,11 @@ static c_rest_error_t decode_internal(const char *src, size_t src_len,
     *dst_len = out_len;
     return C_REST_OK;
   }
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (strncmp(src, "TEST_MOCK_BASE64_DECODE_FAIL", 28) == 0) {
+    return C_REST_ERROR_GENERIC;
+  }
+#endif
   if (*dst_len < out_len)
     return C_REST_ERROR_GENERIC;
 

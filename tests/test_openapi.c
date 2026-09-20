@@ -14,6 +14,14 @@
 #include "parson.h"
 /* clang-format on */
 
+static char *test_strdup(const char *s) {
+  char *out = NULL;
+  c_rest_internal_strdup(s, &out);
+  return out;
+}
+#undef CRF_STRDUP
+#define CRF_STRDUP test_strdup
+
 static c_rest_error_t dummy_handler(struct c_rest_request *req,
                                     struct c_rest_response *res,
                                     void *user_data) {
@@ -51,7 +59,6 @@ static void *fail_malloc_n(size_t size) {
 static int test_openapi_errors(void) {
   struct c_rest_openapi_spec *spec = NULL;
   char *json_str = NULL;
-  c_rest_error_t ret;
   int i;
   struct c_rest_openapi_operation op;
   const char *tags[] = {"test_tag"};
@@ -222,10 +229,9 @@ static int test_openapi_errors(void) {
     for (i = 0; i < 250; i++) {
       g_crf_malloc_hook = fail_malloc_n;
       g_malloc_fail_after = i;
-      ret = c_rest_openapi_spec_to_json(spec, &json_str);
-      if (ret == C_REST_OK) {
-        json_free_serialized_string(json_str);
-      }
+      json_str = NULL;
+      c_rest_openapi_spec_to_json(spec, &json_str);
+      json_free_serialized_string(json_str);
     }
     g_crf_malloc_hook = NULL;
     g_malloc_fail_after = -1;
@@ -348,9 +354,6 @@ static int test_openapi_errors(void) {
     c_rest_openapi_spec_init(&sp);
 
     /* Hit version non-NULL */
-    if (sp->openapi_version) {
-      CRF_FREE((void *)sp->openapi_version);
-    }
     sp->openapi_version = CRF_STRDUP("3.1.0");
 
     memset(&op_empty, 0, sizeof(op_empty));
@@ -454,23 +457,20 @@ static int test_openapi_errors(void) {
     sp->swagger_openapi_url = CRF_STRDUP("/swagger.json");
 
     c_rest_openapi_spec_to_json(sp, &json_out);
-    if (json_out)
-      json_free_serialized_string(json_out);
+    json_free_serialized_string(json_out);
 
     /* Second pass to cover the other contact combinations */
     CRF_FREE((void *)sp->info.contact.name);
     sp->info.contact.name = NULL;
     sp->info.contact.url = CRF_STRDUP("http://contact");
     c_rest_openapi_spec_to_json(sp, &json_out);
-    if (json_out)
-      json_free_serialized_string(json_out);
+    json_free_serialized_string(json_out);
 
     CRF_FREE((void *)sp->info.contact.url);
     sp->info.contact.url = NULL;
     sp->info.contact.email = CRF_STRDUP("email@example.com");
     c_rest_openapi_spec_to_json(sp, &json_out);
-    if (json_out)
-      json_free_serialized_string(json_out);
+    json_free_serialized_string(json_out);
 
     c_rest_openapi_spec_destroy(sp);
   }
@@ -510,10 +510,8 @@ static int test_openapi_errors(void) {
 
       /* Force swagger_openapi_url to NULL to hit the branch */
       c_rest_router_get_openapi_spec(r3, &sp3);
-      if (sp3 && sp3->swagger_openapi_url) {
-        CRF_FREE((void *)sp3->swagger_openapi_url);
-        sp3->swagger_openapi_url = NULL;
-      }
+      CRF_FREE((void *)sp3->swagger_openapi_url);
+      sp3->swagger_openapi_url = NULL;
 
       c_rest_router_dispatch(r3, &req_ui, &res_ui);
       c_rest_response_cleanup(&res_ui);
@@ -632,8 +630,8 @@ int test_openapi(void) {
   op.security = &sec_req;
   op.n_security = 1;
 
-  (void)!c_rest_enable_openapi(router, "/openapi.json");
-  (void)!c_rest_enable_swagger_ui(router, "/docs", "/openapi.json");
+  ret = c_rest_enable_openapi(router, "/openapi.json");
+  ret = c_rest_enable_swagger_ui(router, "/docs", "/openapi.json");
 
   op.summary = "Test Summary";
   op.description = "Test Desc";
@@ -641,12 +639,10 @@ int test_openapi(void) {
   ret = c_rest_router_add_openapi(router, "GET", "/api/test", dummy_handler,
                                   NULL, &op);
 
-  (void)!c_rest_router_get_openapi_spec(router, &spec);
+  ret = c_rest_router_get_openapi_spec(router, &spec);
 
-  if (spec->n_paths > 0) {
-    spec->paths[0].summary = CRF_STRDUP("test sum");
-    spec->paths[0].description = CRF_STRDUP("test desc");
-  }
+  spec->paths[0].summary = CRF_STRDUP("test sum");
+  spec->paths[0].description = CRF_STRDUP("test desc");
 
   spec->info.title = CRF_STRDUP("My API");
   spec->info.version = CRF_STRDUP("2.0.0");
@@ -836,19 +832,17 @@ int test_openapi(void) {
   }
 
   ret = c_rest_openapi_spec_to_json(spec, &json_str);
-
-  if (json_str)
-    json_free_serialized_string(json_str);
+  json_free_serialized_string(json_str);
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
   req.method = "GET";
   req.path = "/docs";
-  (void)!c_rest_router_dispatch(router, &req, &res);
+  ret = c_rest_router_dispatch(router, &req, &res);
 
-  (void)!c_rest_response_cleanup(&res);
+  ret = c_rest_response_cleanup(&res);
 
-  (void)!c_rest_router_destroy(router);
+  ret = c_rest_router_destroy(router);
 
   test_openapi_errors();
 
@@ -904,8 +898,7 @@ int test_openapi(void) {
     spec_null_flows->n_security_schemes = 1;
 
     c_rest_openapi_spec_to_json(spec_null_flows, &json_out);
-    if (json_out)
-      json_free_serialized_string(json_out);
+    json_free_serialized_string(json_out);
 
     c_rest_openapi_spec_destroy(spec_null_flows);
   }
@@ -925,8 +918,7 @@ int test_openapi(void) {
     spec_noflows->n_security_schemes = 1;
 
     c_rest_openapi_spec_to_json(spec_noflows, &json_out);
-    if (json_out)
-      json_free_serialized_string(json_out);
+    json_free_serialized_string(json_out);
 
     c_rest_openapi_spec_destroy(spec_noflows);
   }
@@ -939,8 +931,7 @@ int test_openapi(void) {
     memset(&op_empty, 0, sizeof(op_empty));
     c_rest_openapi_spec_add_path(spec_empty, "/api/empty", "GET", &op_empty);
     c_rest_openapi_spec_to_json(spec_empty, &json_out_empty);
-    if (json_out_empty)
-      json_free_serialized_string(json_out_empty);
+    json_free_serialized_string(json_out_empty);
     c_rest_openapi_spec_destroy(spec_empty);
   }
 

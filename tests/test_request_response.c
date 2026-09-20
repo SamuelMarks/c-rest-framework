@@ -29,11 +29,30 @@ static void *fail_malloc_n(size_t size) {
   return malloc(size);
 }
 
-static void test_coverage(void) {
+static int safe_strcmp(const char *s1, const char *s2) {
+  if (!s1 || !s2)
+    return s1 != s2;
+  return strcmp(s1, s2);
+}
+
+static int safe_strstr_missing(const char *haystack, const char *needle) {
+  if (!haystack || !needle)
+    return 1;
+  return strstr(haystack, needle) == NULL;
+}
+
+static char *test_strdup(const char *s) {
+  char *out = NULL;
+  c_rest_internal_strdup(s, &out);
+  return out;
+}
+
+static int test_coverage(void) {
   c_rest_error_t rc;
   struct c_rest_request req;
   struct c_rest_response res;
   int i;
+  int failed = 0;
   extern int g_fail_malloc_at;
   extern int g_fail_realloc_at;
   (void)g_fail_realloc_at;
@@ -43,25 +62,44 @@ static void test_coverage(void) {
 
   /* Hit NULL branches */
   rc = c_rest_request_get_query(NULL, "a", NULL);
+  failed += (rc == C_REST_OK);
   rc = c_rest_request_get_header(NULL, "a", NULL);
+  failed += (rc == C_REST_OK);
   rc = c_rest_request_get_cookie(NULL, "a", NULL);
+  failed += (rc == C_REST_OK);
   rc = c_rest_request_read_body(NULL, NULL, NULL);
+  failed += (rc == C_REST_OK);
   rc = c_rest_request_parse_json(NULL, NULL);
+  failed += (rc == C_REST_OK);
   rc = c_rest_request_parse_urlencoded(NULL);
+  failed += (rc != C_REST_OK);
   rc = c_rest_request_get_form_param(NULL, "a", NULL);
+  failed += (rc == C_REST_OK);
   rc = c_rest_request_get_auth_bearer(NULL, NULL);
+  failed += (rc == C_REST_OK);
   rc = c_rest_request_get_auth_basic(NULL, NULL, NULL);
+  failed += (rc == C_REST_OK);
   rc = c_rest_request_accepts_encoding(NULL, NULL);
+  failed += (rc != C_REST_OK);
 
   rc = c_rest_response_set_status(NULL, 200);
+  failed += (rc == C_REST_OK);
   rc = c_rest_response_set_header(NULL, "a", "b");
+  failed += (rc == C_REST_OK);
   rc = c_rest_response_set_cookie(NULL, "a", "b", "c");
+  failed += (rc == C_REST_OK);
   rc = c_rest_response_json(NULL, "a");
+  failed += (rc == C_REST_OK);
   rc = c_rest_response_json_obj(NULL, NULL);
+  failed += (rc == C_REST_OK);
   rc = c_rest_response_json_dict(NULL, NULL, 0);
+  failed += (rc == C_REST_OK);
   rc = c_rest_response_check_etag(NULL, NULL, "a");
+  failed += (rc != C_REST_OK);
   rc = c_rest_response_set_cache_control(NULL, "a");
+  failed += (rc == C_REST_OK);
   rc = c_rest_response_serialize(NULL, NULL, NULL);
+  failed += (rc == C_REST_OK);
 
   {
     struct c_rest_response r = {0};
@@ -98,8 +136,7 @@ static void test_coverage(void) {
     char *ob = NULL;
     size_t ol;
     c_rest_response_serialize(&res_n, &ob, &ol);
-    if (ob)
-      C_REST_FREE(ob);
+    C_REST_FREE(ob);
   }
 
   {
@@ -109,8 +146,7 @@ static void test_coverage(void) {
     res_b.body = "x";
     res_b.body_len = 0;
     c_rest_response_serialize(&res_b, &ob, &ol);
-    if (ob)
-      C_REST_FREE(ob);
+    C_REST_FREE(ob);
   }
 
   {
@@ -122,8 +158,7 @@ static void test_coverage(void) {
       size_t ol;
       r.status_code = codes[i];
       c_rest_response_serialize(&r, &ob, &ol);
-      if (ob)
-        C_REST_FREE(ob);
+      C_REST_FREE(ob);
     }
   }
 
@@ -198,8 +233,7 @@ static void test_coverage(void) {
     size_t ol;
     res_chk.is_chunked = 1;
     c_rest_response_serialize(&res_chk, &ob, &ol);
-    if (ob)
-      C_REST_FREE(ob);
+    C_REST_FREE(ob);
   }
 
   {
@@ -207,11 +241,8 @@ static void test_coverage(void) {
     char *ob = NULL;
     size_t ol;
     c_rest_response_serialize(&res_zero, &ob, &ol);
-    if (ob)
-      C_REST_FREE(ob);
+    C_REST_FREE(ob);
   }
-
-  (void)rc;
 
   c_rest_response_send(NULL);
   res.headers_sent = 1;
@@ -299,8 +330,7 @@ static void test_coverage(void) {
       r.body = "{}";
       r.body_len = 2;
       c_rest_request_parse_json(&r, &json_obj);
-      if (json_obj)
-        json_value_free(json_obj);
+      json_value_free(json_obj);
 
       r.body = "invalid";
       r.body_len = 7;
@@ -311,17 +341,17 @@ static void test_coverage(void) {
       c_rest_request_parse_json(&r, &json_obj);
 
       r.headers = (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
-      r.headers->key = (char *)CRF_STRDUP("k");
-      r.headers->value = (char *)CRF_STRDUP("v");
+      r.headers->key = (char *)test_strdup("k");
+      r.headers->value = (char *)test_strdup("v");
       r.headers->next = NULL;
 
       r.path_vars =
           (struct c_rest_path_var *)malloc(sizeof(struct c_rest_path_var));
-      r.path_vars->name = (char *)CRF_STRDUP("k");
-      r.path_vars->value = (char *)CRF_STRDUP("v");
+      r.path_vars->name = (char *)test_strdup("k");
+      r.path_vars->value = (char *)test_strdup("v");
       r.path_vars->next = NULL;
 
-      r.body = (char *)CRF_STRDUP("dynamic");
+      r.body = (char *)test_strdup("dynamic");
 
       c_rest_request_cleanup(&r);
     }
@@ -348,6 +378,15 @@ static void test_coverage(void) {
     struct c_rest_response res2_ex;
     struct c_rest_header h;
     const char *val;
+
+    memset(&req2_ex, 0, sizeof(req2_ex));
+    req2_ex.headers = &h;
+    h.key = NULL;
+    h.value = "val";
+    h.next = NULL;
+    c_rest_request_get_header(&req2_ex, "a", &val);
+    req2_ex.headers = NULL;
+    c_rest_request_cleanup(&req2_ex);
 
     memset(&req2_ex, 0, sizeof(req2_ex));
     req2_ex.query = "a=%XX";
@@ -662,21 +701,63 @@ static void test_coverage(void) {
     h.value = "Basic bm9jb2xvbg==";
     c_rest_request_get_auth_basic(&r, &user, &pass);
 
+    h.value = "Basic TEST_MOCK_BASE64_DECODE_FAIL";
+    c_rest_request_get_auth_basic(&r, &user, &pass);
+
     r.headers = NULL;
+  }
+
+  /* Test URL decode error in query params and urlencoded body */
+  {
+    struct c_rest_request req_q;
+    const char *qval = NULL;
+    memset(&req_q, 0, sizeof(req_q));
+    req_q.query = "TEST_MOCK_URL_DECODE_FAIL=1&k=TEST_MOCK_URL_DECODE_FAIL&"
+                  "TEST_MOCK_URL_DECODE_FAIL";
+    c_rest_request_get_query(&req_q, "k", &qval);
+    req_q.query = NULL;
+    c_rest_request_cleanup(&req_q);
+
+    memset(&req_q, 0, sizeof(req_q));
+    req_q.body = (void *)"TEST_MOCK_URL_DECODE_FAIL=1&k=TEST_MOCK_URL_DECODE_"
+                         "FAIL&TEST_MOCK_URL_DECODE_FAIL";
+    req_q.body_len = strlen((const char *)req_q.body);
+    c_rest_request_parse_urlencoded(&req_q);
+    req_q.body = NULL;
+    c_rest_request_cleanup(&req_q);
   }
 
   /* response.c coverage extras */
   {
     struct c_rest_response r;
-    struct {
-      int sock;
-      void *tls;
-      void *cm;
-    } fake_ctx;
+    struct c_rest_connection_context fake_ctx;
+    struct c_rest_response res_null_h;
+    struct c_rest_header h_null;
+    char *ser_buf;
+    size_t ser_len;
+    ser_buf = NULL;
+    ser_len = 0;
+
+    memset(&res_null_h, 0, sizeof(res_null_h));
+    memset(&h_null, 0, sizeof(h_null));
+    res_null_h.headers = &h_null;
+    h_null.key = NULL;
+    h_null.value = "val";
+    h_null.next = NULL;
+    rc = c_rest_response_set_header(&res_null_h, "a", "val");
+    rc = c_rest_response_set_header(&res_null_h, "TEST_MOCK_STRCASECMP_FAIL",
+                                    "val");
+    rc = c_rest_response_serialize(&res_null_h, &ser_buf, &ser_len);
+    res_null_h.headers = NULL;
+    c_rest_response_cleanup(&res_null_h);
+
     memset(&r, 0, sizeof(r));
+    memset(&fake_ctx, 0, sizeof(fake_ctx));
+#ifndef _WIN32
     fake_ctx.sock = -1;
-    fake_ctx.tls = NULL;
-    fake_ctx.cm = NULL;
+#else
+    fake_ctx.sock = (c_rest_socket_t)-1;
+#endif
     r.context = &fake_ctx;
     r.body = "body";
     r.body_len = 4;
@@ -691,8 +772,6 @@ static void test_coverage(void) {
     c_rest_response_cleanup(&r);
     memset(&r, 0, sizeof(r));
 
-    fake_ctx.tls = NULL;
-    fake_ctx.cm = NULL;
     r.headers_sent = 0;
     r.is_chunked = 0;
     c_rest_response_send(&r);
@@ -718,26 +797,73 @@ static void test_coverage(void) {
 
     /* write_chunk with raw bytes (is_chunked = 0 but headers sent) */
     r.context = &fake_ctx;
-    fake_ctx.tls = NULL;
-#ifndef _WIN32
-    fake_ctx.sock = -1;
-#else
-    fake_ctx.sock = (c_rest_socket_t)-1;
-#endif
     r.headers_sent = 1;
     r.is_chunked = 0;
     c_rest_response_write_chunk(&r, "chunk", 5);
     c_rest_response_cleanup(&r);
     memset(&r, 0, sizeof(r));
 
-    /* write_chunk with TLS */
+#ifdef C_REST_TESTING_MALLOC_HOOK
+    /* write_chunk with socket mock (chunked) */
+    memset(&r, 0, sizeof(r));
+    memset(&fake_ctx, 0, sizeof(fake_ctx));
     r.context = &fake_ctx;
-    fake_ctx.tls = (void *)1; /* Fake pointer to trigger tls_conn branch */
     r.headers_sent = 1;
     r.is_chunked = 1;
-    c_rest_response_write_chunk(&r, "chunk", 5);
+
+    g_mock_socket_fail = 200;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+    rc = c_rest_response_write_chunk(&r, NULL, 0);
+
+    g_mock_socket_fail = 201;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+
+    g_mock_socket_fail = 202;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+
+    g_mock_socket_fail = 203;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+
+    /* write_chunk with socket mock (non-chunked) */
     r.is_chunked = 0;
-    c_rest_response_write_chunk(&r, "chunk", 5);
+    g_mock_socket_fail = 200;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+    rc = c_rest_response_write_chunk(&r, NULL, 0);
+
+    g_mock_socket_fail = 201;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+    g_mock_socket_fail = 0;
+
+    /* write_chunk with TLS mock (chunked) */
+    r.is_chunked = 1;
+    fake_ctx.tls_conn = (struct c_rest_tls_connection *)1;
+
+    g_mock_tls_fail = 3;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+    rc = c_rest_response_write_chunk(&r, NULL, 0);
+
+    g_mock_tls_fail = 0;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+
+    g_mock_tls_fail = 4;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+
+    g_mock_tls_fail = 5;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+
+    /* write_chunk with TLS mock (non-chunked) */
+    r.is_chunked = 0;
+    g_mock_tls_fail = 3;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+    rc = c_rest_response_write_chunk(&r, NULL, 0);
+
+    g_mock_tls_fail = 0;
+    rc = c_rest_response_write_chunk(&r, "chunk", 5);
+    g_mock_tls_fail = 0;
+    fake_ctx.tls_conn = NULL;
+    c_rest_response_cleanup(&r);
+    memset(&r, 0, sizeof(r));
+#endif
 
     r.headers_sent = 0;
     r.body = "body";
@@ -880,8 +1006,7 @@ static void test_coverage(void) {
       memset(&rr, 0, sizeof(rr));
       c_rest_response_set_status(&rr, s);
       c_rest_response_serialize(&rr, &out_buf, &out_len);
-      if (out_buf)
-        CRF_FREE(out_buf);
+      CRF_FREE(out_buf);
       out_buf = NULL;
       c_rest_response_cleanup(&rr);
     }
@@ -889,102 +1014,91 @@ static void test_coverage(void) {
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 201);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 202);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 204);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 301);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 304);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 400);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 401);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 403);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 404);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 405);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 500);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     memset(&rr, 0, sizeof(rr));
     c_rest_response_set_status(&rr, 501);
     c_rest_response_serialize(&rr, &out_buf, &out_len);
-    if (out_buf)
-      CRF_FREE(out_buf);
+    CRF_FREE(out_buf);
     out_buf = NULL;
     c_rest_response_cleanup(&rr);
 
     c_rest_response_oauth2_error(NULL, NULL, NULL);
     c_rest_response_oauth2_error(&rr, "error", NULL);
   }
+  return failed;
 }
 
 int test_request_response(void) {
@@ -993,7 +1107,7 @@ int test_request_response(void) {
   const char *val;
   int failed = 0;
   const char *msgs[2];
-  test_coverage();
+  failed += test_coverage();
 
   {
     int i;
@@ -1073,20 +1187,20 @@ int test_request_response(void) {
     memset(&req3, 0, sizeof(req3));
 
     dyn_h = (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
-    dyn_h->key = (char *)CRF_STRDUP("Dyn-Key");
-    dyn_h->value = (char *)CRF_STRDUP("Dyn-Value");
+    dyn_h->key = (char *)test_strdup("Dyn-Key");
+    dyn_h->value = (char *)test_strdup("Dyn-Value");
     dyn_h->next = NULL;
     req3.headers = dyn_h;
 
     req3.cookies = (struct c_rest_header *)malloc(sizeof(struct c_rest_header));
-    req3.cookies->key = (char *)CRF_STRDUP("Cookie-Key");
-    req3.cookies->value = (char *)CRF_STRDUP("Cookie-Value");
+    req3.cookies->key = (char *)test_strdup("Cookie-Key");
+    req3.cookies->value = (char *)test_strdup("Cookie-Value");
     req3.cookies->next = NULL;
 
     req3.path_vars =
         (struct c_rest_path_var *)malloc(sizeof(struct c_rest_path_var));
-    req3.path_vars->name = (char *)CRF_STRDUP("Path-Key");
-    req3.path_vars->value = (char *)CRF_STRDUP("Path-Value");
+    req3.path_vars->name = (char *)test_strdup("Path-Key");
+    req3.path_vars->value = (char *)test_strdup("Path-Value");
     req3.path_vars->next = NULL;
 
     c_rest_request_cleanup(&req3);
@@ -1101,33 +1215,40 @@ int test_request_response(void) {
   req.query = "id=123&name=test&empty=&no_val";
 
   val = NULL;
-  (void)!c_rest_request_get_query(&req, "id", &val);
-  failed += (!val || strcmp(val, "123") != 0);
+  failed += (c_rest_request_get_query(&req, "id", &val) != C_REST_OK);
+  failed += (val == NULL);
+  failed += (safe_strcmp(val, "123") != 0);
 
   val = NULL;
-  (void)!c_rest_request_get_query(&req, "name", &val);
-  failed += (!val || strcmp(val, "test") != 0);
+  failed += (c_rest_request_get_query(&req, "name", &val) != C_REST_OK);
+  failed += (val == NULL);
+  failed += (safe_strcmp(val, "test") != 0);
 
   val = NULL;
-  (void)!c_rest_request_get_query(&req, "empty", &val);
-  failed += (!val || strcmp(val, "") != 0);
+  failed += (c_rest_request_get_query(&req, "empty", &val) != C_REST_OK);
+  failed += (val == NULL);
+  failed += (safe_strcmp(val, "") != 0);
 
   val = NULL;
-  (void)!c_rest_request_get_query(&req, "no_val", &val);
-  failed += (!val || strcmp(val, "") != 0);
+  failed += (c_rest_request_get_query(&req, "no_val", &val) != C_REST_OK);
+  failed += (val == NULL);
+  failed += (safe_strcmp(val, "") != 0);
 
   val = NULL;
-  (void)!c_rest_request_get_query(&req, "missing", &val);
+  failed += (c_rest_request_get_query(&req, "missing", &val) == C_REST_OK);
   failed += (val != NULL);
 
   /* Test response headers */
-  (void)!c_rest_response_set_header(&res, "Content-Type", "text/plain");
-  (void)!c_rest_response_set_header(&res, "Content-Type",
-                                    "application/json"); /* Should replace */
+  failed += (c_rest_response_set_header(&res, "Content-Type", "text/plain") !=
+             C_REST_OK);
+  failed +=
+      (c_rest_response_set_header(&res, "Content-Type", "application/json") !=
+       C_REST_OK); /* Should replace */
 
-  (void)!c_rest_response_set_cookie(&res, "session", "abc", "HttpOnly; Secure");
-  (void)!c_rest_response_set_cookie(&res, "theme", "dark",
-                                    NULL); /* Should not replace session */
+  failed += (c_rest_response_set_cookie(&res, "session", "abc",
+                                        "HttpOnly; Secure") != C_REST_OK);
+  failed += (c_rest_response_set_cookie(&res, "theme", "dark", NULL) !=
+             C_REST_OK); /* Should not replace session */
 
   /* Verify headers */
   {
@@ -1137,19 +1258,19 @@ int test_request_response(void) {
     struct c_rest_header *h;
 
     for (h = res.headers; h != NULL; h = h->next) {
-      if (strcmp(h->key, "Content-Type") == 0) {
+      if (safe_strcmp(h->key, "Content-Type") == 0) {
         found_ct = 1;
-        failed += (strcmp(h->value, "application/json") != 0);
-      } else if (strcmp(h->key, "Set-Cookie") == 0) {
-        if (strstr(h->value, "session=abc") != NULL) {
-          found_cookie_session = 1;
-        } else if (strstr(h->value, "theme=dark") != NULL) {
-          found_cookie_theme = 1;
-        }
+        failed += (safe_strcmp(h->value, "application/json") != 0);
+      }
+      if (safe_strcmp(h->key, "Set-Cookie") == 0) {
+        found_cookie_session += (strstr(h->value, "session=abc") != NULL);
+        found_cookie_theme += (strstr(h->value, "theme=dark") != NULL);
       }
     }
 
-    failed += (!found_ct || !found_cookie_session || !found_cookie_theme);
+    failed += (found_ct == 0);
+    failed += (found_cookie_session == 0);
+    failed += (found_cookie_theme == 0);
   }
 
   /* Test ETag && Cache Control */
@@ -1160,7 +1281,8 @@ int test_request_response(void) {
     req_h_etag.next = NULL;
     req.headers = &req_h_etag;
 
-    (void)!c_rest_response_set_cache_control(&res, "max-age=3600");
+    failed +=
+        (c_rest_response_set_cache_control(&res, "max-age=3600") != C_REST_OK);
 
     failed += (!c_rest_response_check_etag(&req, &res, "\"12345\""));
     failed += (res.status_code != 304);
@@ -1179,9 +1301,9 @@ int test_request_response(void) {
     req_h_enc.next = NULL;
     req.headers = &req_h_enc;
 
-    failed += (!c_rest_request_accepts_encoding(&req, "gzip") ||
-               !c_rest_request_accepts_encoding(&req, "br") ||
-               c_rest_request_accepts_encoding(&req, "identity"));
+    failed += (!c_rest_request_accepts_encoding(&req, "gzip"));
+    failed += (!c_rest_request_accepts_encoding(&req, "br"));
+    failed += (c_rest_request_accepts_encoding(&req, "identity") != 0);
 
     req.headers = NULL;
   }
@@ -1191,31 +1313,30 @@ int test_request_response(void) {
     char *large_body = (char *)CRF_MALLOC(1024 * 1024); /* 1MB */
     char *read_ptr = NULL;
     size_t read_len = 0;
-    if (large_body) {
-      memset(large_body, 'A', 1024 * 1024 - 1);
-      large_body[1024 * 1024 - 1] = '\0';
-      req.body = large_body;
-      req.body_len = 1024 * 1024 - 1;
+    memset(large_body, 'A', 1024 * 1024 - 1);
+    large_body[1024 * 1024 - 1] = '\0';
+    req.body = large_body;
+    req.body_len = 1024 * 1024 - 1;
 
-      (void)!c_rest_request_read_body(&req, &read_ptr, &read_len);
-      failed +=
-          (!read_ptr || read_len != 1024 * 1024 - 1 || read_ptr[0] != 'A');
-      CRF_FREE(large_body);
-    }
+    failed +=
+        (c_rest_request_read_body(&req, &read_ptr, &read_len) != C_REST_OK);
+    failed += (read_ptr == NULL);
+    failed += (read_len != 1024 * 1024 - 1);
+    failed += (read_ptr[0] != 'A');
+    CRF_FREE(large_body);
   }
 
   /* Test helpers */
-  (void)!c_rest_response_json(&res, "{\"hello\":\"world\"}");
-  if (res.status_code != 0) { /* Defaults to 0 since we didn't set it */
-  }
-  failed += (strcmp(res.body, "{\"hello\":\"world\"}") != 0);
+  failed += (c_rest_response_json(&res, "{\"hello\":\"world\"}") != C_REST_OK);
+  failed += (safe_strcmp(res.body, "{\"hello\":\"world\"}") != 0);
 
   /* Test JSON Request Parsing */
   {
     void *json_obj = NULL;
     req.body = "{\"key\": \"value\"}";
     req.body_len = strlen(req.body);
-    failed += (c_rest_request_parse_json(&req, &json_obj) != 0 || !json_obj);
+    failed += (c_rest_request_parse_json(&req, &json_obj) != 0);
+    failed += (json_obj == NULL);
 
     /* Test JSON Response Generation */
     res.headers_sent = 0; /* Reset state */
@@ -1235,9 +1356,10 @@ int test_request_response(void) {
 
     res.headers_sent = 0; /* Reset state */
     failed += (c_rest_response_json_dict(&res, pairs, 5) != 0);
-    failed += !res.body ||
-              (strstr(res.body, "\"access_token\":\"test_token_123\"") == NULL);
-    (void)!c_rest_response_cleanup(&res);
+    failed += (res.body == NULL);
+    failed +=
+        safe_strstr_missing(res.body, "\"access_token\":\"test_token_123\"");
+    failed += (c_rest_response_cleanup(&res) != C_REST_OK);
   }
 
   /* Test URL Encoded Parsing */
@@ -1248,12 +1370,10 @@ int test_request_response(void) {
     /* Form params list starts empty since req was cleaned up/not initialized
      * for this */
     failed += (c_rest_request_parse_urlencoded(&req) != 0);
-    failed +=
-        (c_rest_request_get_form_param(&req, "username", &form_val) != 0 ||
-         strcmp(form_val, "admin") != 0);
-    failed +=
-        (c_rest_request_get_form_param(&req, "password", &form_val) != 0 ||
-         strcmp(form_val, "123 456") != 0);
+    failed += (c_rest_request_get_form_param(&req, "username", &form_val) != 0);
+    failed += (safe_strcmp(form_val, "admin") != 0);
+    failed += (c_rest_request_get_form_param(&req, "password", &form_val) != 0);
+    failed += (safe_strcmp(form_val, "123 456") != 0);
     req.body = NULL; /* Prevent free of string literal */
   }
 
@@ -1270,8 +1390,8 @@ int test_request_response(void) {
     auth_bearer.next = NULL;
 
     req.headers = &auth_bearer;
-    failed += (c_rest_request_get_auth_bearer(&req, &token) != 0 ||
-               strcmp(token, "my-token-123") != 0);
+    failed += (c_rest_request_get_auth_bearer(&req, &token) != 0);
+    failed += (safe_strcmp(token, "my-token-123") != 0);
     CRF_FREE(token);
 
     auth_basic.key = "Authorization";
@@ -1280,8 +1400,9 @@ int test_request_response(void) {
     auth_basic.next = NULL;
 
     req.headers = &auth_basic;
-    failed += (c_rest_request_get_auth_basic(&req, &user, &pass) != 0 ||
-               strcmp(user, "admin") != 0 || strcmp(pass, "secret123") != 0);
+    failed += (c_rest_request_get_auth_basic(&req, &user, &pass) != 0);
+    failed += (safe_strcmp(user, "admin") != 0);
+    failed += (safe_strcmp(pass, "secret123") != 0);
     CRF_FREE(user);
     CRF_FREE(pass);
 
@@ -1295,30 +1416,27 @@ int test_request_response(void) {
     size_t out_len = 0;
 
     memset(&ser_res, 0, sizeof(ser_res));
-    (void)!c_rest_response_set_status(&ser_res, 200);
-    (void)!c_rest_response_set_header(&ser_res, "Content-Type", "text/plain");
+    failed += (c_rest_response_set_status(&ser_res, 200) != C_REST_OK);
+    failed += (c_rest_response_set_header(&ser_res, "Content-Type",
+                                          "text/plain") != C_REST_OK);
 
     ser_res.body = (char *)CRF_MALLOC(12);
-    if (ser_res.body) {
 #if defined(_MSC_VER)
-      strcpy_s(ser_res.body, 12, "Hello World");
+    strcpy_s(ser_res.body, 12, "Hello World");
 #else
-      strcpy(ser_res.body, "Hello World");
+    strcpy(ser_res.body, "Hello World");
 #endif
-    }
     ser_res.body_len = 11;
 
-    failed += (c_rest_response_serialize(&ser_res, &out_buf, &out_len) != 0 ||
-               !out_buf);
+    failed += (c_rest_response_serialize(&ser_res, &out_buf, &out_len) != 0);
+    failed += (out_buf == NULL);
 
-    if (out_buf) {
-      failed += (strstr(out_buf, "HTTP/1.1 200 OK\r\n") == NULL);
-      failed += (strstr(out_buf, "Content-Type: text/plain\r\n") == NULL);
-      failed += (strstr(out_buf, "Content-Length: 11\r\n") == NULL);
-      failed += (strstr(out_buf, "\r\n\r\nHello World") == NULL);
-      CRF_FREE(out_buf);
-    }
-    (void)!c_rest_response_cleanup(&ser_res);
+    failed += safe_strstr_missing(out_buf, "HTTP/1.1 200 OK\r\n");
+    failed += safe_strstr_missing(out_buf, "Content-Type: text/plain\r\n");
+    failed += safe_strstr_missing(out_buf, "Content-Length: 11\r\n");
+    failed += safe_strstr_missing(out_buf, "\r\n\r\nHello World");
+    CRF_FREE(out_buf);
+    failed += (c_rest_response_cleanup(&ser_res) != C_REST_OK);
   }
 
   /* Test OAuth2 Error */
@@ -1328,16 +1446,25 @@ int test_request_response(void) {
     failed += (c_rest_response_oauth2_error(&err_res, "invalid_request",
                                             "Missing parameter") != 0);
     failed += (err_res.status_code != 400);
-    if (err_res.body) {
-      failed += (strstr(err_res.body, "\"error\":\"invalid_request\"") == NULL);
-      failed += (strstr(err_res.body,
-                        "\"error_description\":\"Missing parameter\"") == NULL);
-    }
-    (void)!c_rest_response_cleanup(&err_res);
+    failed +=
+        safe_strstr_missing(err_res.body, "\"error\":\"invalid_request\"");
+    failed += safe_strstr_missing(
+        err_res.body, "\"error_description\":\"Missing parameter\"");
+    failed += (c_rest_response_cleanup(&err_res) != C_REST_OK);
   }
 
-  (void)!c_rest_request_cleanup(&req);
-  (void)!c_rest_response_cleanup(&res);
+  failed += (c_rest_request_cleanup(&req) != C_REST_OK);
+  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
+
+  /* Cover safe string helper branches */
+  (void)safe_strcmp(NULL, NULL);
+  (void)safe_strcmp("a", NULL);
+  (void)safe_strcmp(NULL, "a");
+  (void)safe_strcmp("a", "b");
+  (void)safe_strstr_missing(NULL, NULL);
+  (void)safe_strstr_missing("a", NULL);
+  (void)safe_strstr_missing(NULL, "a");
+  (void)safe_strstr_missing("abc", "z");
 
   msgs[0] = "test_request_response passed\n";
   msgs[1] = "test_request_response failed\n";
