@@ -200,7 +200,7 @@ int test_hashmap(void) {
   {
     c_rest_hashmap m3;
     g_fail_malloc_at = 0;
-    (void)fail_malloc_n(16);
+    failed += (fail_malloc_n(16) != NULL);
     rc = c_rest_hashmap_init(&m3, 16);
     /* Try to simulate malloc failure by failing io */
 

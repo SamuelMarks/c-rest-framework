@@ -158,6 +158,12 @@ static void test_modality_simple(void) {
     g_mock_socket_fail = 8;
     multi_thread_vtable.run(&ctx);
     g_mock_socket_fail = 0;
+
+    workers_arr[0] = (c_rest_thread_t)-1;
+    multi_st.worker_count = 1;
+    g_mock_socket_fail = 8;
+    multi_thread_vtable.run(&ctx);
+    g_mock_socket_fail = 0;
   }
 
   ctx.internal_state = &async_st;
@@ -204,6 +210,15 @@ static void test_modality_simple(void) {
     multi_st.workers = workers_arr;
     multi_st.worker_count = 3;
     multi_thread_vtable.stop(&ctx);
+
+    workers_arr[0] = (c_rest_thread_t)-1;
+    multi_st.worker_count = 1;
+    multi_thread_vtable.stop(&ctx);
+
+    multi_st.workers = NULL;
+    multi_st.worker_count = 0;
+    multi_st.server_sock = (c_rest_socket_t)9999;
+    multi_thread_vtable.stop(&ctx);
   }
 
   /* 7. Trigger socket close failure in destroy */
@@ -246,6 +261,11 @@ static void test_modality_simple(void) {
     c_rest_thread_create(&workers_arr[2], dummy_modality_worker_fn, NULL);
     multi_st.workers = workers_arr;
     multi_st.worker_count = 3;
+    multi_thread_vtable.destroy(&ctx);
+
+    workers_arr[0] = (c_rest_thread_t)-1;
+    multi_st.worker_count = 1;
+    ctx.internal_state = &multi_st;
     multi_thread_vtable.destroy(&ctx);
 
     ctx.logger.log_cb = NULL;

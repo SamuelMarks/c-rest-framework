@@ -64,14 +64,16 @@ c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock, const char *host,
   struct sockaddr_in addr;
   int s = (int)sock;
   int res;
-
   int opt = 1;
+  c_rest_error_t rc;
 
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
-  c_rest_htons(port, &addr.sin_port);
+  rc = c_rest_htons(port, &addr.sin_port);
+  if (rc != C_REST_OK)
+    return rc;
   if (!host)
     return C_REST_ERROR_GENERIC;
   addr.sin_addr.s_addr = inet_addr(host);

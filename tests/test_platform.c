@@ -51,6 +51,13 @@ static void *hook_malloc_platform(size_t size) {
 }
 #endif
 
+#ifdef C_REST_TESTING_ENDIAN_HOOK
+static c_rest_error_t mock_platform_endian_fail(int *out_is_little) {
+  *out_is_little = 0;
+  return C_REST_ERROR_GENERIC;
+}
+#endif
+
 int test_platform(void) {
 
   int failed = 0;
@@ -81,6 +88,11 @@ int test_platform(void) {
   rc = c_rest_socket_bind(sock, "127.0.0.1", 0);
   failed += ((rc != C_REST_OK) != 0);
   failed += ((c_rest_socket_bind(sock, NULL, 0) == C_REST_OK) != 0);
+#ifdef C_REST_TESTING_ENDIAN_HOOK
+  g_crf_is_little_endian_hook = mock_platform_endian_fail;
+  failed += ((c_rest_socket_bind(sock, "127.0.0.1", 0) == C_REST_OK) != 0);
+  g_crf_is_little_endian_hook = NULL;
+#endif
 
   rc = c_rest_socket_listen(sock, 10);
   c_rest_socket_listen((c_rest_socket_t)-1, 10);

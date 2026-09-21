@@ -1457,14 +1457,14 @@ int test_request_response(void) {
   failed += (c_rest_response_cleanup(&res) != C_REST_OK);
 
   /* Cover safe string helper branches */
-  (void)safe_strcmp(NULL, NULL);
-  (void)safe_strcmp("a", NULL);
-  (void)safe_strcmp(NULL, "a");
-  (void)safe_strcmp("a", "b");
-  (void)safe_strstr_missing(NULL, NULL);
-  (void)safe_strstr_missing("a", NULL);
-  (void)safe_strstr_missing(NULL, "a");
-  (void)safe_strstr_missing("abc", "z");
+  failed += (safe_strcmp(NULL, NULL) != 0);
+  failed += (safe_strcmp("a", NULL) != 1);
+  failed += (safe_strcmp(NULL, "a") != 1);
+  failed += (safe_strcmp("a", "b") >= 0);
+  failed += (safe_strstr_missing(NULL, NULL) != 1);
+  failed += (safe_strstr_missing("a", NULL) != 1);
+  failed += (safe_strstr_missing(NULL, "a") != 1);
+  failed += (safe_strstr_missing("abc", "z") != 1);
 
   msgs[0] = "test_request_response passed\n";
   msgs[1] = "test_request_response failed\n";

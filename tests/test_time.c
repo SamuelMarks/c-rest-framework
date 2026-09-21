@@ -74,9 +74,11 @@ int test_time(void) {
 
   /* Test gmtime edge cases */
   t = (time_t)-1;
-  (void)c_rest_http_date_format(t, buf, sizeof(buf));
+  res = (int)c_rest_http_date_format(t, buf, sizeof(buf));
+  failed += (res != C_REST_OK);
   t = (time_t)(((time_t)1 << (sizeof(time_t) * 8 - 2)) - 1);
-  (void)c_rest_http_date_format(t, buf, sizeof(buf));
+  res = (int)c_rest_http_date_format(t, buf, sizeof(buf));
+  failed += (res != C_REST_ERROR_GENERIC);
 
   msgs[0] = "test_time finished.\n";
   msgs[1] = "test_time failed\n";

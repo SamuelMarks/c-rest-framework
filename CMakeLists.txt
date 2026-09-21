@@ -776,17 +776,6 @@ endif()
 
 
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    if(BUILD_TESTING)
-        enable_testing()
-        remove_definitions(-D_CRT_SECURE_NO_WARNINGS)
-        message(STATUS "ADDING TESTS")
-        add_subdirectory(tests)
-    endif()
-    add_subdirectory(examples)
-endif()
-
-
 if(EMSCRIPTEN AND TARGET c-abstract-http)
     target_compile_definitions(c-abstract-http PRIVATE CDD_NO_UCONTEXT=1)
 endif()
@@ -794,8 +783,7 @@ if(BUILD_TESTING)
     target_compile_definitions(c-rest-framework PRIVATE C_REST_TESTING_ENDIAN_HOOK)
 endif()
 
-
-# Remove warnings-as-errors from dependencies
+# Remove warnings-as-errors and coverage flags from dependencies
 foreach(dep cdd-c c_cdd c-abstract-http c-orm c_str_span cfs c89stringutils parson)
     if(TARGET ${dep}_compiler_flags)
         get_target_property(_opts ${dep}_compiler_flags INTERFACE_COMPILE_OPTIONS)
@@ -803,6 +791,9 @@ foreach(dep cdd-c c_cdd c-abstract-http c-orm c_str_span cfs c89stringutils pars
             string(REPLACE "-Werror" "" _opts "${_opts}")
             string(REPLACE "-WX" "" _opts "${_opts}")
             string(REPLACE "/WX" "" _opts "${_opts}")
+            string(REPLACE "-fprofile-arcs" "" _opts "${_opts}")
+            string(REPLACE "-ftest-coverage" "" _opts "${_opts}")
+            string(REPLACE "--coverage" "" _opts "${_opts}")
             set_target_properties(${dep}_compiler_flags PROPERTIES INTERFACE_COMPILE_OPTIONS "${_opts}")
         endif()
     endif()
@@ -814,6 +805,16 @@ foreach(dep cdd-c c_cdd c-abstract-http c-orm c_str_span cfs c89stringutils pars
             string(REPLACE "/WX" "" _opts "${_opts}")
             set_target_properties(${dep} PROPERTIES COMPILE_OPTIONS "${_opts}")
         endif()
+        get_target_property(_opts ${dep} INTERFACE_COMPILE_OPTIONS)
+        if(_opts)
+            string(REPLACE "-Werror" "" _opts "${_opts}")
+            string(REPLACE "-WX" "" _opts "${_opts}")
+            string(REPLACE "/WX" "" _opts "${_opts}")
+            string(REPLACE "-fprofile-arcs" "" _opts "${_opts}")
+            string(REPLACE "-ftest-coverage" "" _opts "${_opts}")
+            string(REPLACE "--coverage" "" _opts "${_opts}")
+            set_target_properties(${dep} PROPERTIES INTERFACE_COMPILE_OPTIONS "${_opts}")
+        endif()
     endif()
 endforeach()
 
@@ -823,6 +824,16 @@ if(TARGET c_cdd_compiler_flags)
         string(REPLACE "/NODEFAULTLIB:LIBCMTD" "" _link_opts "${_link_opts}")
         set_target_properties(c_cdd_compiler_flags PROPERTIES INTERFACE_LINK_OPTIONS "${_link_opts}")
     endif()
+endif()
+
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    if(BUILD_TESTING)
+        enable_testing()
+        remove_definitions(-D_CRT_SECURE_NO_WARNINGS)
+        message(STATUS "ADDING TESTS")
+        add_subdirectory(tests)
+    endif()
+    add_subdirectory(examples)
 endif()
 
 if(MSVC)

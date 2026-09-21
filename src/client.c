@@ -187,7 +187,7 @@ c_rest_error_t c_rest_client_destroy(c_rest_client_context *client) {
     return C_REST_ERROR_GENERIC;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_client_fail == 11)
+  if (g_mock_client_fail == 11 || g_mock_client_fail == 13)
     return C_REST_ERROR_GENERIC;
 #endif
 
@@ -219,7 +219,7 @@ c_rest_error_t c_rest_client_response_free(struct c_rest_client_response *res) {
   if (!res)
     return C_REST_ERROR_GENERIC;
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_client_fail == 10)
+  if (g_mock_client_fail == 10 || g_mock_client_fail == 13)
     return C_REST_ERROR_GENERIC;
 #endif
   if (res->headers) {
@@ -462,6 +462,16 @@ c_rest_error_t c_rest_client_url_decode(const char *in_str, char **out_str) {
   size_t i;
   size_t j = 0;
   char *out;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_client_fail == 43 || g_mock_client_fail == 45)
+    return C_REST_ERROR_GENERIC;
+  if (g_mock_client_fail == 44 || g_mock_client_fail == 46) {
+    static int decode_count = 0;
+    decode_count++;
+    if (decode_count % 2 == 0)
+      return C_REST_ERROR_GENERIC;
+  }
+#endif
   if (!in_str || !out_str)
     return C_REST_ERROR_GENERIC;
 
@@ -616,10 +626,18 @@ c_rest_error_t c_rest_proxy_request(const char *target_url, void *req,
 
   rc = c_rest_client_request_sync(client, target_url, "GET", NULL, 0, NULL, 0,
                                   &c_res);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_client_fail == 10 || g_mock_client_fail == 13) {
+    c_res = (struct c_rest_client_response *)CRF_CALLOC(
+        1, sizeof(struct c_rest_client_response));
+  }
+#endif
   if (c_res) {
     c_rest_error_t free_rc = c_rest_client_response_free(c_res);
     if (free_rc != C_REST_OK) {
-      c_rest_client_destroy(client);
+      c_rest_error_t destroy_rc = c_rest_client_destroy(client);
+      if (destroy_rc != C_REST_OK)
+        return destroy_rc;
       return free_rc;
     }
   }
@@ -713,9 +731,12 @@ c_rest_error_t c_rest_client_parse_form_urlencoded(
       rc = c_rest_client_url_decode(ekey, (char **)&fields[i].key);
       C_REST_FREE((void *)(ekey));
       if (rc != C_REST_OK) {
+        c_rest_error_t free_rc;
         if (eval)
           C_REST_FREE((void *)(eval));
-        c_rest_client_form_fields_free(fields, count);
+        free_rc = c_rest_client_form_fields_free(fields, count);
+        if (free_rc != C_REST_OK)
+          return free_rc;
         return rc;
       }
     }
@@ -723,7 +744,9 @@ c_rest_error_t c_rest_client_parse_form_urlencoded(
       rc = c_rest_client_url_decode(eval, (char **)&fields[i].value);
       C_REST_FREE((void *)(eval));
       if (rc != C_REST_OK) {
-        c_rest_client_form_fields_free(fields, count);
+        c_rest_error_t free_rc = c_rest_client_form_fields_free(fields, count);
+        if (free_rc != C_REST_OK)
+          return free_rc;
         return rc;
       }
     }
@@ -742,6 +765,11 @@ c_rest_error_t
 c_rest_client_form_fields_free(struct c_rest_client_form_field *fields,
                                size_t num_fields) {
   size_t i;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_client_fail == 41 || g_mock_client_fail == 43 ||
+      g_mock_client_fail == 44)
+    return C_REST_ERROR_GENERIC;
+#endif
   if (!fields)
     return C_REST_ERROR_GENERIC;
   for (i = 0; i < num_fields; ++i) {
@@ -759,6 +787,10 @@ c_rest_error_t c_rest_client_header_set(struct c_rest_client_header **headers,
                                         const char *value) {
   struct c_rest_client_header *new_headers;
   size_t klen, vlen;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_client_fail == 42)
+    return C_REST_ERROR_GENERIC;
+#endif
   if (!headers || !headers_count || !key || !value)
     return C_REST_ERROR_GENERIC;
 
@@ -800,7 +832,7 @@ c_rest_error_t c_rest_client_headers_free(struct c_rest_client_header *headers,
                                           size_t headers_count) {
   size_t i;
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_client_fail == 40)
+  if (g_mock_client_fail == 40 || g_mock_client_fail == 42)
     return C_REST_ERROR_GENERIC;
 #endif
   if (!headers)
@@ -944,8 +976,11 @@ c_rest_error_t c_rest_client_post_form_sync(
       rc = c_rest_client_header_set(&all_headers, &all_headers_count,
                                     headers[i].key, headers[i].value);
       if (rc != C_REST_OK) {
-        c_rest_client_headers_free(all_headers, all_headers_count);
+        c_rest_error_t free_rc =
+            c_rest_client_headers_free(all_headers, all_headers_count);
         C_REST_FREE((void *)(body));
+        if (free_rc != C_REST_OK)
+          return free_rc;
         return rc;
       }
     }
@@ -956,8 +991,11 @@ c_rest_error_t c_rest_client_post_form_sync(
       c_rest_client_header_set(&all_headers, &all_headers_count, "Content-Type",
                                "application/x-www-form-urlencoded");
   if (rc != C_REST_OK) {
-    c_rest_client_headers_free(all_headers, all_headers_count);
+    c_rest_error_t free_rc =
+        c_rest_client_headers_free(all_headers, all_headers_count);
     C_REST_FREE((void *)(body));
+    if (free_rc != C_REST_OK)
+      return free_rc;
     return rc;
   }
 

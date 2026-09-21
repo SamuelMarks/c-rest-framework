@@ -190,7 +190,12 @@ parse_selection_set(struct c_rest_graphql_context *ctx,
 
   /* Error handling: EOF without '}' or parse error inside */
   for (i = 0; i < list->count; i++) {
-    c_rest_graphql_node_free(list->nodes[i]);
+    c_rest_error_t free_rc = c_rest_graphql_node_free(list->nodes[i]);
+    if (free_rc != C_REST_OK) {
+      C_REST_FREE(list->nodes);
+      C_REST_FREE(list);
+      return free_rc;
+    }
   }
   if (list->nodes)
     C_REST_FREE(list->nodes);
@@ -218,8 +223,11 @@ static c_rest_error_t parse_field(struct c_rest_graphql_context *ctx,
     ctx->position++; /* skip ':' */
     node->alias = name;
     if (parse_name(ctx, &node->name) != 0) {
+      c_rest_error_t free_rc;
       node->name = NULL;
-      c_rest_graphql_node_free(node);
+      free_rc = c_rest_graphql_node_free(node);
+      if (free_rc != C_REST_OK)
+        return free_rc;
       return C_REST_ERROR_GENERIC;
     }
   } else {
@@ -230,7 +238,9 @@ static c_rest_error_t parse_field(struct c_rest_graphql_context *ctx,
   skip_whitespace(ctx);
   if (ctx->position < ctx->length && ctx->input[ctx->position] == '{') {
     if (parse_selection_set(ctx, &node->selection_set) != 0) {
-      c_rest_graphql_node_free(node);
+      c_rest_error_t free_rc = c_rest_graphql_node_free(node);
+      if (free_rc != C_REST_OK)
+        return free_rc;
       return C_REST_ERROR_GENERIC;
     }
   }
@@ -276,7 +286,9 @@ static c_rest_error_t parse_operation(struct c_rest_graphql_context *ctx,
   if (ctx->position < ctx->length) {
     if (ctx->input[ctx->position] == '{') {
       if (parse_selection_set(ctx, &node->selection_set) != 0) {
-        c_rest_graphql_node_free(node);
+        c_rest_error_t free_rc = c_rest_graphql_node_free(node);
+        if (free_rc != C_REST_OK)
+          return free_rc;
         return C_REST_ERROR_GENERIC;
       }
       *out_node = node;
@@ -284,7 +296,11 @@ static c_rest_error_t parse_operation(struct c_rest_graphql_context *ctx,
     }
   }
 
-  c_rest_graphql_node_free(node);
+  {
+    c_rest_error_t free_rc = c_rest_graphql_node_free(node);
+    if (free_rc != C_REST_OK)
+      return free_rc;
+  }
   return C_REST_ERROR_GENERIC;
 }
 
@@ -307,7 +323,9 @@ c_rest_error_t c_rest_graphql_parse(const char *query, size_t query_len,
     return C_REST_ERROR_GENERIC;
 
   if (alloc_list(&doc->definitions) != 0) {
-    c_rest_graphql_node_free(doc);
+    c_rest_error_t free_rc = c_rest_graphql_node_free(doc);
+    if (free_rc != C_REST_OK)
+      return free_rc;
     return C_REST_ERROR_GENERIC;
   }
 
@@ -322,7 +340,9 @@ c_rest_error_t c_rest_graphql_parse(const char *query, size_t query_len,
   }
 
   if (ctx.position < ctx.length || doc->definitions->count == 0) {
-    c_rest_graphql_node_free(doc);
+    c_rest_error_t free_rc = c_rest_graphql_node_free(doc);
+    if (free_rc != C_REST_OK)
+      return free_rc;
     return C_REST_ERROR_GENERIC;
   }
 
@@ -357,7 +377,10 @@ c_rest_error_t c_rest_graphql_node_free(struct c_rest_graphql_node *node) {
 
   if (node->arguments) {
     for (i = 0; i < node->arguments->count; i++) {
-      c_rest_graphql_node_free(node->arguments->nodes[i]);
+      c_rest_error_t free_rc =
+          c_rest_graphql_node_free(node->arguments->nodes[i]);
+      if (free_rc != C_REST_OK)
+        return free_rc;
     }
     C_REST_FREE(node->arguments->nodes);
     C_REST_FREE(node->arguments);
@@ -365,7 +388,10 @@ c_rest_error_t c_rest_graphql_node_free(struct c_rest_graphql_node *node) {
 
   if (node->selection_set) {
     for (i = 0; i < node->selection_set->count; i++) {
-      c_rest_graphql_node_free(node->selection_set->nodes[i]);
+      c_rest_error_t free_rc =
+          c_rest_graphql_node_free(node->selection_set->nodes[i]);
+      if (free_rc != C_REST_OK)
+        return free_rc;
     }
     C_REST_FREE(node->selection_set->nodes);
     C_REST_FREE(node->selection_set);
@@ -373,7 +399,10 @@ c_rest_error_t c_rest_graphql_node_free(struct c_rest_graphql_node *node) {
 
   if (node->definitions) {
     for (i = 0; i < node->definitions->count; i++) {
-      c_rest_graphql_node_free(node->definitions->nodes[i]);
+      c_rest_error_t free_rc =
+          c_rest_graphql_node_free(node->definitions->nodes[i]);
+      if (free_rc != C_REST_OK)
+        return free_rc;
     }
     C_REST_FREE(node->definitions->nodes);
     C_REST_FREE(node->definitions);

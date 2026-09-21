@@ -371,6 +371,10 @@ c_rest_error_t c_rest_compress_buffer(c_rest_compression_type_t type,
     C_REST_FREE(data1);
   if (data2)
     C_REST_FREE(data2);
-  c_rest_compression_ctx_destroy(ctx);
+  {
+    c_rest_error_t destroy_rc = c_rest_compression_ctx_destroy(ctx);
+    if (rc == C_REST_OK)
+      rc = destroy_rc;
+  }
   return rc;
 }

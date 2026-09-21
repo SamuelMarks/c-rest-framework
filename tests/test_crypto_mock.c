@@ -186,6 +186,11 @@ TEST test_crypto_error_branches(void) {
   ASSERT_EQ(
       C_REST_ERROR_GENERIC,
       c_rest_jwt_verify_hs256(jwt, (const unsigned char *)"key", 3, &payload));
+  reset_mocks(NULL);
+  g_mock_base64_countdown = 1;
+  ASSERT_EQ(
+      C_REST_ERROR_GENERIC,
+      c_rest_jwt_verify_hs256(jwt, (const unsigned char *)"key", 3, &payload));
 
   /* Cleanup */
   CRF_FREE(jwt);
@@ -224,6 +229,11 @@ TEST test_crypto_error_branches(void) {
 
   /* Third base64_decode failure on hash */
   g_mock_base64_dec_countdown = 2;
+  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_verify_password("pwd", hash));
+  reset_mocks(NULL);
+
+  /* Fourth base64_decode failure on hash */
+  g_mock_base64_dec_countdown = 3;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_verify_password("pwd", hash));
   reset_mocks(NULL);
 

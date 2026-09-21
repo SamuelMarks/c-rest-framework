@@ -851,18 +851,28 @@ c_rest_error_t c_rest_jwt_sign_hs256(const char *json_payload,
   if (!json_payload || !secret || !out_token)
     return C_REST_ERROR_GENERIC;
 
-  c_rest_base64url_encode((const unsigned char *)header, strlen(header), NULL,
-                          &header_len);
+  rc = c_rest_base64url_encode((const unsigned char *)header, strlen(header),
+                               NULL, &header_len);
+  if (rc != C_REST_OK)
+    return rc;
   if (C_REST_MALLOC(header_len + 1, &encoded_header) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
   }
   if (!encoded_header)
     return C_REST_ERROR_GENERIC;
-  c_rest_base64url_encode((const unsigned char *)header, strlen(header),
-                          encoded_header, &header_len);
+  rc = c_rest_base64url_encode((const unsigned char *)header, strlen(header),
+                               encoded_header, &header_len);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(encoded_header));
+    return rc;
+  }
 
-  c_rest_base64url_encode((const unsigned char *)json_payload,
-                          strlen(json_payload), NULL, &payload_len);
+  rc = c_rest_base64url_encode((const unsigned char *)json_payload,
+                               strlen(json_payload), NULL, &payload_len);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(encoded_header));
+    return rc;
+  }
   if (C_REST_MALLOC(payload_len + 1, &encoded_payload) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
   }
@@ -870,8 +880,14 @@ c_rest_error_t c_rest_jwt_sign_hs256(const char *json_payload,
     C_REST_FREE((void *)(encoded_header));
     return C_REST_ERROR_GENERIC;
   }
-  c_rest_base64url_encode((const unsigned char *)json_payload,
-                          strlen(json_payload), encoded_payload, &payload_len);
+  rc = c_rest_base64url_encode((const unsigned char *)json_payload,
+                               strlen(json_payload), encoded_payload,
+                               &payload_len);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(encoded_header));
+    C_REST_FREE((void *)(encoded_payload));
+    return rc;
+  }
 
   to_sign_alloc = strlen(encoded_header) + 1 + strlen(encoded_payload) + 1;
   if (C_REST_MALLOC(to_sign_alloc, &to_sign) != 0) {
@@ -1009,8 +1025,12 @@ c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
   }
   if (!encoded_expected_sig)
     return C_REST_ERROR_GENERIC;
-  c_rest_base64url_encode(expected_sig, 32, encoded_expected_sig,
-                          &encoded_expected_sig_len);
+  rc = c_rest_base64url_encode(expected_sig, 32, encoded_expected_sig,
+                               &encoded_expected_sig_len);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(encoded_expected_sig));
+    return rc;
+  }
 
   if (strcmp(provided_sig, encoded_expected_sig) != 0) {
     C_REST_FREE((void *)(encoded_expected_sig));
@@ -1019,8 +1039,10 @@ c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
   C_REST_FREE((void *)(encoded_expected_sig));
 
   payload_b64_len = (size_t)(dot2 - (dot1 + 1));
-  c_rest_base64url_decode(dot1 + 1, payload_b64_len, NULL,
-                          &decoded_payload_len);
+  rc = c_rest_base64url_decode(dot1 + 1, payload_b64_len, NULL,
+                               &decoded_payload_len);
+  if (rc != C_REST_OK)
+    return rc;
 
   if (C_REST_MALLOC(decoded_payload_len + 1, &decoded_payload) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
@@ -1200,8 +1222,10 @@ c_rest_error_t c_rest_verify_password(const char *password,
   if (expected_hash_len != C_REST_PBKDF2_HASH_LEN) {
     goto cleanup;
   }
-  c_rest_base64_decode(hash_b64, strlen(hash_b64), expected_hash,
-                       &expected_hash_len);
+  if (c_rest_base64_decode(hash_b64, strlen(hash_b64), expected_hash,
+                           &expected_hash_len) != 0) {
+    goto cleanup;
+  }
 
   if (c_rest_pbkdf2_hmac_sha256(
           (const unsigned char *)password, strlen(password), salt, salt_len,

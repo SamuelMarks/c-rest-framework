@@ -359,7 +359,39 @@ static void test_coverage(void) {
       c_rest_proxy_request("http://localhost", NULL, NULL);
       g_mock_client_fail = 11;
       c_rest_proxy_request("http://localhost", NULL, NULL);
+      g_mock_client_fail = 13;
+      c_rest_proxy_request("http://localhost", NULL, NULL);
       g_mock_client_fail = 0;
+
+      {
+        struct c_rest_client_form_field *bad_ff = NULL;
+        size_t bad_count = 0;
+        c_rest_client_form_fields_free(NULL, 0);
+        g_mock_client_fail = 41;
+        c_rest_client_form_fields_free(
+            tc ? (struct c_rest_client_form_field *)1 : NULL, 0);
+        g_mock_client_fail = 43;
+        c_rest_client_parse_form_urlencoded("a=1", &bad_ff, &bad_count);
+        g_mock_client_fail = 45;
+        c_rest_client_parse_form_urlencoded("a=1", &bad_ff, &bad_count);
+        g_mock_client_fail = 44;
+        c_rest_client_parse_form_urlencoded("a=1", &bad_ff, &bad_count);
+        g_mock_client_fail = 46;
+        c_rest_client_parse_form_urlencoded("a=1", &bad_ff, &bad_count);
+        g_mock_client_fail = 0;
+      }
+
+      {
+        http_send_fn old_send = tc->client.send;
+        tc->client.send = mock_send_full;
+        t_ff[0].key = "k";
+        t_ff[0].value = "v";
+        g_mock_client_fail = 42;
+        c_rest_client_post_form_sync(tc, "http://a", t_hdrs, 1, t_ff, 1, &t_sr);
+        c_rest_client_post_form_sync(tc, "http://a", NULL, 0, t_ff, 1, &t_sr);
+        g_mock_client_fail = 0;
+        tc->client.send = old_send;
+      }
 
       c_rest_client_destroy(tc);
     }

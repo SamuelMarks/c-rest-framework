@@ -14,7 +14,7 @@
 #ifdef C_REST_TESTING_MALLOC_HOOK
 int g_mock_sse_append_fail = -1;
 static c_rest_error_t mock_append_cstr(c_rest_string *s, const char *c) {
-  if (g_mock_sse_append_fail == 0) return C_REST_ERROR_GENERIC;
+  if (g_mock_sse_append_fail == 0 || g_mock_sse_append_fail == -5) return C_REST_ERROR_GENERIC;
   if (g_mock_sse_append_fail > 0) g_mock_sse_append_fail--;
   return c_rest_string_append_cstr(s, c);
 }
@@ -24,7 +24,7 @@ static c_rest_error_t mock_append(c_rest_string *s, const char *c, size_t l) {
   return c_rest_string_append(s, c, l);
 }
 static c_rest_error_t mock_string_destroy(c_rest_string *s) {
-  if (g_mock_sse_append_fail == -2) return C_REST_ERROR_GENERIC;
+  if (g_mock_sse_append_fail == -2 || g_mock_sse_append_fail == -5) return C_REST_ERROR_GENERIC;
   return c_rest_string_destroy(s);
 }
 #define c_rest_string_append_cstr mock_append_cstr
@@ -124,7 +124,11 @@ c_rest_error_t c_rest_sse_event_clone(const struct c_rest_sse_event *src,
   return C_REST_OK;
 
 err:
-  c_rest_sse_event_destroy(dest);
+  {
+    c_rest_error_t destroy_rc = INTERNAL_EVENT_DESTROY(dest);
+    if (destroy_rc != C_REST_OK)
+      return destroy_rc;
+  }
   return rc;
 }
 
@@ -221,7 +225,11 @@ c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **ou
   return C_REST_OK;
 
 err:
-  c_rest_string_destroy(&s);
+  {
+    c_rest_error_t destroy_rc = c_rest_string_destroy(&s);
+    if (destroy_rc != C_REST_OK)
+      return destroy_rc;
+  }
   return rc;
 }
 
@@ -530,7 +538,9 @@ c_rest_error_t c_rest_sse_init_response(struct c_rest_response *res) {
     return C_REST_ERROR_GENERIC;
   }
 
-  c_rest_response_set_status(res, 200);
+  rc = c_rest_response_set_status(res, 200);
+  if (rc != C_REST_OK)
+    return rc;
   rc = c_rest_response_set_header(res, "Content-Type", "text/event-stream");
   if (rc != C_REST_OK)
     return rc;

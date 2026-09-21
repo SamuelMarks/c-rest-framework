@@ -109,7 +109,9 @@ static c_rest_error_t multi_thread_destroy(struct c_rest_context *ctx) {
   if (state->workers) {
     for (i = 0; i < state->worker_count; i++) {
       if (state->workers[i]) {
-        c_rest_thread_join(state->workers[i]);
+        rc = c_rest_thread_join(state->workers[i]);
+        if (rc != C_REST_OK)
+          return rc;
         state->workers[i] = (c_rest_thread_t)0;
       }
     }
@@ -329,7 +331,9 @@ static c_rest_error_t multi_thread_run(struct c_rest_context *ctx) {
     int i;
     for (i = 0; i < state->worker_count; i++) {
       if (state->workers[i]) {
-        c_rest_thread_join(state->workers[i]);
+        rc = c_rest_thread_join(state->workers[i]);
+        if (rc != C_REST_OK)
+          return rc;
         state->workers[i] = (c_rest_thread_t)0;
       }
     }
@@ -367,7 +371,9 @@ static c_rest_error_t multi_thread_stop(struct c_rest_context *ctx) {
     int i;
     for (i = 0; i < state->worker_count; i++) {
       if (state->workers[i]) {
-        c_rest_thread_join(state->workers[i]);
+        rc = c_rest_thread_join(state->workers[i]);
+        if (rc != C_REST_OK)
+          return rc;
         state->workers[i] = (c_rest_thread_t)0;
       }
     }
