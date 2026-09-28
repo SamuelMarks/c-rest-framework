@@ -40,7 +40,21 @@ if(CMAKE_CROSSCOMPILING_EMULATOR MATCHES "wine" AND CMAKE_C_COMPILER MATCHES "cl
     set(CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_LINKER> /nologo <OBJECTS> ${CMAKE_CXX_LINK_FLAGS} <LINK_FLAGS> <LINK_LIBRARIES> /out:<TARGET> /implib:<TARGET_IMPLIB> /pdb:<TARGET_PDB> /dll /version:<TARGET_VERSION_MAJOR>.<TARGET_VERSION_MINOR>" CACHE STRING "" FORCE)
 endif()
 
+if(APPLE)
+    if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "10.10" CACHE STRING "Minimum OS X deployment version")
+    endif()
+endif()
+
 project(c-rest-framework C)
+
+if(APPLE AND CMAKE_C_COMPILER_ID MATCHES "GNU")
+    execute_process(COMMAND xcrun --show-sdk-path OUTPUT_VARIABLE _SDK_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(_SDK_PATH AND EXISTS "${_SDK_PATH}")
+        add_compile_options(-iframework "${_SDK_PATH}/System/Library/Frameworks")
+    endif()
+    add_compile_options(-mmacosx-version-min=10.10)
+endif()
 
 if(MSVC)
     string(REGEX REPLACE "/W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
@@ -665,7 +679,7 @@ if(${PROJECT_NAME_SAFE}_FETCH_CDD_C)
     FetchContent_MakeAvailable(cdd-c)
     set(BUILD_SHARED_LIBS ${OLD_BSL_CDD})
 
-    if (TARGET c_cdd)
+    if (TARGET c_cdd AND NOT EMSCRIPTEN)
         target_compile_definitions(c_cdd PUBLIC CDD_BUILD_TESTS)
     endif()
 
@@ -722,8 +736,9 @@ if(${PROJECT_NAME_SAFE}_FETCH_C_ORM)
     FetchContent_MakeAvailable(c-orm)
     set(BUILD_SHARED_LIBS ${OLD_BSL_CORM})
     add_definitions(-D${PROJECT_NAME_SAFE}_USE_REAL_C_ORM)
-
-
+    if(TARGET sqlite3)
+        set_target_properties(sqlite3 PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:sqlite3,INTERFACE_INCLUDE_DIRECTORIES>)
+    endif()
 endif()
 
 if(${PROJECT_NAME_SAFE}_FETCH_CAH)

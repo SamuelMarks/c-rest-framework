@@ -541,6 +541,10 @@ def main():
             import glob
 
             search_paths = [
+                "/opt/homebrew/opt/llvm/lib/libclang.dylib",
+                "/opt/homebrew/Cellar/llvm*/*/lib/libclang.dylib",
+                "/opt/homebrew/lib/libclang.dylib",
+                "/Library/Developer/CommandLineTools/usr/lib/libclang.dylib",
                 "/usr/lib/llvm-*/lib/libclang-[0-9]*.so*",
                 "/usr/lib/llvm-*/lib/libclang.so*",
                 "/usr/lib/x86_64-linux-gnu/libclang-[0-9]*.so*",
