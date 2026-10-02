@@ -362,8 +362,10 @@ c_rest_error_t c_rest_graphql_node_free(struct c_rest_graphql_node *node) {
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   if (g_mock_graphql_free_countdown >= 0) {
-    if (g_mock_graphql_free_countdown == 0)
+    if (g_mock_graphql_free_countdown == 0) {
+      g_mock_graphql_free_countdown--;
       return C_REST_ERROR_GENERIC;
+    }
     g_mock_graphql_free_countdown--;
   }
 #endif

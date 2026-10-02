@@ -169,7 +169,7 @@ c_rest_error_t c_rest_auth_middleware(struct c_rest_request *req,
         return rc;
       return C_REST_ERROR_GENERIC;
     }
-    rc = (c_rest_error_t)verifier->verify_bearer(token, &auth_ctx);
+    rc = verifier->verify_bearer(token, &auth_ctx);
     if (rc != C_REST_OK) {
       C_REST_FREE((void *)(token));
       rc = c_rest_response_set_status(res, 401);
@@ -199,7 +199,8 @@ c_rest_error_t c_rest_auth_middleware(struct c_rest_request *req,
         return rc;
       return C_REST_ERROR_GENERIC;
     }
-    if (verifier->verify_basic(user, pass, &auth_ctx) != 0) {
+    rc = verifier->verify_basic(user, pass, &auth_ctx);
+    if (rc != C_REST_OK) {
       C_REST_FREE((void *)(user));
       C_REST_FREE((void *)(pass));
       rc = c_rest_response_set_status(res, 401);
@@ -268,7 +269,7 @@ c_rest_error_t c_rest_oauth2_middleware(struct c_rest_request *req,
     return C_REST_ERROR_GENERIC;
   }
 
-  if (verify_fn(token, &auth_ctx) != 0) {
+  if (verify_fn(token, &auth_ctx) != C_REST_OK) {
     C_REST_FREE((void *)(token));
     rc = c_rest_response_set_status(res, 401);
     if (rc != C_REST_OK)

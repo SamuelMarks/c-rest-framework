@@ -47,20 +47,14 @@ c_rest_error_t c_rest_parser_execute(c_rest_parser_context *ctx,
   return ctx->vtable->execute(ctx, data, len, out_parsed);
 }
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_parser_vtable_fail = 0;
-C_REST_EXPORT int g_mock_parser_should_keep_alive_fail = 0;
-C_REST_EXPORT int g_mock_parser_destroy_fail = 0;
-#endif
-
 c_rest_error_t c_rest_parser_should_keep_alive(c_rest_parser_context *ctx,
                                                int *out_keep_alive) {
-  if (!ctx || !out_keep_alive)
-    return C_REST_ERROR_GENERIC;
 #ifdef C_REST_TESTING_MALLOC_HOOK
   if (g_mock_parser_should_keep_alive_fail)
     return C_REST_ERROR_GENERIC;
 #endif
+  if (!ctx || !out_keep_alive)
+    return C_REST_ERROR_GENERIC;
   if (!ctx->vtable || !ctx->vtable->should_keep_alive) {
     *out_keep_alive = 0;
     return C_REST_OK;
@@ -429,12 +423,12 @@ static const struct c_rest_parser_vtable basic_vtable = {
 
 c_rest_error_t
 c_rest_parser_get_basic_vtable(const struct c_rest_parser_vtable **out_vtable) {
-  if (!out_vtable)
-    return C_REST_ERROR_GENERIC;
 #ifdef C_REST_TESTING_MALLOC_HOOK
   if (g_mock_parser_vtable_fail)
     return C_REST_ERROR_GENERIC;
 #endif
+  if (!out_vtable)
+    return C_REST_ERROR_GENERIC;
   *out_vtable = &basic_vtable;
   return C_REST_OK;
 }

@@ -5,6 +5,7 @@
 #include "c_rest_response.h"
 #include "c_rest_router.h"
 #include "c_rest_openapi.h"
+#include "c_rest_testing_mocks.h"
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
 #include "c_rest_sse.h"
 #endif
@@ -582,6 +583,10 @@ c_rest_error_t c_rest_router_add_template_openapi(
 c_rest_error_t
 c_rest_router_get_openapi_spec(c_rest_router *router,
                                struct c_rest_openapi_spec **out_spec) {
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_openapi_fail == 7)
+    return C_REST_ERROR_GENERIC;
+#endif
   if (!router || !out_spec)
     return C_REST_ERROR_GENERIC;
   *out_spec = router->openapi_spec;

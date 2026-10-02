@@ -684,6 +684,49 @@ static int test_sse_event_clone_nulls(void) {
   return failed;
 }
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+static int test_sse_mock_cases(void) {
+  extern int g_fail_malloc_at;
+  struct c_rest_sse_event src_evt;
+  struct c_rest_sse_event dst_evt;
+  struct c_rest_sse_event evt;
+  char *out_buf = NULL;
+  size_t out_len = 0;
+  struct c_rest_response res;
+  extern int g_mock_sse_append_fail;
+  extern int g_mock_res_status_fail;
+
+  memset(&src_evt, 0, sizeof(src_evt));
+  memset(&dst_evt, 0, sizeof(dst_evt));
+  src_evt.id = (char *)"id1";
+  src_evt.event = (char *)"event1";
+
+  /* Make strdup fail on 2nd field while INTERNAL_EVENT_DESTROY also fails (-3)
+   */
+  g_fail_malloc_at = 2;
+  g_crf_malloc_hook = fail_malloc_n;
+  g_mock_sse_append_fail = -3;
+  c_rest_sse_event_clone(&src_evt, &dst_evt);
+  g_crf_malloc_hook = NULL;
+  g_fail_malloc_at = 0;
+  g_mock_sse_append_fail = -1;
+
+  memset(&evt, 0, sizeof(evt));
+  evt.id = (char *)"test_id";
+  g_mock_sse_append_fail = -5;
+  c_rest_sse_serialize(&evt, &out_buf, &out_len);
+  g_mock_sse_append_fail = -1;
+
+  memset(&res, 0, sizeof(res));
+  g_mock_res_status_fail = 1;
+  c_rest_sse_init_response(&res);
+  g_mock_res_status_fail = 0;
+  c_rest_response_cleanup(&res);
+
+  return 0;
+}
+#endif
+
 int test_server_sent_events_sse(void) {
   int res = 0;
   test_coverage();
@@ -694,6 +737,9 @@ int test_server_sent_events_sse(void) {
   res |= test_sse_parse_complete();
   res |= test_sse_parse_fragmented();
   res |= test_sse_wrappers();
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  res |= test_sse_mock_cases();
+#endif
 
   {
     const char *msgs[2];

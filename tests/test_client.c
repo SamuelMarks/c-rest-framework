@@ -3,6 +3,7 @@
 #include "c_rest_mem.h"
 #include "test_protos.h"
 #include "c_rest_client.h"
+#include "c_rest_client_hooks.h"
 #include "c_rest_tls.h"
 #include "c_rest_platform.h"
 #include <parson.h>
@@ -1313,6 +1314,7 @@ int test_client(void) {
     test_safe_json_free(&json);
   }
 
+  c_rest_client_set_hooks(NULL);
   c_rest_client_destroy(client);
 
   msgs[0] = "test_client passed\n";

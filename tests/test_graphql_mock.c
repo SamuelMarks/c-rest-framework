@@ -60,14 +60,24 @@ TEST test_graphql_error_branches(void) {
   /* fail in parse_name */
   c_rest_graphql_parse("query 123", 9, &doc);
 
-  /* Line 195: fail c_rest_graphql_node_free in parse_selection_set error
-   * handler */
-  g_mock_graphql_free_countdown = 0;
-  c_rest_graphql_parse("query { a { b ! } }", 19, &doc);
+  {
+    int i;
+    for (i = 0; i < 20; i++) {
+      g_mock_graphql_free_countdown = i;
+      c_rest_graphql_parse("query { alias: a { b (arg: 1) { c } ! } }", 41,
+                           &doc);
+    }
+    g_mock_graphql_free_countdown = -1;
+  }
 
-  /* Line 230: fail in parse_name for alias target */
-  g_mock_graphql_free_countdown = 0;
-  c_rest_graphql_parse("query { alias: 123 }", 20, &doc);
+  {
+    int i;
+    for (i = 0; i < 5; i++) {
+      g_mock_graphql_free_countdown = i;
+      c_rest_graphql_parse("query { alias: 123 }", 20, &doc);
+    }
+    g_mock_graphql_free_countdown = -1;
+  }
 
   /* Line 328: fail alloc_list for doc->definitions */
   g_fail_malloc_at = 0;

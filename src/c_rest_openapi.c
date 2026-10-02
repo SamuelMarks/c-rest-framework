@@ -451,9 +451,14 @@ c_rest_error_t c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
 #include "c_rest_router.h"
 #include "c_rest_response.h"
 #include "c_rest_request.h"
+#include "c_rest_testing_mocks.h"
 
 #include <stdio.h>
 /* clang-format on */
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT int g_mock_openapi_fail = 0;
+#endif
 
 static c_rest_error_t
 serialize_operation(JSON_Object *methods_obj, const char *method_name,
@@ -872,17 +877,33 @@ static c_rest_error_t openapi_handler(struct c_rest_request *req,
   struct c_rest_openapi_spec *spec = NULL;
   char *json_str = NULL;
   c_rest_error_t rc;
-  rc = c_rest_router_get_openapi_spec(router, &spec);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_openapi_fail == 1)
+    rc = C_REST_ERROR_GENERIC;
+  else
+#endif
+    rc = c_rest_router_get_openapi_spec(router, &spec);
   if (rc != C_REST_OK)
     return rc;
 
   /* unused args */
   (void)req;
 
-  rc = c_rest_openapi_spec_to_json(spec, &json_str);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_openapi_fail == 2)
+    rc = C_REST_ERROR_GENERIC;
+  else
+#endif
+    rc = c_rest_openapi_spec_to_json(spec, &json_str);
   if (rc != C_REST_OK)
     return rc;
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_openapi_fail == 3) {
+    json_free_serialized_string(json_str);
+    return C_REST_ERROR_GENERIC;
+  }
+#endif
   rc = c_rest_response_set_status(res, 200);
   if (rc != C_REST_OK) {
     json_free_serialized_string(json_str);
@@ -946,7 +967,12 @@ static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
   c_rest_error_t rc;
   const char *openapi_url = "/openapi.json";
 
-  rc = c_rest_router_get_openapi_spec(router, &spec);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_openapi_fail == 4)
+    rc = C_REST_ERROR_GENERIC;
+  else
+#endif
+    rc = c_rest_router_get_openapi_spec(router, &spec);
   if (rc != C_REST_OK)
     return rc;
 
@@ -975,6 +1001,10 @@ static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
 #endif
 
   rc = c_rest_response_set_status(res, 200);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_openapi_fail == 5)
+    rc = C_REST_ERROR_GENERIC;
+#endif
   if (rc != C_REST_OK) {
     C_REST_FREE((void *)(html_buf));
     return rc;
@@ -1000,7 +1030,12 @@ c_rest_error_t c_rest_enable_swagger_ui(struct c_rest_router *router,
   if (!openapi_url)
     return C_REST_ERROR_GENERIC;
 
-  rc = c_rest_router_get_openapi_spec(router, &spec);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_openapi_fail == 6)
+    rc = C_REST_ERROR_GENERIC;
+  else
+#endif
+    rc = c_rest_router_get_openapi_spec(router, &spec);
   if (rc != C_REST_OK)
     return rc;
   C_REST_FREE((void *)(spec->swagger_openapi_url));

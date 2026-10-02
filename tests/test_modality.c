@@ -643,6 +643,18 @@ int test_modality(void) {
       g_mock_tls_fail = 0;
       ctx->tls_ctx = NULL;
       c_rest_socket_close(accepted_sock);
+
+      socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+      accepted_sock = (c_rest_socket_t)fds[0];
+      client_sock = (c_rest_socket_t)fds[1];
+      c_rest_socket_send(client_sock, req, strlen(req), &wr);
+      c_rest_socket_close(client_sock);
+      ctx->tls_ctx = (void *)1;
+      g_mock_tls_fail = 6;
+      c_rest_handle_connection(ctx, accepted_sock);
+      g_mock_tls_fail = 0;
+      ctx->tls_ctx = NULL;
+      c_rest_socket_close(accepted_sock);
     }
 #endif
     c_rest_destroy(ctx);

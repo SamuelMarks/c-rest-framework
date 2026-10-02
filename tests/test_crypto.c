@@ -141,6 +141,66 @@ static int test_crypto_rand_fail(void) {
   int failed = 0;
   char *hash = NULL;
   char *token = NULL;
+  char *jwt = NULL;
+
+  g_mock_crypto_fail = 11;
+  {
+    unsigned char h[32];
+    c_rest_sha256((const unsigned char *)"a", 1, h);
+    c_rest_sha256((const unsigned char *)"a", 1, h);
+  }
+
+  {
+    unsigned char hmac[32];
+    unsigned char big_key[100];
+    int i;
+    memset(big_key, 'x', 100);
+    for (i = 101; i <= 103; i++) {
+      g_mock_crypto_fail = i;
+      c_rest_hmac_sha256(big_key, 100, (const unsigned char *)"data", 4, hmac);
+    }
+  }
+
+  {
+    int i;
+    for (i = 201; i <= 208; i++) {
+      g_mock_crypto_fail = i;
+      c_rest_random_string_generate(32, &token);
+      c_rest_jwt_sign_hs256("{}", (const unsigned char *)"secret", 6, &jwt);
+      c_rest_jwt_verify_hs256("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.t-"
+                              "9K23mB5x3oHZZ9tF4K9tqJ3r8",
+                              (const unsigned char *)"secret", 6, &token);
+    }
+    {
+      char *vtok = NULL;
+      c_rest_jwt_sign_hs256("{\"sub\":\"123\"}",
+                            (const unsigned char *)"secret", 6, &vtok);
+      for (i = 201; i <= 208; i++) {
+        g_mock_crypto_fail = i;
+        c_rest_jwt_verify_hs256(vtok, (const unsigned char *)"secret", 6,
+                                &token);
+      }
+      for (i = 501; i <= 504; i++) {
+        g_mock_crypto_fail = i;
+        c_rest_jwt_verify_hs256(vtok, (const unsigned char *)"secret", 6,
+                                &token);
+      }
+      CRF_FREE(vtok);
+    }
+    for (i = 301; i <= 306; i++) {
+      g_mock_crypto_fail = i;
+      c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
+    }
+    {
+      int k;
+      for (k = 401; k <= 405; k++) {
+        g_mock_crypto_fail = k;
+        c_rest_verify_password("pwd",
+                               "$pbkdf2-sha256$i=1000$c2FsdA==$"
+                               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+      }
+    }
+  }
 
   g_mock_crypto_fail = 3;
   failed += (c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256,

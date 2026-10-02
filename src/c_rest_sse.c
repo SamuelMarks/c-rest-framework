@@ -12,7 +12,7 @@
 #include "c_rest_string.h"
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-int g_mock_sse_append_fail = -1;
+C_REST_EXPORT int g_mock_sse_append_fail = -1;
 static c_rest_error_t mock_append_cstr(c_rest_string *s, const char *c) {
   if (g_mock_sse_append_fail == 0 || g_mock_sse_append_fail == -5) return C_REST_ERROR_GENERIC;
   if (g_mock_sse_append_fail > 0) g_mock_sse_append_fail--;

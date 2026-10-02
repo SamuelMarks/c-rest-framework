@@ -63,39 +63,43 @@ static void reset_mocks(void *data) {
   g_mock_res_html_fail = 0;
 }
 
-static int dummy_verify_bearer_ok(const char *token, void **out_ctx) {
+static c_rest_error_t dummy_verify_bearer_ok(const char *token,
+                                             void **out_ctx) {
   (void)token;
-  *out_ctx = (void *)0x123;
-  return 0;
+  *out_ctx = (void *)0x1234;
+  return C_REST_OK;
 }
-static int dummy_verify_bearer_fail(const char *token, void **out_ctx) {
+static c_rest_error_t dummy_verify_bearer_fail(const char *token,
+                                               void **out_ctx) {
   (void)token;
-  (void)out_ctx;
-  return -1;
+  *out_ctx = NULL;
+  return C_REST_ERROR_GENERIC;
 }
-static int dummy_verify_basic_ok(const char *user, const char *pass,
-                                 void **out_ctx) {
+static c_rest_error_t dummy_verify_basic_ok(const char *user, const char *pass,
+                                            void **out_ctx) {
   (void)user;
   (void)pass;
-  *out_ctx = (void *)0x456;
-  return 0;
+  *out_ctx = (void *)0x5678;
+  return C_REST_OK;
 }
-static int dummy_verify_basic_fail(const char *user, const char *pass,
-                                   void **out_ctx) {
+static c_rest_error_t
+dummy_verify_basic_fail(const char *user, const char *pass, void **out_ctx) {
   (void)user;
   (void)pass;
-  (void)out_ctx;
-  return -1;
+  *out_ctx = NULL;
+  return C_REST_ERROR_GENERIC;
 }
-static int dummy_oauth2_verify_ok(const char *token, void **out_ctx) {
+static c_rest_error_t dummy_oauth2_verify_ok(const char *token,
+                                             void **out_ctx) {
   (void)token;
   *out_ctx = (void *)0x789;
-  return 0;
+  return C_REST_OK;
 }
-static int dummy_oauth2_verify_fail(const char *token, void **out_ctx) {
+static c_rest_error_t dummy_oauth2_verify_fail(const char *token,
+                                               void **out_ctx) {
   (void)token;
   (void)out_ctx;
-  return -1;
+  return C_REST_ERROR_GENERIC;
 }
 
 TEST test_misc_error_branches(void) {

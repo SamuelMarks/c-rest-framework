@@ -210,5 +210,89 @@ int test_rate_limiting_throttling_middleware(void) {
   failed += test_rate_limiter_edge_cases();
   failed += test_rate_limiter_malloc();
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  {
+    extern int g_mock_rate_limit_fail;
+    c_rest_rate_limiter rl;
+    size_t remaining;
+
+    /* 1, 2: init fail */
+    g_mock_rate_limit_fail = 1;
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_mock_rate_limit_fail = 2;
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_mock_rate_limit_fail = 0;
+
+    /* 3: check lock fail */
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_mock_rate_limit_fail = 3;
+    c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining);
+    g_mock_rate_limit_fail = 0;
+    c_rest_rate_limiter_destroy(&rl);
+
+    /* 4: check put fail */
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_mock_rate_limit_fail = 4;
+    c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining);
+    g_mock_rate_limit_fail = 0;
+    c_rest_rate_limiter_destroy(&rl);
+
+    /* 12: check put fail and unlock fail */
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_mock_rate_limit_fail = 12;
+    c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining);
+    g_mock_rate_limit_fail = 0;
+    c_rest_rate_limiter_destroy(&rl);
+
+    /* 5: check unlock fail after malloc */
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_crf_malloc_hook = fail_malloc_n;
+    g_malloc_fail_after = 0;
+    g_mock_rate_limit_fail = 5;
+    c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining);
+    g_crf_malloc_hook = NULL;
+    g_mock_rate_limit_fail = 0;
+    c_rest_rate_limiter_destroy(&rl);
+
+    /* 6: check unlock fail normal */
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_mock_rate_limit_fail = 6;
+    c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining);
+    g_mock_rate_limit_fail = 0;
+    c_rest_rate_limiter_destroy(&rl);
+
+    /* 7: destroy lock fail */
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_mock_rate_limit_fail = 7;
+    c_rest_rate_limiter_destroy(&rl);
+    g_mock_rate_limit_fail = 0;
+    c_rest_rate_limiter_destroy(&rl);
+
+    /* 8: destroy unlock fail after map destroy */
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_mock_rate_limit_fail = 8;
+    c_rest_rate_limiter_destroy(&rl);
+    g_mock_rate_limit_fail = 0;
+
+    /* 9: destroy hashmap destroy fail */
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_mock_rate_limit_fail = 9;
+    c_rest_rate_limiter_destroy(&rl);
+    g_mock_rate_limit_fail = 0;
+
+    /* 10: destroy hashmap destroy fail & unlock fail */
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_mock_rate_limit_fail = 10;
+    c_rest_rate_limiter_destroy(&rl);
+    g_mock_rate_limit_fail = 0;
+
+    /* 11: destroy mutex destroy fail */
+    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    g_mock_rate_limit_fail = 11;
+    c_rest_rate_limiter_destroy(&rl);
+    g_mock_rate_limit_fail = 0;
+  }
+#endif
+
   return failed > 0 ? 1 : 0;
 }

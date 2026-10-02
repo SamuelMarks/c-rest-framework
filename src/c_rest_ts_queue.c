@@ -7,6 +7,47 @@
 #include "c_rest_log.h"
 /* clang-format on */
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT int g_mock_tsq_fail = 0;
+#ifndef c_rest_cond_create
+#define c_rest_cond_create(c)                                                  \
+  ((g_mock_tsq_fail == 1 || g_mock_tsq_fail == 2) ? C_REST_ERROR_GENERIC       \
+                                                  : c_rest_cond_create(c))
+#endif
+#ifndef c_rest_mutex_destroy
+#define c_rest_mutex_destroy(m)                                                \
+  ((g_mock_tsq_fail == 2 || g_mock_tsq_fail == 13) ? C_REST_ERROR_GENERIC      \
+                                                   : c_rest_mutex_destroy(m))
+#endif
+#ifndef c_rest_mutex_lock
+#define c_rest_mutex_lock(m)                                                   \
+  ((g_mock_tsq_fail == 3) ? C_REST_ERROR_GENERIC : c_rest_mutex_lock(m))
+#endif
+#ifndef c_rest_cond_signal
+#define c_rest_cond_signal(c)                                                  \
+  ((g_mock_tsq_fail == 4 || g_mock_tsq_fail == 5 || g_mock_tsq_fail == 9 ||    \
+    g_mock_tsq_fail == 10)                                                     \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_cond_signal(c))
+#endif
+#ifndef c_rest_mutex_unlock
+#define c_rest_mutex_unlock(m)                                                 \
+  ((g_mock_tsq_fail == 5 || g_mock_tsq_fail == 6 || g_mock_tsq_fail == 7 ||    \
+    g_mock_tsq_fail == 8 || g_mock_tsq_fail == 10 || g_mock_tsq_fail == 11 ||  \
+    g_mock_tsq_fail == 12 || g_mock_tsq_fail == 14)                            \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_mutex_unlock(m))
+#endif
+#ifndef c_rest_cond_wait
+#define c_rest_cond_wait(c, m)                                                 \
+  ((g_mock_tsq_fail == 7) ? C_REST_ERROR_GENERIC : c_rest_cond_wait(c, m))
+#endif
+#ifndef c_rest_cond_destroy
+#define c_rest_cond_destroy(c)                                                 \
+  ((g_mock_tsq_fail == 15) ? C_REST_ERROR_GENERIC : c_rest_cond_destroy(c))
+#endif
+#endif
+
 c_rest_error_t c_rest_ts_queue_init(c_rest_ts_queue *queue) {
   c_rest_error_t rc;
   c_rest_error_t destroy_rc;

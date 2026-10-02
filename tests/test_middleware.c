@@ -4,25 +4,26 @@
 #include "c_rest_middleware.h"
 #include "c_rest_request.h"
 #include "c_rest_response.h"
+#include "c_rest_testing_mocks.h"
 #include "test_protos.h"
 #include <stdio.h>
 #include <string.h>
 /* clang-format on */
 
-static int mock_verify_bearer_ok(const char *token, void **ctx) {
+static c_rest_error_t mock_verify_bearer_ok(const char *token, void **ctx) {
   int is_good = (strcmp(token, "good_token") == 0);
   *ctx = (void *)0x123;
   return is_good ? C_REST_OK : C_REST_ERROR_GENERIC;
 }
 
-static int mock_verify_basic_ok(const char *user, const char *pass,
-                                void **ctx) {
+static c_rest_error_t mock_verify_basic_ok(const char *user, const char *pass,
+                                           void **ctx) {
   int is_good = (strcmp(user, "alice") == 0 && strcmp(pass, "wonderland") == 0);
   *ctx = (void *)0x456;
   return is_good ? C_REST_OK : C_REST_ERROR_GENERIC;
 }
 
-static int mock_verify_oauth2_ok(const char *token, void **ctx) {
+static c_rest_error_t mock_verify_oauth2_ok(const char *token, void **ctx) {
   int is_good = (strcmp(token, "valid_oauth") == 0);
   *ctx = (void *)0x789;
   return is_good ? C_REST_OK : C_REST_ERROR_GENERIC;
@@ -63,7 +64,7 @@ static void test_coverage(void) {
   int i;
   union {
     void *ptr;
-    int (*func)(const char *, void **);
+    c_rest_oauth2_verify_fn func;
   } u;
 
   u.func = mock_verify_oauth2_ok;
@@ -372,7 +373,7 @@ int test_middleware_suite(void) {
   {
     union {
       void *ptr;
-      int (*func)(const char *, void **);
+      c_rest_oauth2_verify_fn func;
     } u;
     u.func = mock_verify_oauth2_ok;
 
@@ -403,6 +404,118 @@ int test_middleware_suite(void) {
   }
 
   test_coverage();
+
+  {
+    struct c_rest_auth_verifier v = {0, 0};
+    union {
+      void *ptr;
+      c_rest_oauth2_verify_fn func;
+    } u;
+    u.func = mock_verify_oauth2_ok;
+    v.verify_bearer = mock_verify_bearer_ok;
+    v.verify_basic = mock_verify_basic_ok;
+
+    /* Test c_rest_auth_middleware with g_mock_res_status_fail */
+    /* 1. Missing user_data */
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+    g_mock_res_status_fail = 1;
+    rc = c_rest_auth_middleware(&req, &res, NULL);
+    g_mock_res_status_fail = 0;
+    failed += (rc != C_REST_ERROR_GENERIC);
+    c_rest_response_cleanup(&res);
+
+    /* 2. Missing auth (not bearer, not basic) */
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+    g_mock_res_status_fail = 1;
+    rc = c_rest_auth_middleware(&req, &res, &v);
+    g_mock_res_status_fail = 0;
+    failed += (rc != C_REST_ERROR_GENERIC);
+    c_rest_response_cleanup(&res);
+
+    /* 3. Bearer auth, verify_bearer missing */
+    {
+      struct c_rest_auth_verifier no_bearer = {0, 0};
+      no_bearer.verify_basic = mock_verify_basic_ok;
+      memset(&req, 0, sizeof(req));
+      memset(&res, 0, sizeof(res));
+      mock_add_header(&req, "Authorization", "Bearer good_token");
+      g_mock_res_status_fail = 1;
+      rc = c_rest_auth_middleware(&req, &res, &no_bearer);
+      g_mock_res_status_fail = 0;
+      failed += (rc != C_REST_ERROR_GENERIC);
+      c_rest_response_cleanup(&res);
+      free_mock_headers(&req);
+    }
+
+    /* 4. Bearer auth, invalid token */
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+    mock_add_header(&req, "Authorization", "Bearer bad_token");
+    g_mock_res_status_fail = 1;
+    rc = c_rest_auth_middleware(&req, &res, &v);
+    g_mock_res_status_fail = 0;
+    failed += (rc != C_REST_ERROR_GENERIC);
+    c_rest_response_cleanup(&res);
+    free_mock_headers(&req);
+
+    /* 5. Basic auth, verify_basic missing */
+    {
+      struct c_rest_auth_verifier no_basic = {0, 0};
+      no_basic.verify_bearer = mock_verify_bearer_ok;
+      memset(&req, 0, sizeof(req));
+      memset(&res, 0, sizeof(res));
+      mock_add_header(&req, "Authorization", "Basic YWxpY2U6d29uZGVybGFuZA==");
+      g_mock_res_status_fail = 1;
+      rc = c_rest_auth_middleware(&req, &res, &no_basic);
+      g_mock_res_status_fail = 0;
+      failed += (rc != C_REST_ERROR_GENERIC);
+      c_rest_response_cleanup(&res);
+      free_mock_headers(&req);
+    }
+
+    /* 6. Basic auth, invalid credentials */
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+    mock_add_header(&req, "Authorization", "Basic Ym9iOmJhZA==");
+    g_mock_res_status_fail = 1;
+    rc = c_rest_auth_middleware(&req, &res, &v);
+    g_mock_res_status_fail = 0;
+    failed += (rc != C_REST_ERROR_GENERIC);
+    c_rest_response_cleanup(&res);
+    free_mock_headers(&req);
+
+    /* Test c_rest_oauth2_middleware with g_mock_res_status_fail */
+    /* 1. Missing user_data */
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+    g_mock_res_status_fail = 1;
+    rc = c_rest_oauth2_middleware(&req, &res, NULL);
+    g_mock_res_status_fail = 0;
+    failed += (rc != C_REST_ERROR_GENERIC);
+    c_rest_response_cleanup(&res);
+
+    /* 2. Missing Bearer token */
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+    g_mock_res_status_fail = 1;
+    rc = c_rest_oauth2_middleware(&req, &res, u.ptr);
+    g_mock_res_status_fail = 0;
+    failed += (rc != C_REST_ERROR_GENERIC);
+    c_rest_response_cleanup(&res);
+
+    /* 3. Invalid token */
+    memset(&req, 0, sizeof(req));
+    memset(&res, 0, sizeof(res));
+    mock_add_header(&req, "Authorization", "Bearer bad");
+    g_mock_res_status_fail = 1;
+    rc = c_rest_oauth2_middleware(&req, &res, u.ptr);
+    g_mock_res_status_fail = 0;
+    failed += (rc != C_REST_ERROR_GENERIC);
+    c_rest_response_cleanup(&res);
+    free_mock_headers(&req);
+  }
 
   {
     const char *msgs[2];

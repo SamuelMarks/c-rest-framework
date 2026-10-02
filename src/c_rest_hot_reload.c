@@ -74,6 +74,11 @@ static c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
   (void)ctx;
   if (!path)
     return C_REST_ERROR_INVALID_ARG;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_hot_reload_fail == 10) {
+    return C_REST_ERROR_GENERIC;
+  }
+#endif
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
   if (ctx && ctx->cm_env) {
     unsigned long mtime_ul;
@@ -94,7 +99,7 @@ static c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
   }
 #else
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if ((g_mock_lib_fail == 10
+  if ((g_mock_hot_reload_fail == 10
            ? cfs_errc_not_enough_memory
            : cfs_path_init_str(&p, (const cfs_char_t *)path)) !=
       cfs_errc_success) {
@@ -137,6 +142,10 @@ c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *ctx,
   ctx->cm_env = env;
   return C_REST_OK;
 }
+#endif
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT int g_mock_hot_reload_fail = 0;
 #endif
 
 c_rest_error_t c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
@@ -273,7 +282,9 @@ c_rest_error_t c_rest_hot_reload_poll(c_rest_hot_reload_ctx_t *ctx,
   }
 
   for (i = 0; i < ctx->watch_count; ++i) {
-    get_file_mtime(ctx, ctx->watched_paths[i], &current_mtime);
+    rc = get_file_mtime(ctx, ctx->watched_paths[i], &current_mtime);
+    if (rc != C_REST_OK)
+      return rc;
     if (current_mtime != ctx->last_modified_times[i]) {
       ctx->last_modified_times[i] = current_mtime;
       changed = 1;
@@ -352,6 +363,11 @@ c_rest_error_t c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
 #else
     rc = c_rest_thread_join(ctx->watcher_thread);
 #endif
+#ifdef C_REST_TESTING_MALLOC_HOOK
+    if (g_mock_hot_reload_fail == 1) {
+      rc = C_REST_ERROR_GENERIC;
+    }
+#endif
     if (rc != C_REST_OK) {
       c_rest_error_t log_rc =
           hot_reload_log(ctx, "[HOT RELOAD] Failed to join watcher thread");
@@ -412,7 +428,7 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
   res->status_code = 200;
   rc = c_rest_sse_init_response(res);
   if (rc != 0) {
-    printf("c_rest_sse_init_response failed: %d\n", rc);
+
     return C_REST_OK;
   }
 
@@ -425,8 +441,8 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
     struct c_rest_sse_event ev;
     c_rest_error_t ev_rc;
 #ifdef C_REST_TESTING_MALLOC_HOOK
-    rc = (g_mock_sse_append_fail == -4 ? C_REST_ERROR_GENERIC
-                                       : c_rest_sse_event_init(&ev));
+    rc = (g_mock_hot_reload_fail == 4 ? C_REST_ERROR_GENERIC
+                                      : c_rest_sse_event_init(&ev));
 #else
     rc = c_rest_sse_event_init(&ev);
 #endif
@@ -456,8 +472,8 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
 
     rc = c_rest_sse_send_event(res, &ev);
 #ifdef C_REST_TESTING_MALLOC_HOOK
-    ev_rc = (g_mock_sse_append_fail == -3 ? C_REST_ERROR_GENERIC
-                                          : c_rest_sse_event_destroy(&ev));
+    ev_rc = (g_mock_hot_reload_fail == 3 ? C_REST_ERROR_GENERIC
+                                         : c_rest_sse_event_destroy(&ev));
 #else
     ev_rc = c_rest_sse_event_destroy(&ev);
 #endif

@@ -111,6 +111,11 @@ TEST test_hot_reload_add_watch(void) {
   PASS();
 }
 
+static int dummy_fail_reload(void *user_data) {
+  (void)user_data;
+  return -1;
+}
+
 static int dummy_reload_callback(void *user_data) {
   int *called = (int *)user_data;
   if (called)
@@ -185,6 +190,35 @@ TEST test_hot_reload_modification(void) {
 
   res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
+
+  /* Trigger watcher_thread_func returning rc on poll failure */
+  {
+    c_rest_hot_reload_ctx_t *poll_ctx = NULL;
+    int dummy_called = 0;
+    c_rest_hot_reload_init(&poll_ctx, NULL);
+    poll_ctx->on_reload = dummy_fail_reload;
+    poll_ctx->user_data = &dummy_called;
+    {
+      FILE *fp = fopen("test_poll_fail.txt", "w");
+      if (fp) {
+        fprintf(fp, "data\n");
+        fclose(fp);
+      }
+    }
+    c_rest_hot_reload_add_watch(poll_ctx, "test_poll_fail.txt");
+    sleep_seconds(1);
+    {
+      FILE *fp = fopen("test_poll_fail.txt", "a");
+      if (fp) {
+        fprintf(fp, "changed\n");
+        fclose(fp);
+      }
+    }
+    c_rest_hot_reload_start(poll_ctx, dummy_fail_reload, &dummy_called);
+    sleep_seconds(1);
+    c_rest_hot_reload_destroy(poll_ctx);
+    remove("test_poll_fail.txt");
+  }
 
   remove(test_filename);
   PASS();
@@ -273,7 +307,7 @@ TEST test_hot_reload_edge_cases(void) {
     ctx_null->watched_paths[0] = NULL;
     res = (int)c_rest_hot_reload_poll(ctx_null, dummy_reload_callback,
                                       &dummy_called);
-    ASSERT_EQ(C_REST_OK, res);
+    ASSERT_EQ(C_REST_ERROR_INVALID_ARG, res);
     ctx_null->watched_paths[0] = saved_path;
     res = (int)c_rest_hot_reload_destroy(ctx_null);
     ASSERT_EQ(C_REST_OK, res);
@@ -352,6 +386,54 @@ TEST test_hot_reload_logger(void) {
 
   res = (int)c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_OK, res);
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  {
+    extern int g_mock_hot_reload_fail;
+    res = (int)c_rest_hot_reload_init(&ctx, &logger);
+    ASSERT_EQ(C_REST_OK, res);
+    ctx->watcher_thread = (c_rest_thread_t)1;
+    g_mock_hot_reload_fail = 1;
+    res = (int)c_rest_hot_reload_destroy(ctx);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, res);
+
+    /* Also test join failure with logger returning error */
+    res = (int)c_rest_hot_reload_init(&ctx, &logger);
+    ASSERT_EQ(C_REST_OK, res);
+    ctx->watcher_thread = (c_rest_thread_t)1;
+    ctx->logger = &err_logger;
+    g_mock_hot_reload_fail = 1;
+    res = (int)c_rest_hot_reload_destroy(ctx);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, res);
+    g_mock_hot_reload_fail = 0;
+
+    /* Test init failure when logger fails */
+    res = (int)c_rest_hot_reload_init(&ctx, &err_logger);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, res);
+
+    /* Test get_file_mtime failure with g_mock_hot_reload_fail == 10 */
+    {
+      c_rest_hot_reload_ctx_t *ctx_fail = NULL;
+      res = (int)c_rest_hot_reload_init(&ctx_fail, NULL);
+      ASSERT_EQ(C_REST_OK, res);
+      g_mock_hot_reload_fail = 10;
+      res = (int)c_rest_hot_reload_add_watch(ctx_fail, "test_log.txt");
+      ASSERT_EQ(C_REST_ERROR_GENERIC, res);
+      g_mock_hot_reload_fail = 0;
+
+      res = (int)c_rest_hot_reload_add_watch(ctx_fail, "test_log.txt");
+      ASSERT_EQ(C_REST_OK, res);
+
+      g_mock_hot_reload_fail = 10;
+      res = (int)c_rest_hot_reload_poll(ctx_fail, dummy_reload_callback, NULL);
+      ASSERT_EQ(C_REST_ERROR_GENERIC, res);
+      g_mock_hot_reload_fail = 0;
+
+      res = (int)c_rest_hot_reload_destroy(ctx_fail);
+      ASSERT_EQ(C_REST_OK, res);
+    }
+  }
+#endif
 
   remove("test_log.txt");
   PASS();
@@ -554,6 +636,7 @@ TEST test_hot_reload_sse_routes(void) {
 #ifdef C_REST_TESTING_MALLOC_HOOK
   g_mock_socket_fail = 200;
 #endif
+  accepted_sock = (c_rest_socket_t)1;
 #endif
 
   rc = c_rest_hot_reload_init(&hr_ctx, NULL);
@@ -705,12 +788,12 @@ TEST test_hot_reload_sse_routes(void) {
     req.path = "/hot-reload";
     res.context = &conn_ctx;
     hr_ctx->state = C_REST_HOT_RELOAD_STATE_CHANGED;
-    g_mock_sse_append_fail = -4;
+    g_mock_hot_reload_fail = 4;
 #if !defined(__unix__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
     g_mock_socket_fail = 200;
 #endif
     rc = c_rest_router_dispatch(router, &req, &res);
-    g_mock_sse_append_fail = 0;
+    g_mock_hot_reload_fail = 0;
 #if !defined(__unix__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
     g_mock_socket_fail = 0;
 #endif
@@ -743,12 +826,12 @@ TEST test_hot_reload_sse_routes(void) {
     req.path = "/hot-reload";
     res.context = &conn_ctx;
     hr_ctx->state = C_REST_HOT_RELOAD_STATE_CHANGED;
-    g_mock_sse_append_fail = -3;
+    g_mock_hot_reload_fail = 3;
 #if !defined(__unix__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
     g_mock_socket_fail = 200;
 #endif
     rc = c_rest_router_dispatch(router, &req, &res);
-    g_mock_sse_append_fail = 0;
+    g_mock_hot_reload_fail = 0;
 #if !defined(__unix__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
     g_mock_socket_fail = 0;
 #endif

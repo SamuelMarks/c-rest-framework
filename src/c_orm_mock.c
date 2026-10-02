@@ -53,7 +53,6 @@ C_REST_EXPORT extern int g_mock_socket_fail;
 C_REST_EXPORT int g_mock_tls_fail = 0;
 C_REST_EXPORT int g_mock_client_fail = 0;
 C_REST_EXPORT int g_mock_platform_cleanup_fail = 0;
-C_REST_EXPORT int g_mock_crypto_fail = 0;
 
 #undef c_rest_socket_create
 #undef c_rest_socket_bind
@@ -172,3 +171,10 @@ c_rest_error_t mock_c_rest_handle_connection(struct c_rest_context *ctx,
     return C_REST_ERROR_GENERIC;
   return c_rest_handle_connection(ctx, sock);
 }
+
+C_REST_EXPORT int g_mock_parser_destroy_fail = 0;
+C_REST_EXPORT int g_mock_parser_should_keep_alive_fail = 0;
+C_REST_EXPORT int g_mock_parser_vtable_fail = 0;
+C_REST_EXPORT int g_mock_req_cleanup_fail = 0;
+C_REST_EXPORT int g_mock_res_cleanup_fail = 0;
+C_REST_EXPORT int g_mock_res_status_fail = 0;

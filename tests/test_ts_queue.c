@@ -246,6 +246,165 @@ int test_ts_queue(void) {
   }
 #endif
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  {
+    extern int g_mock_tsq_fail;
+    c_rest_ts_queue tq;
+    void *out_val = NULL;
+
+    printf("TSQ SUBSTEP 1\n");
+    fflush(stdout);
+    /* 1: cond_create fail with mutex_destroy success */
+    g_mock_tsq_fail = 1;
+    c_rest_ts_queue_init(&tq);
+
+    printf("TSQ SUBSTEP 2\n");
+    fflush(stdout);
+    /* 2: cond_create fail with mutex_destroy fail */
+    g_mock_tsq_fail = 2;
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 0;
+    c_rest_mutex_destroy(tq.mutex);
+
+    printf("TSQ SUBSTEP 3\n");
+    fflush(stdout);
+    /* 3: push mutex_lock fail */
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 3;
+    c_rest_ts_queue_push(&tq, (void *)1);
+    g_mock_tsq_fail = 0;
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    /* is_closed unlock fail */
+    c_rest_ts_queue_init(&tq);
+    c_rest_ts_queue_close(&tq);
+    g_mock_tsq_fail = 5;
+    c_rest_ts_queue_push(&tq, (void *)1);
+    g_mock_tsq_fail = 0;
+    c_rest_mutex_unlock(tq.mutex);
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    printf("TSQ SUBSTEP 4\n");
+    fflush(stdout);
+    /* 4: push cond_signal fail, unlock ok */
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 4;
+    c_rest_ts_queue_push(&tq, (void *)1);
+    g_mock_tsq_fail = 0;
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    printf("TSQ SUBSTEP 5\n");
+    fflush(stdout);
+    /* 5: push cond_signal fail, unlock fail */
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 5;
+    c_rest_ts_queue_push(&tq, (void *)1);
+    g_mock_tsq_fail = 0;
+    c_rest_mutex_unlock(tq.mutex);
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    printf("TSQ SUBSTEP 6\n");
+    fflush(stdout);
+    /* 6: push normal unlock fail */
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 6;
+    c_rest_ts_queue_push(&tq, (void *)1);
+    g_mock_tsq_fail = 0;
+    c_rest_mutex_unlock(tq.mutex);
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    printf("TSQ SUBSTEP 7\n");
+    fflush(stdout);
+    /* 7: pop cond_wait fail */
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 7;
+    c_rest_ts_queue_pop(&tq, &out_val);
+    g_mock_tsq_fail = 0;
+    c_rest_mutex_unlock(tq.mutex);
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    printf("TSQ SUBSTEP 8\n");
+    fflush(stdout);
+    /* 8: pop size==0 unlock fail */
+    c_rest_ts_queue_init(&tq);
+    c_rest_ts_queue_close(&tq);
+    g_mock_tsq_fail = 8;
+    c_rest_ts_queue_pop(&tq, &out_val);
+    g_mock_tsq_fail = 0;
+    c_rest_mutex_unlock(tq.mutex);
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    printf("TSQ SUBSTEP 9\n");
+    fflush(stdout);
+    /* 9: close cond_signal fail, unlock ok */
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 9;
+    c_rest_ts_queue_close(&tq);
+    g_mock_tsq_fail = 0;
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    printf("TSQ SUBSTEP 10\n");
+    fflush(stdout);
+    /* 10: close cond_signal fail, unlock fail */
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 10;
+    c_rest_ts_queue_close(&tq);
+    g_mock_tsq_fail = 0;
+    c_rest_mutex_unlock(tq.mutex);
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    printf("TSQ SUBSTEP 11\n");
+    fflush(stdout);
+    /* 11: close normal unlock fail */
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 11;
+    c_rest_ts_queue_close(&tq);
+    g_mock_tsq_fail = 0;
+    c_rest_mutex_unlock(tq.mutex);
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    printf("TSQ SUBSTEP 12\n");
+    fflush(stdout);
+    /* 12: destroy unlock fail */
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 12;
+    c_rest_ts_queue_destroy(&tq, NULL);
+    g_mock_tsq_fail = 0;
+    c_rest_mutex_unlock(tq.mutex);
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    printf("TSQ SUBSTEP 13\n");
+    fflush(stdout);
+    /* 13: destroy mutex_destroy fail */
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 13;
+    c_rest_ts_queue_destroy(&tq, NULL);
+    g_mock_tsq_fail = 0;
+    c_rest_mutex_destroy(tq.mutex);
+    c_rest_cond_destroy(tq.cond);
+
+    printf("TSQ SUBSTEP 14\n");
+    fflush(stdout);
+    /* 14: pop normal unlock fail */
+    c_rest_ts_queue_init(&tq);
+    c_rest_ts_queue_push(&tq, (void *)1);
+    g_mock_tsq_fail = 14;
+    c_rest_ts_queue_pop(&tq, &out_val);
+    g_mock_tsq_fail = 0;
+    c_rest_mutex_unlock(tq.mutex);
+    c_rest_ts_queue_destroy(&tq, NULL);
+
+    printf("TSQ SUBSTEP 15\n");
+    fflush(stdout);
+    /* 15: destroy cond_destroy fail */
+    c_rest_ts_queue_init(&tq);
+    g_mock_tsq_fail = 15;
+    c_rest_ts_queue_destroy(&tq, NULL);
+    g_mock_tsq_fail = 0;
+    c_rest_cond_destroy(tq.cond);
+  }
+#endif
+
   msgs[0] = "test_ts_queue passed\n";
   msgs[1] = "test_ts_queue failed\n";
   printf("%s", msgs[failed != 0]);

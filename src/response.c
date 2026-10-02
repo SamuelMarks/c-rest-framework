@@ -99,10 +99,6 @@ c_rest_error_t c_rest_response_set_header(struct c_rest_response *res,
   return C_REST_OK;
 }
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_res_status_fail = 0;
-#endif
-
 c_rest_error_t c_rest_response_set_status(struct c_rest_response *res,
                                           int status_code) {
   if (!res) {
@@ -632,22 +628,18 @@ c_rest_error_t c_rest_response_send_file(struct c_rest_response *res,
   return C_REST_OK;
 }
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_res_cleanup_fail = 0;
-#endif
-
 c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res) {
   struct c_rest_header *h;
   struct c_rest_header *next_h;
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_res_cleanup_fail)
+    return C_REST_ERROR_GENERIC;
+#endif
+
   if (!res) {
     return C_REST_ERROR_GENERIC;
   }
-#ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_res_cleanup_fail) {
-    return C_REST_ERROR_GENERIC;
-  }
-#endif
 
   h = res->headers;
   while (h) {

@@ -23,6 +23,7 @@
 #include "c_abstract_http.h"
 #endif
 #include "c_rest_client.h"
+#include "c_rest_client_hooks.h"
 #include "c_rest_base64.h"
 #include <parson.h>
 
@@ -32,6 +33,12 @@
 #include "c_rest_log.h"
 #include <string.h>
 /* clang-format on */
+
+static const struct c_rest_client_hooks *g_client_hooks = NULL;
+
+void c_rest_client_set_hooks(const struct c_rest_client_hooks *hooks) {
+  g_client_hooks = hooks;
+}
 
 struct c_rest_client_context {
   struct HttpClient client;

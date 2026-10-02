@@ -306,6 +306,58 @@ int test_jwt_json_web_tokens_authentication_middleware(void) {
     failed += (rc != C_REST_OK);
   }
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  {
+    extern int g_mock_jwt_fail;
+    struct c_rest_request mock_req;
+    struct c_rest_response mock_res;
+    struct c_rest_header mock_hdr;
+    char *mock_tok = NULL;
+    char mock_hdr_val[512];
+    int k;
+
+    c_rest_jwt_sign_hs256("{\"sub\":\"123\"}", secret, sizeof(secret) - 1,
+                          &mock_tok);
+#if defined(_MSC_VER)
+    sprintf_s(mock_hdr_val, sizeof(mock_hdr_val), "Bearer %s", mock_tok);
+#else
+    sprintf(mock_hdr_val, "Bearer %s", mock_tok);
+#endif
+    mock_hdr.key = "Authorization";
+    mock_hdr.value = mock_hdr_val;
+    mock_hdr.next = NULL;
+
+    for (k = 1; k <= 12; k++) {
+      g_mock_jwt_fail = k;
+      memset(&mock_req, 0, sizeof(mock_req));
+      memset(&mock_res, 0, sizeof(mock_res));
+      mock_req.headers = &mock_hdr;
+
+      if (k == 1 || k == 2) {
+        /* fail on NULL config */
+        c_rest_jwt_middleware(&mock_req, &mock_res, NULL);
+      } else if (k >= 3 && k <= 5) {
+        /* fail on missing token */
+        mock_req.headers = NULL;
+        config.verify_payload = mock_verify_payload_fail;
+        c_rest_jwt_middleware(&mock_req, &mock_res, &config);
+        config.verify_payload = mock_verify_payload_success;
+      } else if (k >= 6 && k <= 8) {
+        /* fail on invalid token signature */
+        mock_hdr.value = "Bearer invalid.signature.token";
+        c_rest_jwt_middleware(&mock_req, &mock_res, &config);
+        mock_hdr.value = mock_hdr_val;
+      } else if (k >= 9 && k <= 12) {
+        /* fail on verify_payload callback */
+        c_rest_jwt_middleware(&mock_req, &mock_res, &config);
+      }
+      c_rest_response_cleanup(&mock_res);
+    }
+    g_mock_jwt_fail = 0;
+    CRF_FREE(mock_tok);
+  }
+#endif
+
   msgs[0] = "test_jwt_json_web_tokens_authentication_middleware passed\n";
   msgs[1] = "test_jwt_json_web_tokens_authentication_middleware failed\n";
   printf("%s", msgs[failed != 0]);

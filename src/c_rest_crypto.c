@@ -526,6 +526,45 @@ c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
 #include "c_rest_export.h"
 /* clang-format on */
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT int g_mock_crypto_fail = 0;
+#ifndef c_rest_sha256
+#define c_rest_sha256(a, b, c)                                                 \
+  ((g_mock_crypto_fail > 100 && g_mock_crypto_fail < 200 &&                    \
+    --g_mock_crypto_fail == 100)                                               \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_sha256(a, b, c))
+#endif
+#ifndef c_rest_base64url_encode
+#define c_rest_base64url_encode(a, b, c, d)                                    \
+  ((g_mock_crypto_fail > 200 && g_mock_crypto_fail < 300 &&                    \
+    --g_mock_crypto_fail == 200)                                               \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_base64url_encode(a, b, c, d))
+#endif
+#ifndef c_rest_base64_encode
+#define c_rest_base64_encode(a, b, c, d)                                       \
+  ((g_mock_crypto_fail > 300 && g_mock_crypto_fail < 400 &&                    \
+    --g_mock_crypto_fail == 300)                                               \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_base64_encode(a, b, c, d))
+#endif
+#ifndef c_rest_base64_decode
+#define c_rest_base64_decode(a, b, c, d)                                       \
+  ((g_mock_crypto_fail > 400 && g_mock_crypto_fail < 500 &&                    \
+    --g_mock_crypto_fail == 400)                                               \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_base64_decode(a, b, c, d))
+#endif
+#ifndef c_rest_base64url_decode
+#define c_rest_base64url_decode(a, b, c, d)                                    \
+  ((g_mock_crypto_fail > 500 && g_mock_crypto_fail < 600 &&                    \
+    --g_mock_crypto_fail == 500)                                               \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_base64url_decode(a, b, c, d))
+#endif
+#endif
+
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
 
@@ -976,12 +1015,12 @@ c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
   size_t to_sign_len;
   char *to_sign;
   unsigned char expected_sig[32];
-  char *encoded_expected_sig;
-  size_t encoded_expected_sig_len;
-  const char *provided_sig;
-  size_t payload_b64_len;
-  unsigned char *decoded_payload;
-  size_t decoded_payload_len;
+  char *encoded_expected_sig = NULL;
+  size_t encoded_expected_sig_len = 0;
+  const char *provided_sig = NULL;
+  size_t payload_b64_len = 0;
+  unsigned char *decoded_payload = NULL;
+  size_t decoded_payload_len = 0;
 
   if (!token || !secret || !out_payload)
     return C_REST_ERROR_GENERIC;

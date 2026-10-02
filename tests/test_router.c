@@ -221,6 +221,9 @@ static void test_coverage(void) {
   c_rest_router_get_openapi_spec(NULL, NULL);
   c_rest_router_get_openapi_spec(r, NULL);
   c_rest_router_get_openapi_spec(r, &spec);
+  g_mock_openapi_fail = 7;
+  c_rest_router_get_openapi_spec(r, &spec);
+  g_mock_openapi_fail = 0;
 
   c_rest_router_add_websocket(NULL, "/ws", NULL, NULL, NULL);
   c_rest_router_add_websocket(r, NULL, NULL, NULL, NULL);

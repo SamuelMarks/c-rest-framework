@@ -95,6 +95,63 @@ TEST test_write_chunk_tls_fail_trailer(void) {
   PASS();
 }
 
+TEST test_write_chunk_tls_chunked_success(void) {
+  struct c_rest_response res;
+  struct c_rest_connection_context ctx;
+  memset(&res, 0, sizeof(res));
+  memset(&ctx, 0, sizeof(ctx));
+  res.context = &ctx;
+  res.is_chunked = 1;
+  res.headers_sent = 1;
+  ctx.tls_conn = (struct c_rest_tls_connection *)1;
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  g_mock_tls_fail = 3; /* Always succeed */
+  ASSERT_EQ(C_REST_OK, c_rest_response_write_chunk(&res, "abc", 3));
+  g_mock_tls_fail = 0;
+#endif
+  PASS();
+}
+
+TEST test_write_chunk_tls_unchunked(void) {
+  struct c_rest_response res;
+  struct c_rest_connection_context ctx;
+  memset(&res, 0, sizeof(res));
+  memset(&ctx, 0, sizeof(ctx));
+  res.context = &ctx;
+  res.is_chunked = 0;
+  res.headers_sent = 1;
+  ctx.tls_conn = (struct c_rest_tls_connection *)1;
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  g_mock_tls_fail = 3; /* Success */
+  ASSERT_EQ(C_REST_OK, c_rest_response_write_chunk(&res, "abc", 3));
+
+  g_mock_tls_fail = 1; /* Fail */
+  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_response_write_chunk(&res, "abc", 3));
+  g_mock_tls_fail = 0;
+#endif
+  PASS();
+}
+
+TEST test_response_send_tls_success(void) {
+  struct c_rest_response res;
+  struct c_rest_connection_context ctx;
+  memset(&res, 0, sizeof(res));
+  memset(&ctx, 0, sizeof(ctx));
+  res.context = &ctx;
+  ctx.tls_conn = (struct c_rest_tls_connection *)1;
+  res.body = "body";
+  res.body_len = 4;
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  g_mock_tls_fail = 3; /* Success for both header and body writes */
+  ASSERT_EQ(C_REST_OK, c_rest_response_send(&res));
+  g_mock_tls_fail = 0;
+#endif
+  PASS();
+}
+
 TEST test_response_send_tls_fail(void) {
   struct c_rest_response res;
   struct c_rest_connection_context ctx;
@@ -279,6 +336,9 @@ SUITE(response_mock_suite) {
   RUN_TEST(test_write_chunk_socket_fail_trailer);
   RUN_TEST(test_write_chunk_tls_fail_payload);
   RUN_TEST(test_write_chunk_tls_fail_trailer);
+  RUN_TEST(test_write_chunk_tls_chunked_success);
+  RUN_TEST(test_write_chunk_tls_unchunked);
+  RUN_TEST(test_response_send_tls_success);
   RUN_TEST(test_response_send_tls_fail);
   RUN_TEST(test_response_send_socket_fail_body);
   RUN_TEST(test_response_send_socket_success_body);

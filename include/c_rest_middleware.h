@@ -80,11 +80,11 @@ c_rest_https_redirect_middleware(struct c_rest_request *req,
  * @brief Authentication verifiers for middleware.
  */
 struct c_rest_auth_verifier {
-  /** @brief Verify a bearer token. Return 0 if valid. */
-  int (*verify_bearer)(const char *token, void **out_auth_context);
-  /** @brief Verify basic auth credentials. Return 0 if valid. */
-  int (*verify_basic)(const char *username, const char *password,
-                      void **out_auth_context);
+  /** @brief Verify a bearer token. Return C_REST_OK if valid. */
+  c_rest_error_t (*verify_bearer)(const char *token, void **out_auth_context);
+  /** @brief Verify basic auth credentials. Return C_REST_OK if valid. */
+  c_rest_error_t (*verify_basic)(const char *username, const char *password,
+                                 void **out_auth_context);
 };
 
 /**
@@ -107,8 +107,8 @@ c_rest_auth_middleware(struct c_rest_request *req, struct c_rest_response *res,
  * @param out_auth_context Pointer to store the resolved user context.
  * @return 0 if token is valid, non-zero otherwise.
  */
-typedef int (*c_rest_oauth2_verify_fn)(const char *token,
-                                       void **out_auth_context);
+typedef c_rest_error_t (*c_rest_oauth2_verify_fn)(const char *token,
+                                                  void **out_auth_context);
 
 /**
  * @brief Built-in OAuth2 Middleware.

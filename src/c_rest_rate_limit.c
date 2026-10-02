@@ -5,6 +5,48 @@
 #include <time.h>
 /* clang-format on */
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT int g_mock_rate_limit_fail = 0;
+#ifndef c_rest_mutex_create
+#define c_rest_mutex_create(m)                                                 \
+  ((g_mock_rate_limit_fail == 1 || g_mock_rate_limit_fail == 2)                \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_mutex_create(m))
+#endif
+#ifndef c_rest_mutex_lock
+#define c_rest_mutex_lock(m)                                                   \
+  ((g_mock_rate_limit_fail == 3 || g_mock_rate_limit_fail == 7)                \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_mutex_lock(m))
+#endif
+#ifndef c_rest_hashmap_put
+#define c_rest_hashmap_put(m, k, v)                                            \
+  ((g_mock_rate_limit_fail == 4 || g_mock_rate_limit_fail == 12)               \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_hashmap_put(m, k, v))
+#endif
+#ifndef c_rest_mutex_unlock
+#define c_rest_mutex_unlock(m)                                                 \
+  ((g_mock_rate_limit_fail == 5 || g_mock_rate_limit_fail == 6 ||              \
+    g_mock_rate_limit_fail == 8 || g_mock_rate_limit_fail == 10 ||             \
+    g_mock_rate_limit_fail == 12)                                              \
+       ? ((c_rest_mutex_unlock)(m), C_REST_ERROR_GENERIC)                      \
+       : (c_rest_mutex_unlock)(m))
+#endif
+#ifndef c_rest_hashmap_destroy
+#define c_rest_hashmap_destroy(m, f)                                           \
+  ((g_mock_rate_limit_fail == 2 || g_mock_rate_limit_fail == 9 ||              \
+    g_mock_rate_limit_fail == 10 || g_mock_rate_limit_fail == 12)              \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_hashmap_destroy(m, f))
+#endif
+#ifndef c_rest_mutex_destroy
+#define c_rest_mutex_destroy(m)                                                \
+  (g_mock_rate_limit_fail == 11 ? C_REST_ERROR_GENERIC                         \
+                                : c_rest_mutex_destroy(m))
+#endif
+#endif
+
 static void c_rest_rate_limiter_bucket_free(void *bucket_ptr) {
 
   C_REST_FREE(bucket_ptr);

@@ -2,6 +2,7 @@
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
 #include "c_rest_tls.h"
+#include "c_rest_testing_mocks.h"
 
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
 #include <c_abstract_http/c_abstract_http.h>
@@ -30,10 +31,6 @@
 #include <s2n.h>
 #endif
 /* clang-format on */
-
-#ifdef C_REST_TESTING_MALLOC_HOOK
-extern int g_mock_tls_fail;
-#endif
 
 c_rest_error_t c_rest_tls_init(void) {
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL)
@@ -472,6 +469,36 @@ c_rest_error_t c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf,
 c_rest_error_t c_rest_tls_write(struct c_rest_tls_connection *conn,
                                 const void *buf, size_t len,
                                 size_t *out_written) {
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  static int write_count = 0;
+  if (g_mock_tls_fail == 1)
+    return C_REST_ERROR_GENERIC;
+  if (g_mock_tls_fail == 3) {
+    if (out_written)
+      *out_written = len;
+    return C_REST_OK;
+  }
+  if (g_mock_tls_fail == 4) {
+    write_count++;
+    if (write_count == 2) {
+      write_count = 0;
+      return C_REST_ERROR_GENERIC;
+    }
+    if (out_written)
+      *out_written = len;
+    return C_REST_OK;
+  }
+  if (g_mock_tls_fail == 5) {
+    write_count++;
+    if (write_count == 3) {
+      write_count = 0;
+      return C_REST_ERROR_GENERIC;
+    }
+    if (out_written)
+      *out_written = len;
+    return C_REST_OK;
+  }
+#endif
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   int ret;
@@ -533,22 +560,6 @@ c_rest_error_t c_rest_tls_write(struct c_rest_tls_connection *conn,
   }
   return C_REST_ERROR_GENERIC;
 #else
-#ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_tls_fail == 3) {
-    *out_written = len;
-    return C_REST_OK;
-  }
-  if (g_mock_tls_fail == 4) {
-    g_mock_tls_fail = 0;
-    *out_written = len;
-    return C_REST_OK;
-  }
-  if (g_mock_tls_fail == 5) {
-    g_mock_tls_fail = 4;
-    *out_written = len;
-    return C_REST_OK;
-  }
-#endif
   *out_written = 0;
   return C_REST_ERROR_GENERIC;
 #endif
@@ -558,7 +569,7 @@ c_rest_error_t c_rest_tls_close(struct c_rest_tls_connection *conn) {
   if (!conn)
     return C_REST_OK;
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_tls_fail == 2) {
+  if (g_mock_tls_fail == 6) {
     C_REST_FREE((void *)(conn));
     return C_REST_ERROR_GENERIC;
   }

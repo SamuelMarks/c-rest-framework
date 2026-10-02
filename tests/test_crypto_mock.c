@@ -12,11 +12,8 @@
 #include "c_rest_tls.h"
 
 #undef C_REST_EXPORT
-#if defined(_MSC_VER) && !defined(C_REST_FRAMEWORK_STATIC_DEFINE)
-#define C_REST_EXPORT __declspec(dllimport)
-#else
 #define C_REST_EXPORT
-#endif
+
 
 static int g_mock_base64_countdown = -1;
 static int g_mock_base64_dec_countdown = -1;

@@ -18,16 +18,21 @@ struct c_rest_context;
 /* Exported hooks for testing */
 C_REST_EXPORT extern c_rest_error_t (*g_crf_is_little_endian_hook)(int *);
 
-C_REST_EXPORT extern c_rest_error_t
-mock_c_rest_socket_accept(c_rest_socket_t server, c_rest_socket_t *out_client);
-C_REST_EXPORT extern c_rest_error_t
-mock_c_rest_socket_close(c_rest_socket_t sock);
-C_REST_EXPORT extern c_rest_error_t
-mock_c_rest_handle_connection(struct c_rest_context *ctx, c_rest_socket_t sock);
-C_REST_EXPORT extern c_rest_error_t
-mock_c_rest_thread_create(c_rest_thread_t *thread,
-                          c_rest_error_t (*func)(void *), void *arg);
+extern c_rest_error_t mock_c_rest_socket_accept(c_rest_socket_t server,
+                                                c_rest_socket_t *out_client);
+extern c_rest_error_t mock_c_rest_socket_close(c_rest_socket_t sock);
+extern c_rest_error_t mock_c_rest_handle_connection(struct c_rest_context *ctx,
+                                                    c_rest_socket_t sock);
+extern c_rest_error_t mock_c_rest_thread_create(c_rest_thread_t *thread,
+                                                c_rest_error_t (*func)(void *),
+                                                void *arg);
 C_REST_EXPORT extern int g_mock_lib_fail;
+C_REST_EXPORT extern int g_mock_lib_fail;
+C_REST_EXPORT extern int g_mock_hot_reload_fail;
+C_REST_EXPORT extern int g_mock_jwt_fail;
+C_REST_EXPORT extern int g_mock_rate_limit_fail;
+C_REST_EXPORT extern int g_mock_mem_fail;
+C_REST_EXPORT extern int g_mock_tsq_fail;
 C_REST_EXPORT extern int g_mock_sse_append_fail;
 C_REST_EXPORT extern int g_mock_orm_init_fail;
 C_REST_EXPORT extern int g_mock_socket_fail;
@@ -47,6 +52,7 @@ C_REST_EXPORT extern int g_mock_req_cleanup_fail;
 C_REST_EXPORT extern int g_mock_res_cleanup_fail;
 C_REST_EXPORT extern int g_mock_graphql_free_countdown;
 C_REST_EXPORT extern int g_mock_client_fail;
+C_REST_EXPORT extern int g_mock_openapi_fail;
 
 C_REST_EXPORT extern c_rest_mutex_t *g_crf_mem_mutex_ptr;
 C_REST_EXPORT extern int *g_crf_mem_initialized_ptr;

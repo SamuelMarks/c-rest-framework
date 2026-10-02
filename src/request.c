@@ -3,6 +3,7 @@
 #include "c_rest_mem.h"
 #include "c_rest_request.h"
 #include "c_rest_str_utils.h"
+#include "c_rest_testing_mocks.h"
 #include <parson.h>
 
 #include <stdlib.h>
@@ -409,22 +410,19 @@ c_rest_error_t c_rest_request_parse_json(struct c_rest_request *req, void **json
   return C_REST_OK;
 }
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_req_cleanup_fail = 0;
-#endif
 
 c_rest_error_t c_rest_request_cleanup(struct c_rest_request *req) {
   struct c_rest_header *h;
   struct c_rest_header *next_h;
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_req_cleanup_fail)
+    return C_REST_ERROR_GENERIC;
+#endif
+
   if (!req) {
     return C_REST_ERROR_GENERIC;
   }
-#ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_req_cleanup_fail) {
-    return C_REST_ERROR_GENERIC;
-  }
-#endif
 
   h = req->headers;
   while (h) {

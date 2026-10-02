@@ -6,6 +6,7 @@
 #include "c_rest_router.h"
 #include "c_rest_request.h"
 #include "c_rest_response.h"
+#include "c_rest_testing_mocks.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -951,6 +952,70 @@ int test_openapi(void) {
     c_rest_openapi_spec_add_path(sp, "route", NULL, &op_dummy);
     c_rest_openapi_spec_add_path(sp, "route", "GET", NULL);
     c_rest_openapi_spec_destroy(sp);
+  }
+
+  {
+    struct c_rest_router *r_mock = NULL;
+    struct c_rest_request req_m;
+    struct c_rest_response res_m;
+
+    c_rest_router_init(&r_mock);
+    c_rest_enable_openapi(r_mock, "/openapi.json");
+    c_rest_enable_swagger_ui(r_mock, "/docs", "/openapi.json");
+
+    /* Test openapi_handler error branches */
+    memset(&req_m, 0, sizeof(req_m));
+    memset(&res_m, 0, sizeof(res_m));
+    req_m.method = "GET";
+    req_m.path = "/openapi.json";
+
+    g_mock_openapi_fail = 1;
+    c_rest_router_dispatch(r_mock, &req_m, &res_m);
+    c_rest_response_cleanup(&res_m);
+
+    memset(&res_m, 0, sizeof(res_m));
+    g_mock_openapi_fail = 2;
+    c_rest_router_dispatch(r_mock, &req_m, &res_m);
+    c_rest_response_cleanup(&res_m);
+
+    memset(&res_m, 0, sizeof(res_m));
+    g_mock_openapi_fail = 3;
+    c_rest_router_dispatch(r_mock, &req_m, &res_m);
+    c_rest_response_cleanup(&res_m);
+
+    memset(&res_m, 0, sizeof(res_m));
+    g_mock_res_status_fail = 1;
+    c_rest_router_dispatch(r_mock, &req_m, &res_m);
+    g_mock_res_status_fail = 0;
+    c_rest_response_cleanup(&res_m);
+
+    /* Test swagger_ui_handler error branches */
+    memset(&req_m, 0, sizeof(req_m));
+    memset(&res_m, 0, sizeof(res_m));
+    req_m.method = "GET";
+    req_m.path = "/docs";
+
+    g_mock_openapi_fail = 4;
+    c_rest_router_dispatch(r_mock, &req_m, &res_m);
+    c_rest_response_cleanup(&res_m);
+
+    memset(&res_m, 0, sizeof(res_m));
+    g_mock_openapi_fail = 5;
+    c_rest_router_dispatch(r_mock, &req_m, &res_m);
+    c_rest_response_cleanup(&res_m);
+
+    memset(&res_m, 0, sizeof(res_m));
+    g_mock_res_status_fail = 1;
+    c_rest_router_dispatch(r_mock, &req_m, &res_m);
+    g_mock_res_status_fail = 0;
+    c_rest_response_cleanup(&res_m);
+
+    /* Test c_rest_enable_swagger_ui error branch */
+    g_mock_openapi_fail = 6;
+    c_rest_enable_swagger_ui(r_mock, "/docs_fail", "/openapi.json");
+    g_mock_openapi_fail = 0;
+
+    c_rest_router_destroy(r_mock);
   }
 
   return 0;

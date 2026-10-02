@@ -11,11 +11,9 @@
 #include "c_rest_hot_reload.h"
 
 #undef C_REST_EXPORT
-#if defined(_MSC_VER) && !defined(C_REST_FRAMEWORK_STATIC_DEFINE)
-#define C_REST_EXPORT __declspec(dllimport)
-#else
 #define C_REST_EXPORT
-#endif
+
+
 
 /* Forward declarations */
 extern c_rest_error_t c_rest_thread_join(c_rest_thread_t thread);
@@ -41,9 +39,25 @@ static void reset_mocks(void *data) {
   g_mock_join_fail = 0;
 }
 
+static int logger_fail_countdown = -1;
 static c_rest_error_t fail_logger_cb(const char *msg) {
   (void)msg;
-  return C_REST_ERROR_GENERIC; /* Fail the logger to make poll fail */
+  if (logger_fail_countdown >= 0) {
+    if (logger_fail_countdown == 0)
+      return C_REST_ERROR_GENERIC;
+    logger_fail_countdown--;
+  }
+  return C_REST_ERROR_GENERIC; /* Default fail if countdown not used */
+}
+
+static c_rest_error_t fail_logger_cb_countdown(const char *msg) {
+  (void)msg;
+  if (logger_fail_countdown >= 0) {
+    if (logger_fail_countdown == 0)
+      return C_REST_ERROR_GENERIC;
+    logger_fail_countdown--;
+  }
+  return C_REST_OK;
 }
 
 static int dummy_on_reload(void *user_data) {
@@ -55,6 +69,7 @@ TEST test_watcher_thread_func_poll_fail(void) {
   c_rest_hot_reload_ctx_t *ctx = NULL;
   struct c_rest_logger logger = {0};
   c_rest_error_t rc;
+  FILE *fake_file = NULL;
 
   /* Don't use the failing logger for init, or init will fail. */
   rc = c_rest_hot_reload_init(&ctx, NULL);
@@ -82,10 +97,22 @@ TEST test_watcher_thread_func_poll_fail(void) {
             C_REST_MALLOC(sizeof(time_t), (void **)&ctx->last_modified_times));
   ctx->last_modified_times[0] = 12345; /* Fake mtime */
 
+#if defined(_MSC_VER)
+  fopen_s(&fake_file, "test_file_fake", "w");
+#else
+  fake_file = fopen("test_file_fake", "w");
+#endif
+  if (fake_file) {
+    fprintf(fake_file, "fake");
+    fclose(fake_file);
+  }
+
   /* Call the static watcher_thread_func directly */
   rc = watcher_thread_func(ctx);
   printf("RC is %d\n", rc);
   ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+
+  remove("test_file_fake");
 
   c_rest_hot_reload_destroy(ctx);
   PASS();
@@ -106,10 +133,12 @@ TEST test_hot_reload_destroy_join_fail(void) {
   ASSERT(ctx != NULL);
 
   memset(&fail_logger, 0, sizeof(fail_logger));
-  fail_logger.log_cb = fail_logger_cb;
+  fail_logger.log_cb = fail_logger_cb_countdown;
   ctx->logger = &fail_logger;
   ctx->watcher_thread = (c_rest_thread_t)1; /* Fake thread handle */
 
+  logger_fail_countdown =
+      0; /* Fail on the first log call (which is the log in join failure) */
   g_mock_join_fail = 1;
   rc = c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_ERROR_GENERIC, rc);

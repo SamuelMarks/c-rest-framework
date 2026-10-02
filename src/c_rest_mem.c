@@ -38,6 +38,65 @@ C_REST_EXPORT void *test_c_rest_internal_realloc(void *ptr, size_t size) {
 #include "c_rest_log.h"
 /* clang-format on */
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT int g_mock_mem_fail = 0;
+#if !defined(c_rest_mutex_lock) && !defined(c_rest_mutex_unlock)
+extern c_rest_error_t c_rest_mutex_lock(c_rest_mutex_t mutex);
+extern c_rest_error_t c_rest_mutex_unlock(c_rest_mutex_t mutex);
+
+static c_rest_error_t mock_mem_lock(c_rest_mutex_t m) {
+  if (g_mock_mem_fail == 12) {
+    static int lock_count = 0;
+    lock_count++;
+    if (lock_count == 2) {
+      lock_count = 0;
+      g_mock_mem_fail = 0;
+      return C_REST_ERROR_GENERIC;
+    }
+    return (c_rest_mutex_lock)(m);
+  }
+  if (g_mock_mem_fail == 14) {
+    return (c_rest_mutex_lock)(m);
+  }
+  if (g_mock_mem_fail == 5 || g_mock_mem_fail == 7 || g_mock_mem_fail == 9) {
+    return C_REST_ERROR_GENERIC;
+  }
+  return (c_rest_mutex_lock)(m);
+}
+
+static c_rest_error_t mock_mem_unlock(c_rest_mutex_t m) {
+  if (g_mock_mem_fail == 14) {
+    static int unlock_count = 0;
+    unlock_count++;
+    if (unlock_count == 2) {
+      unlock_count = 0;
+      g_mock_mem_fail = 0;
+      (c_rest_mutex_unlock)(m);
+      return C_REST_ERROR_GENERIC;
+    }
+    return (c_rest_mutex_unlock)(m);
+  }
+  if (g_mock_mem_fail == 1 || g_mock_mem_fail == 2 || g_mock_mem_fail == 4 ||
+      g_mock_mem_fail == 6 || g_mock_mem_fail == 8 || g_mock_mem_fail == 10) {
+    (c_rest_mutex_unlock)(m);
+    return C_REST_ERROR_GENERIC;
+  }
+  return (c_rest_mutex_unlock)(m);
+}
+
+#ifndef c_rest_mutex_unlock
+#define c_rest_mutex_unlock(m) (mock_mem_unlock(m))
+#endif
+#ifndef c_rest_mutex_lock
+#define c_rest_mutex_lock(m) (mock_mem_lock(m))
+#endif
+#endif
+#ifndef c_rest_mutex_destroy
+#define c_rest_mutex_destroy(m)                                                \
+  (g_mock_mem_fail == 11 ? C_REST_ERROR_GENERIC : c_rest_mutex_destroy(m))
+#endif
+#endif
+
 c_rest_error_t c_rest_internal_strdup(const char *s, char **out_str) {
   size_t len;
   char *dup;
@@ -67,12 +126,8 @@ typedef struct c_rest_mem_node {
 
 static c_rest_mem_node *mem_list = NULL;
 static c_rest_mutex_t mem_mutex = (c_rest_mutex_t)-1;
-static int mem_initialized = 0;
-
-#ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT c_rest_mutex_t *g_crf_mem_mutex_ptr = &mem_mutex;
-C_REST_EXPORT int *g_crf_mem_initialized_ptr = &mem_initialized;
-#endif
+C_REST_EXPORT int mem_initialized = 0;
 
 c_rest_error_t c_rest_mem_tracker_init(void) {
   c_rest_error_t rc;

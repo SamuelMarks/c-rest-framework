@@ -8,6 +8,28 @@
 #include "c_rest_crypto.h"
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT int g_mock_jwt_fail = 0;
+#ifndef c_rest_response_set_status
+#define c_rest_response_set_status(r, s) \
+  ((g_mock_jwt_fail == 1 || g_mock_jwt_fail == 4 || g_mock_jwt_fail == 7 || g_mock_jwt_fail == 10) \
+       ? C_REST_ERROR_GENERIC \
+       : c_rest_response_set_status(r, s))
+#endif
+#ifndef c_rest_response_html
+#define c_rest_response_html(r, h) \
+  ((g_mock_jwt_fail == 2 || g_mock_jwt_fail == 3 || g_mock_jwt_fail == 6 || g_mock_jwt_fail == 9 || g_mock_jwt_fail == 12) \
+       ? C_REST_ERROR_GENERIC \
+       : c_rest_response_html(r, h))
+#endif
+#ifndef c_rest_response_set_header
+#define c_rest_response_set_header(r, k, v) \
+  ((g_mock_jwt_fail == 5 || g_mock_jwt_fail == 8 || g_mock_jwt_fail == 11) \
+       ? C_REST_ERROR_GENERIC \
+       : c_rest_response_set_header(r, k, v))
+#endif
+#endif
 #include "c_rest_log.h"
 /* clang-format on */
 
@@ -73,7 +95,7 @@ c_rest_error_t c_rest_jwt_middleware(struct c_rest_request *req,
 
   verify_res = c_rest_jwt_verify_hs256(token, config->secret,
                                        config->secret_len, &payload);
-  if (verify_res != 0) {
+  if (verify_res != C_REST_OK) {
     C_REST_FREE((void *)(token));
     rc = c_rest_response_set_status(res, 401);
     if (rc != C_REST_OK)

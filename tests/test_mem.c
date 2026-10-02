@@ -1,4 +1,8 @@
+#include "c_rest_export.h"
+C_REST_EXPORT extern int mem_initialized;
 /* clang-format off */
+#include "c_rest_platform.h"
+
 #define C_REST_MEM_TRACK 1
 #include "test_protos.h"
 #include "c_rest_mem.h"
@@ -24,6 +28,19 @@ static void *fail_realloc(void *p, size_t s) {
 static char *fail_strdup(const char *s) {
   (void)s;
   return NULL;
+}
+
+static char *success_strdup(const char *s) {
+  size_t len = strlen(s) + 1;
+  char *d = (char *)malloc(len);
+  if (d) {
+#if defined(_MSC_VER)
+    strcpy_s(d, len, s);
+#else
+    memcpy(d, s, len);
+#endif
+  }
+  return d;
 }
 
 int test_mem(void) {
@@ -307,12 +324,12 @@ int test_mem(void) {
   failed += (rc == C_REST_OK);
 
   /* Test remove_node uninitialized state */
-  *g_crf_mem_initialized_ptr = 0;
+  mem_initialized = 0;
   rc = C_REST_FREE(
       &failed); /* Just a valid ptr, but not tracked/uninitialized */
   failed += (rc != C_REST_ERROR_GENERIC);
-  *g_crf_mem_initialized_ptr = 1;
-  *g_crf_mem_initialized_ptr = 1;
+  mem_initialized = 1;
+  mem_initialized = 1;
 
   /* Test empty cleanup */
   c_rest_mem_tracker_init();
@@ -346,6 +363,159 @@ int test_mem(void) {
   rc = c_rest_mem_tracker_cleanup();
   c_rest_mem_tracker_init();
   c_rest_mem_tracker_cleanup();
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  {
+    extern int g_mock_mem_fail;
+    char *dup_str = NULL;
+    void *ptr = NULL;
+
+    /* c_rest_internal_strdup */
+    c_rest_internal_strdup(NULL, &dup_str);
+    c_rest_internal_strdup("test", NULL);
+    c_rest_internal_strdup("test", &dup_str);
+    free(dup_str);
+
+    printf("MEM STEP 1\n");
+    fflush(stdout);
+    /* 1: add_node unlock fail */
+    c_rest_mem_tracker_init();
+    g_mock_mem_fail = 1;
+    c_rest_mem_malloc(10, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 0;
+    c_rest_mutex_unlock(*g_crf_mem_mutex_ptr);
+    c_rest_mem_free(ptr);
+    c_rest_mem_tracker_cleanup();
+
+    printf("MEM STEP 2\n");
+    fflush(stdout);
+    /* 2: remove_node unlock fail */
+    c_rest_mem_tracker_init();
+    c_rest_mem_malloc(10, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 2;
+    c_rest_mem_free(ptr);
+    g_mock_mem_fail = 0;
+    c_rest_mutex_unlock(*g_crf_mem_mutex_ptr);
+    c_rest_mem_tracker_cleanup();
+
+    printf("MEM STEP 4\n");
+    fflush(stdout);
+    /* 4: realloc first unlock fail */
+    c_rest_mem_tracker_init();
+    c_rest_mem_malloc(10, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 4;
+    c_rest_mem_realloc(ptr, 20, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 0;
+    c_rest_mutex_unlock(*g_crf_mem_mutex_ptr);
+    c_rest_mem_free(ptr);
+    c_rest_mem_tracker_cleanup();
+
+    printf("MEM STEP 5\n");
+    fflush(stdout);
+    /* 5: realloc second lock fail */
+    c_rest_mem_tracker_init();
+    c_rest_mem_malloc(10, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 5;
+    c_rest_mem_realloc(ptr, 20, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 0;
+    c_rest_mem_tracker_cleanup();
+    free(ptr);
+
+    printf("MEM STEP 6\n");
+    fflush(stdout);
+    /* 6: realloc second unlock fail */
+    c_rest_mem_tracker_init();
+    c_rest_mem_malloc(10, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 6;
+    c_rest_mem_realloc(ptr, 20, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 0;
+    c_rest_mutex_unlock(*g_crf_mem_mutex_ptr);
+    c_rest_mem_free(ptr);
+    c_rest_mem_tracker_cleanup();
+
+    printf("MEM STEP 8\n");
+    fflush(stdout);
+    /* 8: print_leaks unlock fail */
+    c_rest_mem_tracker_init();
+    g_mock_mem_fail = 8;
+    c_rest_mem_tracker_print_leaks();
+    g_mock_mem_fail = 0;
+    c_rest_mutex_unlock(*g_crf_mem_mutex_ptr);
+    c_rest_mem_tracker_cleanup();
+
+    printf("MEM STEP 10\n");
+    fflush(stdout);
+    /* 10: cleanup unlock fail */
+    c_rest_mem_tracker_init();
+    g_mock_mem_fail = 10;
+    c_rest_mem_tracker_cleanup();
+    g_mock_mem_fail = 0;
+    c_rest_mutex_unlock(*g_crf_mem_mutex_ptr);
+    c_rest_mem_tracker_cleanup();
+
+    printf("MEM STEP 11\n");
+    fflush(stdout);
+    /* 11: cleanup mutex_destroy fail */
+    c_rest_mem_tracker_init();
+    g_mock_mem_fail = 11;
+    c_rest_mem_tracker_cleanup();
+    g_mock_mem_fail = 0;
+    c_rest_mutex_destroy(*g_crf_mem_mutex_ptr);
+    mem_initialized = 0;
+
+    /* realloc size 0 */
+    c_rest_mem_tracker_init();
+    c_rest_mem_malloc(10, __FILE__, __LINE__, &ptr);
+    /* Test realloc size 0 failure when free fails */
+    g_mock_mem_fail = 2;
+    c_rest_mem_realloc(ptr, 0, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 0;
+    c_rest_mem_free(ptr);
+    c_rest_mem_tracker_cleanup();
+
+    /* normal realloc size 0 */
+    c_rest_mem_tracker_init();
+    c_rest_mem_malloc(10, __FILE__, __LINE__, &ptr);
+    c_rest_mem_realloc(ptr, 0, __FILE__, __LINE__, &ptr);
+    c_rest_mem_tracker_cleanup();
+
+    /* realloc second lock fail with curr */
+    c_rest_mem_tracker_init();
+    c_rest_mem_malloc(10, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 12; /* fail on second lock only (line 267) */
+    c_rest_mem_realloc(ptr, 20, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 0;
+    c_rest_mem_free(ptr);
+    c_rest_mem_tracker_cleanup();
+
+    /* realloc second unlock fail with curr (line 270) */
+    c_rest_mem_tracker_init();
+    c_rest_mem_malloc(10, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 14; /* first lock succeeds, unlock succeeds, second lock
+                             succeeds and sets fail=6 (line 270 unlock fails) */
+    c_rest_mem_realloc(ptr, 20, __FILE__, __LINE__, &ptr);
+    g_mock_mem_fail = 0;
+    c_rest_mem_free(ptr);
+    c_rest_mem_tracker_cleanup();
+
+    printf("MEM SUB: /* strdup without hook (normal branch) */\n");
+    fflush(stdout);
+    /* strdup without hook (normal branch) */
+    c_rest_mem_tracker_init();
+    g_crf_strdup_hook = NULL;
+    c_rest_mem_strdup("test", __FILE__, __LINE__, &dup_str);
+    c_rest_mem_free(dup_str);
+    c_rest_mem_tracker_cleanup();
+
+    /* strdup with hook returning non-null */
+    c_rest_mem_tracker_init();
+    g_crf_strdup_hook = success_strdup;
+    c_rest_mem_strdup("test", __FILE__, __LINE__, &dup_str);
+    g_crf_strdup_hook = NULL;
+    c_rest_mem_free(dup_str);
+    c_rest_mem_tracker_cleanup();
+  }
+#endif
 
   msgs[0] = "test_mem passed\n";
   msgs[1] = "test_mem failed\n";

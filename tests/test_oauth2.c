@@ -178,18 +178,20 @@ static int test_bearer_token_parser(void) {
   return failed;
 }
 
-static int mock_verify_bearer(const char *token, void **out_auth_context) {
+static c_rest_error_t mock_verify_bearer(const char *token,
+                                         void **out_auth_context) {
   int is_valid = (strcmp(token, "valid_token") == 0);
   *out_auth_context = (void *)0x1234;
-  return is_valid ? 0 : 1;
+  return is_valid ? C_REST_OK : C_REST_ERROR_GENERIC;
 }
 
-static int mock_verify_basic(const char *username, const char *password,
-                             void **out_auth_context) {
+static c_rest_error_t mock_verify_basic(const char *username,
+                                        const char *password,
+                                        void **out_auth_context) {
   int is_valid =
       (strcmp(username, "admin") == 0) * (strcmp(password, "secret") == 0);
   *out_auth_context = (void *)0x5678;
-  return is_valid ? 0 : 1;
+  return is_valid ? C_REST_OK : C_REST_ERROR_GENERIC;
 }
 
 static int test_auth_middleware(void) {

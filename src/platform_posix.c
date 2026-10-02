@@ -10,6 +10,7 @@
 #endif
 
 #include "c_rest_platform.h"
+#include "c_rest_testing_mocks.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -32,16 +33,13 @@
 
 c_rest_error_t c_rest_platform_init(void) { return C_REST_OK; }
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT extern int g_mock_platform_cleanup_fail;
 c_rest_error_t c_rest_platform_cleanup(void) {
+#ifdef C_REST_TESTING_MALLOC_HOOK
   if (g_mock_platform_cleanup_fail)
     return C_REST_ERROR_GENERIC;
+#endif
   return C_REST_OK;
 }
-#else
-c_rest_error_t c_rest_platform_cleanup(void) { return C_REST_OK; }
-#endif
 
 c_rest_error_t c_rest_socket_create(c_rest_socket_t *out_sock) {
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
@@ -360,11 +358,6 @@ c_rest_error_t c_rest_cond_destroy(c_rest_cond_t c) {
   return C_REST_ERROR_GENERIC;
 #endif
 }
-
-#ifdef C_REST_TESTING_MALLOC_HOOK
-extern int g_mock_fork_fail;
-extern int g_mock_socket_fail;
-#endif
 
 c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
                                      const char *executable,
