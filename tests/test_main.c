@@ -18,22 +18,13 @@ static int test_init_destroy(void) {
   int failed = 0;
 
   res = (int)c_rest_init(C_REST_MODALITY_SYNC, &ctx);
-  if (res != 0) {
-    printf("init failed %d\n", res);
-    failed++;
-  }
-  if (ctx == NULL) {
-    printf("ctx null\n");
-    failed++;
-  }
+  failed += (res != 0);
+  failed += (ctx == NULL);
 
   test_logger("SYNC modality destroyed");
 
   res = (int)c_rest_destroy(ctx);
-  if (res != 0) {
-    printf("destroy failed %d\n", res);
-    failed++;
-  }
+  failed += (res != 0);
 
   return failed;
 }
@@ -128,13 +119,6 @@ int main(int argc, char **argv) {
     fflush(stdout);                                                            \
     {                                                                          \
       int res = (call);                                                        \
-      if (res) {                                                               \
-        printf("%s FAILED with %d\n", name, res);                              \
-        fflush(stdout);                                                        \
-      } else {                                                                 \
-        printf("%s PASSED\n", name);                                           \
-        fflush(stdout);                                                        \
-      }                                                                        \
       failed += res;                                                           \
     }                                                                          \
   } while (0)

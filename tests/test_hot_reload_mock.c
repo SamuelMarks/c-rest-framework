@@ -42,21 +42,17 @@ static void reset_mocks(void *data) {
 static int logger_fail_countdown = -1;
 static c_rest_error_t fail_logger_cb(const char *msg) {
   (void)msg;
-  if (logger_fail_countdown >= 0) {
-    if (logger_fail_countdown == 0)
-      return C_REST_ERROR_GENERIC;
-    logger_fail_countdown--;
-  }
+  if (logger_fail_countdown == 0)
+    return C_REST_ERROR_GENERIC;
+  logger_fail_countdown--;
   return C_REST_ERROR_GENERIC; /* Default fail if countdown not used */
 }
 
 static c_rest_error_t fail_logger_cb_countdown(const char *msg) {
   (void)msg;
-  if (logger_fail_countdown >= 0) {
-    if (logger_fail_countdown == 0)
-      return C_REST_ERROR_GENERIC;
-    logger_fail_countdown--;
-  }
+  if (logger_fail_countdown == 0)
+    return C_REST_ERROR_GENERIC;
+  logger_fail_countdown--;
   return C_REST_OK;
 }
 
@@ -102,10 +98,9 @@ TEST test_watcher_thread_func_poll_fail(void) {
 #else
   fake_file = fopen("test_file_fake", "w");
 #endif
-  if (fake_file) {
-    fprintf(fake_file, "fake");
-    fclose(fake_file);
-  }
+  ASSERT(fake_file != NULL);
+  fprintf(fake_file, "fake");
+  fclose(fake_file);
 
   /* Call the static watcher_thread_func directly */
   rc = watcher_thread_func(ctx);
@@ -139,6 +134,23 @@ TEST test_hot_reload_destroy_join_fail(void) {
 
   logger_fail_countdown =
       0; /* Fail on the first log call (which is the log in join failure) */
+  g_mock_join_fail = 1;
+  rc = c_rest_hot_reload_destroy(ctx);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  g_mock_join_fail = 0;
+
+  /* Case 1.5: logger succeeds on join fail */
+  rc = c_rest_hot_reload_init(&ctx, NULL);
+  ASSERT_EQ(C_REST_OK, rc);
+  ASSERT(ctx != NULL);
+
+  memset(&fail_logger, 0, sizeof(fail_logger));
+  fail_logger.log_cb = fail_logger_cb_countdown;
+  ctx->logger = &fail_logger;
+  ctx->watcher_thread = (c_rest_thread_t)1; /* Fake thread handle */
+
+  logger_fail_countdown =
+      1; /* Succeed on the first log call (which is the log in join failure) */
   g_mock_join_fail = 1;
   rc = c_rest_hot_reload_destroy(ctx);
   ASSERT_EQ(C_REST_ERROR_GENERIC, rc);

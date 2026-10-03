@@ -333,21 +333,21 @@ int test_jwt_json_web_tokens_authentication_middleware(void) {
       memset(&mock_res, 0, sizeof(mock_res));
       mock_req.headers = &mock_hdr;
 
-      if (k == 1 || k == 2) {
+      if (k <= 2) {
         /* fail on NULL config */
         c_rest_jwt_middleware(&mock_req, &mock_res, NULL);
-      } else if (k >= 3 && k <= 5) {
+      } else if (k <= 5) {
         /* fail on missing token */
         mock_req.headers = NULL;
         config.verify_payload = mock_verify_payload_fail;
         c_rest_jwt_middleware(&mock_req, &mock_res, &config);
         config.verify_payload = mock_verify_payload_success;
-      } else if (k >= 6 && k <= 8) {
+      } else if (k <= 8) {
         /* fail on invalid token signature */
         mock_hdr.value = "Bearer invalid.signature.token";
         c_rest_jwt_middleware(&mock_req, &mock_res, &config);
         mock_hdr.value = mock_hdr_val;
-      } else if (k >= 9 && k <= 12) {
+      } else {
         /* fail on verify_payload callback */
         c_rest_jwt_middleware(&mock_req, &mock_res, &config);
       }

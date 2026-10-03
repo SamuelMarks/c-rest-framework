@@ -387,7 +387,11 @@ c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
   if (pid == 0) {
     /* Child */
     execvp(executable, argv);
+#ifdef C_REST_TESTING_MALLOC_HOOK
     exit(127);
+#else
+    _exit(127);
+#endif
   }
 
   *out_proc = (c_rest_process_t)pid;

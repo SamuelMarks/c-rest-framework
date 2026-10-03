@@ -200,19 +200,17 @@ TEST test_hot_reload_modification(void) {
     poll_ctx->user_data = &dummy_called;
     {
       FILE *fp = fopen("test_poll_fail.txt", "w");
-      if (fp) {
-        fprintf(fp, "data\n");
-        fclose(fp);
-      }
+      ASSERT(fp != NULL);
+      fprintf(fp, "data\n");
+      fclose(fp);
     }
     c_rest_hot_reload_add_watch(poll_ctx, "test_poll_fail.txt");
     sleep_seconds(1);
     {
       FILE *fp = fopen("test_poll_fail.txt", "a");
-      if (fp) {
-        fprintf(fp, "changed\n");
-        fclose(fp);
-      }
+      ASSERT(fp != NULL);
+      fprintf(fp, "changed\n");
+      fclose(fp);
     }
     c_rest_hot_reload_start(poll_ctx, dummy_fail_reload, &dummy_called);
     sleep_seconds(1);

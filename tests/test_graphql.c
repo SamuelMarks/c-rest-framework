@@ -430,6 +430,13 @@ static int test_graphql_errors(void) {
   failed += (rc == C_REST_OK);
 
   g_crf_malloc_hook = fail_malloc_n;
+  g_malloc_fail_after = 0;
+  rc = dummy_resolver("user", &json, &len, NULL);
+  failed += (rc == C_REST_OK);
+  g_crf_malloc_hook = NULL;
+  g_malloc_fail_after = -1;
+
+  g_crf_malloc_hook = fail_malloc_n;
   for (i = 0; i < 20; i++) {
     g_malloc_fail_after = i;
     rc = c_rest_graphql_resolve(doc, schema, &json, &len);

@@ -20,6 +20,17 @@ int test_tls_context(void) {
   size_t written = 0, rd = 0;
   char buf[10];
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  extern int g_mock_tls_fail;
+  g_mock_tls_fail = 3;
+  c_rest_tls_write(NULL, NULL, 0, NULL);
+  g_mock_tls_fail = 4;
+  c_rest_tls_write(NULL, NULL, 0, NULL);
+  g_mock_tls_fail = 5;
+  c_rest_tls_write(NULL, NULL, 0, NULL);
+  g_mock_tls_fail = 0;
+#endif
+
   res = (int)c_rest_tls_init();
   failed += (res != C_REST_OK);
 

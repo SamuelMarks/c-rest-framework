@@ -268,7 +268,23 @@ TEST test_crypto_error_branches(void) {
   {
     unsigned char mac[32];
     unsigned char long_key[65];
+    int i;
     memset(long_key, 'A', sizeof(long_key));
+
+    /* Cover failure of the underlying sha256 via macro */
+    for (i = 101; i <= 103; i++) {
+      g_mock_crypto_fail = i;
+      ASSERT_EQ(C_REST_ERROR_GENERIC,
+                c_rest_hmac_sha256(long_key, sizeof(long_key),
+                                   (const unsigned char *)"data", 4, mac));
+    }
+
+    /* Cover success case of long_key */
+    g_mock_crypto_fail = 0;
+    ASSERT_EQ(C_REST_OK,
+              c_rest_hmac_sha256(long_key, sizeof(long_key),
+                                 (const unsigned char *)"data", 4, mac));
+
     g_mock_crypto_fail = 10;
     ASSERT_EQ(C_REST_ERROR_GENERIC,
               c_rest_hmac_sha256(long_key, sizeof(long_key),

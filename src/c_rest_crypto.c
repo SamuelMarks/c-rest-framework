@@ -528,38 +528,41 @@ c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT int g_mock_crypto_fail = 0;
+static c_rest_error_t c_rest_mock_crypto_check(int base) {
+  if (g_mock_crypto_fail > base && g_mock_crypto_fail < base + 100) {
+    if (--g_mock_crypto_fail == base) {
+      return C_REST_ERROR_GENERIC;
+    }
+  }
+  return C_REST_OK;
+}
+
 #ifndef c_rest_sha256
 #define c_rest_sha256(a, b, c)                                                 \
-  ((g_mock_crypto_fail > 100 && g_mock_crypto_fail < 200 &&                    \
-    --g_mock_crypto_fail == 100)                                               \
-       ? C_REST_ERROR_GENERIC                                                  \
-       : c_rest_sha256(a, b, c))
+  (c_rest_mock_crypto_check(100) != C_REST_OK ? C_REST_ERROR_GENERIC           \
+                                              : c_rest_sha256(a, b, c))
 #endif
 #ifndef c_rest_base64url_encode
 #define c_rest_base64url_encode(a, b, c, d)                                    \
-  ((g_mock_crypto_fail > 200 && g_mock_crypto_fail < 300 &&                    \
-    --g_mock_crypto_fail == 200)                                               \
+  (c_rest_mock_crypto_check(200) != C_REST_OK                                  \
        ? C_REST_ERROR_GENERIC                                                  \
        : c_rest_base64url_encode(a, b, c, d))
 #endif
 #ifndef c_rest_base64_encode
 #define c_rest_base64_encode(a, b, c, d)                                       \
-  ((g_mock_crypto_fail > 300 && g_mock_crypto_fail < 400 &&                    \
-    --g_mock_crypto_fail == 300)                                               \
+  (c_rest_mock_crypto_check(300) != C_REST_OK                                  \
        ? C_REST_ERROR_GENERIC                                                  \
        : c_rest_base64_encode(a, b, c, d))
 #endif
 #ifndef c_rest_base64_decode
 #define c_rest_base64_decode(a, b, c, d)                                       \
-  ((g_mock_crypto_fail > 400 && g_mock_crypto_fail < 500 &&                    \
-    --g_mock_crypto_fail == 400)                                               \
+  (c_rest_mock_crypto_check(400) != C_REST_OK                                  \
        ? C_REST_ERROR_GENERIC                                                  \
        : c_rest_base64_decode(a, b, c, d))
 #endif
 #ifndef c_rest_base64url_decode
 #define c_rest_base64url_decode(a, b, c, d)                                    \
-  ((g_mock_crypto_fail > 500 && g_mock_crypto_fail < 600 &&                    \
-    --g_mock_crypto_fail == 500)                                               \
+  (c_rest_mock_crypto_check(500) != C_REST_OK                                  \
        ? C_REST_ERROR_GENERIC                                                  \
        : c_rest_base64url_decode(a, b, c, d))
 #endif

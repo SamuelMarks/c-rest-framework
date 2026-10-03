@@ -206,7 +206,7 @@ c_rest_error_t c_rest_client_destroy(c_rest_client_context *client) {
   http_winhttp_context_free(client->client.transport);
 #endif
 #elif defined(__APPLE__)
-  http_apple_context_free(client->client.transport);
+  (void)http_apple_context_free(client->client.transport);
 #elif defined(__EMSCRIPTEN__)
   http_wasm_context_free(client->client.transport);
 #else
@@ -216,7 +216,7 @@ c_rest_error_t c_rest_client_destroy(c_rest_client_context *client) {
 #endif
 #endif
 
-  http_client_free(&client->client);
+  (void)http_client_free(&client->client);
   C_REST_FREE((void *)(client));
   return C_REST_OK;
 }
@@ -351,13 +351,13 @@ c_rest_error_t c_rest_client_request_sync(
   }
 
   if (res) {
-    http_response_free(res);
+    (void)http_response_free(res);
     C_REST_FREE((void *)(res));
   }
 
   req.url = NULL;
   req.body = NULL;
-  http_request_free(&req);
+  (void)http_request_free(&req);
 
   return rc;
 }

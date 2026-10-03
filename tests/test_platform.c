@@ -78,37 +78,19 @@ int test_platform(void) {
 #endif
 
   rc = c_rest_platform_init();
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
   /* Sockets */
-  if ((c_rest_socket_create(NULL) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_socket_create(NULL) == C_REST_OK);
   rc = c_rest_socket_create(&sock);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
   rc = c_rest_socket_bind(sock, "127.0.0.1", 0);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
-  if ((c_rest_socket_bind(sock, NULL, 0) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
+  failed += (c_rest_socket_bind(sock, NULL, 0) == C_REST_OK);
 #ifdef C_REST_TESTING_ENDIAN_HOOK
   g_crf_is_little_endian_hook = mock_platform_endian_fail;
-  if ((c_rest_socket_bind(sock, "127.0.0.1", 0) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_socket_bind(sock, "127.0.0.1", 0) == C_REST_OK);
   g_crf_is_little_endian_hook = NULL;
 #endif
 
@@ -117,29 +99,17 @@ int test_platform(void) {
   c_rest_socket_accept(sock, NULL);
   c_rest_socket_accept((c_rest_socket_t)-1, &client_sock);
 #ifndef __EMSCRIPTEN__
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 #else
-  if ((rc != C_REST_ERROR_NOT_SUPPORTED) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_ERROR_NOT_SUPPORTED);
 #endif
 
   rc = c_rest_socket_set_nonblocking(sock, 1);
 
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
   rc = c_rest_socket_set_nonblocking(sock, 0);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
   /* Should fail with EWOULDBLOCK if nonblocking, but we are back to blocking.
    */
@@ -149,22 +119,10 @@ int test_platform(void) {
   /* Send / Recv */
   {
     size_t wr = 0, rd = 0;
-    if ((c_rest_socket_send(sock, NULL, 5, &wr) == C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
-    if ((c_rest_socket_send(sock, "hello", 5, NULL) == C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
-    if ((c_rest_socket_recv(sock, NULL, 5, &rd) == C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
-    if ((c_rest_socket_recv(sock, buf, 5, NULL) == C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
+    failed += (c_rest_socket_send(sock, NULL, 5, &wr) == C_REST_OK);
+    failed += (c_rest_socket_send(sock, "hello", 5, NULL) == C_REST_OK);
+    failed += (c_rest_socket_recv(sock, NULL, 5, &rd) == C_REST_OK);
+    failed += (c_rest_socket_recv(sock, buf, 5, NULL) == C_REST_OK);
 
     /* Expected to fail on unconnected sock */
     c_rest_socket_send(sock, "hello", 5, &wr);
@@ -189,76 +147,37 @@ int test_platform(void) {
   }
 
   rc = c_rest_socket_close(sock);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
   /* Threads */
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   g_malloc_fail_count = 0;
-  if (c_rest_thread_create(&thread, thread_func, &val) == C_REST_OK) {
-    printf("test_platform failed at multiline %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_thread_create(&thread, thread_func, &val) == C_REST_OK);
   g_malloc_fail_count = -1;
 #endif
 
   rc = c_rest_thread_create(&thread, thread_func, &val);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
   rc = c_rest_thread_join(thread);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
-  if ((val != 42) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
+  failed += (val != 42);
 
   {
     c_rest_thread_t thread2;
-    if (c_rest_thread_create(NULL, thread_func, &val) == C_REST_OK) {
-      printf("test_platform failed at multiline %d\n", __LINE__);
-      failed++;
-    }
-    if ((c_rest_thread_create(&thread2, NULL, &val) == C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
-    if ((c_rest_thread_join((c_rest_thread_t)NULL) == C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
-    if ((c_rest_thread_join((c_rest_thread_t)-1) == C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
+    failed += (c_rest_thread_create(NULL, thread_func, &val) == C_REST_OK);
+    failed += (c_rest_thread_create(&thread2, NULL, &val) == C_REST_OK);
+    failed += (c_rest_thread_join((c_rest_thread_t)NULL) == C_REST_OK);
+    failed += (c_rest_thread_join((c_rest_thread_t)-1) == C_REST_OK);
 #if defined(_WIN32)
-    if (c_rest_thread_join((c_rest_thread_t)9999999) == C_REST_OK) {
-      printf("test_platform failed at multiline %d\n", __LINE__);
-      failed++;
-    }
+    failed += (c_rest_thread_join((c_rest_thread_t)9999999) == C_REST_OK);
 #else
-    if ((c_rest_thread_join((c_rest_thread_t)pthread_self()) == C_REST_OK) !=
-        0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
+    failed +=
+        (c_rest_thread_join((c_rest_thread_t)pthread_self()) == C_REST_OK);
 #endif
 
-    if ((c_rest_mutex_create(NULL) == C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
-    if ((c_rest_cond_create(NULL) == C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
+    failed += (c_rest_mutex_create(NULL) == C_REST_OK);
+    failed += (c_rest_cond_create(NULL) == C_REST_OK);
 
     c_rest_mutex_lock((c_rest_mutex_t)NULL);
     c_rest_mutex_unlock((c_rest_mutex_t)NULL);
@@ -278,89 +197,47 @@ int test_platform(void) {
   }
 
   /* Mutex */
-  if ((c_rest_mutex_create(NULL) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_mutex_create(NULL) == C_REST_OK);
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   g_malloc_fail_count = 0;
-  if ((c_rest_mutex_create(&mutex) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_mutex_create(&mutex) == C_REST_OK);
   g_malloc_fail_count = -1;
 #endif
 
   rc = c_rest_mutex_create(&mutex);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
-  if ((c_rest_mutex_lock((c_rest_mutex_t)0) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_mutex_lock((c_rest_mutex_t)0) == C_REST_OK);
   rc = c_rest_mutex_lock(mutex);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
-  if ((c_rest_mutex_unlock((c_rest_mutex_t)0) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_mutex_unlock((c_rest_mutex_t)0) == C_REST_OK);
   rc = c_rest_mutex_unlock(mutex);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
-  if ((c_rest_mutex_destroy((c_rest_mutex_t)0) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_mutex_destroy((c_rest_mutex_t)0) == C_REST_OK);
   rc = c_rest_mutex_destroy(mutex);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
   /* Cond */
-  if ((c_rest_cond_create(NULL) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_cond_create(NULL) == C_REST_OK);
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   g_malloc_fail_count = 0;
-  if ((c_rest_cond_create(&cond) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_cond_create(&cond) == C_REST_OK);
   g_malloc_fail_count = -1;
 #endif
 
   rc = c_rest_cond_create(&cond);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
   rc = c_rest_mutex_create(&mutex);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
   /* if (c_rest_cond_wait((c_rest_cond_t)0, mutex) == C_REST_OK) return
    * __LINE__; */
-  if ((c_rest_cond_wait(cond, (c_rest_mutex_t)0) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_cond_wait(cond, (c_rest_mutex_t)0) == C_REST_OK);
 #ifndef __EMSCRIPTEN__
   c_rest_mutex_lock(mutex);
   c_rest_thread_create(&thread, cond_thread_func, (void *)cond);
@@ -370,25 +247,13 @@ int test_platform(void) {
 #endif
   /* Skip actual wait so we don't hang */
 
-  if ((c_rest_cond_signal((c_rest_cond_t)0) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_cond_signal((c_rest_cond_t)0) == C_REST_OK);
   rc = c_rest_cond_signal(cond);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
-  if ((c_rest_cond_destroy((c_rest_cond_t)0) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_cond_destroy((c_rest_cond_t)0) == C_REST_OK);
   rc = c_rest_cond_destroy(cond);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
   rc = c_rest_mutex_destroy(mutex);
 
   /* Process */
@@ -396,38 +261,23 @@ int test_platform(void) {
     char *argv[] = {"echo", "hello", NULL};
     int exit_code = -1;
     (void)exit_code;
-    if ((c_rest_process_create(NULL, "echo", argv) == C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
-    if ((c_rest_process_create(&proc, NULL, argv) == C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
+    failed += (c_rest_process_create(NULL, "echo", argv) == C_REST_OK);
+    failed += (c_rest_process_create(&proc, NULL, argv) == C_REST_OK);
 #if defined(_WIN32)
     {
       char *argv_win[] = {"cmd.exe", "/c", "echo", "hello", NULL};
       rc = c_rest_process_create(&proc, "cmd.exe", argv_win);
-      if (rc != C_REST_OK) {
-        printf("test_platform failed at line %d\n", __LINE__);
-        failed++;
-      }
+      failed += (rc != C_REST_OK);
       rc = c_rest_process_wait(proc, &exit_code);
       rc = c_rest_process_create(&proc, "cmd.exe", argv_win);
-      if (rc != C_REST_OK) {
-        printf("test_platform failed at line %d\n", __LINE__);
-        failed++;
-      }
+      failed += (rc != C_REST_OK);
       rc = c_rest_process_wait(proc, NULL);
     }
 #elif !defined(__EMSCRIPTEN__)
     {
       char *argv_bin[] = {"/bin/echo", "hello", NULL};
       rc = c_rest_process_create(&proc, "/bin/echo", argv_bin);
-      if (rc != C_REST_OK) {
-        printf("test_platform failed at line %d\n", __LINE__);
-        failed++;
-      }
+      failed += (rc != C_REST_OK);
       rc = c_rest_process_wait(proc, &exit_code);
       rc = c_rest_process_wait(proc, NULL);
     }
@@ -446,52 +296,31 @@ int test_platform(void) {
     argv_big[2] = NULL;
 #if defined(_WIN32)
     rc = c_rest_process_create(&proc, "does_not_exist_xyz123", argv_big);
-    if (rc != C_REST_ERROR_GENERIC) {
-      failed++;
-    }
+    failed += (rc != C_REST_ERROR_GENERIC);
     rc = c_rest_process_create(&proc, "does_not_exist_xyz123", argv_fake);
-    if (rc != C_REST_ERROR_GENERIC) {
-      failed++;
-    }
+    failed += (rc != C_REST_ERROR_GENERIC);
     rc = c_rest_process_create(&proc, "does_not_exist_xyz123", NULL);
-    if (rc != C_REST_ERROR_GENERIC) {
-      failed++;
-    }
+    failed += (rc != C_REST_ERROR_GENERIC);
 #else
     rc = c_rest_process_create(&proc, "does_not_exist_xyz123", argv_big);
-    if (rc != C_REST_OK) {
-      failed++;
-    }
+    failed += (rc != C_REST_OK);
     rc = c_rest_process_wait(proc, &exit_code);
-    if (rc != C_REST_OK) {
-      failed++;
-    }
+    failed += (rc != C_REST_OK);
     rc = c_rest_process_create(&proc, "does_not_exist_xyz123", argv_fake);
-    if (rc != C_REST_OK) {
-      failed++;
-    }
+    failed += (rc != C_REST_OK);
     rc = c_rest_process_wait(proc, &exit_code);
-    if (rc != C_REST_OK) {
-      failed++;
-    }
+    failed += (rc != C_REST_OK);
     rc = c_rest_process_create(&proc, "does_not_exist_xyz123", NULL);
-    if (rc != C_REST_OK) {
-      failed++;
-    }
+    failed += (rc != C_REST_OK);
     rc = c_rest_process_wait(proc, &exit_code);
-    if (rc != C_REST_OK) {
-      failed++;
-    }
+    failed += (rc != C_REST_OK);
 #endif
 #ifdef C_REST_TESTING_MALLOC_HOOK
     {
       c_rest_process_t failed_proc;
       g_mock_fork_fail = 1;
       rc = c_rest_process_create(&failed_proc, "/bin/echo", argv_fake);
-      if (rc != C_REST_ERROR_GENERIC) {
-        printf("test_platform failed at line %d\n", __LINE__);
-        failed++;
-      }
+      failed += (rc != C_REST_ERROR_GENERIC);
       g_mock_fork_fail = 0;
     }
 #endif
@@ -500,77 +329,38 @@ int test_platform(void) {
     {
       char *argv_kill[] = {"sh", "-c", "kill -9 $$", NULL};
       rc = c_rest_process_create(&proc, "/bin/sh", argv_kill);
-      if (rc != C_REST_OK) {
-        printf("test_platform failed at line %d\n", __LINE__);
-        failed++;
-      }
+      failed += (rc != C_REST_OK);
       rc = c_rest_process_wait(proc, &exit_code);
-      if (rc != C_REST_OK) {
-        printf("test_platform failed at line %d\n", __LINE__);
-        failed++;
-      }
+      failed += (rc != C_REST_OK);
     }
 #endif
 
-    if ((c_rest_process_wait((c_rest_process_t)0, &exit_code) == C_REST_OK) !=
-        0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
-    if ((c_rest_process_wait((c_rest_process_t)-1, &exit_code) == C_REST_OK) !=
-        0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
-    if ((c_rest_process_wait((c_rest_process_t)9999999, &exit_code) ==
-         C_REST_OK) != 0) {
-      printf("test_platform failed at line %d\n", __LINE__);
-      failed++;
-    }
+    failed +=
+        (c_rest_process_wait((c_rest_process_t)0, &exit_code) == C_REST_OK);
+    failed +=
+        (c_rest_process_wait((c_rest_process_t)-1, &exit_code) == C_REST_OK);
+    failed += (c_rest_process_wait((c_rest_process_t)9999999, &exit_code) ==
+               C_REST_OK);
   }
 
   /* Timer */
-  if ((c_rest_timer_get_ms(NULL) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_timer_get_ms(NULL) == C_REST_OK);
   rc = c_rest_timer_get_ms(&ms);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
   /* Random */
-  if ((c_rest_random_get(NULL, 16) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
-  if ((c_rest_random_get(buf, 0) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_random_get(NULL, 16) == C_REST_OK);
+  failed += (c_rest_random_get(buf, 0) == C_REST_OK);
   rc = c_rest_random_get(buf, 16);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
   /* Error */
-  if ((c_rest_get_last_error(NULL) == C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (c_rest_get_last_error(NULL) == C_REST_OK);
   rc = c_rest_get_last_error(&err);
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
   rc = c_rest_platform_cleanup();
-  if ((rc != C_REST_OK) != 0) {
-    printf("test_platform failed at line %d\n", __LINE__);
-    failed++;
-  }
+  failed += (rc != C_REST_OK);
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   g_crf_malloc_hook = NULL;

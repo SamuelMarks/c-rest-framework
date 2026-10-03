@@ -148,6 +148,9 @@ static int test_crypto_rand_fail(void) {
     unsigned char h[32];
     c_rest_sha256((const unsigned char *)"a", 1, h);
     c_rest_sha256((const unsigned char *)"a", 1, h);
+    g_mock_crypto_fail = 999;
+    c_rest_sha256((const unsigned char *)"a", 1, h);
+    g_mock_crypto_fail = 0;
   }
 
   {
