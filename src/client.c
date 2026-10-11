@@ -190,6 +190,8 @@ c_rest_error_t c_rest_client_init(c_rest_client_context **out_client) {
 }
 
 c_rest_error_t c_rest_client_destroy(c_rest_client_context *client) {
+  enum c_abstract_http_error cah_rc = C_ABSTRACT_HTTP_SUCCESS;
+  enum c_abstract_http_error cah_rc2 = C_ABSTRACT_HTTP_SUCCESS;
   if (!client)
     return C_REST_ERROR_GENERIC;
 
@@ -201,22 +203,34 @@ c_rest_error_t c_rest_client_destroy(c_rest_client_context *client) {
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__)
 #if defined(_MSC_VER) && _MSC_VER < 1600
-  http_wininet_context_free(client->client.transport);
+  cah_rc = http_wininet_context_free(client->client.transport);
+  if (cah_rc != C_ABSTRACT_HTTP_SUCCESS)
+    return C_REST_ERROR_GENERIC;
 #else
-  http_winhttp_context_free(client->client.transport);
+  cah_rc = http_winhttp_context_free(client->client.transport);
+  if (cah_rc != C_ABSTRACT_HTTP_SUCCESS)
+    return C_REST_ERROR_GENERIC;
 #endif
 #elif defined(__APPLE__)
-  (void)http_apple_context_free(client->client.transport);
+  cah_rc = http_apple_context_free(client->client.transport);
+  if (cah_rc != C_ABSTRACT_HTTP_SUCCESS)
+    return C_REST_ERROR_GENERIC;
 #elif defined(__EMSCRIPTEN__)
-  http_wasm_context_free(client->client.transport);
+  cah_rc = http_wasm_context_free(client->client.transport);
+  if (cah_rc != C_ABSTRACT_HTTP_SUCCESS)
+    return C_REST_ERROR_GENERIC;
 #else
 #if !defined(CDD_DOS) && !defined(__EMSCRIPTEN__)
-  http_curl_context_free(client->client.transport);
+  cah_rc = http_curl_context_free(client->client.transport);
+  if (cah_rc != C_ABSTRACT_HTTP_SUCCESS)
+    return C_REST_ERROR_GENERIC;
 #endif
 #endif
 #endif
 
-  (void)http_client_free(&client->client);
+  cah_rc2 = http_client_free(&client->client);
+  if (cah_rc2 != C_ABSTRACT_HTTP_SUCCESS)
+    return C_REST_ERROR_GENERIC;
   C_REST_FREE((void *)(client));
   return C_REST_OK;
 }
@@ -248,6 +262,8 @@ c_rest_error_t c_rest_client_request_sync(
     const struct c_rest_client_header *headers, size_t headers_count,
     const void *body, size_t body_len,
     struct c_rest_client_response **out_res) {
+  enum c_abstract_http_error cah_rc = C_ABSTRACT_HTTP_SUCCESS;
+  enum c_abstract_http_error cah_rc_req = C_ABSTRACT_HTTP_SUCCESS;
   struct HttpRequest req;
   struct HttpResponse *res = NULL;
   c_rest_error_t rc;
@@ -351,13 +367,17 @@ c_rest_error_t c_rest_client_request_sync(
   }
 
   if (res) {
-    (void)http_response_free(res);
+    cah_rc = http_response_free(res);
+    if (cah_rc != C_ABSTRACT_HTTP_SUCCESS)
+      return C_REST_ERROR_GENERIC;
     C_REST_FREE((void *)(res));
   }
 
   req.url = NULL;
   req.body = NULL;
-  (void)http_request_free(&req);
+  cah_rc_req = http_request_free(&req);
+  if (cah_rc_req != C_ABSTRACT_HTTP_SUCCESS)
+    return C_REST_ERROR_GENERIC;
 
   return rc;
 }

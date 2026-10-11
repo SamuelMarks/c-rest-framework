@@ -422,47 +422,6 @@ if(MSVC)
     # Note: /Za strictly enforces ANSI C but might cause issues with Windows headers.
     set(C_REST_MSVC_FLAGS /W4 /WX /FS)
 
-    # We apply /Za only to specific source files since windows.h is not ANSI compliant
-    set_source_files_properties(
-        src/c_rest_hot_reload.c
-        src/modality.c
-        src/modality_sync.c
-        src/modality_single_thread.c
-        src/modality_async.c
-        src/modality_multi_thread.c
-        src/modality_multi_process.c
-        src/modality_greenthread.c
-        src/modality_message_passing.c
-        src/parser.c
-        src/client.c
-        src/tls.c
-        src/multipart.c
-        src/router.c
-        src/middleware.c
-        src/request.c
-        src/response.c
-        src/c_orm_middleware.c
-        src/c_orm_crud.c
-        src/c_rest_string.c
-        src/c_rest_hashmap.c
-        src/c_rest_list.c
-        src/c_rest_log.c
-        src/c_rest_pool.c
-        src/c_rest_ts_queue.c
-        src/c_rest_mem.c
-        src/c_rest_str_utils.c
-        src/c_rest_endian.c
-        src/c_rest_base64.c
-        src/c_rest_crypto.c
-        src/c_rest_time.c
-        src/c_rest_graphql.c
-        src/c_rest_template.c
-        src/c_rest_http23.c
-        src/c_rest_rate_limit.c
-        src/c_rest_jwt_middleware.c
-        src/websocket.c
-        PROPERTIES COMPILE_OPTIONS ""
-    )
 
 
 
@@ -643,7 +602,6 @@ if(${PROJECT_NAME_SAFE}_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
             )
             set(BROTLI_DISABLE_TESTS ON CACHE BOOL "" FORCE)
             FetchContent_MakeAvailable(brotli)
-            remove_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 
             if(TARGET brotlienc-static)
@@ -829,7 +787,6 @@ endif()
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     if(BUILD_TESTING)
         enable_testing()
-        remove_definitions(-D_CRT_SECURE_NO_WARNINGS)
         message(STATUS "ADDING TESTS")
         add_subdirectory(tests)
     endif()

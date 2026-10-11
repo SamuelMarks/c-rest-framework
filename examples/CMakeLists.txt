@@ -1,4 +1,3 @@
-remove_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 if(CMAKE_C_FLAGS MATCHES "--coverage")
     set(CRF_DEMO_HAD_COVERAGE TRUE)

@@ -188,10 +188,27 @@ TEST test_hot_reload_init_logger_fail(void) {
   PASS();
 }
 
+TEST test_hot_reload_path_fail(void) {
+  c_rest_hot_reload_ctx_t *ctx = NULL;
+  c_rest_error_t rc;
+
+  rc = c_rest_hot_reload_init(&ctx, NULL);
+  ASSERT_EQ(C_REST_OK, rc);
+
+  g_mock_hot_reload_fail = 10;
+  rc = c_rest_hot_reload_add_watch(ctx, "fake_path");
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  g_mock_hot_reload_fail = 0;
+
+  c_rest_hot_reload_destroy(ctx);
+  PASS();
+}
+
 SUITE_EXTERN(hot_reload_mock_suite);
 SUITE(hot_reload_mock_suite) {
   SET_SETUP(reset_mocks, NULL);
   RUN_TEST(test_watcher_thread_func_poll_fail);
   RUN_TEST(test_hot_reload_destroy_join_fail);
   RUN_TEST(test_hot_reload_init_logger_fail);
+  RUN_TEST(test_hot_reload_path_fail);
 }
