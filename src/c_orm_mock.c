@@ -14,7 +14,7 @@
 
 /* Mock implementations for c-orm functions when c-orm is not present */
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
+#if 1
 C_REST_EXPORT int g_mock_orm_init_fail = 0;
 C_REST_EXPORT int g_mock_orm_cleanup_fail = 0;
 C_REST_EXPORT int g_mock_socket_fail = 0;
@@ -23,7 +23,7 @@ C_REST_EXPORT int g_mock_fork_fail = 0;
 
 c_rest_error_t c_rest_orm_init(struct c_rest_db_config *config,
                                struct c_orm_pool **pool) {
-#ifdef C_REST_TESTING_MALLOC_HOOK
+#if 1
   if (g_mock_orm_init_fail) {
     return C_REST_ERROR_GENERIC;
   }
@@ -36,7 +36,7 @@ c_rest_error_t c_rest_orm_init(struct c_rest_db_config *config,
 }
 
 c_rest_error_t c_rest_orm_cleanup(struct c_orm_pool *pool) {
-#ifdef C_REST_TESTING_MALLOC_HOOK
+#if 1
   if (g_mock_orm_cleanup_fail) {
     return C_REST_ERROR_GENERIC;
   }
@@ -49,10 +49,12 @@ c_rest_error_t c_rest_orm_cleanup(struct c_orm_pool *pool) {
 
 typedef int c_orm_mock_dummy_declaration;
 
+#if 1
 C_REST_EXPORT extern int g_mock_socket_fail;
 C_REST_EXPORT int g_mock_tls_fail = 0;
 C_REST_EXPORT int g_mock_client_fail = 0;
 C_REST_EXPORT int g_mock_platform_cleanup_fail = 0;
+#endif
 
 #undef c_rest_socket_create
 #undef c_rest_socket_bind

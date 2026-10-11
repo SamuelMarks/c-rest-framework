@@ -12,9 +12,25 @@
 #include "c_rest_export.h"
 /* clang-format on */
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** @brief Supported column types for the CRUD ORM models */
+typedef enum {
+  C_REST_ORM_TYPE_INT,
+  C_REST_ORM_TYPE_STRING,
+  C_REST_ORM_TYPE_BOOL,
+  C_REST_ORM_TYPE_FLOAT
+} c_rest_orm_type_t;
+
+/** @brief ORM column definition */
+struct c_rest_orm_column {
+  const char *name;
+  c_rest_orm_type_t type;
+};
 
 /** @brief ORM model */
 struct c_rest_orm_model {
@@ -22,6 +38,10 @@ struct c_rest_orm_model {
   const char *table_name;
   /** @brief Primary key field */
   const char *primary_key;
+  /** @brief Array of column definitions */
+  struct c_rest_orm_column *columns;
+  /** @brief Number of columns in the array */
+  size_t num_columns;
 };
 
 /**

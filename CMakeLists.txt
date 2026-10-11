@@ -461,7 +461,7 @@ if(MSVC)
         src/c_rest_rate_limit.c
         src/c_rest_jwt_middleware.c
         src/websocket.c
-        PROPERTIES COMPILE_OPTIONS "/Za"
+        PROPERTIES COMPILE_OPTIONS ""
     )
 
 
@@ -676,12 +676,13 @@ if(${PROJECT_NAME_SAFE}_FETCH_CDD_C)
     )
     set(OLD_BSL_CDD ${BUILD_SHARED_LIBS})
     set(BUILD_SHARED_LIBS OFF)
+    set(OLD_BUILD_TESTING_GLOBAL ${BUILD_TESTING})
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(cdd-c)
+    set(BUILD_TESTING ${OLD_BUILD_TESTING_GLOBAL} CACHE BOOL "" FORCE)
     set(BUILD_SHARED_LIBS ${OLD_BSL_CDD})
 
-    if (TARGET c_cdd AND NOT EMSCRIPTEN)
-        target_compile_definitions(c_cdd PUBLIC CDD_BUILD_TESTS)
-    endif()
+
 
     if (TARGET c_cdd)
         if (NOT WIN32 AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "DOS")
@@ -836,5 +837,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 endif()
 
 if(MSVC)
-    target_compile_definitions(c-rest-framework-tests PRIVATE DISABLE_GZIP_BROTLI_OOM_TESTS)
+    if(TARGET c-rest-framework-tests)
+        target_compile_definitions(c-rest-framework-tests PRIVATE DISABLE_GZIP_BROTLI_OOM_TESTS)
+    endif()
 endif()

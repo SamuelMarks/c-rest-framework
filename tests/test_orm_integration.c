@@ -35,6 +35,7 @@ int test_orm_integration(void) {
   struct c_rest_request req;
   struct c_rest_response res;
   struct c_rest_orm_model user_model;
+  struct c_rest_orm_column cols[] = {{"id", C_REST_ORM_TYPE_INT}};
   c_rest_error_t ret;
   int run_ok;
 
@@ -82,6 +83,8 @@ int test_orm_integration(void) {
   /* Register a CRUD handler */
   user_model.table_name = "users";
   user_model.primary_key = "id";
+  user_model.columns = cols;
+  user_model.num_columns = 1;
   failed +=
       (c_rest_router_add(router, "GET", "/api/users", c_rest_orm_crud_get_list,
                          &user_model) != C_REST_OK);

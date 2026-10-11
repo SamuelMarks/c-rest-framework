@@ -12,7 +12,13 @@
 /**
  * @brief The note ORM model definition.
  */
-struct c_rest_orm_model note_model = {"notes", "id"};
+struct c_rest_orm_column note_columns[] = {{"id", C_REST_ORM_TYPE_INT},
+                                           {"title", C_REST_ORM_TYPE_STRING},
+                                           {"content", C_REST_ORM_TYPE_STRING}};
+
+struct c_rest_orm_model note_model = {"notes", "id", note_columns,
+                                      sizeof(note_columns) /
+                                          sizeof(note_columns[0])};
 
 /**
  * @brief Custom 404 Not Found handler.
