@@ -1,8 +1,8 @@
-/* clang-format off */
-#include "c_rest_error.h"
 #ifndef OAUTH2_SERVER_H
 #define OAUTH2_SERVER_H
 
+/* clang-format off */
+#include "c_rest_error.h"
 #include "c_rest_router.h"
 #include "c_orm_db.h"
 #include "c_rest_request.h"

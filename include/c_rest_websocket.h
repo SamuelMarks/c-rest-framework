@@ -5,8 +5,6 @@
 #ifndef C_REST_WEBSOCKET_H
 #define C_REST_WEBSOCKET_H
 /* clang-format off */
-#include "c_rest_error.h"
-
 #include <stddef.h>
 #include "c_rest_error.h"
 #include "c_rest_export.h"
@@ -119,8 +117,6 @@ c_rest_websocket_unmask_payload(unsigned char *payload, size_t payload_len,
 C_REST_EXPORT extern c_rest_error_t c_rest_websocket_serialize_frame_header(
     const struct c_rest_websocket_frame_header *header, unsigned char *out_data,
     size_t out_data_max, size_t *out_written);
-
-/* __cplusplus */
 
 #ifdef __cplusplus
 }

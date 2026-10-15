@@ -281,8 +281,11 @@ c_rest_error_t c_rest_tls_accept(struct c_rest_tls_context *ctx,
                                  c_rest_socket_t sock,
                                  struct c_rest_tls_connection **out_conn) {
   struct c_rest_tls_connection *conn;
+#if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
+    defined(C_REST_USE_BORINGSSL) || defined(C_REST_USE_MBEDTLS) ||            \
+    defined(C_REST_USE_WOLFSSL) || defined(C_REST_USE_S2N)
   int ret = 0;
-  (void)ret;
+#endif
 
   if (!ctx)
     return C_REST_ERROR_GENERIC;

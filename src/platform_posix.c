@@ -176,8 +176,12 @@ static void *thread_wrapper(void *arg) {
   c_rest_error_t rc;
   struct thread_wrapper_args *args = (struct thread_wrapper_args *)arg;
   rc = args->func(args->arg);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(args));
+    return (void *)(ptrdiff_t)rc;
+  }
   C_REST_FREE((void *)(args));
-  return (void *)(ptrdiff_t)rc;
+  return (void *)(ptrdiff_t)C_REST_OK;
 }
 
 c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,

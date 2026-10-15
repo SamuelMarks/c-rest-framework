@@ -262,12 +262,36 @@ static void test_coverage(void) {
       c_rest_client_init(&tc);
       g_mock_client_fail = 11;
       c_rest_client_destroy(tc);
+      g_mock_client_fail = 14;
+      c_rest_client_destroy(tc);
+      {
+        struct HttpTransportContext *saved_tr = tc->client.transport;
+        tc->client.transport = NULL;
+        g_mock_client_fail = 15;
+        c_rest_client_destroy(tc);
+        tc->client.transport = saved_tr;
+      }
       g_mock_client_fail = 0;
 
       g_mock_client_fail = 12;
       c_rest_client_request_sync(tc, "http://a", "GET", NULL, 0, NULL, 0,
                                  &t_sr);
       g_mock_client_fail = 0;
+
+      {
+        http_send_fn old_send = tc->client.send;
+        tc->client.send = mock_send_full;
+        g_mock_client_fail = 16;
+        c_rest_client_request_sync(tc, "http://a", "GET", NULL, 0, NULL, 0,
+                                   &t_sr);
+        test_safe_response_free(&t_sr);
+        g_mock_client_fail = 17;
+        c_rest_client_request_sync(tc, "http://a", "GET", NULL, 0, NULL, 0,
+                                   &t_sr);
+        test_safe_response_free(&t_sr);
+        g_mock_client_fail = 0;
+        tc->client.send = old_send;
+      }
 
       g_mock_client_fail = 20;
       c_rest_client_url_encode("@", &t_enc);
@@ -1314,8 +1338,10 @@ int test_client(void) {
     test_safe_json_free(&json);
   }
 
-  c_rest_client_set_hooks(NULL);
-  c_rest_client_destroy(client);
+  res = (int)c_rest_client_set_hooks(NULL);
+  failed += (res != C_REST_OK);
+  res = (int)c_rest_client_destroy(client);
+  failed += (res != C_REST_OK);
 
   msgs[0] = "test_client passed\n";
   msgs[1] = "test_client failed\n";

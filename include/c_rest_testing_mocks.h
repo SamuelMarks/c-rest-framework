@@ -70,6 +70,6 @@ C_REST_EXPORT extern const struct c_rest_modality_vtable multi_process_vtable;
 
 #ifdef __cplusplus
 }
-#endif
+#endif /* __cplusplus */
 
-#endif
+#endif /* C_REST_TESTING_MOCKS_H */

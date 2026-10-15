@@ -5,29 +5,37 @@
 #include "c_rest_response.h"
 #include "c_rest_router.h"
 #include "c_rest_openapi.h"
+#include "c_rest_websocket.h"
 #include "c_rest_testing_mocks.h"
+#include "c_rest_log.h"
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
 #include "c_rest_sse.h"
 #endif
+#ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
+#include "c_rest_graphql.h"
+#endif
+#ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
+#include "c_rest_template.h"
+#endif
 
 #include <stdlib.h>
-#include "c_rest_log.h"
 #include <string.h>
+/* clang-format on */
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
 static c_rest_error_t c_rest_template_handler(struct c_rest_request *req,
-                                   struct c_rest_response *res,
-                                   void *user_data);
+                                              struct c_rest_response *res,
+                                              void *user_data);
 #endif
 
 static c_rest_error_t c_rest_ws_upgrade_handler(struct c_rest_request *req,
-                                     struct c_rest_response *res,
-                                     void *user_data);
+                                                struct c_rest_response *res,
+                                                void *user_data);
 
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
 static c_rest_error_t c_rest_sse_handler_wrapper(struct c_rest_request *req,
-                                      struct c_rest_response *res,
-                                      void *user_data);
+                                                 struct c_rest_response *res,
+                                                 void *user_data);
 #endif
 
 struct c_rest_route_handler {
@@ -65,24 +73,24 @@ struct c_rest_router {
 };
 
 static c_rest_error_t create_node(const char *segment, size_t len,
-                       struct c_rest_route_node **out_node) {
+                                  struct c_rest_route_node **out_node) {
   struct c_rest_route_node *node;
 
-
-
-  node = (struct c_rest_route_node *)CRF_MALLOC(sizeof(struct c_rest_route_node));
-  if (!node) return C_REST_ERROR_GENERIC;
+  node =
+      (struct c_rest_route_node *)CRF_MALLOC(sizeof(struct c_rest_route_node));
+  if (!node)
+    return C_REST_ERROR_GENERIC;
 
   node->segment = (char *)CRF_MALLOC(len + 1);
   if (!node->segment) {
     C_REST_FREE((void *)(node));
     return C_REST_ERROR_GENERIC;
   }
-  #if defined(_MSC_VER)
+#if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(node->segment, len, segment, len);
-  #else
+#else
   memcpy(node->segment, segment, len);
-  #endif
+#endif
   node->segment[len] = '\0';
 
   node->is_var = 0;
@@ -111,15 +119,10 @@ static c_rest_error_t create_node(const char *segment, size_t len,
   return C_REST_OK;
 }
 
-static c_rest_error_t free_node(struct c_rest_route_node *node) {
+static void free_node(struct c_rest_route_node *node) {
   struct c_rest_route_handler *h;
-  c_rest_error_t rc;
   if (!node)
-    return C_REST_OK;
-#ifdef C_REST_TESTING_MALLOC_HOOK
-  if (node == (struct c_rest_route_node *)0x1234)
-    return C_REST_ERROR_GENERIC;
-#endif
+    return;
 
   C_REST_FREE((void *)(node->segment));
 
@@ -145,17 +148,12 @@ static c_rest_error_t free_node(struct c_rest_route_node *node) {
   }
 
   if (node->children) {
-    rc = free_node(node->children);
-    if (rc != C_REST_OK)
-      return rc;
+    free_node(node->children);
   }
   if (node->next) {
-    rc = free_node(node->next);
-    if (rc != C_REST_OK)
-      return rc;
+    free_node(node->next);
   }
   C_REST_FREE((void *)(node));
-  return C_REST_OK;
 }
 c_rest_error_t c_rest_router_init(c_rest_router **out_router) {
   struct c_rest_router *router;
@@ -168,9 +166,10 @@ c_rest_error_t c_rest_router_init(c_rest_router **out_router) {
   if (!router)
     return C_REST_ERROR_GENERIC;
 
-  if (create_node("", 0, &router->root) != 0) {
+  rc = create_node("", 0, &router->root);
+  if (rc != C_REST_OK) {
     C_REST_FREE((void *)(router));
-    return C_REST_ERROR_GENERIC;
+    return rc;
   }
   router->middlewares = NULL;
   router->post_middlewares = NULL;
@@ -193,9 +192,7 @@ c_rest_error_t c_rest_router_destroy(c_rest_router *router) {
   if (!router)
     return C_REST_ERROR_GENERIC;
 
-  rc = free_node(router->root);
-  if (rc != C_REST_OK)
-    return rc;
+  free_node(router->root);
 
   m = router->middlewares;
   while (m) {
@@ -226,12 +223,11 @@ c_rest_error_t c_rest_router_destroy(c_rest_router *router) {
 }
 
 static c_rest_error_t find_or_add_child(struct c_rest_route_node *parent,
-                             const char *segment, size_t len,
-                             struct c_rest_route_node **out_child) {
+                                        const char *segment, size_t len,
+                                        struct c_rest_route_node **out_child) {
   struct c_rest_route_node *child;
   struct c_rest_route_node *new_node;
-
-
+  c_rest_error_t rc;
 
   child = parent->children;
 
@@ -244,8 +240,9 @@ static c_rest_error_t find_or_add_child(struct c_rest_route_node *parent,
     child = child->next;
   }
 
-  if (create_node(segment, len, &new_node) != C_REST_OK)
-    return C_REST_ERROR_GENERIC;
+  rc = create_node(segment, len, &new_node);
+  if (rc != C_REST_OK)
+    return rc;
 
   new_node->next = parent->children;
   parent->children = new_node;
@@ -255,11 +252,12 @@ static c_rest_error_t find_or_add_child(struct c_rest_route_node *parent,
   return C_REST_OK;
 }
 c_rest_error_t c_rest_router_add(c_rest_router *router, const char *method,
-                      const char *path, c_rest_handler_fn handler,
-                      void *user_data) {
+                                 const char *path, c_rest_handler_fn handler,
+                                 void *user_data) {
   const char *p;
   struct c_rest_route_node *curr;
   struct c_rest_route_handler *h;
+  c_rest_error_t rc;
 
   if (!router || !method || !path || !handler)
     return C_REST_ERROR_GENERIC;
@@ -282,8 +280,9 @@ c_rest_error_t c_rest_router_add(c_rest_router *router, const char *method,
     }
 
     if (len > 0) {
-      if (find_or_add_child(curr, p, len, &child) != C_REST_OK)
-        return C_REST_ERROR_GENERIC;
+      rc = find_or_add_child(curr, p, len, &child);
+      if (rc != C_REST_OK)
+        return rc;
       curr = child;
     }
 
@@ -318,18 +317,21 @@ c_rest_error_t c_rest_router_add(c_rest_router *router, const char *method,
   return C_REST_OK;
 }
 
-c_rest_error_t c_rest_router_add_openapi(c_rest_router *router, const char *method,
-                              const char *path, c_rest_handler_fn handler,
-                              void *user_data,
-                              const struct c_rest_openapi_operation *op_meta) {
-  c_rest_error_t res = c_rest_router_add(router, method, path, handler, user_data);
-  if (res == C_REST_OK && op_meta) {
-    res = c_rest_openapi_spec_add_path(router->openapi_spec, path, method, op_meta);
+c_rest_error_t
+c_rest_router_add_openapi(c_rest_router *router, const char *method,
+                          const char *path, c_rest_handler_fn handler,
+                          void *user_data,
+                          const struct c_rest_openapi_operation *op_meta) {
+  c_rest_error_t res =
+      c_rest_router_add(router, method, path, handler, user_data);
+  if (res != C_REST_OK)
+    return res;
+  if (op_meta) {
+    return c_rest_openapi_spec_add_path(router->openapi_spec, path, method,
+                                        op_meta);
   }
-  return res;
+  return C_REST_OK;
 }
-
-#include "c_rest_websocket.h"
 
 struct c_rest_ws_route_data {
   c_rest_websocket_on_message_fn on_message;
@@ -338,16 +340,17 @@ struct c_rest_ws_route_data {
 };
 
 static c_rest_error_t c_rest_ws_upgrade_handler(struct c_rest_request *req,
-                                     struct c_rest_response *res,
-                                     void *user_data) {
+                                                struct c_rest_response *res,
+                                                void *user_data) {
   (void)user_data; /* Used later by connection logic to call on_message */
   return c_rest_websocket_upgrade(req, res);
 }
 
-c_rest_error_t c_rest_router_add_websocket(c_rest_router *router, const char *path,
-                                c_rest_websocket_on_message_fn on_message,
-                                c_rest_websocket_on_close_fn on_close,
-                                void *user_data) {
+c_rest_error_t
+c_rest_router_add_websocket(c_rest_router *router, const char *path,
+                            c_rest_websocket_on_message_fn on_message,
+                            c_rest_websocket_on_close_fn on_close,
+                            void *user_data) {
   struct c_rest_ws_route_data *ws_data;
 
   if (!router || !path)
@@ -371,12 +374,15 @@ c_rest_error_t c_rest_router_add_websocket_openapi(
     c_rest_websocket_on_message_fn on_message,
     c_rest_websocket_on_close_fn on_close, void *user_data,
     const struct c_rest_openapi_operation *op_meta) {
-  c_rest_error_t res = c_rest_router_add_websocket(router, path, on_message, on_close,
-                                        user_data);
-  if (res == C_REST_OK && op_meta) {
-    res = c_rest_openapi_spec_add_path(router->openapi_spec, path, "GET", op_meta);
+  c_rest_error_t res = c_rest_router_add_websocket(router, path, on_message,
+                                                   on_close, user_data);
+  if (res != C_REST_OK)
+    return res;
+  if (op_meta) {
+    return c_rest_openapi_spec_add_path(router->openapi_spec, path, "GET",
+                                        op_meta);
   }
-  return res;
+  return C_REST_OK;
 }
 
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
@@ -386,8 +392,8 @@ struct c_rest_sse_route_data {
 };
 
 static c_rest_error_t c_rest_sse_handler_wrapper(struct c_rest_request *req,
-                                      struct c_rest_response *res,
-                                      void *user_data) {
+                                                 struct c_rest_response *res,
+                                                 void *user_data) {
   struct c_rest_sse_route_data *sse_data =
       (struct c_rest_sse_route_data *)user_data;
   c_rest_error_t rc;
@@ -397,14 +403,15 @@ static c_rest_error_t c_rest_sse_handler_wrapper(struct c_rest_request *req,
     return rc;
 
   if (sse_data->handler) {
-    rc = sse_data->handler(req, res, sse_data->user_data);
+    return sse_data->handler(req, res, sse_data->user_data);
   }
 
-  return rc;
+  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_router_add_sse(c_rest_router *router, const char *path,
-                          c_rest_handler_fn handler, void *user_data) {
+                                     c_rest_handler_fn handler,
+                                     void *user_data) {
   struct c_rest_sse_route_data *sse_data;
 
   if (!router || !path)
@@ -422,23 +429,26 @@ c_rest_error_t c_rest_router_add_sse(c_rest_router *router, const char *path,
                            sse_data);
 }
 
-c_rest_error_t c_rest_router_add_sse_openapi(
-    c_rest_router *router, const char *path, c_rest_handler_fn handler,
-    void *user_data, const struct c_rest_openapi_operation *op_meta) {
+c_rest_error_t
+c_rest_router_add_sse_openapi(c_rest_router *router, const char *path,
+                              c_rest_handler_fn handler, void *user_data,
+                              const struct c_rest_openapi_operation *op_meta) {
   c_rest_error_t res = c_rest_router_add_sse(router, path, handler, user_data);
-  if (res == 0 && op_meta) {
-    res = c_rest_openapi_spec_add_path(router->openapi_spec, path, "GET", op_meta);
+  if (res != C_REST_OK)
+    return res;
+  if (op_meta) {
+    return c_rest_openapi_spec_add_path(router->openapi_spec, path, "GET",
+                                        op_meta);
   }
-  return res;
+  return C_REST_OK;
 }
 #endif
 
 #ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
-#include "c_rest_graphql.h"
 
 static c_rest_error_t c_rest_graphql_handler(struct c_rest_request *req,
-                                  struct c_rest_response *res,
-                                  void *user_data) {
+                                             struct c_rest_response *res,
+                                             void *user_data) {
   struct c_rest_graphql_schema *schema =
       (struct c_rest_graphql_schema *)user_data;
   struct c_rest_graphql_node *doc = NULL;
@@ -454,7 +464,7 @@ static c_rest_error_t c_rest_graphql_handler(struct c_rest_request *req,
   }
 
   ret = c_rest_graphql_parse((const char *)req->body, req->body_len, &doc);
-  if (ret != 0) {
+  if (ret != C_REST_OK) {
     c_rest_error_t s_rc = c_rest_response_set_status(res, 400);
     if (s_rc != C_REST_OK)
       return s_rc;
@@ -480,8 +490,9 @@ static c_rest_error_t c_rest_graphql_handler(struct c_rest_request *req,
   return ret;
 }
 
-c_rest_error_t c_rest_router_add_graphql(c_rest_router *router, const char *path,
-                              struct c_rest_graphql_schema *schema) {
+c_rest_error_t c_rest_router_add_graphql(c_rest_router *router,
+                                         const char *path,
+                                         struct c_rest_graphql_schema *schema) {
   if (!router || !path || !schema)
     return C_REST_ERROR_GENERIC;
 
@@ -494,16 +505,17 @@ c_rest_error_t c_rest_router_add_graphql_openapi(
     struct c_rest_graphql_schema *schema,
     const struct c_rest_openapi_operation *op_meta) {
   c_rest_error_t res = c_rest_router_add_graphql(router, path, schema);
-  if (res == 0 && op_meta) {
-    res = c_rest_openapi_spec_add_path(router->openapi_spec, path, "POST", op_meta);
+  if (res != C_REST_OK)
+    return res;
+  if (op_meta) {
+    return c_rest_openapi_spec_add_path(router->openapi_spec, path, "POST",
+                                        op_meta);
   }
-  return res;
+  return C_REST_OK;
 }
 #endif
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
-#include "c_rest_template.h"
-/* clang-format on */
 
 struct c_rest_template_route_data {
   const struct c_rest_template_context *ctx;
@@ -572,11 +584,13 @@ c_rest_error_t c_rest_router_add_template_openapi(
     const struct c_rest_openapi_operation *op_meta) {
   c_rest_error_t res = c_rest_router_add_template(router, method, path, ctx,
                                                   data_provider, user_data);
-  if (res == 0 && op_meta) {
-    res = c_rest_openapi_spec_add_path(router->openapi_spec, path, method,
-                                       op_meta);
+  if (res != C_REST_OK)
+    return res;
+  if (op_meta) {
+    return c_rest_openapi_spec_add_path(router->openapi_spec, path, method,
+                                        op_meta);
   }
-  return res;
+  return C_REST_OK;
 }
 #endif
 

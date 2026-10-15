@@ -3,36 +3,46 @@
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
 #include "c_rest_sse.h"
+#include "c_rest_string.h"
+#include "c_rest_response.h"
+#include "c_rest_log.h"
 
 #include <stdlib.h>
 #include <string.h>
-#include "c_rest_log.h"
 #include <stdio.h>
-
-#include "c_rest_string.h"
+/* clang-format on */
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT int g_mock_sse_append_fail = -1;
 static c_rest_error_t mock_append_cstr(c_rest_string *s, const char *c) {
-  if (g_mock_sse_append_fail == 0 || g_mock_sse_append_fail == -5) return C_REST_ERROR_GENERIC;
-  if (g_mock_sse_append_fail > 0) g_mock_sse_append_fail--;
+  if (g_mock_sse_append_fail == 0 || g_mock_sse_append_fail == -5)
+    return C_REST_ERROR_GENERIC;
+  if (g_mock_sse_append_fail > 0)
+    g_mock_sse_append_fail--;
   return c_rest_string_append_cstr(s, c);
 }
 static c_rest_error_t mock_append(c_rest_string *s, const char *c, size_t l) {
-  if (g_mock_sse_append_fail == 0) return C_REST_ERROR_GENERIC;
-  if (g_mock_sse_append_fail > 0) g_mock_sse_append_fail--;
+  if (g_mock_sse_append_fail == 0)
+    return C_REST_ERROR_GENERIC;
+  if (g_mock_sse_append_fail > 0)
+    g_mock_sse_append_fail--;
   return c_rest_string_append(s, c, l);
 }
 static c_rest_error_t mock_string_destroy(c_rest_string *s) {
-  if (g_mock_sse_append_fail == -2 || g_mock_sse_append_fail == -5) return C_REST_ERROR_GENERIC;
+  if (g_mock_sse_append_fail == -2 || g_mock_sse_append_fail == -5)
+    return C_REST_ERROR_GENERIC;
   return c_rest_string_destroy(s);
 }
 #define c_rest_string_append_cstr mock_append_cstr
 #define c_rest_string_append mock_append
 #define c_rest_string_destroy mock_string_destroy
 
-#define INTERNAL_EVENT_DESTROY(ev) (g_mock_sse_append_fail == -3 ? C_REST_ERROR_GENERIC : c_rest_sse_event_destroy(ev))
-#define INTERNAL_EVENT_INIT(ev) (g_mock_sse_append_fail == -4 ? C_REST_ERROR_GENERIC : c_rest_sse_event_init(ev))
+#define INTERNAL_EVENT_DESTROY(ev)                                             \
+  (g_mock_sse_append_fail == -3 ? C_REST_ERROR_GENERIC                         \
+                                : c_rest_sse_event_destroy(ev))
+#define INTERNAL_EVENT_INIT(ev)                                                \
+  (g_mock_sse_append_fail == -4 ? C_REST_ERROR_GENERIC                         \
+                                : c_rest_sse_event_init(ev))
 #else
 #define INTERNAL_EVENT_DESTROY(ev) c_rest_sse_event_destroy(ev)
 #define INTERNAL_EVENT_INIT(ev) c_rest_sse_event_init(ev)
@@ -85,37 +95,40 @@ static c_rest_error_t c_rest_sse_strdup(const char *s, char **out_str) {
     return C_REST_ERROR_GENERIC;
   }
   copy = (char *)tmp;
-  #if defined(_MSC_VER)
+#if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(copy, len + 1, s, len + 1);
-  #else
+#else
   memcpy(copy, s, len + 1);
-  #endif
+#endif
   *out_str = copy;
   return C_REST_OK;
 }
 c_rest_error_t c_rest_sse_event_clone(const struct c_rest_sse_event *src,
-                           struct c_rest_sse_event *dest) {
+                                      struct c_rest_sse_event *dest) {
   c_rest_error_t rc;
   if (!src || !dest) {
     return C_REST_ERROR_GENERIC;
   }
   if (src->id) {
     rc = c_rest_sse_strdup(src->id, &dest->id);
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
   } else {
     dest->id = NULL;
   }
 
   if (src->event) {
     rc = c_rest_sse_strdup(src->event, &dest->event);
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
   } else {
     dest->event = NULL;
   }
 
   if (src->data) {
     rc = c_rest_sse_strdup(src->data, &dest->data);
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
   } else {
     dest->data = NULL;
   }
@@ -123,17 +136,16 @@ c_rest_error_t c_rest_sse_event_clone(const struct c_rest_sse_event *src,
   dest->retry = src->retry;
   return C_REST_OK;
 
-err:
-  {
-    c_rest_error_t destroy_rc = INTERNAL_EVENT_DESTROY(dest);
-    if (destroy_rc != C_REST_OK)
-      return destroy_rc;
-  }
+err: {
+  c_rest_error_t destroy_rc = INTERNAL_EVENT_DESTROY(dest);
+  if (destroy_rc != C_REST_OK)
+    return destroy_rc;
+}
   return rc;
 }
 
-c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
-                         size_t *out_len) {
+c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev,
+                                    char **out_buf, size_t *out_len) {
   c_rest_string s;
   char retry_buf[32];
   const char *data_ptr;
@@ -157,20 +169,26 @@ c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **ou
 
   if (ev->id) {
     rc = c_rest_string_append_cstr(&s, "id: ");
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
     rc = c_rest_string_append_cstr(&s, ev->id);
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
     rc = c_rest_string_append_cstr(&s, "\n");
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
   }
 
   if (ev->event) {
     rc = c_rest_string_append_cstr(&s, "event: ");
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
     rc = c_rest_string_append_cstr(&s, ev->event);
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
     rc = c_rest_string_append_cstr(&s, "\n");
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
   }
 
   if (ev->retry >= 0) {
@@ -180,30 +198,38 @@ c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **ou
     sprintf(retry_buf, "retry: %d\n", ev->retry);
 #endif
     rc = c_rest_string_append_cstr(&s, retry_buf);
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
   }
 
   if (ev->data) {
     data_ptr = ev->data;
     while ((nl = strchr(data_ptr, '\n')) != NULL) {
       rc = c_rest_string_append_cstr(&s, "data: ");
-      if (rc != C_REST_OK) goto err;
+      if (rc != C_REST_OK)
+        goto err;
       rc = c_rest_string_append(&s, data_ptr, (size_t)(nl - data_ptr));
-      if (rc != C_REST_OK) goto err;
+      if (rc != C_REST_OK)
+        goto err;
       rc = c_rest_string_append_cstr(&s, "\n");
-      if (rc != C_REST_OK) goto err;
+      if (rc != C_REST_OK)
+        goto err;
       data_ptr = nl + 1;
     }
     rc = c_rest_string_append_cstr(&s, "data: ");
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
     rc = c_rest_string_append_cstr(&s, data_ptr);
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
     rc = c_rest_string_append_cstr(&s, "\n");
-    if (rc != C_REST_OK) goto err;
+    if (rc != C_REST_OK)
+      goto err;
   }
 
   rc = c_rest_string_append_cstr(&s, "\n");
-  if (rc != C_REST_OK) goto err;
+  if (rc != C_REST_OK)
+    goto err;
 
   data_len = s.length;
   if (C_REST_MALLOC(data_len + 1, &tmp_out_buf) != 0) {
@@ -211,25 +237,25 @@ c_rest_error_t c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **ou
     goto err;
   }
   *out_buf = (char *)tmp_out_buf;
-  #if defined(_MSC_VER)
+#if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(*out_buf, data_len, s.data, data_len);
-  #else
+#else
   memcpy(*out_buf, s.data, data_len);
-  #endif
+#endif
   (*out_buf)[data_len] = '\0';
   *out_len = data_len;
 
   rc = c_rest_string_destroy(&s);
-  if (rc != C_REST_OK) return rc;
+  if (rc != C_REST_OK)
+    return rc;
 
   return C_REST_OK;
 
-err:
-  {
-    c_rest_error_t destroy_rc = c_rest_string_destroy(&s);
-    if (destroy_rc != C_REST_OK)
-      return destroy_rc;
-  }
+err: {
+  c_rest_error_t destroy_rc = c_rest_string_destroy(&s);
+  if (destroy_rc != C_REST_OK)
+    return destroy_rc;
+}
   return rc;
 }
 
@@ -290,29 +316,29 @@ static c_rest_error_t append_to_string(char **dest, const char *src,
   }
   new_str = (char *)tmp_new_str;
 
+  if (*dest) {
+#if defined(_MSC_VER)
+    /* CDD_SAFE_CRT */ memcpy_s(new_str, old_len, *dest, old_len);
+#else
+    memcpy(new_str, *dest, old_len);
+#endif
+    C_REST_FREE(*dest);
+  }
 
-    if (*dest) {
-      #if defined(_MSC_VER)
-      /* CDD_SAFE_CRT */ memcpy_s(new_str, old_len, *dest, old_len);
-      #else
-      memcpy(new_str, *dest, old_len);
-      #endif
-      C_REST_FREE(*dest);
-    }
-
-  #if defined(_MSC_VER)
+#if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(new_str + old_len, len, src, len);
-  #else
+#else
   memcpy(new_str + old_len, src, len);
-  #endif
+#endif
   new_str[old_len + len] = '\0';
 
   *dest = new_str;
   return C_REST_OK;
 }
 
-c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data,
-                     size_t len, struct c_rest_sse_event *out_event) {
+c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx,
+                                const char *data, size_t len,
+                                struct c_rest_sse_event *out_event) {
   char *new_buf;
   const char *line_start;
   const char *line_end;
@@ -340,29 +366,30 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
       new_buf = (char *)tmp_new_buf;
 
       if (ctx->buffer) {
-        #if defined(_MSC_VER)
-        /* CDD_SAFE_CRT */ memcpy_s(new_buf, ctx->buffer_len, ctx->buffer, ctx->buffer_len);
-        #else
+#if defined(_MSC_VER)
+        /* CDD_SAFE_CRT */ memcpy_s(new_buf, ctx->buffer_len, ctx->buffer,
+                                    ctx->buffer_len);
+#else
         memcpy(new_buf, ctx->buffer, ctx->buffer_len);
-        #endif
+#endif
         C_REST_FREE(ctx->buffer);
       }
 
       ctx->buffer = new_buf;
     }
-    #if defined(_MSC_VER)
+#if defined(_MSC_VER)
     /* CDD_SAFE_CRT */ memcpy_s(ctx->buffer + ctx->buffer_len, len, data, len);
-    #else
+#else
     memcpy(ctx->buffer + ctx->buffer_len, data, len);
-    #endif
+#endif
     ctx->buffer_len += len;
   }
 
   line_start = ctx->buffer;
 
   while (line_start < ctx->buffer + ctx->buffer_len) {
-    line_end = (const char *)memchr(line_start, '\n',
-                                    (size_t)(ctx->buffer + ctx->buffer_len - line_start));
+    line_end = (const char *)memchr(
+        line_start, '\n', (size_t)(ctx->buffer + ctx->buffer_len - line_start));
     if (!line_end) {
       break;
     }
@@ -373,19 +400,21 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
       line_len--;
     }
 
-
     if (line_len == 0) {
       if (ctx->current_event.data || ctx->current_event.event ||
           ctx->current_event.id || ctx->current_event.retry >= 0) {
         c_rest_error_t rc;
         rc = c_rest_sse_event_clone(&ctx->current_event, out_event);
-        if (rc != C_REST_OK) return rc;
+        if (rc != C_REST_OK)
+          return rc;
 
         rc = INTERNAL_EVENT_DESTROY(&ctx->current_event);
-        if (rc != C_REST_OK) return rc;
+        if (rc != C_REST_OK)
+          return rc;
 
         rc = INTERNAL_EVENT_INIT(&ctx->current_event);
-        if (rc != C_REST_OK) return rc;
+        if (rc != C_REST_OK)
+          return rc;
         event_completed = 1;
       }
       processed = (size_t)(line_end - ctx->buffer + 1);
@@ -432,10 +461,9 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
         if (ctx->current_event.data) {
           rc = append_to_string(&ctx->current_event.data, "\n", 1);
 
-        if (rc != C_REST_OK) {
-          return rc;
-        }
-
+          if (rc != C_REST_OK) {
+            return rc;
+          }
         }
 
         rc = append_to_string(&ctx->current_event.data, value, value_len);
@@ -470,11 +498,11 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
           copy_len = 31;
         }
 
-        #if defined(_MSC_VER)
+#if defined(_MSC_VER)
         /* CDD_SAFE_CRT */ memcpy_s(retry_str, copy_len, value, copy_len);
-        #else
+#else
         memcpy(retry_str, value, copy_len);
-        #endif
+#endif
         retry_str[copy_len] = '\0';
         ctx->current_event.retry = atoi(retry_str);
       }
@@ -487,7 +515,8 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
           ctx->current_event.event = NULL;
         }
         rc = c_rest_sse_strdup("", &ctx->current_event.event);
-        if (rc != C_REST_OK) return rc;
+        if (rc != C_REST_OK)
+          return rc;
       } else if (line_len == 4 && memcmp(line_start, "data", 4) == 0) {
         if (ctx->current_event.data) {
           c_rest_error_t rc;
@@ -497,7 +526,6 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
           }
         }
       }
-
     }
 
     line_start = line_end + 1;
@@ -528,9 +556,6 @@ c_rest_error_t c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data
 
   return C_REST_ERROR_GENERIC;
 }
-
-#include "c_rest_response.h"
-/* clang-format on */
 
 c_rest_error_t c_rest_sse_init_response(struct c_rest_response *res) {
   c_rest_error_t rc;
@@ -570,9 +595,13 @@ c_rest_error_t c_rest_sse_send_event(struct c_rest_response *res,
   }
 
   ret = c_rest_response_write_chunk(res, buf, len);
+  if (ret != C_REST_OK) {
+    C_REST_FREE(buf);
+    return ret;
+  }
   C_REST_FREE(buf);
 
-  return ret;
+  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_sse_send_keepalive(struct c_rest_response *res) {

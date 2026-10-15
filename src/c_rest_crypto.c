@@ -4,6 +4,8 @@
 #include "c_rest_mem.h"
 #include "c_rest_crypto.h"
 #include "c_rest_tls.h"
+#include "c_rest_base64.h"
+#include "c_rest_export.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -13,31 +15,30 @@
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) || defined(C_REST_USE_BORINGSSL)
 #include <openssl/evp.h>
 #include <openssl/rand.h>
-
 #include <openssl/hmac.h>
-#include <openssl/evp.h>
-
 #elif defined(C_REST_USE_MBEDTLS)
 #include <mbedtls/sha1.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
-
 #include <mbedtls/md.h>
 #include <mbedtls/pkcs5.h>
-
 #elif defined(C_REST_USE_WOLFSSL)
 #include <wolfssl/options.h>
 #include <wolfssl/wolfcrypt/sha.h>
 #include <wolfssl/wolfcrypt/sha256.h>
 #include <wolfssl/wolfcrypt/random.h>
-
 #include <wolfssl/wolfcrypt/hmac.h>
 #include <wolfssl/wolfcrypt/pwdbased.h>
-
 #endif
 
-c_rest_error_t c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) {
+#if !defined(C_REST_HAS_TLS) && (!defined(_MSC_VER) || _MSC_VER >= 1600) && !defined(__WATCOMC__)
+#include <stdint.h>
+#endif
+/* clang-format on */
+
+c_rest_error_t
+c_rest_tls_get_provider(enum c_rest_crypto_provider *out_provider) {
   if (!out_provider)
     return C_REST_ERROR_GENERIC;
 
@@ -67,23 +68,13 @@ typedef unsigned __int32 c_rest_uint32_t;
 #elif defined(__WATCOMC__)
 typedef unsigned long c_rest_uint32_t;
 #else
-#if defined(_MSC_VER) && _MSC_VER < 1600
-    typedef __int32 int32_t;
-    typedef unsigned __int32 uint32_t;
-    typedef __int64 int64_t;
-    typedef unsigned __int64 uint64_t;
-#else
-#if !defined(_MSC_VER) || _MSC_VER >= 1600
-#include <stdint.h>
-#endif
-#endif
 typedef uint32_t c_rest_uint32_t;
 #endif
 
 /* Fallback to custom SHA1 if no crypto backend is available */
 #define SHA1_ROTL(bits, word) (((word) << (bits)) | ((word) >> (32 - (bits))))
 
-static c_rest_error_t sha1_transform(c_rest_uint32_t state[5],
+static void sha1_transform(c_rest_uint32_t state[5],
                            const unsigned char buffer[64]) {
   c_rest_uint32_t a, b, c, d, e;
   typedef union {
@@ -94,11 +85,11 @@ static c_rest_error_t sha1_transform(c_rest_uint32_t state[5],
   c_rest_uint32_t w[80];
   int i;
 
-  #if defined(_MSC_VER)
+#if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(block, 64, buffer, 64);
-  #else
+#else
   memcpy(block, buffer, 64);
-  #endif
+#endif
   for (i = 0; i < 16; i++) {
     w[i] = ((c_rest_uint32_t)buffer[i * 4] << 24) |
            ((c_rest_uint32_t)buffer[i * 4 + 1] << 16) |
@@ -145,11 +136,10 @@ static c_rest_error_t sha1_transform(c_rest_uint32_t state[5],
   state[2] += c;
   state[3] += d;
   state[4] += e;
-
-  return C_REST_OK;
 }
 
-c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
+c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len,
+                           unsigned char hash[20]) {
   c_rest_uint32_t state[5];
   c_rest_uint32_t count[2];
   unsigned char buffer[64];
@@ -206,10 +196,7 @@ c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char 
     for (i = 0; i < 8; i++) {
       buffer[56 + i] = len_bytes[i];
     }
-    {
-
-      sha1_transform(state, buffer);
-    }
+    { sha1_transform(state, buffer); }
   }
 
   for (i = 0; i < 20; i++) {
@@ -242,7 +229,7 @@ static const c_rest_uint32_t sha256_k[64] = {
     0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
-static c_rest_error_t sha256_transform(c_rest_uint32_t state[8],
+static void sha256_transform(c_rest_uint32_t state[8],
                              const unsigned char buffer[64]) {
   c_rest_uint32_t a, b, c, d, e, f, g, h, t1, t2, m[64];
   int i, j;
@@ -288,12 +275,10 @@ static c_rest_error_t sha256_transform(c_rest_uint32_t state[8],
   state[5] += f;
   state[6] += g;
   state[7] += h;
-
-  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
-                  unsigned char hash[32]) {
+                             unsigned char hash[32]) {
   c_rest_uint32_t state[8];
   c_rest_uint32_t count[2];
   unsigned char buffer[64];
@@ -356,10 +341,7 @@ c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
     for (i = 0; i < 8; i++) {
       buffer[56 + i] = len_bytes[i];
     }
-    {
-
-      sha256_transform(state, buffer);
-    }
+    { sha256_transform(state, buffer); }
   }
 
   for (i = 0; i < 32; i++) {
@@ -380,7 +362,8 @@ c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
 #elif defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||           \
     defined(C_REST_USE_BORINGSSL)
 
-c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
+c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len,
+                           unsigned char hash[20]) {
   c_rest_error_t rc;
   unsigned int out_len = 0;
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
@@ -399,7 +382,7 @@ c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char 
 }
 
 c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
-                  unsigned char hash[32]) {
+                             unsigned char hash[32]) {
   c_rest_error_t rc;
   unsigned int out_len = 0;
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
@@ -427,9 +410,10 @@ c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
 
 #elif defined(C_REST_USE_MBEDTLS)
 
-c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
+c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len,
+                           unsigned char hash[20]) {
   c_rest_error_t rc;
-  #if MBEDTLS_VERSION_MAJOR >= 3
+#if MBEDTLS_VERSION_MAJOR >= 3
   if (mbedtls_sha1(data, len, hash) != 0)
     return C_REST_ERROR_GENERIC;
 #else
@@ -439,9 +423,9 @@ c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char 
 }
 
 c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
-                  unsigned char hash[32]) {
+                             unsigned char hash[32]) {
   c_rest_error_t rc;
-  #if MBEDTLS_VERSION_MAJOR >= 3
+#if MBEDTLS_VERSION_MAJOR >= 3
   if (mbedtls_sha256(data, len, hash, 0) != 0)
     return C_REST_ERROR_GENERIC;
 #else
@@ -476,7 +460,8 @@ c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
 
 #elif defined(C_REST_USE_WOLFSSL)
 
-c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]) {
+c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len,
+                           unsigned char hash[20]) {
   c_rest_error_t rc;
   wc_Sha1 sha;
   if (wc_InitSha1(&sha) != 0)
@@ -489,7 +474,7 @@ c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len, unsigned char 
 }
 
 c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
-                  unsigned char hash[32]) {
+                             unsigned char hash[32]) {
   c_rest_error_t rc;
   wc_Sha256 sha256;
   if (wc_InitSha256(&sha256) != 0)
@@ -521,10 +506,6 @@ c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
  * we'll just fall back to custom here if ONLY s2n is specified for TLS */
 /* ... same custom implementation as !defined(C_REST_HAS_TLS) block ... */
 #endif
-
-#include "c_rest_base64.h"
-#include "c_rest_export.h"
-/* clang-format on */
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT int g_mock_crypto_fail = 0;
@@ -713,9 +694,11 @@ c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
 #endif
 
   rc = c_rest_sha256(inner_buf, 64 + data_len, inner_hash);
-  C_REST_FREE((void *)(inner_buf));
-  if (rc != C_REST_OK)
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(inner_buf));
     return rc;
+  }
+  C_REST_FREE((void *)(inner_buf));
 
   if (C_REST_MALLOC(64 + 32, &outer_buf) != 0) {
     LOG_DEBUG("C_REST_MALLOC failed");
@@ -735,9 +718,11 @@ c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
 #endif
 
   rc = c_rest_sha256(outer_buf, 64 + 32, hash);
-  C_REST_FREE((void *)(outer_buf));
-  if (rc != C_REST_OK)
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(outer_buf));
     return rc;
+  }
+  C_REST_FREE((void *)(outer_buf));
 
   return C_REST_OK;
 }
@@ -788,7 +773,7 @@ c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
                             U);
     if (rc != C_REST_OK) {
       C_REST_FREE((void *)(salt_plus_idx));
-      return C_REST_ERROR_GENERIC;
+      return rc;
     }
     C_REST_FREE((void *)(salt_plus_idx));
 
@@ -799,8 +784,9 @@ c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
 #endif
 
     for (i = 1; i < iterations; i++) {
-      if (c_rest_hmac_sha256(password, password_len, U, 32, U) != 0)
-        return C_REST_ERROR_GENERIC;
+      rc = c_rest_hmac_sha256(password, password_len, U, 32, U);
+      if (rc != C_REST_OK)
+        return rc;
       for (k = 0; k < 32; k++) {
         T[k] ^= U[k];
       }
@@ -837,9 +823,10 @@ c_rest_error_t c_rest_random_string_generate(size_t entropy_bytes,
     return C_REST_ERROR_GENERIC;
   }
 
-  if (c_rest_rand_bytes(rand_buf, entropy_bytes) != 0) {
+  rc = c_rest_rand_bytes(rand_buf, entropy_bytes);
+  if (rc != C_REST_OK) {
     C_REST_FREE((void *)(rand_buf));
-    return C_REST_ERROR_GENERIC;
+    return rc;
   }
 
   rc = c_rest_base64url_encode(rand_buf, entropy_bytes, NULL, &out_len);
@@ -1096,7 +1083,7 @@ c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
                                &decoded_payload_len);
   if (rc != C_REST_OK) {
     C_REST_FREE((void *)(decoded_payload));
-    return C_REST_ERROR_GENERIC;
+    return rc;
   }
   decoded_payload[decoded_payload_len] = '\0';
 
@@ -1141,15 +1128,17 @@ c_rest_error_t c_rest_hash_password(const char *password,
     return C_REST_ERROR_GENERIC;
   }
 
-  if (c_rest_rand_bytes(salt, C_REST_PBKDF2_SALT_LEN) != 0) {
-    return C_REST_ERROR_GENERIC;
+  rc = c_rest_rand_bytes(salt, C_REST_PBKDF2_SALT_LEN);
+  if (rc != C_REST_OK) {
+    return rc;
   }
 
-  if (c_rest_pbkdf2_hmac_sha256((const unsigned char *)password,
-                                strlen(password), salt, C_REST_PBKDF2_SALT_LEN,
-                                C_REST_PBKDF2_ITERATIONS,
-                                C_REST_PBKDF2_HASH_LEN, hash) != 0) {
-    return C_REST_ERROR_GENERIC;
+  rc = c_rest_pbkdf2_hmac_sha256((const unsigned char *)password,
+                                 strlen(password), salt, C_REST_PBKDF2_SALT_LEN,
+                                 C_REST_PBKDF2_ITERATIONS,
+                                 C_REST_PBKDF2_HASH_LEN, hash);
+  if (rc != C_REST_OK) {
+    return rc;
   }
 
   rc = c_rest_base64_encode(salt, C_REST_PBKDF2_SALT_LEN, NULL, &salt_b64_len);
@@ -1203,8 +1192,10 @@ cleanup:
 #undef c_rest_pbkdf2_hmac_sha256
 #undef c_rest_pbkdf2_hmac_sha256
 #define c_rest_pbkdf2_hmac_sha256(a, b, c, d, e, f, g)                         \
-  (g_mock_crypto_fail == 5 ? C_REST_ERROR_GENERIC                              \
-                           : c_rest_pbkdf2_hmac_sha256(a, b, c, d, e, f, g))
+  ((g_mock_crypto_fail == 5 || g_mock_crypto_fail == 6 ||                      \
+    g_mock_crypto_fail == 7)                                                   \
+       ? C_REST_ERROR_GENERIC                                                  \
+       : c_rest_pbkdf2_hmac_sha256(a, b, c, d, e, f, g))
 #endif
 c_rest_error_t c_rest_verify_password(const char *password,
                                       const char *hash_str) {
@@ -1253,26 +1244,34 @@ c_rest_error_t c_rest_verify_password(const char *password,
   if (!salt) {
     return C_REST_ERROR_GENERIC;
   }
-  if (c_rest_base64_decode(salt_b64, strlen(salt_b64), salt, &salt_len) != 0) {
-    goto cleanup;
+  rc = c_rest_base64_decode(salt_b64, strlen(salt_b64), salt, &salt_len);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(salt));
+    return rc;
   }
 
-  if (c_rest_base64_decode(hash_b64, strlen(hash_b64), NULL,
-                           &expected_hash_len) != 0) {
-    goto cleanup;
+  rc = c_rest_base64_decode(hash_b64, strlen(hash_b64), NULL,
+                            &expected_hash_len);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(salt));
+    return rc;
   }
   if (expected_hash_len != C_REST_PBKDF2_HASH_LEN) {
     goto cleanup;
   }
-  if (c_rest_base64_decode(hash_b64, strlen(hash_b64), expected_hash,
-                           &expected_hash_len) != 0) {
-    goto cleanup;
+  rc = c_rest_base64_decode(hash_b64, strlen(hash_b64), expected_hash,
+                            &expected_hash_len);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(salt));
+    return rc;
   }
 
-  if (c_rest_pbkdf2_hmac_sha256(
-          (const unsigned char *)password, strlen(password), salt, salt_len,
-          (unsigned long)iters, C_REST_PBKDF2_HASH_LEN, computed_hash) != 0) {
-    goto cleanup;
+  rc = c_rest_pbkdf2_hmac_sha256(
+      (const unsigned char *)password, strlen(password), salt, salt_len,
+      (unsigned long)iters, C_REST_PBKDF2_HASH_LEN, computed_hash);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(salt));
+    return rc;
   }
 
   /* Constant time comparison */

@@ -74,11 +74,6 @@ static c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
   (void)ctx;
   if (!path)
     return C_REST_ERROR_INVALID_ARG;
-#ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_hot_reload_fail == 10) {
-    return C_REST_ERROR_GENERIC;
-  }
-#endif
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
   if (ctx && ctx->cm_env) {
     unsigned long mtime_ul;

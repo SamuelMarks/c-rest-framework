@@ -10,49 +10,66 @@
 
 #ifdef C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING
 
+static int g_cb_fail_at = 0;
+static int g_cb_call_count = 0;
+
 static c_rest_error_t on_part_begin(c_rest_multipart_parser *parser) {
   (void)parser;
+  if (g_cb_fail_at > 0 && ++g_cb_call_count == g_cb_fail_at)
+    return C_REST_ERROR_GENERIC;
   printf("Part begin\n");
-  return 0;
+  return C_REST_OK;
 }
 
 static c_rest_error_t on_header_field(c_rest_multipart_parser *parser,
                                       const char *at, size_t length) {
   (void)parser;
+  if (g_cb_fail_at > 0 && ++g_cb_call_count == g_cb_fail_at)
+    return C_REST_ERROR_GENERIC;
   printf("Header field: %.*s\n", (int)length, at);
-  return 0;
+  return C_REST_OK;
 }
 
 static c_rest_error_t on_header_value(c_rest_multipart_parser *parser,
                                       const char *at, size_t length) {
   (void)parser;
+  if (g_cb_fail_at > 0 && ++g_cb_call_count == g_cb_fail_at)
+    return C_REST_ERROR_GENERIC;
   printf("Header value: %.*s\n", (int)length, at);
-  return 0;
+  return C_REST_OK;
 }
 
 static c_rest_error_t on_headers_complete(c_rest_multipart_parser *parser) {
   (void)parser;
+  if (g_cb_fail_at > 0 && ++g_cb_call_count == g_cb_fail_at)
+    return C_REST_ERROR_GENERIC;
   printf("Headers complete\n");
-  return 0;
+  return C_REST_OK;
 }
 
 static c_rest_error_t on_part_data(c_rest_multipart_parser *parser,
                                    const char *at, size_t length) {
   (void)parser;
+  if (g_cb_fail_at > 0 && ++g_cb_call_count == g_cb_fail_at)
+    return C_REST_ERROR_GENERIC;
   printf("Part data: %.*s\n", (int)length, at);
-  return 0;
+  return C_REST_OK;
 }
 
 static c_rest_error_t on_part_end(c_rest_multipart_parser *parser) {
   (void)parser;
+  if (g_cb_fail_at > 0 && ++g_cb_call_count == g_cb_fail_at)
+    return C_REST_ERROR_GENERIC;
   printf("Part end\n");
-  return 0;
+  return C_REST_OK;
 }
 
 static c_rest_error_t on_body_end(c_rest_multipart_parser *parser) {
   (void)parser;
+  if (g_cb_fail_at > 0 && ++g_cb_call_count == g_cb_fail_at)
+    return C_REST_ERROR_GENERIC;
   printf("Body end\n");
-  return 0;
+  return C_REST_OK;
 }
 
 static void *fail_malloc_n(size_t size) {
@@ -338,6 +355,30 @@ static void test_multipart_invalid_args(int *res_ptr) {
   ((struct dummy_parser_state *)parser)->state = 999;
   rc = c_rest_multipart_parser_execute(parser, "data", 4, &parsed);
   c_rest_multipart_parser_destroy(parser);
+
+  /* Callback failure percolation tests */
+  {
+    const char *complex_body =
+        "--boundary\r\nH: v\r\n\r\na\rx\r\nx\r\n-x\r\n--x\r\n--boX\r\n"
+        "--boundary\r\nH2: v2\r\n\r\nb\r\n--boundary--\r\n";
+    for (i = 1; i <= 25; i++) {
+      g_cb_fail_at = i;
+      g_cb_call_count = 0;
+      c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+      c_rest_multipart_parser_execute(parser, complex_body,
+                                      strlen(complex_body), &parsed);
+      c_rest_multipart_parser_destroy(parser);
+    }
+    /* Trailing part data callback failure */
+    g_cb_fail_at = 5;
+    g_cb_call_count = 0;
+    c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+    c_rest_multipart_parser_execute(parser, "--boundary\r\nH: v\r\n\r\ntrail",
+                                    25, &parsed);
+    c_rest_multipart_parser_destroy(parser);
+    g_cb_fail_at = 0;
+    g_cb_call_count = 0;
+  }
 
   printf("malloc loop\n");
   fflush(stdout);

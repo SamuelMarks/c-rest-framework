@@ -35,8 +35,9 @@ struct c_rest_client_hooks {
 };
 
 /** @brief Set HTTP client hooks.
- * @param hooks Pointer to hooks. */
-C_REST_EXPORT extern void
+ * @param hooks Pointer to hooks.
+ * @return C_REST_OK on success. */
+C_REST_EXPORT extern c_rest_error_t
 c_rest_client_set_hooks(const struct c_rest_client_hooks *hooks);
 
 #ifdef __cplusplus

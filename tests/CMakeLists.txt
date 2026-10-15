@@ -65,8 +65,10 @@ add_executable(c-rest-framework-tests ${TEST_SRCS})
 
 function(add_mock_test TARGET_NAME SRC_FILE SUITE_NAME)
     set(RUNNER_SRC "${CMAKE_CURRENT_BINARY_DIR}/runner_${TARGET_NAME}.c")
-    file(WRITE "${RUNNER_SRC}"
+    if(NOT EXISTS "${RUNNER_SRC}")
+        file(WRITE "${RUNNER_SRC}"
 "/* clang-format off */\n#include \"greatest.h\"\n/* clang-format on */\nSUITE_EXTERN(${SUITE_NAME});\nGREATEST_MAIN_DEFS();\nint main(int argc, char **argv) {\n  GREATEST_MAIN_BEGIN();\n  RUN_SUITE(${SUITE_NAME});\n  GREATEST_MAIN_END();\n}\n")
+    endif()
     add_executable(${TARGET_NAME} ${SRC_FILE} "${RUNNER_SRC}")
     target_include_directories(${TARGET_NAME} PRIVATE ../include ${CMAKE_CURRENT_SOURCE_DIR} ${greatest_SOURCE_DIR})
     target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../)

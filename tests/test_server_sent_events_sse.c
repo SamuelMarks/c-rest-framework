@@ -3,9 +3,11 @@
 #include "c_rest_mem.h"
 #include "test_protos.h"
 #include "c_rest_sse.h"
+#include "c_rest_response.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+/* clang-format on */
 
 static int test_sse_event_init_destroy(void) {
   struct c_rest_sse_event ev;
@@ -68,7 +70,9 @@ static int test_sse_serialize(void) {
   failed += (c_rest_sse_serialize(&ev, &out, &len) != C_REST_OK);
   failed += (out == NULL);
 
-  failed += (strcmp("id: 42\nevent: ping\nretry: 3000\ndata: line1\ndata: line2\n\n", out) != 0);
+  failed +=
+      (strcmp("id: 42\nevent: ping\nretry: 3000\ndata: line1\ndata: line2\n\n",
+              out) != 0);
 
   CRF_FREE(ev.id);
   CRF_FREE(ev.event);
@@ -106,8 +110,10 @@ static int test_sse_parse_fragmented(void) {
   failed += (c_rest_sse_context_init(&ctx) != C_REST_OK);
   failed += (c_rest_sse_event_init(&ev) != C_REST_OK);
 
-  failed += (c_rest_sse_parse(ctx, "id: 2\nev", 8, &ev) != C_REST_ERROR_GENERIC);
-  failed += (c_rest_sse_parse(ctx, "ent: partial\ndat", 16, &ev) != C_REST_ERROR_GENERIC);
+  failed +=
+      (c_rest_sse_parse(ctx, "id: 2\nev", 8, &ev) != C_REST_ERROR_GENERIC);
+  failed += (c_rest_sse_parse(ctx, "ent: partial\ndat", 16, &ev) !=
+             C_REST_ERROR_GENERIC);
   failed += (c_rest_sse_parse(ctx, "a: hello", 8, &ev) != C_REST_ERROR_GENERIC);
   failed += (c_rest_sse_parse(ctx, "\n\n", 2, &ev) != C_REST_OK);
 
@@ -119,9 +125,6 @@ static int test_sse_parse_fragmented(void) {
   failed += (c_rest_sse_context_destroy(ctx) != C_REST_OK);
   return failed;
 }
-
-#include "c_rest_response.h"
-/* clang-format on */
 
 static int test_sse_wrappers(void) {
   struct c_rest_response res;

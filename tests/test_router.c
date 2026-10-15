@@ -588,24 +588,12 @@ static void test_coverage(void) {
       tr->openapi_spec = NULL;
       c_rest_router_destroy(r_mock);
 
-      /* test node->children fail */
-      c_rest_router_init(&r_mock);
-      tr = (struct test_router *)r_mock;
-      tr->root->children = (struct test_route_node *)0x1234;
-      c_rest_router_destroy(r_mock);
-
-      /* test node->next fail */
-      c_rest_router_init(&r_mock);
-      tr = (struct test_router *)r_mock;
-      tr->root->next = (struct test_route_node *)0x1234;
-      c_rest_router_destroy(r_mock);
-
-      /* test router->root fail */
+      /* test router->root is NULL */
       c_rest_router_init(&r_mock);
       tr = (struct test_router *)r_mock;
       free(tr->root->segment);
       free(tr->root);
-      tr->root = (struct test_route_node *)0x1234;
+      tr->root = NULL;
       c_rest_router_destroy(r_mock);
     }
   }

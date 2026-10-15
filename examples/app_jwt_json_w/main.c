@@ -45,18 +45,20 @@ static c_rest_error_t generate_token_handler(struct c_rest_request *req,
   const unsigned char *secret = (const unsigned char *)user_data;
   char *token = NULL;
   char response_buf[1024];
+  c_rest_error_t sign_rc;
   c_rest_error_t res_rc;
 
   (void)req;
-  if (c_rest_jwt_sign_hs256("{\"sub\":\"user123\"}", secret,
-                            strlen((const char *)secret), &token) == 0) {
+  sign_rc = c_rest_jwt_sign_hs256("{\"sub\":\"user123\"}", secret,
+                                  strlen((const char *)secret), &token);
+  if (sign_rc == C_REST_OK) {
 #if defined(_MSC_VER)
     sprintf_s(response_buf, sizeof(response_buf), "Your token is: %s", token);
 #else
     sprintf(response_buf, "Your token is: %s", token);
 #endif
-    res_rc = c_rest_response_html(res, response_buf);
     CRF_FREE(token);
+    res_rc = c_rest_response_html(res, response_buf);
     if (res_rc != C_REST_OK)
       return res_rc;
   } else {

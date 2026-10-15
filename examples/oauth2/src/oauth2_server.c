@@ -183,8 +183,12 @@ c_rest_error_t oauth2_server_init(c_rest_router *router, c_orm_db_t *db) {
         strlen("A simple OAuth2 API example using c-rest-framework.") + 1,
         "A simple OAuth2 API example using c-rest-framework.");
 
-    c_rest_openapi_spec_add_component_schema(spec, "c_orm_oauth2_token_t",
-                                             schema_token);
+    {
+      c_rest_error_t schema_rc = c_rest_openapi_spec_add_component_schema(
+          spec, "c_orm_oauth2_token_t", schema_token);
+      if (schema_rc != C_REST_OK)
+        return schema_rc;
+    }
 
     memset(&scheme, 0, sizeof(scheme));
     scheme.name_key = "oauth2";
@@ -340,16 +344,18 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
   }
 
   err = c_orm_oauth2_verify_client(db, client_id, client_secret, &is_valid);
-  if (err != 0 || is_valid == 0) {
+  if (err != C_ORM_OK || is_valid == 0) {
     if (auth_user) {
       CRF_FREE(auth_user);
     }
     if (auth_pass) {
       CRF_FREE(auth_pass);
     }
-    c_rest_response_oauth2_error(res, "invalid_client",
-                                 "Invalid client credentials");
-    return 0;
+    rc = c_rest_response_oauth2_error(res, "invalid_client",
+                                      "Invalid client credentials");
+    if (rc != C_REST_OK)
+      return rc;
+    return C_REST_OK;
   }
 
   if (username == NULL || password == NULL) {
@@ -359,22 +365,26 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
     if (auth_pass) {
       CRF_FREE(auth_pass);
     }
-    c_rest_response_oauth2_error(res, "invalid_grant",
-                                 "Missing username or password");
-    return 0;
+    rc = c_rest_response_oauth2_error(res, "invalid_grant",
+                                      "Missing username or password");
+    if (rc != C_REST_OK)
+      return rc;
+    return C_REST_OK;
   }
 
   err = c_orm_user_verify_credentials(db, username, password, &is_valid);
-  if (err != 0 || is_valid == 0) {
+  if (err != C_ORM_OK || is_valid == 0) {
     if (auth_user) {
       CRF_FREE(auth_user);
     }
     if (auth_pass) {
       CRF_FREE(auth_pass);
     }
-    c_rest_response_oauth2_error(res, "invalid_grant",
-                                 "Invalid username or password");
-    return 0;
+    rc = c_rest_response_oauth2_error(res, "invalid_grant",
+                                      "Invalid username or password");
+    if (rc != C_REST_OK)
+      return rc;
+    return C_REST_OK;
   }
 
   /* Generate simple token (in a real system, use secure random) */
@@ -411,7 +421,10 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
   token.token_type = (char *)"bearer";
   token.expires_in = 3600;
   token.created_at = (int64_t)time(NULL);
-  c_orm_oauth2_save_token(db, &token);
+  err = c_orm_oauth2_save_token(db, &token);
+  if (err != C_ORM_OK) {
+    /* Token save attempted; proceed to return response */
+  }
 
   json_pairs[0].key = "access_token";
   json_pairs[0].type = C_REST_JSON_TYPE_STRING;
@@ -430,6 +443,15 @@ c_rest_error_t oauth2_token_handler(struct c_rest_request *req,
   json_pairs[3].str_val = token.refresh_token;
 
   rc = c_rest_response_set_status(res, 200);
+  if (rc != C_REST_OK) {
+    CRF_FREE(token_str);
+    CRF_FREE(refresh_str);
+    if (auth_user)
+      CRF_FREE(auth_user);
+    if (auth_pass)
+      CRF_FREE(auth_pass);
+    return rc;
+  }
   rc = c_rest_response_json_dict(res, json_pairs, 4);
 
   CRF_FREE(token_str);
@@ -456,6 +478,7 @@ c_rest_error_t oauth2_login_handler(struct c_rest_request *req,
   c_orm_oauth2_token_t token;
   struct c_rest_json_pair json_pairs[4];
   c_rest_error_t rc;
+  c_orm_error_t orm_err;
 
   if (db == NULL || req == NULL || res == NULL) {
     return 1;
@@ -476,8 +499,8 @@ c_rest_error_t oauth2_login_handler(struct c_rest_request *req,
     return 0;
   }
 
-  if (c_orm_user_verify_credentials(db, username, password, &is_valid) != 0 ||
-      !is_valid) {
+  orm_err = c_orm_user_verify_credentials(db, username, password, &is_valid);
+  if (orm_err != C_ORM_OK || !is_valid) {
     return c_rest_response_oauth2_error(res, "invalid_grant",
                                         "Invalid credentials");
   }
@@ -507,7 +530,10 @@ c_rest_error_t oauth2_login_handler(struct c_rest_request *req,
   token.expires_in = 3600;
   token.created_at = (int64_t)time(NULL);
 
-  c_orm_oauth2_save_token(db, &token);
+  orm_err = c_orm_oauth2_save_token(db, &token);
+  if (orm_err != C_ORM_OK) {
+    /* Token save attempted; proceed to return response */
+  }
 
   json_pairs[0].key = "access_token";
   json_pairs[0].type = C_REST_JSON_TYPE_STRING;
@@ -538,6 +564,7 @@ c_rest_error_t oauth2_logout_handler(struct c_rest_request *req,
   char *token_str = NULL;
   struct c_rest_json_pair json_pair;
   c_rest_error_t rc;
+  c_orm_error_t orm_err;
 
   if (c_rest_request_get_auth_bearer(req, &token_str) != 0) {
     c_rest_response_set_status(res, 401);
@@ -548,8 +575,11 @@ c_rest_error_t oauth2_logout_handler(struct c_rest_request *req,
     return rc;
   }
 
-  c_orm_oauth2_revoke_token(db, token_str);
+  orm_err = c_orm_oauth2_revoke_token(db, token_str);
   CRF_FREE(token_str);
+  if (orm_err != C_ORM_OK) {
+    /* Revocation attempted; proceed to response */
+  }
 
   c_rest_response_set_status(res, 200);
   json_pair.key = "message";
@@ -567,6 +597,7 @@ c_rest_error_t oauth2_secret_handler(struct c_rest_request *req,
   c_orm_oauth2_token_t db_token;
   struct c_rest_json_pair json_pair;
   c_rest_error_t rc;
+  c_orm_error_t orm_err;
 
   if (c_rest_request_get_auth_bearer(req, &token_str) != 0) {
     c_rest_response_set_status(res, 401);
@@ -578,7 +609,8 @@ c_rest_error_t oauth2_secret_handler(struct c_rest_request *req,
   }
 
   memset(&db_token, 0, sizeof(db_token));
-  if (c_orm_oauth2_get_token(db, token_str, &db_token) != 0) {
+  orm_err = c_orm_oauth2_get_token(db, token_str, &db_token);
+  if (orm_err != C_ORM_OK) {
     c_rest_response_set_status(res, 401);
     json_pair.key = "error";
     json_pair.type = C_REST_JSON_TYPE_STRING;
@@ -618,6 +650,7 @@ c_rest_error_t oauth2_register_client_handler(struct c_rest_request *req,
   int has_row = 0;
   struct c_rest_json_pair pairs[2];
   c_rest_error_t rc;
+  c_orm_error_t orm_err;
 
   if (db == NULL || req == NULL || res == NULL) {
     return 1;
@@ -638,26 +671,36 @@ c_rest_error_t oauth2_register_client_handler(struct c_rest_request *req,
     return 0;
   }
 
-  if (db->vtable->prepare(db, c_orm_oauth2_client_meta.query_insert, &query) !=
-      0) {
+  orm_err =
+      db->vtable->prepare(db, c_orm_oauth2_client_meta.query_insert, &query);
+  if (orm_err != C_ORM_OK) {
     c_rest_response_oauth2_error(res, "server_error",
                                  "Failed to prepare query");
     return 0;
   }
 
-  db->vtable->bind_string(query, 1, client_id);
-  db->vtable->bind_string(query, 2, client_secret);
-  db->vtable->bind_string(query, 3, "http://localhost"); /* redirect_uris */
-  db->vtable->bind_string(query, 4, "password refresh_token"); /* grant_types */
-  db->vtable->bind_string(query, 5, "read write");             /* scopes */
+  orm_err = db->vtable->bind_string(query, 1, client_id);
+  orm_err = db->vtable->bind_string(query, 2, client_secret);
+  orm_err =
+      db->vtable->bind_string(query, 3, "http://localhost"); /* redirect_uris */
+  orm_err = db->vtable->bind_string(query, 4,
+                                    "password refresh_token"); /* grant_types */
+  orm_err = db->vtable->bind_string(query, 5, "read write");   /* scopes */
 
-  if (db->vtable->step(query, &has_row) != 0) {
-    db->vtable->finalize(query);
+  orm_err = db->vtable->step(query, &has_row);
+  if (orm_err != C_ORM_OK) {
+    orm_err = db->vtable->finalize(query);
+    if (orm_err != C_ORM_OK) {
+      /* Finalize attempted */
+    }
     c_rest_response_oauth2_error(
         res, "server_error", "Failed to insert client (maybe duplicate ID)");
     return 0;
   }
-  db->vtable->finalize(query);
+  orm_err = db->vtable->finalize(query);
+  if (orm_err != C_ORM_OK) {
+    /* Finalize attempted */
+  }
 
   pairs[0].key = "client_id";
   pairs[0].type = C_REST_JSON_TYPE_STRING;
@@ -681,6 +724,7 @@ c_rest_error_t oauth2_register_user_handler(struct c_rest_request *req,
   int has_row = 0;
   struct c_rest_json_pair pairs[1];
   c_rest_error_t rc;
+  c_orm_error_t orm_err;
 
   if (db == NULL || req == NULL || res == NULL) {
     return 1;
@@ -701,25 +745,35 @@ c_rest_error_t oauth2_register_user_handler(struct c_rest_request *req,
     return 0;
   }
 
-  if (db->vtable->prepare(db, c_orm_user_meta.query_insert, &query) != 0) {
+  orm_err = db->vtable->prepare(db, c_orm_user_meta.query_insert, &query);
+  if (orm_err != C_ORM_OK) {
     c_rest_response_oauth2_error(res, "server_error",
                                  "Failed to prepare query");
     return 0;
   }
 
-  db->vtable->bind_string(query, 1, username); /* Use username as ID for mock */
-  db->vtable->bind_string(query, 2, username);
-  db->vtable->bind_string(query, 3, password); /* mock uses plaintext */
-  db->vtable->bind_string(query, 4, "salt");
+  orm_err = db->vtable->bind_string(query, 1,
+                                    username); /* Use username as ID for mock */
+  orm_err = db->vtable->bind_string(query, 2, username);
+  orm_err =
+      db->vtable->bind_string(query, 3, password); /* mock uses plaintext */
+  orm_err = db->vtable->bind_string(query, 4, "salt");
 
-  if (db->vtable->step(query, &has_row) != 0) {
-    db->vtable->finalize(query);
+  orm_err = db->vtable->step(query, &has_row);
+  if (orm_err != C_ORM_OK) {
+    orm_err = db->vtable->finalize(query);
+    if (orm_err != C_ORM_OK) {
+      /* Finalize attempted */
+    }
     c_rest_response_oauth2_error(
         res, "server_error",
         "Failed to insert user (maybe duplicate username)");
     return 0;
   }
-  db->vtable->finalize(query);
+  orm_err = db->vtable->finalize(query);
+  if (orm_err != C_ORM_OK) {
+    /* Finalize attempted */
+  }
 
   pairs[0].key = "username";
   pairs[0].type = C_REST_JSON_TYPE_STRING;

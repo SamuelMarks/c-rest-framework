@@ -36,8 +36,10 @@
 
 static const struct c_rest_client_hooks *g_client_hooks = NULL;
 
-void c_rest_client_set_hooks(const struct c_rest_client_hooks *hooks) {
+c_rest_error_t
+c_rest_client_set_hooks(const struct c_rest_client_hooks *hooks) {
   g_client_hooks = hooks;
+  return C_REST_OK;
 }
 
 struct c_rest_client_context {
@@ -100,9 +102,7 @@ c_rest_error_t c_rest_client_init(c_rest_client_context **out_client) {
   struct c_rest_client_context *ctx;
 #ifdef C_REST_TESTING_MALLOC_HOOK
   enum c_abstract_http_error init_err;
-#if defined(__APPLE__)
-  enum c_abstract_http_error apple_err;
-#endif
+  enum c_abstract_http_error tr_err;
 #endif
   if (!out_client)
     return C_REST_ERROR_GENERIC;
@@ -126,17 +126,33 @@ c_rest_error_t c_rest_client_init(c_rest_client_context **out_client) {
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__)
 #if defined(_MSC_VER) && _MSC_VER < 1600
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  tr_err = (g_mock_client_fail == 2)
+               ? C_ABSTRACT_HTTP_ERR_NOMEM
+               : http_wininet_context_init(
+                     (struct HttpTransportContext **)&ctx->client.transport);
+  if (tr_err != C_ABSTRACT_HTTP_SUCCESS) {
+#else
   if (http_wininet_context_init(
           (struct HttpTransportContext **)&ctx->client.transport) !=
       C_ABSTRACT_HTTP_SUCCESS) {
+#endif
     C_REST_FREE(ctx);
     return C_REST_ERROR_GENERIC;
   }
   ctx->client.send = http_wininet_send;
 #else
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  tr_err = (g_mock_client_fail == 2)
+               ? C_ABSTRACT_HTTP_ERR_NOMEM
+               : http_winhttp_context_init(
+                     (struct HttpTransportContext **)&ctx->client.transport);
+  if (tr_err != C_ABSTRACT_HTTP_SUCCESS) {
+#else
   if (http_winhttp_context_init(
           (struct HttpTransportContext **)&ctx->client.transport) !=
       C_ABSTRACT_HTTP_SUCCESS) {
+#endif
     C_REST_FREE(ctx);
     return C_REST_ERROR_GENERIC;
   }
@@ -144,11 +160,11 @@ c_rest_error_t c_rest_client_init(c_rest_client_context **out_client) {
 #endif
 #elif defined(__APPLE__)
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  apple_err = (g_mock_client_fail == 2)
-                  ? C_ABSTRACT_HTTP_ERR_NOMEM
-                  : http_apple_context_init(
-                        (struct HttpTransportContext **)&ctx->client.transport);
-  if (apple_err != C_ABSTRACT_HTTP_SUCCESS) {
+  tr_err = (g_mock_client_fail == 2)
+               ? C_ABSTRACT_HTTP_ERR_NOMEM
+               : http_apple_context_init(
+                     (struct HttpTransportContext **)&ctx->client.transport);
+  if (tr_err != C_ABSTRACT_HTTP_SUCCESS) {
 #else
   if (http_apple_context_init(
           (struct HttpTransportContext **)&ctx->client.transport) !=
@@ -168,9 +184,17 @@ c_rest_error_t c_rest_client_init(c_rest_client_context **out_client) {
   ctx->client.send = http_wasm_send;
 #else
 #if !defined(CDD_DOS) && !defined(__EMSCRIPTEN__)
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  tr_err = (g_mock_client_fail == 2)
+               ? C_ABSTRACT_HTTP_ERR_NOMEM
+               : http_curl_context_init(
+                     (struct HttpTransportContext **)&ctx->client.transport);
+  if (tr_err != C_ABSTRACT_HTTP_SUCCESS) {
+#else
   if (http_curl_context_init(
           (struct HttpTransportContext **)&ctx->client.transport) !=
       C_ABSTRACT_HTTP_SUCCESS) {
+#endif
     C_REST_FREE(ctx);
     return C_REST_ERROR_GENERIC;
   }
@@ -203,16 +227,34 @@ c_rest_error_t c_rest_client_destroy(c_rest_client_context *client) {
 #ifdef C_REST_FRAMEWORK_USE_REAL_CAH
 #if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__)
 #if defined(_MSC_VER) && _MSC_VER < 1600
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  cah_rc = (g_mock_client_fail == 14)
+               ? C_ABSTRACT_HTTP_ERR_INVAL
+               : http_wininet_context_free(client->client.transport);
+#else
   cah_rc = http_wininet_context_free(client->client.transport);
+#endif
   if (cah_rc != C_ABSTRACT_HTTP_SUCCESS)
     return C_REST_ERROR_GENERIC;
 #else
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  cah_rc = (g_mock_client_fail == 14)
+               ? C_ABSTRACT_HTTP_ERR_INVAL
+               : http_winhttp_context_free(client->client.transport);
+#else
   cah_rc = http_winhttp_context_free(client->client.transport);
+#endif
   if (cah_rc != C_ABSTRACT_HTTP_SUCCESS)
     return C_REST_ERROR_GENERIC;
 #endif
 #elif defined(__APPLE__)
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  cah_rc = (g_mock_client_fail == 14)
+               ? C_ABSTRACT_HTTP_ERR_INVAL
+               : http_apple_context_free(client->client.transport);
+#else
   cah_rc = http_apple_context_free(client->client.transport);
+#endif
   if (cah_rc != C_ABSTRACT_HTTP_SUCCESS)
     return C_REST_ERROR_GENERIC;
 #elif defined(__EMSCRIPTEN__)
@@ -221,14 +263,25 @@ c_rest_error_t c_rest_client_destroy(c_rest_client_context *client) {
     return C_REST_ERROR_GENERIC;
 #else
 #if !defined(CDD_DOS) && !defined(__EMSCRIPTEN__)
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  cah_rc = (g_mock_client_fail == 14)
+               ? C_ABSTRACT_HTTP_ERR_INVAL
+               : http_curl_context_free(client->client.transport);
+#else
   cah_rc = http_curl_context_free(client->client.transport);
+#endif
   if (cah_rc != C_ABSTRACT_HTTP_SUCCESS)
     return C_REST_ERROR_GENERIC;
 #endif
 #endif
 #endif
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  cah_rc2 = (g_mock_client_fail == 15) ? C_ABSTRACT_HTTP_ERR_INVAL
+                                       : http_client_free(&client->client);
+#else
   cah_rc2 = http_client_free(&client->client);
+#endif
   if (cah_rc2 != C_ABSTRACT_HTTP_SUCCESS)
     return C_REST_ERROR_GENERIC;
   C_REST_FREE((void *)(client));
@@ -368,14 +421,24 @@ c_rest_error_t c_rest_client_request_sync(
 
   if (res) {
     cah_rc = http_response_free(res);
-    if (cah_rc != C_ABSTRACT_HTTP_SUCCESS)
+#ifdef C_REST_TESTING_MALLOC_HOOK
+    if (g_mock_client_fail == 16)
+      cah_rc = C_ABSTRACT_HTTP_ERR_INVAL;
+#endif
+    if (cah_rc != C_ABSTRACT_HTTP_SUCCESS) {
+      C_REST_FREE((void *)(res));
       return C_REST_ERROR_GENERIC;
+    }
     C_REST_FREE((void *)(res));
   }
 
   req.url = NULL;
   req.body = NULL;
   cah_rc_req = http_request_free(&req);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_client_fail == 17)
+    cah_rc_req = C_ABSTRACT_HTTP_ERR_INVAL;
+#endif
   if (cah_rc_req != C_ABSTRACT_HTTP_SUCCESS)
     return C_REST_ERROR_GENERIC;
 
@@ -512,8 +575,9 @@ c_rest_error_t c_rest_client_url_decode(const char *in_str, char **out_str) {
       out[j++] = ' ';
     } else if (in_str[i] == '%' && i + 2 < len) {
       int h1, h2;
-      if (from_hex(in_str[i + 1], &h1) == C_REST_OK &&
-          from_hex(in_str[i + 2], &h2) == C_REST_OK) {
+      c_rest_error_t rc1 = from_hex(in_str[i + 1], &h1);
+      c_rest_error_t rc2 = from_hex(in_str[i + 2], &h2);
+      if (rc1 == C_REST_OK && rc2 == C_REST_OK) {
         out[j++] = (char)((h1 << 4) | h2);
         i += 2;
       } else {
@@ -550,14 +614,17 @@ c_rest_error_t c_rest_client_build_form_urlencoded(
     char *eval = NULL;
     size_t key_len = 0;
     size_t val_len = 0;
+    c_rest_error_t enc_rc;
 
     if (fields[i].key) {
-      if (c_rest_client_url_encode(fields[i].key, &ekey) == 0) {
+      enc_rc = c_rest_client_url_encode(fields[i].key, &ekey);
+      if (enc_rc == C_REST_OK) {
         key_len = strlen(ekey);
       }
     }
     if (fields[i].value) {
-      if (c_rest_client_url_encode(fields[i].value, &eval) == 0) {
+      enc_rc = c_rest_client_url_encode(fields[i].value, &eval);
+      if (enc_rc == C_REST_OK) {
         val_len = strlen(eval);
       }
     }
@@ -756,9 +823,9 @@ c_rest_error_t c_rest_client_parse_form_urlencoded(
 
     if (ekey) {
       rc = c_rest_client_url_decode(ekey, (char **)&fields[i].key);
-      C_REST_FREE((void *)(ekey));
       if (rc != C_REST_OK) {
         c_rest_error_t free_rc;
+        C_REST_FREE((void *)(ekey));
         if (eval)
           C_REST_FREE((void *)(eval));
         free_rc = c_rest_client_form_fields_free(fields, count);
@@ -766,16 +833,19 @@ c_rest_error_t c_rest_client_parse_form_urlencoded(
           return free_rc;
         return rc;
       }
+      C_REST_FREE((void *)(ekey));
     }
     if (eval) {
       rc = c_rest_client_url_decode(eval, (char **)&fields[i].value);
-      C_REST_FREE((void *)(eval));
       if (rc != C_REST_OK) {
-        c_rest_error_t free_rc = c_rest_client_form_fields_free(fields, count);
+        c_rest_error_t free_rc;
+        C_REST_FREE((void *)(eval));
+        free_rc = c_rest_client_form_fields_free(fields, count);
         if (free_rc != C_REST_OK)
           return free_rc;
         return rc;
       }
+      C_REST_FREE((void *)(eval));
     }
 
     if (*amp != '\0') {
@@ -932,12 +1002,13 @@ c_rest_error_t c_rest_client_build_auth_basic(const char *username,
 #else
   rc = c_rest_base64_encode((unsigned char *)concat, clen, b64, &b64_len);
 #endif
-  b64[b64_len] = '\0';
-  C_REST_FREE((void *)(concat));
   if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(concat));
     C_REST_FREE((void *)(b64));
     return rc;
   }
+  b64[b64_len] = '\0';
+  C_REST_FREE((void *)(concat));
 
   hlen = 6 + b64_len + 1; /* "Basic " + b64 + null */
   *out_header = (char *)CRF_MALLOC(hlen);

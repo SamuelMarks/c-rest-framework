@@ -11,9 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-
 #include <string.h>
-#include <signal.h>
 /* clang-format on */
 
 static struct c_rest_context *g_ctx = NULL;

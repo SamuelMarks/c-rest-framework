@@ -119,6 +119,8 @@ int main(int argc, char **argv) {
     fflush(stdout);                                                            \
     {                                                                          \
       int res = (call);                                                        \
+      if (res != 0)                                                            \
+        printf("SUITE FAILED: " name " (res=%d)\n", res);                      \
       failed += res;                                                           \
     }                                                                          \
   } while (0)

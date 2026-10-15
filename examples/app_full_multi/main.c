@@ -59,7 +59,8 @@ static c_rest_error_t upload_handler(struct c_rest_request *req,
   c_rest_multipart_parser *parser = NULL;
   struct c_rest_multipart_callbacks callbacks = {0};
   size_t parsed = 0;
-  c_rest_error_t parse_res = 0;
+  c_rest_error_t parse_res = C_REST_OK;
+  c_rest_error_t destroy_res = C_REST_OK;
   (void)ctx;
 
   callbacks.on_part_begin = on_part_begin;
@@ -72,8 +73,9 @@ static c_rest_error_t upload_handler(struct c_rest_request *req,
 
   /* In a real app, you would parse the boundary from the Content-Type header.
    */
-  if (c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL) ==
-      C_REST_OK) {
+  parse_res =
+      c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  if (parse_res == C_REST_OK) {
     if (req->body && req->body_len > 0) {
       parse_res = c_rest_multipart_parser_execute(parser, req->body,
                                                   req->body_len, &parsed);
@@ -81,9 +83,9 @@ static c_rest_error_t upload_handler(struct c_rest_request *req,
         printf("[Multipart] Failed to parse multipart data.\n");
       }
     }
-    parse_res = c_rest_multipart_parser_destroy(parser);
-    if (parse_res != C_REST_OK) {
-      return parse_res;
+    destroy_res = c_rest_multipart_parser_destroy(parser);
+    if (destroy_res != C_REST_OK) {
+      return destroy_res;
     }
   }
 

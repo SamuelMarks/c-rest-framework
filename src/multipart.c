@@ -87,6 +87,7 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
   size_t i = 0;
   size_t mark = 0;
   char c;
+  c_rest_error_t cb_rc;
 
   if (!out_parsed)
     return C_REST_ERROR_GENERIC;
@@ -123,7 +124,9 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
     case s_header_field_start:
       if (c == LF) {
         if (parser->callbacks.on_part_begin) {
-          parser->callbacks.on_part_begin(parser);
+          cb_rc = parser->callbacks.on_part_begin(parser);
+          if (cb_rc != C_REST_OK)
+            return cb_rc;
         }
         parser->state = s_header_field;
         mark = i + 1;
@@ -136,7 +139,10 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
         parser->state = s_headers_almost_done;
       } else if (c == ':') {
         if (parser->callbacks.on_header_field && i > mark) {
-          parser->callbacks.on_header_field(parser, data + mark, i - mark);
+          cb_rc =
+              parser->callbacks.on_header_field(parser, data + mark, i - mark);
+          if (cb_rc != C_REST_OK)
+            return cb_rc;
         }
         parser->state = s_header_value_start;
       }
@@ -144,7 +150,9 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
     case s_headers_almost_done:
       if (c == LF) {
         if (parser->callbacks.on_headers_complete) {
-          parser->callbacks.on_headers_complete(parser);
+          cb_rc = parser->callbacks.on_headers_complete(parser);
+          if (cb_rc != C_REST_OK)
+            return cb_rc;
         }
         parser->state = s_part_data_start;
       } else {
@@ -163,7 +171,10 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
     case s_header_value:
       if (c == CR) {
         if (parser->callbacks.on_header_value && i > mark) {
-          parser->callbacks.on_header_value(parser, data + mark, i - mark);
+          cb_rc =
+              parser->callbacks.on_header_value(parser, data + mark, i - mark);
+          if (cb_rc != C_REST_OK)
+            return cb_rc;
         }
         parser->state = s_header_value_almost_done;
       }
@@ -183,7 +194,9 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
     case s_part_data:
       if (c == CR) {
         if (parser->callbacks.on_part_data && i > mark) {
-          parser->callbacks.on_part_data(parser, data + mark, i - mark);
+          cb_rc = parser->callbacks.on_part_data(parser, data + mark, i - mark);
+          if (cb_rc != C_REST_OK)
+            return cb_rc;
         }
         parser->state = s_part_data_almost_boundary;
       }
@@ -194,7 +207,9 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
         parser->boundary_match_index = 0;
       } else {
         if (parser->callbacks.on_part_data) {
-          parser->callbacks.on_part_data(parser, "\\r", 1);
+          cb_rc = parser->callbacks.on_part_data(parser, "\r", 1);
+          if (cb_rc != C_REST_OK)
+            return cb_rc;
         }
         parser->state = s_part_data;
         mark = i;
@@ -207,7 +222,9 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
           parser->boundary_match_index++;
         } else {
           if (parser->callbacks.on_part_data) {
-            parser->callbacks.on_part_data(parser, "\\r\\n", 2);
+            cb_rc = parser->callbacks.on_part_data(parser, "\r\n", 2);
+            if (cb_rc != C_REST_OK)
+              return cb_rc;
           }
           parser->state = s_part_data;
           mark = i;
@@ -218,7 +235,9 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
           parser->boundary_match_index++;
         } else {
           if (parser->callbacks.on_part_data) {
-            parser->callbacks.on_part_data(parser, "\\r\\n-", 3);
+            cb_rc = parser->callbacks.on_part_data(parser, "\r\n-", 3);
+            if (cb_rc != C_REST_OK)
+              return cb_rc;
           }
           parser->state = s_part_data;
           mark = i;
@@ -229,10 +248,14 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
           parser->boundary_match_index++;
         } else {
           if (parser->callbacks.on_part_data) {
-            parser->callbacks.on_part_data(parser, "\\r\\n--", 4);
+            cb_rc = parser->callbacks.on_part_data(parser, "\r\n--", 4);
+            if (cb_rc != C_REST_OK)
+              return cb_rc;
             if (parser->boundary_match_index > 2) {
-              parser->callbacks.on_part_data(parser, parser->boundary,
-                                             parser->boundary_match_index - 2);
+              cb_rc = parser->callbacks.on_part_data(
+                  parser, parser->boundary, parser->boundary_match_index - 2);
+              if (cb_rc != C_REST_OK)
+                return cb_rc;
             }
           }
           parser->state = s_part_data;
@@ -242,7 +265,9 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
       } else {
         if (c == CR) {
           if (parser->callbacks.on_part_end) {
-            parser->callbacks.on_part_end(parser);
+            cb_rc = parser->callbacks.on_part_end(parser);
+            if (cb_rc != C_REST_OK)
+              return cb_rc;
           }
           parser->state = s_header_field_start;
         } else if (c == '-') {
@@ -262,10 +287,14 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
     case s_end:
       if (c == CR) {
         if (parser->callbacks.on_part_end) {
-          parser->callbacks.on_part_end(parser);
+          cb_rc = parser->callbacks.on_part_end(parser);
+          if (cb_rc != C_REST_OK)
+            return cb_rc;
         }
         if (parser->callbacks.on_body_end) {
-          parser->callbacks.on_body_end(parser);
+          cb_rc = parser->callbacks.on_body_end(parser);
+          if (cb_rc != C_REST_OK)
+            return cb_rc;
         }
         parser->state = s_epilogue;
       } else {
@@ -281,7 +310,9 @@ c_rest_error_t c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
 
   if (parser->state == s_part_data && mark < len) {
     if (parser->callbacks.on_part_data) {
-      parser->callbacks.on_part_data(parser, data + mark, len - mark);
+      cb_rc = parser->callbacks.on_part_data(parser, data + mark, len - mark);
+      if (cb_rc != C_REST_OK)
+        return cb_rc;
     }
   }
 

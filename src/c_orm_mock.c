@@ -126,14 +126,12 @@ c_rest_error_t mock_c_rest_socket_accept(c_rest_socket_t server,
 c_rest_error_t mock_c_rest_thread_create(c_rest_thread_t *thread,
                                          c_rest_error_t (*func)(void *),
                                          void *arg) {
-
   if (g_mock_socket_fail > 0) {
     if (g_mock_socket_fail == 13)
       return C_REST_ERROR_GENERIC;
     if (g_mock_socket_fail == 113)
       return C_REST_ERROR_GENERIC;
-    func(arg);
-    return C_REST_OK;
+    return func(arg);
   }
   return c_rest_thread_create(thread, func, arg);
 }

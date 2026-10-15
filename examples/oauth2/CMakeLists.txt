@@ -116,8 +116,10 @@ if(OAUTH2_BUILD_TESTS AND BUILD_TESTING)
     FetchContent_MakeAvailable(greatest)
 
     set(RUNNER_OAUTH2_SRC "${CMAKE_CURRENT_BINARY_DIR}/runner_oauth2.c")
-    file(WRITE "${RUNNER_OAUTH2_SRC}"
+    if(NOT EXISTS "${RUNNER_OAUTH2_SRC}")
+        file(WRITE "${RUNNER_OAUTH2_SRC}"
 "/* clang-format off */\n#include \"greatest.h\"\n#include <stdlib.h>\n/* clang-format on */\nSUITE_EXTERN(oauth2_suite);\nGREATEST_MAIN_DEFS();\n#if defined(__EMSCRIPTEN__)\nextern void emscripten_force_exit(int status);\n#endif\nint main(int argc, char **argv) {\n  int greatest_passed = 0;\n  GREATEST_MAIN_BEGIN();\n  RUN_SUITE(oauth2_suite);\n  GREATEST_PRINT_REPORT();\n  greatest_all_passed(&greatest_passed);\n#if defined(__EMSCRIPTEN__)\n  emscripten_force_exit(greatest_passed ? 0 : 1);\n#endif\n  return (greatest_passed ? EXIT_SUCCESS : EXIT_FAILURE);\n}\n")
+    endif()
     add_executable(oauth2_tests tests/test_oauth2.c "${RUNNER_OAUTH2_SRC}")
     target_include_directories(oauth2_tests PRIVATE ${greatest_SOURCE_DIR})
     target_link_libraries(oauth2_tests PRIVATE oauth2_example_static)

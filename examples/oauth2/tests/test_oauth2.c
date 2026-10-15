@@ -592,8 +592,11 @@ static c_rest_error_t clear_test_req(struct c_rest_request *req) {
     req->headers = NULL;
     req->body = NULL;
     rc = c_rest_request_cleanup(req);
+    if (rc != C_REST_OK) {
+      memset(req, 0, sizeof(*req));
+      return rc;
+    }
     memset(req, 0, sizeof(*req));
-    return rc;
   }
   return C_REST_OK;
 }

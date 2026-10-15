@@ -290,7 +290,7 @@ static c_rest_error_t basic_execute(c_rest_parser_context *ctx,
             cmp_rc = c_rest_strcasecmp(st->key_buf, "Connection", &cmp_conn);
             if (cmp_rc == C_REST_OK && cmp_conn == 0) {
               cmp_rc = c_rest_strcasecmp(v, "close", &cmp_close);
-              if (cmp_close == 0)
+              if (cmp_rc == C_REST_OK && cmp_close == 0)
                 st->keep_alive = 0;
             }
           }

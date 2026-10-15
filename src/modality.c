@@ -3,10 +3,18 @@
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
 #include "c_rest_modality.h"
+#include "c_rest_parser.h"
+#include "c_rest_request.h"
+#include "c_rest_response.h"
+#include "c_rest_router.h"
+#include "c_rest_str_utils.h"
+#include "c_rest_export.h"
+#include "c_rest_log.h"
 
 #include <stdlib.h>
-#include "c_rest_log.h"
 #include <stdio.h>
+#include <string.h>
+/* clang-format on */
 
 C_REST_EXPORT extern const struct c_rest_modality_vtable sync_vtable;
 C_REST_EXPORT extern const struct c_rest_modality_vtable single_thread_vtable;
@@ -54,8 +62,9 @@ static c_rest_error_t dummy_stop(struct c_rest_context *ctx) {
 static const struct c_rest_modality_vtable dummy_vtable = {
     dummy_init, dummy_destroy, dummy_run, dummy_stop};
 
-static c_rest_error_t get_vtable(enum c_rest_modality_type type,
-                      const struct c_rest_modality_vtable **out_vtable) {
+static c_rest_error_t
+get_vtable(enum c_rest_modality_type type,
+           const struct c_rest_modality_vtable **out_vtable) {
   switch (type) {
   case C_REST_MODALITY_SYNC:
     *out_vtable = &sync_vtable;
@@ -90,7 +99,7 @@ static c_rest_error_t get_vtable(enum c_rest_modality_type type,
 }
 
 c_rest_error_t c_rest_init(enum c_rest_modality_type type,
-                struct c_rest_context **out_ctx) {
+                           struct c_rest_context **out_ctx) {
   struct c_rest_context *ctx;
   const struct c_rest_modality_vtable *vtable;
   c_rest_error_t res;
@@ -111,13 +120,15 @@ c_rest_error_t c_rest_init(enum c_rest_modality_type type,
   }
 #endif
 
-
   res = get_vtable(type, &vtable);
   if (res != C_REST_OK) {
     return res;
   }
 
-  if (C_REST_MALLOC(sizeof(struct c_rest_context), &ctx) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); ctx = NULL; }
+  if (C_REST_MALLOC(sizeof(struct c_rest_context), &ctx) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    ctx = NULL;
+  }
   if (!ctx) {
     return C_REST_ERROR_GENERIC; /* Out of memory */
   }
@@ -152,7 +163,8 @@ c_rest_error_t c_rest_init(enum c_rest_modality_type type,
 
 #ifdef C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART
   ctx->hot_reload_ctx = NULL;
-  /* c_rest_hot_reload_init is left for the user to explicitly call if they want it. */
+  /* c_rest_hot_reload_init is left for the user to explicitly call if they want
+   * it. */
 #endif
 
   res = ctx->vtable->init(ctx);
@@ -261,7 +273,8 @@ c_rest_error_t c_rest_destroy(struct c_rest_context *ctx) {
 }
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
-c_rest_error_t c_rest_set_multiplatform_env(struct c_rest_context *ctx, cm_env_t env) {
+c_rest_error_t c_rest_set_multiplatform_env(struct c_rest_context *ctx,
+                                            cm_env_t env) {
   struct cm_allocator alloc;
   struct cm_logger logger;
 
@@ -283,21 +296,12 @@ c_rest_error_t c_rest_set_multiplatform_env(struct c_rest_context *ctx, cm_env_t
 #endif
 
 c_rest_error_t c_rest_set_router(struct c_rest_context *ctx,
-                      struct c_rest_router *router) {
+                                 struct c_rest_router *router) {
   if (!ctx)
     return C_REST_ERROR_GENERIC;
   ctx->router = router;
   return C_REST_OK;
 }
-
-#include "c_rest_parser.h"
-#include "c_rest_request.h"
-#include "c_rest_response.h"
-#include "c_rest_router.h"
-#include "c_rest_str_utils.h"
-#include <string.h>
-#include "c_rest_export.h"
-/* clang-format on */
 
 struct connection_state {
   struct c_rest_request req;

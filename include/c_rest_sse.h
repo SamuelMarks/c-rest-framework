@@ -128,8 +128,6 @@ c_rest_sse_send_event(struct c_rest_response *res,
 C_REST_EXPORT extern c_rest_error_t
 c_rest_sse_send_keepalive(struct c_rest_response *res);
 
-/* __cplusplus */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

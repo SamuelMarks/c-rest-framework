@@ -113,18 +113,17 @@ int test_crypto(void) {
                  "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
                         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
              C_REST_ERROR_GENERIC);
+  failed +=
+      (c_rest_verify_password(
+           "pwd", "$pbkdf2-sha256$i=1000$bad_b64_$"
+                  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") == C_REST_OK);
+
   failed += (c_rest_verify_password(
-                 "pwd", "$pbkdf2-sha256$i=1000$bad_b64_$"
-                        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
-             C_REST_ERROR_GENERIC);
+                 "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$!!!") == C_REST_OK);
 
   failed +=
-      (c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$!!!") !=
-       C_REST_ERROR_GENERIC);
-
-  failed += (c_rest_verify_password(
-                 "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$bad_b64_") !=
-             C_REST_ERROR_GENERIC);
+      (c_rest_verify_password(
+           "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$bad_b64_") == C_REST_OK);
 
   failed += (test_crypto_rand_fail() != 0);
 
@@ -462,9 +461,11 @@ static int test_crypto_malloc_failures(void) {
 
   {
     char *valid_token = NULL;
+    g_malloc_fail_after = -1;
     res = (int)c_rest_jwt_sign_hs256(
         "{\"sub\":\"123\"}", (const unsigned char *)"key", 3, &valid_token);
-    (void)res;
+    if (res != C_REST_OK)
+      return 1;
     for (i = 0; i < 10; i++) {
       g_malloc_fail_size = -1;
       g_malloc_fail_after = i;

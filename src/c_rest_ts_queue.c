@@ -153,8 +153,8 @@ c_rest_error_t c_rest_ts_queue_pop(c_rest_ts_queue *queue, void **out_data) {
   }
 
   if (queue->size == 0) {
-    rc = c_rest_mutex_unlock(queue->mutex);
     *out_data = NULL;
+    rc = c_rest_mutex_unlock(queue->mutex);
     if (rc != C_REST_OK)
       return rc;
     return C_REST_ERROR_GENERIC;

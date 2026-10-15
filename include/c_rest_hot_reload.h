@@ -5,8 +5,6 @@
 #ifndef C_REST_HOT_RELOAD_H
 #define C_REST_HOT_RELOAD_H
 /* clang-format off */
-#include "c_rest_error.h"
-
 #include <stddef.h>
 #include "c_rest_error.h"
 #include "c_rest_modality.h"
@@ -19,8 +17,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* __cplusplus */
 
 /**
  * \file c_rest_hot_reload.h
@@ -42,7 +38,7 @@ typedef struct c_rest_hot_reload_ctx c_rest_hot_reload_ctx_t;
  * \param user_data User-provided data pointer.
  * \return 0 on success, non-zero error code otherwise.
  */
-typedef int (*c_rest_hot_reload_callback_t)(void *user_data);
+typedef c_rest_error_t (*c_rest_hot_reload_callback_t)(void *user_data);
 
 /**
  * \brief Initialize a new hot reload context.
@@ -118,8 +114,6 @@ struct c_rest_router;
 C_REST_EXPORT extern c_rest_error_t
 c_rest_hot_reload_register_routes(struct c_rest_router *router,
                                   const char *path);
-
-/* __cplusplus */
 
 #ifdef __cplusplus
 }

@@ -13,8 +13,6 @@
 extern "C" {
 #endif
 
-/* __cplusplus */
-
 /**
  * @file c_rest_http23.h
  * @brief HTTP/2 and HTTP/3 Support module.
@@ -108,8 +106,6 @@ C_REST_EXPORT extern c_rest_error_t
 c_rest_http23_format_response(c_rest_http23_ctx_t *ctx,
                               struct c_rest_response *response,
                               char **out_buffer, size_t *out_len);
-
-/* __cplusplus */
 
 #ifdef __cplusplus
 }

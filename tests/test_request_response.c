@@ -206,15 +206,6 @@ static int test_coverage(void) {
     c_rest_response_write_chunk(&res_c, NULL, 0);
   }
 
-  {
-    struct c_rest_response res_c = {0};
-    res_c.body = "test";
-    res_c.body_len = 0;
-    (void)res_c;
-    /* To test body_len == 0 but body != NULL, although c_rest_response_send
-     * handles this. */
-  }
-
   c_rest_response_send_file(NULL, "file");
   {
     struct c_rest_response res_f = {0};

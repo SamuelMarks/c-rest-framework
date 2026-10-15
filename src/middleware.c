@@ -269,7 +269,8 @@ c_rest_error_t c_rest_oauth2_middleware(struct c_rest_request *req,
     return C_REST_ERROR_GENERIC;
   }
 
-  if (verify_fn(token, &auth_ctx) != C_REST_OK) {
+  rc = verify_fn(token, &auth_ctx);
+  if (rc != C_REST_OK) {
     C_REST_FREE((void *)(token));
     rc = c_rest_response_set_status(res, 401);
     if (rc != C_REST_OK)

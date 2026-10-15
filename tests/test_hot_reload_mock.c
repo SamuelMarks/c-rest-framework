@@ -56,9 +56,9 @@ static c_rest_error_t fail_logger_cb_countdown(const char *msg) {
   return C_REST_OK;
 }
 
-static int dummy_on_reload(void *user_data) {
+static c_rest_error_t dummy_on_reload(void *user_data) {
   (void)user_data;
-  return 0;
+  return C_REST_OK;
 }
 
 TEST test_watcher_thread_func_poll_fail(void) {

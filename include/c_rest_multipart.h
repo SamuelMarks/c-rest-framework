@@ -5,8 +5,6 @@
 #ifndef C_REST_MULTIPART_H
 #define C_REST_MULTIPART_H
 /* clang-format off */
-#include "c_rest_error.h"
-
 #include <stddef.h>
 #include "c_rest_error.h"
 #include "c_rest_export.h"
@@ -83,8 +81,6 @@ c_rest_multipart_parser_get_user_data(c_rest_multipart_parser *parser,
                                       void **out_user_data);
 
 #endif /* C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING */
-
-/* __cplusplus */
 
 #ifdef __cplusplus
 }

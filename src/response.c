@@ -130,9 +130,9 @@ c_rest_error_t c_rest_response_check_etag(struct c_rest_request *req,
   rc = c_rest_request_get_header(req, "If-None-Match", &if_none_match);
   if (rc == C_REST_OK) {
     if (strcmp(if_none_match, etag) == 0) {
-      rc = c_rest_response_set_status(res, 304);
-      if (rc != C_REST_OK)
-        return rc;
+      c_rest_error_t s_rc = c_rest_response_set_status(res, 304);
+      if (s_rc != C_REST_OK)
+        return s_rc;
       return C_REST_ERROR_GENERIC; /* Match found */
     }
   }
@@ -361,8 +361,12 @@ c_rest_error_t c_rest_response_json_dict(struct c_rest_response *res,
   }
 
   rc = c_rest_response_json_obj(res, root_val);
+  if (rc != C_REST_OK) {
+    json_value_free(root_val);
+    return rc;
+  }
   json_value_free(root_val);
-  return rc;
+  return C_REST_OK;
 }
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
@@ -379,8 +383,12 @@ c_rest_response_template(struct c_rest_response *res,
   if (rc != C_REST_OK)
     return rc;
   rc = c_rest_response_html(res, rendered);
+  if (rc != C_REST_OK) {
+    C_REST_FREE(rendered);
+    return rc;
+  }
   C_REST_FREE(rendered);
-  return rc;
+  return C_REST_OK;
 }
 #endif /* C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING */
 

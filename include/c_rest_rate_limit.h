@@ -5,8 +5,6 @@
 #ifndef C_REST_RATE_LIMIT_H
 #define C_REST_RATE_LIMIT_H
 /* clang-format off */
-#include "c_rest_error.h"
-
 #include "c_rest_hashmap.h"
 #include "c_rest_platform.h"
 #include <stddef.h>
@@ -86,8 +84,6 @@ c_rest_rate_limiter_check(c_rest_rate_limiter *limiter, const char *identifier,
  */
 C_REST_EXPORT extern c_rest_error_t
 c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter);
-
-/* __cplusplus */
 
 #ifdef __cplusplus
 }

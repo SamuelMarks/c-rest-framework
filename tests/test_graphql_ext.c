@@ -1,1 +1,3 @@
-/* Just putting content in test_graphql.c */
+/* clang-format off */
+/* Intentionally empty placeholder for extended GraphQL tests */
+/* clang-format on */

@@ -3,16 +3,19 @@
 #include "c_rest_mem.h"
 #include "c_rest_request.h"
 #include "c_rest_str_utils.h"
+#include "c_rest_base64.h"
 #include "c_rest_testing_mocks.h"
+#include "c_rest_log.h"
 #include <parson.h>
 
 #include <stdlib.h>
 #include <string.h>
-#include "c_rest_log.h"
-
 #include <ctype.h>
-c_rest_error_t c_rest_request_get_header(struct c_rest_request *req, const char *key,
-                              const char **out_value) {
+/* clang-format on */
+
+c_rest_error_t c_rest_request_get_header(struct c_rest_request *req,
+                                         const char *key,
+                                         const char **out_value) {
   struct c_rest_header *h;
   if (!req || !key || !out_value) {
     return C_REST_ERROR_GENERIC;
@@ -21,7 +24,8 @@ c_rest_error_t c_rest_request_get_header(struct c_rest_request *req, const char 
     int cmp;
     c_rest_error_t rc;
     rc = c_rest_strcasecmp(h->key, key, &cmp);
-    if (rc != C_REST_OK) return rc;
+    if (rc != C_REST_OK)
+      return rc;
     if (cmp == 0) {
       *out_value = h->value;
       return C_REST_OK;
@@ -67,27 +71,37 @@ static c_rest_error_t parse_cookies_if_needed(struct c_rest_request *req) {
         if (!eq || eq > semi) {
           /* Invalid cookie format, skip to next */
           p = semi;
-          if (*p == ';') p++;
+          if (*p == ';')
+            p++;
         } else {
           key_len = (size_t)(eq - p);
           val_len = (size_t)(semi - eq - 1);
 
-          if (C_REST_MALLOC(sizeof(struct c_rest_header), &cp) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp = NULL; }
+          if (C_REST_MALLOC(sizeof(struct c_rest_header), &cp) != 0) {
+            LOG_DEBUG("C_REST_MALLOC failed");
+            cp = NULL;
+          }
           if (cp) {
-            if (C_REST_MALLOC(key_len + 1, &cp->key) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp->key = NULL; }
-            if (C_REST_MALLOC(val_len + 1, &cp->value) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); cp->value = NULL; }
+            if (C_REST_MALLOC(key_len + 1, &cp->key) != 0) {
+              LOG_DEBUG("C_REST_MALLOC failed");
+              cp->key = NULL;
+            }
+            if (C_REST_MALLOC(val_len + 1, &cp->value) != 0) {
+              LOG_DEBUG("C_REST_MALLOC failed");
+              cp->value = NULL;
+            }
             if (cp->key && cp->value) {
-              #if defined(_MSC_VER)
+#if defined(_MSC_VER)
               /* CDD_SAFE_CRT */ memcpy_s(cp->key, key_len, p, key_len);
-              #else
+#else
               memcpy(cp->key, p, key_len);
-              #endif
+#endif
               cp->key[key_len] = '\0';
-              #if defined(_MSC_VER)
+#if defined(_MSC_VER)
               /* CDD_SAFE_CRT */ memcpy_s(cp->value, val_len, eq + 1, val_len);
-              #else
+#else
               memcpy(cp->value, eq + 1, val_len);
-              #endif
+#endif
               cp->value[val_len] = '\0';
 
               cp->next = req->cookies;
@@ -109,15 +123,17 @@ static c_rest_error_t parse_cookies_if_needed(struct c_rest_request *req) {
   return C_REST_OK;
 }
 
-c_rest_error_t c_rest_request_get_cookie(struct c_rest_request *req, const char *key,
-                              const char **out_value) {
+c_rest_error_t c_rest_request_get_cookie(struct c_rest_request *req,
+                                         const char *key,
+                                         const char **out_value) {
   struct c_rest_header *cp;
   c_rest_error_t rc;
   if (!req || !key || !out_value) {
     return C_REST_ERROR_GENERIC;
   }
   rc = parse_cookies_if_needed(req);
-  if (rc != C_REST_OK) return rc;
+  if (rc != C_REST_OK)
+    return rc;
   for (cp = req->cookies; cp != NULL; cp = cp->next) {
     if (strcmp(cp->key, key) == 0) {
       *out_value = cp->value;
@@ -222,8 +238,9 @@ static c_rest_error_t parse_query_if_needed(struct c_rest_request *req) {
   return C_REST_OK;
 }
 
-c_rest_error_t c_rest_request_get_query(struct c_rest_request *req, const char *key,
-                             const char **out_value) {
+c_rest_error_t c_rest_request_get_query(struct c_rest_request *req,
+                                        const char *key,
+                                        const char **out_value) {
   struct c_rest_header *qp;
 
   c_rest_error_t rc;
@@ -232,7 +249,8 @@ c_rest_error_t c_rest_request_get_query(struct c_rest_request *req, const char *
   }
 
   rc = parse_query_if_needed(req);
-  if (rc != C_REST_OK) return rc;
+  if (rc != C_REST_OK)
+    return rc;
 
   for (qp = req->query_params; qp != NULL; qp = qp->next) {
     if (strcmp(qp->key, key) == 0) {
@@ -343,8 +361,9 @@ c_rest_error_t c_rest_request_parse_urlencoded(struct c_rest_request *req) {
   return C_REST_OK;
 }
 
-c_rest_error_t c_rest_request_get_form_param(struct c_rest_request *req, const char *key,
-                                  const char **out_value) {
+c_rest_error_t c_rest_request_get_form_param(struct c_rest_request *req,
+                                             const char *key,
+                                             const char **out_value) {
   c_rest_error_t rc;
   struct c_rest_header *qp;
 
@@ -353,7 +372,8 @@ c_rest_error_t c_rest_request_get_form_param(struct c_rest_request *req, const c
   }
 
   rc = c_rest_request_parse_urlencoded(req);
-  if (rc != C_REST_OK) return rc;
+  if (rc != C_REST_OK)
+    return rc;
 
   for (qp = req->form_params; qp != NULL; qp = qp->next) {
     if (strcmp(qp->key, key) == 0) {
@@ -366,7 +386,7 @@ c_rest_error_t c_rest_request_get_form_param(struct c_rest_request *req, const c
 }
 
 c_rest_error_t c_rest_request_read_body(struct c_rest_request *req, char **body,
-                             size_t *body_len) {
+                                        size_t *body_len) {
   if (!req || !body || !body_len) {
     return C_REST_ERROR_GENERIC;
   }
@@ -376,7 +396,7 @@ c_rest_error_t c_rest_request_read_body(struct c_rest_request *req, char **body,
 }
 
 c_rest_error_t c_rest_request_accepts_encoding(struct c_rest_request *req,
-                                    const char *encoding) {
+                                               const char *encoding) {
   c_rest_error_t rc;
   const char *accept_enc;
   if (!req || !encoding) {
@@ -393,7 +413,8 @@ c_rest_error_t c_rest_request_accepts_encoding(struct c_rest_request *req,
   return C_REST_OK;
 }
 
-c_rest_error_t c_rest_request_parse_json(struct c_rest_request *req, void **json_obj) {
+c_rest_error_t c_rest_request_parse_json(struct c_rest_request *req,
+                                         void **json_obj) {
   if (!req || !json_obj) {
     return C_REST_ERROR_GENERIC;
   }
@@ -409,7 +430,6 @@ c_rest_error_t c_rest_request_parse_json(struct c_rest_request *req, void **json
 
   return C_REST_OK;
 }
-
 
 c_rest_error_t c_rest_request_cleanup(struct c_rest_request *req) {
   struct c_rest_header *h;
@@ -485,7 +505,7 @@ c_rest_error_t c_rest_request_cleanup(struct c_rest_request *req) {
 }
 
 c_rest_error_t c_rest_request_get_auth_bearer(struct c_rest_request *req,
-                                   char **out_token) {
+                                              char **out_token) {
   c_rest_error_t rc;
   const char *auth_val;
   if (!req || !out_token)
@@ -500,7 +520,10 @@ c_rest_error_t c_rest_request_get_auth_bearer(struct c_rest_request *req,
     return C_REST_ERROR_GENERIC;
   }
 
-  if (C_REST_MALLOC(strlen(auth_val + 7) + 1, out_token) != 0) { LOG_DEBUG("C_REST_MALLOC failed"); *out_token = NULL; }
+  if (C_REST_MALLOC(strlen(auth_val + 7) + 1, out_token) != 0) {
+    LOG_DEBUG("C_REST_MALLOC failed");
+    *out_token = NULL;
+  }
   if (!*out_token)
     return C_REST_ERROR_GENERIC;
 
@@ -512,9 +535,6 @@ c_rest_error_t c_rest_request_get_auth_bearer(struct c_rest_request *req,
 
   return C_REST_OK;
 }
-
-#include "c_rest_base64.h"
-/* clang-format on */
 
 c_rest_error_t c_rest_request_get_auth_basic(struct c_rest_request *req,
                                              char **out_username,
@@ -541,8 +561,9 @@ c_rest_error_t c_rest_request_get_auth_basic(struct c_rest_request *req,
   auth_val += 6;
   auth_len = strlen(auth_val);
 
-  if (c_rest_base64_decode(auth_val, auth_len, NULL, &decoded_len) != 0) {
-    return C_REST_ERROR_GENERIC;
+  rc = c_rest_base64_decode(auth_val, auth_len, NULL, &decoded_len);
+  if (rc != C_REST_OK) {
+    return rc;
   }
 
   if (C_REST_MALLOC(decoded_len + 1, &decoded) != 0) {

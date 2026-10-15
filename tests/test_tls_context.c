@@ -49,13 +49,19 @@ int test_tls_context(void) {
   failed += (res != C_REST_OK);
 
   res = (int)c_rest_tls_accept(ctx, 0, &conn);
-  (void)res;
+  if (res != C_REST_OK && res != C_REST_ERROR_GENERIC &&
+      res != C_REST_TLS_WANT_READ && res != C_REST_TLS_WANT_WRITE)
+    failed++;
 
   res = (int)c_rest_tls_read(conn, buf, 10, &rd);
-  (void)res;
+  if (res != C_REST_OK && res != C_REST_ERROR_GENERIC &&
+      res != C_REST_TLS_WANT_READ && res != C_REST_TLS_WANT_WRITE)
+    failed++;
 
   res = (int)c_rest_tls_write(conn, buf, 10, &written);
-  (void)res;
+  if (res != C_REST_OK && res != C_REST_ERROR_GENERIC &&
+      res != C_REST_TLS_WANT_READ && res != C_REST_TLS_WANT_WRITE)
+    failed++;
 
   res = (int)c_rest_tls_close(conn);
   failed += (res != C_REST_OK);

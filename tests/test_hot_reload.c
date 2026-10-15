@@ -111,16 +111,16 @@ TEST test_hot_reload_add_watch(void) {
   PASS();
 }
 
-static int dummy_fail_reload(void *user_data) {
+static c_rest_error_t dummy_fail_reload(void *user_data) {
   (void)user_data;
-  return -1;
+  return C_REST_ERROR_GENERIC;
 }
 
-static int dummy_reload_callback(void *user_data) {
+static c_rest_error_t dummy_reload_callback(void *user_data) {
   int *called = (int *)user_data;
   if (called)
     *called = 1;
-  return 0;
+  return C_REST_OK;
 }
 
 TEST test_hot_reload_start(void) {

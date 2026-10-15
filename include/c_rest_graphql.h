@@ -6,7 +6,6 @@
 #ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
 
 #include <stddef.h>
-#include "c_rest_error.h"
 #include "c_rest_export.h"
 /* clang-format on */
 
@@ -166,8 +165,6 @@ C_REST_EXPORT extern c_rest_error_t
 c_rest_graphql_resolve(struct c_rest_graphql_node *doc,
                        struct c_rest_graphql_schema *schema, char **out_json,
                        size_t *out_len);
-
-/* __cplusplus */
 
 #endif /* C_REST_FRAMEWORK_ENABLE_GRAPHQL */
 

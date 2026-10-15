@@ -383,6 +383,16 @@ static int test_graphql_errors(void) {
     doc = NULL;
   }
 
+  /* Test list_append failure combined with node_free failure */
+  for (i = 0; i < 20; i++) {
+    g_malloc_fail_after = i;
+    g_mock_graphql_free_countdown = 0;
+    rc = c_rest_graphql_parse("query getUser { user }", 22, &doc);
+    g_mock_graphql_free_countdown = -1;
+    c_rest_graphql_node_free(doc);
+    doc = NULL;
+  }
+
   for (i = 0; i < 5; i++) {
     g_malloc_fail_after = i;
     rc = c_rest_graphql_schema_init(&schema);

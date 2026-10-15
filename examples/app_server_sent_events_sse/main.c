@@ -71,12 +71,14 @@ static c_rest_error_t my_sse_handler(struct c_rest_request *req,
 
     printf("Sending event %d...\n", i + 1);
 
-    if (c_rest_sse_send_event(res, &ev) != 0) {
+    ev_rc = c_rest_sse_send_event(res, &ev);
+    if (ev_rc != C_REST_OK) {
       printf("Failed to send event, client probably disconnected.\n");
       break;
     }
 
-    if (c_rest_sse_send_keepalive(res) != 0) {
+    ev_rc = c_rest_sse_send_keepalive(res);
+    if (ev_rc != C_REST_OK) {
       break;
     }
 
