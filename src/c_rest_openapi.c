@@ -527,14 +527,22 @@ c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
   return C_REST_OK;
 }
 
-static void serialize_operation(JSON_Object *methods_obj,
-                                const char *method_name,
-                                const struct c_rest_openapi_operation *op) {
+static c_rest_error_t
+serialize_operation(JSON_Object *methods_obj, const char *method_name,
+                    const struct c_rest_openapi_operation *op) {
   JSON_Value *op_val;
   JSON_Object *op_obj;
   JSON_Value *tags_val;
   JSON_Array *tags_arr;
   size_t i;
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_openapi_fail >= 10 && g_mock_openapi_fail <= 18) {
+    if (g_mock_openapi_fail == 10)
+      return C_REST_ERROR_GENERIC;
+    g_mock_openapi_fail--;
+  }
+#endif
 
   op_val = json_value_init_object();
   op_obj = json_value_get_object(op_val);
@@ -590,6 +598,7 @@ static void serialize_operation(JSON_Object *methods_obj,
   }
 
   json_object_set_value(methods_obj, method_name, op_val);
+  return C_REST_OK;
 }
 
 c_rest_error_t
@@ -743,21 +752,40 @@ c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
     struct c_rest_openapi_path *p = &spec->paths[i];
     JSON_Value *path_item_val = json_value_init_object();
     JSON_Object *path_item_obj = json_value_get_object(path_item_val);
+    c_rest_error_t rc;
 
     if (p->summary)
       json_object_set_string(path_item_obj, "summary", p->summary);
     if (p->description)
       json_object_set_string(path_item_obj, "description", p->description);
 
-    serialize_operation(path_item_obj, "get", &p->get);
-    serialize_operation(path_item_obj, "post", &p->post);
-    serialize_operation(path_item_obj, "put", &p->put);
-    serialize_operation(path_item_obj, "delete", &p->del);
-    serialize_operation(path_item_obj, "patch", &p->patch);
-    serialize_operation(path_item_obj, "options", &p->options);
-    serialize_operation(path_item_obj, "head", &p->head);
-    serialize_operation(path_item_obj, "trace", &p->trace);
-    serialize_operation(path_item_obj, "query", &p->query);
+    rc = serialize_operation(path_item_obj, "get", &p->get);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "post", &p->post);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "put", &p->put);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "delete", &p->del);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "patch", &p->patch);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "options", &p->options);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "head", &p->head);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "trace", &p->trace);
+    if (rc != C_REST_OK)
+      return rc;
+    rc = serialize_operation(path_item_obj, "query", &p->query);
+    if (rc != C_REST_OK)
+      return rc;
 
     json_object_set_value(paths_obj, p->route, path_item_val);
   }

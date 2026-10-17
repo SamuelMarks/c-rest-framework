@@ -11,6 +11,6 @@ extern "C" {
 
 #ifdef __cplusplus
 }
-#endif
+#endif /* __cplusplus */
 
 #endif /* MOCK_WS2TCPIP_H */

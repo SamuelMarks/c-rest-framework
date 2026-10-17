@@ -70,6 +70,7 @@ add_library(oauth2_example_shared SHARED src/oauth2_server.c src/oauth2_client.c
 if(CRF_DEMO_HAD_COVERAGE)
     target_compile_options(oauth2_example_static PRIVATE --coverage)
     target_compile_options(oauth2_example_shared PRIVATE --coverage)
+    target_link_libraries(oauth2_example_shared PRIVATE --coverage)
 endif()
 
 # Add "header-only" interface

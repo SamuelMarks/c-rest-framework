@@ -16,6 +16,6 @@ uintptr_t _beginthreadex(void *security, unsigned stack_size,
 
 #ifdef __cplusplus
 }
-#endif
+#endif /* __cplusplus */
 
 #endif /* MOCK_PROCESS_H */

@@ -348,21 +348,23 @@ c_rest_error_t c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
 
   ctx->state = C_REST_HOT_RELOAD_STATE_STOPPED;
   if (ctx->watcher_thread) {
-#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
-    if (ctx->cm_env) {
-      rc = (c_rest_error_t)cm_thread_join(ctx->cm_env,
-                                          (cm_thread_t)ctx->watcher_thread);
-    } else {
-      rc = c_rest_thread_join(ctx->watcher_thread);
-    }
-#else
-    rc = c_rest_thread_join(ctx->watcher_thread);
-#endif
 #ifdef C_REST_TESTING_MALLOC_HOOK
     if (g_mock_hot_reload_fail == 1) {
       rc = C_REST_ERROR_GENERIC;
-    }
+    } else
 #endif
+    {
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+      if (ctx->cm_env) {
+        rc = (c_rest_error_t)cm_thread_join(ctx->cm_env,
+                                            (cm_thread_t)ctx->watcher_thread);
+      } else {
+        rc = c_rest_thread_join(ctx->watcher_thread);
+      }
+#else
+      rc = c_rest_thread_join(ctx->watcher_thread);
+#endif
+    }
     if (rc != C_REST_OK) {
       c_rest_error_t log_rc =
           hot_reload_log(ctx, "[HOT RELOAD] Failed to join watcher thread");

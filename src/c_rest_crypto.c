@@ -74,8 +74,8 @@ typedef uint32_t c_rest_uint32_t;
 /* Fallback to custom SHA1 if no crypto backend is available */
 #define SHA1_ROTL(bits, word) (((word) << (bits)) | ((word) >> (32 - (bits))))
 
-static void sha1_transform(c_rest_uint32_t state[5],
-                           const unsigned char buffer[64]) {
+static c_rest_error_t sha1_transform(c_rest_uint32_t state[5],
+                                     const unsigned char buffer[64]) {
   c_rest_uint32_t a, b, c, d, e;
   typedef union {
     unsigned char c[64];
@@ -84,6 +84,14 @@ static void sha1_transform(c_rest_uint32_t state[5],
   CHAR64LONG16 block[1];
   c_rest_uint32_t w[80];
   int i;
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_crypto_fail >= 20 && g_mock_crypto_fail <= 22) {
+    if (g_mock_crypto_fail == 20)
+      return C_REST_ERROR_GENERIC;
+    g_mock_crypto_fail--;
+  }
+#endif
 
 #if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(block, 64, buffer, 64);
@@ -136,6 +144,7 @@ static void sha1_transform(c_rest_uint32_t state[5],
   state[2] += c;
   state[3] += d;
   state[4] += e;
+  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len,
@@ -144,6 +153,7 @@ c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len,
   c_rest_uint32_t count[2];
   unsigned char buffer[64];
   size_t i;
+  c_rest_error_t rc;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   if (g_mock_crypto_fail == 8)
@@ -160,8 +170,9 @@ c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len,
   for (i = 0; i < len; i++) {
     buffer[count[0] % 64] = data[i];
     if ((count[0] % 64) == 63) {
-
-      sha1_transform(state, buffer);
+      rc = sha1_transform(state, buffer);
+      if (rc != C_REST_OK)
+        return rc;
     }
     count[0]++;
   }
@@ -188,15 +199,18 @@ c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len,
     for (i = 0; i < (size_t)pad_len; i++) {
       buffer[(count[0] + i) % 64] = pad[i];
       if (((count[0] + i) % 64) == 63) {
-
-        sha1_transform(state, buffer);
+        rc = sha1_transform(state, buffer);
+        if (rc != C_REST_OK)
+          return rc;
       }
     }
 
     for (i = 0; i < 8; i++) {
       buffer[56 + i] = len_bytes[i];
     }
-    { sha1_transform(state, buffer); }
+    rc = sha1_transform(state, buffer);
+    if (rc != C_REST_OK)
+      return rc;
   }
 
   for (i = 0; i < 20; i++) {
@@ -229,10 +243,18 @@ static const c_rest_uint32_t sha256_k[64] = {
     0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
-static void sha256_transform(c_rest_uint32_t state[8],
-                             const unsigned char buffer[64]) {
+static c_rest_error_t sha256_transform(c_rest_uint32_t state[8],
+                                       const unsigned char buffer[64]) {
   c_rest_uint32_t a, b, c, d, e, f, g, h, t1, t2, m[64];
   int i, j;
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_crypto_fail >= 30 && g_mock_crypto_fail <= 32) {
+    if (g_mock_crypto_fail == 30)
+      return C_REST_ERROR_GENERIC;
+    g_mock_crypto_fail--;
+  }
+#endif
 
   for (i = 0, j = 0; i < 16; ++i, j += 4) {
     m[i] = ((c_rest_uint32_t)buffer[j] << 24) |
@@ -275,6 +297,7 @@ static void sha256_transform(c_rest_uint32_t state[8],
   state[5] += f;
   state[6] += g;
   state[7] += h;
+  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
@@ -283,6 +306,7 @@ c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
   c_rest_uint32_t count[2];
   unsigned char buffer[64];
   size_t i;
+  c_rest_error_t rc;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   if (g_mock_crypto_fail == 10)
@@ -305,8 +329,9 @@ c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
   for (i = 0; i < len; i++) {
     buffer[count[0] % 64] = data[i];
     if ((count[0] % 64) == 63) {
-
-      sha256_transform(state, buffer);
+      rc = sha256_transform(state, buffer);
+      if (rc != C_REST_OK)
+        return rc;
     }
     count[0]++;
   }
@@ -333,15 +358,18 @@ c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
     for (i = 0; i < (size_t)pad_len; i++) {
       buffer[(count[0] + i) % 64] = pad[i];
       if (((count[0] + i) % 64) == 63) {
-
-        sha256_transform(state, buffer);
+        rc = sha256_transform(state, buffer);
+        if (rc != C_REST_OK)
+          return rc;
       }
     }
 
     for (i = 0; i < 8; i++) {
       buffer[56 + i] = len_bytes[i];
     }
-    { sha256_transform(state, buffer); }
+    rc = sha256_transform(state, buffer);
+    if (rc != C_REST_OK)
+      return rc;
   }
 
   for (i = 0; i < 32; i++) {

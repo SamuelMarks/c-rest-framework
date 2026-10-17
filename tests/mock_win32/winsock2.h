@@ -146,6 +146,6 @@ DWORD GetLastError(void);
 
 #ifdef __cplusplus
 }
-#endif
+#endif /* __cplusplus */
 
 #endif /* MOCK_WINSOCK2_H */

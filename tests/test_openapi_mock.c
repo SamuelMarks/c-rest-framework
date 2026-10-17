@@ -166,6 +166,24 @@ TEST test_openapi_error_branches(void) {
   /* swagger_ui_handler: success with custom swagger_openapi_url */
   ASSERT_EQ(C_REST_OK, swagger_ui_handler(&req, &res, router));
 
+  /* serialize_operation failure branches (10..18) */
+  {
+    struct c_rest_openapi_spec *spec = NULL;
+    struct c_rest_openapi_operation op;
+    char *json_out = NULL;
+    int i;
+    memset(&op, 0, sizeof(op));
+    c_rest_openapi_spec_init(&spec);
+    c_rest_openapi_spec_add_path(spec, "/test", "GET", &op);
+    for (i = 10; i <= 18; i++) {
+      g_mock_openapi_fail = i;
+      ASSERT_EQ(C_REST_ERROR_GENERIC,
+                c_rest_openapi_spec_to_json(spec, &json_out));
+    }
+    g_mock_openapi_fail = 0;
+    c_rest_openapi_spec_destroy(spec);
+  }
+
   c_rest_router_destroy(router);
   PASS();
 }

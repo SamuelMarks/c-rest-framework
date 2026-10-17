@@ -12,6 +12,7 @@ static void reset_mocks(void *data) {
   (void)data;
 #ifdef C_REST_TESTING_MALLOC_HOOK
   g_mock_graphql_free_countdown = -1;
+  g_mock_graphql_ws_countdown = -1;
 #endif
 }
 
@@ -77,6 +78,15 @@ TEST test_graphql_error_branches(void) {
       c_rest_graphql_parse("query { alias: 123 }", 20, &doc);
     }
     g_mock_graphql_free_countdown = -1;
+  }
+
+  {
+    int i;
+    for (i = 0; i < 25; i++) {
+      g_mock_graphql_ws_countdown = i;
+      c_rest_graphql_parse("query q { alias: a { b } }", 26, &doc);
+    }
+    g_mock_graphql_ws_countdown = -1;
   }
 
   /* Line 328: fail alloc_list for doc->definitions */

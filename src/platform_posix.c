@@ -223,7 +223,7 @@ c_rest_error_t c_rest_thread_join(c_rest_thread_t thread) {
     return C_REST_ERROR_GENERIC;
   }
   t = (pthread_t)thread;
-  if (pthread_join(t, NULL) != 0) {
+  if (pthread_equal(t, pthread_self()) || pthread_join(t, NULL) != 0) {
     return C_REST_ERROR_GENERIC;
   }
   return C_REST_OK;

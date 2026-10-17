@@ -5,8 +5,11 @@ if(CMAKE_C_FLAGS MATCHES "--coverage")
     string(REPLACE "-fprofile-arcs" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
     string(REPLACE "-ftest-coverage" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 endif()
-if(CMAKE_EXE_LINKER_FLAGS MATCHES "--coverage")
-    string(REPLACE "--coverage" "" CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+
+if(C_REST_GNU_FLAGS)
+    add_compile_options(${C_REST_GNU_FLAGS})
+elseif(C_REST_MSVC_FLAGS)
+    add_compile_options(${C_REST_MSVC_FLAGS})
 endif()
 
 add_subdirectory(app_node_style)

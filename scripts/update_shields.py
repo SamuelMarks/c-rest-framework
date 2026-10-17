@@ -6,13 +6,15 @@ import re
 
 
 def get_test_coverage():
-    try:
-        with open("build/coverage_summary.json", "r") as f:
-            data = json.load(f)
-            return data["line_percent"]
-    except Exception as e:
-        print("Could not read test coverage:", e)
-        return None
+    for path in ["build/coverage_summary.json", "build_gcc/coverage_summary.json"]:
+        if os.path.exists(path):
+            try:
+                with open(path, "r") as f:
+                    data = json.load(f)
+                    return data["line_percent"]
+            except Exception as e:
+                print("Could not read test coverage:", e)
+    return None
 
 
 def get_doc_coverage():
@@ -112,8 +114,10 @@ if __name__ == "__main__":
     os.system("doxygen Doxyfile > /dev/null 2>&1")
 
     # generate test coverage summary (this assumes the project is already built with coverage and tests run)
-    cmd = r"cd build && gcovr -r .. --filter '\.\./src/' --filter '\.\./include/' --json-summary coverage_summary.json > /dev/null 2>&1"
-    os.system(cmd)
+    build_dir = "build" if os.path.exists("build") else ("build_gcc" if os.path.exists("build_gcc") else None)
+    if build_dir:
+        cmd = rf"cd {build_dir} && gcovr -r .. --filter '\.\./src/' --filter '\.\./include/' --json-summary coverage_summary.json > /dev/null 2>&1"
+        os.system(cmd)
 
     test_cov = get_test_coverage()
     doc_cov = get_doc_coverage()

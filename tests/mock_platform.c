@@ -65,6 +65,8 @@ c_rest_error_t mock_c_rest_thread_create(c_rest_thread_t *thread,
       return C_REST_ERROR_GENERIC;
     if (g_mock_socket_fail == 113)
       return C_REST_ERROR_GENERIC;
+    if (thread)
+      *thread = (c_rest_thread_t)0;
     func(arg);
     return C_REST_OK;
   }

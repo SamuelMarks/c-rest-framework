@@ -51,6 +51,7 @@ C_REST_EXPORT extern int g_mock_parser_destroy_fail;
 C_REST_EXPORT extern int g_mock_req_cleanup_fail;
 C_REST_EXPORT extern int g_mock_res_cleanup_fail;
 C_REST_EXPORT extern int g_mock_graphql_free_countdown;
+C_REST_EXPORT extern int g_mock_graphql_ws_countdown;
 C_REST_EXPORT extern int g_mock_client_fail;
 C_REST_EXPORT extern int g_mock_openapi_fail;
 

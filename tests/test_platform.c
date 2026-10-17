@@ -22,7 +22,9 @@
 #ifndef __EMSCRIPTEN__
 static c_rest_error_t cond_thread_func(void *arg) {
   c_rest_cond_t cond = (c_rest_cond_t)arg;
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(_WIN32)
+  Sleep(10);
+#elif defined(__unix__) || defined(__APPLE__)
   {
     struct timeval tv;
     tv.tv_sec = 0;

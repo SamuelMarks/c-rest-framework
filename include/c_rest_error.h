@@ -17,6 +17,8 @@ extern "C" {
  * @brief Error codes returned by most functions in the framework.
  */
 typedef enum c_rest_error {
+  /** @brief Internal sentinel to ensure signed enum underlying type. */
+  C_REST_ERROR_INTERNAL = -1,
   /** @brief Success, no error. */
   C_REST_OK = 0,
   /** @brief Generic or unknown error. */

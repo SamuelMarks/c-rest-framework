@@ -82,8 +82,21 @@ static c_rest_error_t list_append(struct c_rest_graphql_node_list *list,
   return C_REST_OK;
 }
 
-static void skip_whitespace(struct c_rest_graphql_context *ctx) {
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT int g_mock_graphql_ws_countdown = -1;
+#endif
+
+static c_rest_error_t skip_whitespace(struct c_rest_graphql_context *ctx) {
   int done = 0;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_graphql_ws_countdown >= 0) {
+    if (g_mock_graphql_ws_countdown == 0) {
+      g_mock_graphql_ws_countdown--;
+      return C_REST_ERROR_GENERIC;
+    }
+    g_mock_graphql_ws_countdown--;
+  }
+#endif
   while (!done) {
     if (ctx->position >= ctx->length) {
       done = 1;
@@ -104,6 +117,7 @@ static void skip_whitespace(struct c_rest_graphql_context *ctx) {
       }
     }
   }
+  return C_REST_OK;
 }
 
 static c_rest_error_t parse_name(struct c_rest_graphql_context *ctx,
@@ -112,8 +126,11 @@ static c_rest_error_t parse_name(struct c_rest_graphql_context *ctx,
   size_t len;
   char *str;
   int c;
+  c_rest_error_t rc;
 
-  skip_whitespace(ctx);
+  rc = skip_whitespace(ctx);
+  if (rc != C_REST_OK)
+    return rc;
   if (ctx->position >= ctx->length) {
     return C_REST_ERROR_GENERIC;
   }
@@ -161,7 +178,9 @@ parse_selection_set(struct c_rest_graphql_context *ctx,
   size_t i;
   c_rest_error_t rc;
 
-  skip_whitespace(ctx);
+  rc = skip_whitespace(ctx);
+  if (rc != C_REST_OK)
+    return rc;
 
   ctx->position++; /* skip '{' */
 
@@ -171,7 +190,9 @@ parse_selection_set(struct c_rest_graphql_context *ctx,
 
   while (ctx->position < ctx->length) {
     struct c_rest_graphql_node *field = NULL;
-    skip_whitespace(ctx);
+    rc = skip_whitespace(ctx);
+    if (rc != C_REST_OK)
+      break;
     if (ctx->position < ctx->length && ctx->input[ctx->position] == '}') {
       ctx->position++; /* skip '}' */
       if (list->count == 0) {
@@ -228,7 +249,12 @@ static c_rest_error_t parse_field(struct c_rest_graphql_context *ctx,
     return rc;
   }
 
-  skip_whitespace(ctx);
+  rc = skip_whitespace(ctx);
+  if (rc != C_REST_OK) {
+    C_REST_FREE(name);
+    C_REST_FREE(node);
+    return rc;
+  }
   if (ctx->position < ctx->length && ctx->input[ctx->position] == ':') {
     /* This was an alias */
     ctx->position++; /* skip ':' */
@@ -247,7 +273,13 @@ static c_rest_error_t parse_field(struct c_rest_graphql_context *ctx,
   }
 
   /* parse selection set if any */
-  skip_whitespace(ctx);
+  rc = skip_whitespace(ctx);
+  if (rc != C_REST_OK) {
+    C_REST_FREE(node->alias);
+    C_REST_FREE(node->name);
+    C_REST_FREE(node);
+    return rc;
+  }
   if (ctx->position < ctx->length && ctx->input[ctx->position] == '{') {
     rc = parse_selection_set(ctx, &node->selection_set);
     if (rc != C_REST_OK) {
@@ -269,7 +301,9 @@ static c_rest_error_t parse_operation(struct c_rest_graphql_context *ctx,
   enum c_rest_graphql_operation_type op_type = C_REST_GRAPHQL_OP_QUERY;
   c_rest_error_t rc;
 
-  skip_whitespace(ctx);
+  rc = skip_whitespace(ctx);
+  if (rc != C_REST_OK)
+    return rc;
 
   /* Very basic check for query/mutation */
   if (ctx->position + 5 <= ctx->length &&
@@ -299,7 +333,12 @@ static c_rest_error_t parse_operation(struct c_rest_graphql_context *ctx,
   node->op_type = op_type;
   node->name = name;
 
-  skip_whitespace(ctx);
+  rc = skip_whitespace(ctx);
+  if (rc != C_REST_OK) {
+    C_REST_FREE(node->name);
+    C_REST_FREE(node);
+    return rc;
+  }
   if (ctx->position < ctx->length) {
     if (ctx->input[ctx->position] == '{') {
       rc = parse_selection_set(ctx, &node->selection_set);
@@ -350,7 +389,12 @@ c_rest_error_t c_rest_graphql_parse(const char *query, size_t query_len,
     return rc;
   }
 
-  skip_whitespace(&ctx);
+  rc = skip_whitespace(&ctx);
+  if (rc != C_REST_OK) {
+    C_REST_FREE(doc->definitions);
+    C_REST_FREE(doc);
+    return rc;
+  }
   while (ctx.position < ctx.length) {
     rc = parse_operation(&ctx, &op);
     if (rc == C_REST_OK) {
@@ -364,7 +408,11 @@ c_rest_error_t c_rest_graphql_parse(const char *query, size_t query_len,
     } else {
       break;
     }
-    skip_whitespace(&ctx);
+    rc = skip_whitespace(&ctx);
+    if (rc != C_REST_OK) {
+      ctx.position = 0;
+      break;
+    }
   }
 
   if (ctx.position < ctx.length || doc->definitions->count == 0) {

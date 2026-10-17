@@ -64,6 +64,10 @@ if(MSVC)
     string(REPLACE "-Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
     string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
     string(REPLACE "-Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+    if(CMAKE_CROSSCOMPILING_EMULATOR MATCHES "wine")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /MANIFEST:NO")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /MANIFEST:NO")
+    endif()
     add_compile_options(/FS)
     function(target_compile_features)
     endfunction()
@@ -275,6 +279,9 @@ macro(c_rest_framework_apply_crypto tgt scope)
 endmacro()
 
 include(FetchContent)
+if(CMAKE_CROSSCOMPILING_EMULATOR MATCHES "wine")
+    set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "" FORCE)
+endif()
 foreach(_fc_dep PARSON C-ABSTRACT-HTTP C_ABSTRACT_HTTP C89STRINGUTILS CDD-C CDD_C C-STR-SPAN C_STR_SPAN C-ORM C_ORM CFS C_FS)
     unset(FETCHCONTENT_SOURCE_DIR_${_fc_dep} CACHE)
     unset(FETCHCONTENT_SOURCE_DIR_${_fc_dep})
@@ -323,9 +330,12 @@ if(${PROJECT_NAME_SAFE}_FETCH_C_FS)
       GIT_TAG master
     )
     set(OLD_BSL_CFS ${BUILD_SHARED_LIBS})
-        set(BUILD_SHARED_LIBS OFF)
-        FetchContent_MakeAvailable(cfs)
-        set(BUILD_SHARED_LIBS ${OLD_BSL_CFS})
+    set(OLD_BUILD_TESTING_CFS ${BUILD_TESTING})
+    set(BUILD_SHARED_LIBS OFF)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(cfs)
+    set(BUILD_TESTING ${OLD_BUILD_TESTING_CFS} CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS ${OLD_BSL_CFS})
 endif()
 
 if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
@@ -352,6 +362,14 @@ endif()
     set(OLD_BSL_CSS ${BUILD_SHARED_LIBS})
     set(BUILD_SHARED_LIBS OFF)
     FetchContent_MakeAvailable(c-str-span)
+    if(TARGET c_str_span_compiler_flags AND NOT CMAKE_C_FLAGS MATCHES "--coverage")
+        get_target_property(_css_opts c_str_span_compiler_flags INTERFACE_COMPILE_OPTIONS)
+        if(_css_opts)
+            string(REPLACE ";-fprofile-arcs;-ftest-coverage" "" _css_opts "${_css_opts}")
+            set_target_properties(c_str_span_compiler_flags PROPERTIES INTERFACE_COMPILE_OPTIONS "${_css_opts}")
+        endif()
+        set_target_properties(c_str_span_compiler_flags PROPERTIES INTERFACE_LINK_OPTIONS "")
+    endif()
     if(CMAKE_HOST_UNIX AND EXISTS "${CMAKE_BINARY_DIR}/_deps/c-str-span-build/c_str_span/c_str_span_export.h" AND EXISTS "${CMAKE_BINARY_DIR}/_deps/c-str-span-src/CMakeLists.txt")
         execute_process(COMMAND touch -r "${CMAKE_BINARY_DIR}/_deps/c-str-span-src/CMakeLists.txt" "${CMAKE_BINARY_DIR}/_deps/c-str-span-build/c_str_span/c_str_span_export.h")
     endif()
@@ -405,6 +423,10 @@ macro(c_rest_framework_resolve_parson)
         target_link_libraries(c-rest-framework PUBLIC parson)
         if(TARGET parson)
             target_include_directories(parson PUBLIC $<BUILD_INTERFACE:${parson_SOURCE_DIR}>)
+            if(UNIX AND NOT APPLE AND CMAKE_C_COMPILER_ID MATCHES "Clang")
+                file(WRITE "${CMAKE_BINARY_DIR}/parson_c89_math_fix.h" "#include <math.h>\n#undef isinf\n#undef isnan\n")
+                target_compile_options(parson PRIVATE -include "${CMAKE_BINARY_DIR}/parson_c89_math_fix.h")
+            endif()
         endif()
         target_include_directories(c-rest-framework PUBLIC ${parson_SOURCE_DIR})
         set(parson_RESOLVED ON)
@@ -639,10 +661,74 @@ endif()
 c_rest_framework_resolve_parson()
 
 if(${PROJECT_NAME_SAFE}_FETCH_CDD_C)
+    if(MSVC)
+        foreach(_c89_var
+            C89STRINGUTILS_HAVE_PRINTF_ZU C89STRINGUTILS_HAVE_PRINTF_LLD
+            C89STRINGUTILS_HAVE_PRINTF_I64D C89STRINGUTILS_HAVE_PRINTF_IU
+            C89STRINGUTILS_HAVE_VSNPRINTF_NULL C89STRINGUTILS_HAVE_VA_COPY
+            C89STRINGUTILS_HAVE_SAL C89STRINGUTILS_HAVE_ERRNO_T
+            C89STRINGUTILS_HAVE_RSIZE_T C89STRINGUTILS_HAVE_WCHAR_H
+            C89STRINGUTILS_HAVE_STRNCPY_S C89STRINGUTILS_HAVE_STRCPY_S
+            C89STRINGUTILS_HAVE_STRNCAT_S C89STRINGUTILS_HAVE_STRCAT_S
+            C89STRINGUTILS_HAVE_STRNLEN C89STRINGUTILS_HAVE_STRNLEN_S
+            C89STRINGUTILS_HAVE_MEMCPY_S C89STRINGUTILS_HAVE_TMPFILE_S
+            C89STRINGUTILS_HAVE_FOPEN_S C89STRINGUTILS_HAVE_FREOPEN_S
+            C89STRINGUTILS_HAVE_VSSCANF C89STRINGUTILS_HAVE_VSSCANF_S
+            C89STRINGUTILS_HAVE_VFSCANF C89STRINGUTILS_HAVE_VFSCANF_S
+            C89STRINGUTILS_HAVE_WCSCPY C89STRINGUTILS_HAVE_WCSNCPY
+            C89STRINGUTILS_HAVE_WCSCPY_S C89STRINGUTILS_HAVE_WCSNCPY_S
+            C89STRINGUTILS_HAVE_VSWPRINTF C89STRINGUTILS_HAVE_VSWPRINTF_S
+            C89STRINGUTILS_HAVE_SWPRINTF C89STRINGUTILS_HAVE_SWPRINTF_S
+            C89STRINGUTILS_HAVE_SPRINTF_S C89STRINGUTILS_HAVE_VSNPRINTF
+            C89STRINGUTILS_HAVE__VSNPRINTF C89STRINGUTILS_HAVE_VSNPRINTF_S
+            C89STRINGUTILS_HAVE__VSNPRINTF_S C89STRINGUTILS_HAVE__SNPRINTF_S
+            C89STRINGUTILS_HAVE__SNPRINTF C89STRINGUTILS_HAVE_VFPRINTF_S
+            C89STRINGUTILS_HAVE_FPRINTF_S C89STRINGUTILS_HAVE__VSCPRINTF
+            C89STRINGUTILS_HAVE_SNPRINTF C89STRINGUTILS_HAVE__STRNICMP
+            C89STRINGUTILS_HAVE__STRICMP C89STRINGUTILS_HAVE_STRERROR_S
+            C89STRINGUTILS_HAVE_LONG_LONG C89STRINGUTILS_HAVE___INT64)
+            set(${_c89_var} 1 CACHE INTERNAL "")
+        endforeach()
+        foreach(_c89_var_off
+            C89STRINGUTILS_HAVE___VA_COPY C89STRINGUTILS_HAVE_ATTR_FORMAT
+            C89STRINGUTILS_HAVE_ATTR_NONNULL C89STRINGUTILS_HAVE_TYPEOF
+            C89STRINGUTILS_HAVE_STRINGS_H C89STRINGUTILS_HAVE_SYS_PARAM_H
+            C89STRINGUTILS_HAVE_STRLCPY C89STRINGUTILS_HAVE_STRLCAT
+            C89STRINGUTILS_HAVE_SET_CONSTRAINT_HANDLER_S
+            C89STRINGUTILS_HAVE_REALLOCARRAY C89STRINGUTILS_HAVE_SNPRINTF_S
+            C89STRINGUTILS_HAVE_STRNCASECMP C89STRINGUTILS_HAVE_STRCASECMP
+            C89STRINGUTILS_HAVE_STRNSTR C89STRINGUTILS_HAVE_STRCASESTR
+            C89STRINGUTILS_HAVE_VASPRINTF C89STRINGUTILS_HAVE_ASPRINTF
+            C89STRINGUTILS_HAVE_STRERROR_R)
+            set(${_c89_var_off} 0 CACHE INTERNAL "")
+        endforeach()
+    endif()
+    if(UNIX AND NOT APPLE)
+        include(CheckCSourceCompiles)
+        set(_OLD_REQ_DEFS "${CMAKE_REQUIRED_DEFINITIONS}")
+        set(_OLD_REQ_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+        set(CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
+        set(CMAKE_REQUIRED_FLAGS "-Werror")
+        check_c_source_compiles("
+            #include <string.h>
+            int main(void) {
+                char buf[256];
+                char *res = strerror_r(0, buf, sizeof(buf));
+                return res != 0;
+            }
+        " C89STRINGUTILS_STRERROR_R_CHAR_P)
+        set(CMAKE_REQUIRED_DEFINITIONS "${_OLD_REQ_DEFS}")
+        set(CMAKE_REQUIRED_FLAGS "${_OLD_REQ_FLAGS}")
+    endif()
     unset(FETCHCONTENT_SOURCE_DIR_CDD-C CACHE)
     unset(FETCHCONTENT_SOURCE_DIR_CDD_C CACHE)
     unset(FETCHCONTENT_SOURCE_DIR_CDD-C)
     unset(FETCHCONTENT_SOURCE_DIR_CDD_C)
+    FetchContent_Declare(
+      c89stringutils
+      GIT_REPOSITORY https://github.com/offscale/c89stringutils.git
+      GIT_TAG master
+    )
     FetchContent_Declare(
       cdd-c
       GIT_REPOSITORY https://github.com/SamuelMarks/cdd-c.git
@@ -659,6 +745,9 @@ if(${PROJECT_NAME_SAFE}_FETCH_CDD_C)
 
 
     if (TARGET c_cdd)
+        if (UNIX AND NOT APPLE AND CMAKE_C_COMPILER_ID MATCHES "Clang")
+            target_compile_definitions(c_cdd PRIVATE "_Bool=unsigned char")
+        endif()
         if (NOT WIN32 AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "DOS")
             find_package(OpenSSL QUIET)
             if (OpenSSL_FOUND)
@@ -693,8 +782,11 @@ if(${PROJECT_NAME_SAFE}_FETCH_CAH)
       GIT_TAG master
     )
     set(OLD_BSL_CAH ${BUILD_SHARED_LIBS})
+    set(OLD_BUILD_TESTING_CAH ${BUILD_TESTING})
     set(BUILD_SHARED_LIBS OFF)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(c-abstract-http)
+    set(BUILD_TESTING ${OLD_BUILD_TESTING_CAH} CACHE BOOL "" FORCE)
     set(BUILD_SHARED_LIBS ${OLD_BSL_CAH})
 
     add_definitions(-D${PROJECT_NAME_SAFE}_USE_REAL_CAH)
@@ -707,8 +799,13 @@ if(${PROJECT_NAME_SAFE}_FETCH_C_ORM)
       GIT_TAG master
     )
     set(OLD_BSL_CORM ${BUILD_SHARED_LIBS})
+    set(OLD_BUILD_TESTING_CORM ${BUILD_TESTING})
     set(BUILD_SHARED_LIBS OFF)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(C_ORM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(C_ORM_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(c-orm)
+    set(BUILD_TESTING ${OLD_BUILD_TESTING_CORM} CACHE BOOL "" FORCE)
     set(BUILD_SHARED_LIBS ${OLD_BSL_CORM})
     add_definitions(-D${PROJECT_NAME_SAFE}_USE_REAL_C_ORM)
     if(TARGET sqlite3)
@@ -778,6 +875,7 @@ foreach(dep cdd-c c_cdd c-abstract-http c-orm c_str_span cfs c89stringutils pars
             string(REPLACE "-fprofile-arcs" "" _opts "${_opts}")
             string(REPLACE "-ftest-coverage" "" _opts "${_opts}")
             string(REPLACE "--coverage" "" _opts "${_opts}")
+            string(REPLACE "-Wcast-qual" "" _opts "${_opts}")
             if(MSVC)
                 string(REPLACE "-Zi" "/Z7" _opts "${_opts}")
                 string(REPLACE "/Zi" "/Z7" _opts "${_opts}")
@@ -791,6 +889,7 @@ foreach(dep cdd-c c_cdd c-abstract-http c-orm c_str_span cfs c89stringutils pars
             string(REPLACE "-fprofile-arcs" "" _opts "${_opts}")
             string(REPLACE "-ftest-coverage" "" _opts "${_opts}")
             string(REPLACE "--coverage" "" _opts "${_opts}")
+            string(REPLACE "-Wcast-qual" "" _opts "${_opts}")
             if(MSVC)
                 string(REPLACE "-Zi" "/Z7" _opts "${_opts}")
                 string(REPLACE "/Zi" "/Z7" _opts "${_opts}")

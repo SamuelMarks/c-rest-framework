@@ -297,6 +297,23 @@ TEST test_crypto_error_branches(void) {
               c_rest_hmac_sha256((const unsigned char *)"key", 3,
                                  (const unsigned char *)"data", 4, mac));
     g_mock_crypto_fail = 0;
+
+    /* Cover sha1_transform and sha256_transform failure branches */
+    {
+      unsigned char two_block_buf[120];
+      memset(two_block_buf, 'B', sizeof(two_block_buf));
+      for (i = 20; i <= 22; i++) {
+        g_mock_crypto_fail = i;
+        ASSERT_EQ(C_REST_ERROR_GENERIC,
+                  c_rest_sha1(two_block_buf, sizeof(two_block_buf), mac));
+      }
+      for (i = 30; i <= 32; i++) {
+        g_mock_crypto_fail = i;
+        ASSERT_EQ(C_REST_ERROR_GENERIC,
+                  c_rest_sha256(two_block_buf, sizeof(two_block_buf), mac));
+      }
+      g_mock_crypto_fail = 0;
+    }
   }
 
   PASS();
