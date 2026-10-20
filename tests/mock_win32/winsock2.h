@@ -114,7 +114,6 @@ int closesocket(SOCKET s);
 int recv(SOCKET s, char *buf, int len, int flags);
 int send(SOCKET s, const char *buf, int len, int flags);
 unsigned short htons(unsigned short hostshort);
-unsigned long inet_addr(const char *cp);
 
 void InitializeCriticalSection(CRITICAL_SECTION *lpCriticalSection);
 void EnterCriticalSection(CRITICAL_SECTION *lpCriticalSection);

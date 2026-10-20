@@ -104,14 +104,6 @@ int send(SOCKET s, const char *buf, int len, int flags) {
 #undef htons
 unsigned short htons(unsigned short hostshort) { return hostshort; }
 
-unsigned long inet_addr(const char *cp) {
-  if (strcmp(cp, "invalid") == 0)
-    return INADDR_NONE;
-  if (strcmp(cp, "255.255.255.255") == 0)
-    return INADDR_NONE;
-  return 0x7f000001UL;
-}
-
 void InitializeCriticalSection(CRITICAL_SECTION *lpCriticalSection) {
   g_mock_win32_dummy += (int)(size_t)lpCriticalSection;
 }

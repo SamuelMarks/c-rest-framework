@@ -123,6 +123,44 @@ set(${PROJECT_NAME_SAFE}_MSVC_RTC "OFF" CACHE STRING "MSVC Runtime Checks (OFF, 
 set_property(CACHE ${PROJECT_NAME_SAFE}_MSVC_RTC PROPERTY STRINGS "OFF" "1" "s" "u")
 option(${PROJECT_NAME_SAFE}_LTO "Enable Link-Time Optimization (IPO)" OFF)
 
+if(MSVC)
+    if(DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+        if(CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
+            set(${PROJECT_NAME_SAFE}_CRT_LINKAGE "dynamic" CACHE STRING "" FORCE)
+        else()
+            set(${PROJECT_NAME_SAFE}_CRT_LINKAGE "static" CACHE STRING "" FORCE)
+        endif()
+    endif()
+    if(${PROJECT_NAME_SAFE}_CRT_LINKAGE STREQUAL "static")
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        foreach(flag_var
+            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+            CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
+            if(${flag_var} MATCHES "/MD")
+                string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+            endif()
+        endforeach()
+        set(_SUB_CRT_LINKAGE_CAP "Static")
+    elseif(${PROJECT_NAME_SAFE}_CRT_LINKAGE STREQUAL "dynamic")
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+        foreach(flag_var
+            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+            CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
+            if(${flag_var} MATCHES "/MT")
+                string(REGEX REPLACE "/MT" "/MD" ${flag_var} "${${flag_var}}")
+            endif()
+        endforeach()
+        set(_SUB_CRT_LINKAGE_CAP "Shared")
+    endif()
+    set(CDD_CRT_LINKAGE "${_SUB_CRT_LINKAGE_CAP}" CACHE STRING "" FORCE)
+    set(C_STR_SPAN_CRT_LINKAGE "${_SUB_CRT_LINKAGE_CAP}" CACHE STRING "" FORCE)
+    set(C89STRINGUTILS_CRT_LINKAGE "${_SUB_CRT_LINKAGE_CAP}" CACHE STRING "" FORCE)
+    set(C_FS_CRT_LINKAGE "${_SUB_CRT_LINKAGE_CAP}" CACHE STRING "" FORCE)
+    set(C_ABSTRACT_HTTP_CRT_LINKAGE "${_SUB_CRT_LINKAGE_CAP}" CACHE STRING "" FORCE)
+    set(CDD_C_CRT_LINKAGE "${_SUB_CRT_LINKAGE_CAP}" CACHE STRING "" FORCE)
+    set(C_ORM_CRT_LINKAGE "${${PROJECT_NAME_SAFE}_CRT_LINKAGE}" CACHE STRING "" FORCE)
+endif()
+
 if(${PROJECT_NAME_SAFE}_LTO)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
@@ -456,30 +494,6 @@ if(MSVC)
     # Note: /Za strictly enforces ANSI C but might cause issues with Windows headers.
     set(C_REST_MSVC_FLAGS /W4 /WX /FS)
 
-
-
-
-    if(${PROJECT_NAME_SAFE}_CRT_LINKAGE STREQUAL "static")
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-        foreach(flag_var
-            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-            CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
-            if(${flag_var} MATCHES "/MD")
-                string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-            endif()
-        endforeach()
-    elseif(${PROJECT_NAME_SAFE}_CRT_LINKAGE STREQUAL "dynamic")
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-        foreach(flag_var
-            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-            CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
-            if(${flag_var} MATCHES "/MT")
-                string(REGEX REPLACE "/MT" "/MD" ${flag_var} "${${flag_var}}")
-            endif()
-        endforeach()
-    endif()
-
-
     if(${PROJECT_NAME_SAFE}_CHARSET STREQUAL "UNICODE")
         add_definitions(-DUNICODE -D_UNICODE)
     elseif(${PROJECT_NAME_SAFE}_CHARSET STREQUAL "ANSI")
@@ -613,10 +627,14 @@ if(${PROJECT_NAME_SAFE}_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI)
             endif()
             if(TARGET zlibstatic)
                 target_link_libraries(c-rest-framework PUBLIC zlibstatic)
+                set_target_properties(zlibstatic PROPERTIES C_EXTENSIONS ON)
             else()
                 target_link_libraries(c-rest-framework PUBLIC zlib)
             endif()
-            target_include_directories(c-rest-framework PUBLIC ${zlib_SOURCE_DIR})
+            if(TARGET zlib)
+                set_target_properties(zlib PROPERTIES C_EXTENSIONS ON)
+            endif()
+            target_include_directories(c-rest-framework SYSTEM PUBLIC ${zlib_SOURCE_DIR} ${zlib_BINARY_DIR})
         endif()
 
     if(NOT MSVC OR MSVC_VERSION GREATER_EQUAL 1600)

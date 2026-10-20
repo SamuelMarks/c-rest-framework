@@ -303,6 +303,13 @@ int test_platform(void) {
     failed += (rc != C_REST_ERROR_GENERIC);
     rc = c_rest_process_create(&proc, "does_not_exist_xyz123", NULL);
     failed += (rc != C_REST_ERROR_GENERIC);
+#elif defined(__EMSCRIPTEN__)
+    rc = c_rest_process_create(&proc, "does_not_exist_xyz123", argv_big);
+    failed += (rc != C_REST_ERROR_NOT_SUPPORTED);
+    rc = c_rest_process_create(&proc, "does_not_exist_xyz123", argv_fake);
+    failed += (rc != C_REST_ERROR_NOT_SUPPORTED);
+    rc = c_rest_process_wait(proc, &exit_code);
+    failed += (rc != C_REST_ERROR_NOT_SUPPORTED);
 #else
     rc = c_rest_process_create(&proc, "does_not_exist_xyz123", argv_big);
     failed += (rc != C_REST_OK);
@@ -317,7 +324,7 @@ int test_platform(void) {
     rc = c_rest_process_wait(proc, &exit_code);
     failed += (rc != C_REST_OK);
 #endif
-#ifdef C_REST_TESTING_MALLOC_HOOK
+#if defined(C_REST_TESTING_MALLOC_HOOK) && !defined(__EMSCRIPTEN__)
     {
       c_rest_process_t failed_proc;
       g_mock_fork_fail = 1;

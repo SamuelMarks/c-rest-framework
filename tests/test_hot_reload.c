@@ -736,8 +736,14 @@ TEST test_hot_reload_sse_routes(void) {
   req.method = "GET";
   req.path = "/hot-reload";
   res.context = &conn_ctx;
+#if !defined(__unix__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+  g_mock_socket_fail = 200;
+#endif
 
   rc = c_rest_router_dispatch(router, &req, &res);
+#if !defined(__unix__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+  g_mock_socket_fail = 0;
+#endif
   ASSERT_EQ(C_REST_OK, rc);
   ASSERT_EQ(200, res.status_code);
 

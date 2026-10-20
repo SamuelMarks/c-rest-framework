@@ -65,7 +65,7 @@ static c_rest_error_t dummy_modality_worker_fn(void *arg) {
 
 struct my_sync_state {
   c_rest_socket_t server_sock;
-  int is_running;
+  volatile int is_running;
   c_rest_thread_t *workers;
   int worker_count;
 };
@@ -196,9 +196,11 @@ static void test_modality_simple(void) {
 
   /* 6. Trigger logger failure in stop */
   ctx.internal_state = &sync_st;
+  sync_st.server_sock = C_REST_INVALID_SOCKET;
   sync_vtable.stop(&ctx);
 
   ctx.internal_state = &single_st;
+  single_st.server_sock = C_REST_INVALID_SOCKET;
   single_thread_vtable.stop(&ctx);
 
   ctx.internal_state = &multi_st;
@@ -221,8 +223,12 @@ static void test_modality_simple(void) {
     multi_thread_vtable.stop(&ctx);
   }
 
-  /* 7. Trigger socket close failure in destroy */
+  /* 7. Trigger socket close failure in destroy & stop */
   ctx.logger.log_cb = NULL;
+
+  ctx.internal_state = &sync_st;
+  sync_st.server_sock = (c_rest_socket_t)9999;
+  sync_vtable.stop(&ctx);
 
   ctx.internal_state = &sync_st;
   sync_st.server_sock = (c_rest_socket_t)9999;
@@ -240,6 +246,34 @@ static void test_modality_simple(void) {
   async_st.evloop = &dummy_evloop;
   async_st.server_sock = (c_rest_socket_t)9999;
   async_vtable.destroy(&ctx);
+
+  /* 7b. Trigger socket close success in destroy & stop */
+  {
+    c_rest_socket_t s1 = C_REST_INVALID_SOCKET;
+    c_rest_socket_t s2 = C_REST_INVALID_SOCKET;
+    c_rest_socket_t s3 = C_REST_INVALID_SOCKET;
+    c_rest_socket_t s4 = C_REST_INVALID_SOCKET;
+    c_rest_socket_create(&s1);
+    c_rest_socket_create(&s2);
+    c_rest_socket_create(&s3);
+    c_rest_socket_create(&s4);
+
+    ctx.internal_state = &sync_st;
+    sync_st.server_sock = s1;
+    sync_vtable.stop(&ctx);
+
+    ctx.internal_state = &sync_st;
+    sync_st.server_sock = s2;
+    sync_vtable.destroy(&ctx);
+
+    ctx.internal_state = &single_st;
+    single_st.server_sock = s3;
+    single_thread_vtable.destroy(&ctx);
+
+    ctx.internal_state = &multi_st;
+    multi_st.server_sock = s4;
+    multi_thread_vtable.destroy(&ctx);
+  }
 
   /* 8. Trigger logger failure in destroy */
   ctx.logger.log_cb = my_mock_logger_err_cb_internal;
@@ -289,6 +323,7 @@ static void test_modality_simple(void) {
   sync_st.is_running = 1;
   sync_vtable.run(&ctx);
 
+  sync_st.server_sock = C_REST_INVALID_SOCKET;
   sync_vtable.stop(&ctx);
 
   sync_st.server_sock = C_REST_INVALID_SOCKET;
@@ -449,7 +484,6 @@ static c_rest_error_t test_client_thread(void *arg) {
     }
 #endif
   }
-  c_rest_platform_cleanup();
   return C_REST_OK;
 }
 #endif
@@ -1549,6 +1583,7 @@ int test_modality(void) {
       g_mock_socket_fail = 11;
       multi_thread_vtable.run(&ctx_err);
 
+      memset(dummy_workers, 0, sizeof(dummy_workers));
       multi_st.server_sock = (c_rest_socket_t)1;
       multi_st.is_running = 1;
       multi_st.workers = dummy_workers;
@@ -1556,6 +1591,7 @@ int test_modality(void) {
       g_mock_socket_fail = 6;
       multi_thread_vtable.run(&ctx_err);
 
+      memset(dummy_workers, 0, sizeof(dummy_workers));
       multi_st.server_sock = (c_rest_socket_t)1;
       multi_st.is_running = 1;
       multi_st.workers = dummy_workers;

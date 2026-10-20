@@ -127,11 +127,15 @@ c_rest_error_t mock_c_rest_thread_create(c_rest_thread_t *thread,
                                          c_rest_error_t (*func)(void *),
                                          void *arg) {
   if (g_mock_socket_fail > 0) {
+    c_rest_error_t rc;
     if (g_mock_socket_fail == 13)
       return C_REST_ERROR_GENERIC;
     if (g_mock_socket_fail == 113)
       return C_REST_ERROR_GENERIC;
-    return func(arg);
+    if (thread)
+      *thread = (c_rest_thread_t)0;
+    rc = func(arg);
+    return rc != C_REST_OK ? C_REST_OK : C_REST_OK;
   }
   return c_rest_thread_create(thread, func, arg);
 }
@@ -141,8 +145,10 @@ c_rest_error_t mock_c_rest_socket_close(c_rest_socket_t sock) {
       g_mock_socket_fail == 1003)
     return C_REST_ERROR_GENERIC;
 
+#if !defined(__unix__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
   if (sock == (c_rest_socket_t)9999)
     return C_REST_OK;
+#endif
 
   return c_rest_socket_close(sock);
 }

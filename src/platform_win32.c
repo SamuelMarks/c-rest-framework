@@ -3,7 +3,6 @@
 #include "c_rest_mem.h"
 #include "c_rest_platform.h"
 
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <stdlib.h>
 #include <string.h>
 #include "c_rest_log.h"
@@ -61,17 +60,29 @@ c_rest_error_t c_rest_socket_bind(c_rest_socket_t sock, const char *host,
   struct sockaddr_in addr;
   SOCKET s = (SOCKET)sock;
   int res;
+  unsigned int b0 = 0, b1 = 0, b2 = 0, b3 = 0;
+  char tail = '\0';
+  unsigned char *ip_bytes;
 
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
   if (!host)
     return C_REST_ERROR_GENERIC;
-  addr.sin_addr.s_addr =
-      inet_addr(host); /* Very basic, INADDR_ANY if "0.0.0.0" */
-  if (addr.sin_addr.s_addr == INADDR_NONE &&
-      strcmp(host, "255.255.255.255") != 0)
+#if defined(_MSC_VER)
+  if (sscanf_s(host, "%u.%u.%u.%u%c", &b0, &b1, &b2, &b3, &tail, 1) != 4 ||
+      b0 > 255 || b1 > 255 || b2 > 255 || b3 > 255)
     return C_REST_ERROR_GENERIC;
+#else
+  if (sscanf(host, "%u.%u.%u.%u%c", &b0, &b1, &b2, &b3, &tail) != 4 ||
+      b0 > 255 || b1 > 255 || b2 > 255 || b3 > 255)
+    return C_REST_ERROR_GENERIC;
+#endif
+  ip_bytes = (unsigned char *)&addr.sin_addr.s_addr;
+  ip_bytes[0] = (unsigned char)b0;
+  ip_bytes[1] = (unsigned char)b1;
+  ip_bytes[2] = (unsigned char)b2;
+  ip_bytes[3] = (unsigned char)b3;
 
   res = bind(s, (struct sockaddr *)&addr, sizeof(addr));
   if (res == SOCKET_ERROR) {

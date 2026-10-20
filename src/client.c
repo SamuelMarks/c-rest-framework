@@ -34,11 +34,9 @@
 #include <string.h>
 /* clang-format on */
 
-static const struct c_rest_client_hooks *g_client_hooks = NULL;
-
 c_rest_error_t
 c_rest_client_set_hooks(const struct c_rest_client_hooks *hooks) {
-  g_client_hooks = hooks;
+  (void)hooks;
   return C_REST_OK;
 }
 
@@ -102,7 +100,10 @@ c_rest_error_t c_rest_client_init(c_rest_client_context **out_client) {
   struct c_rest_client_context *ctx;
 #ifdef C_REST_TESTING_MALLOC_HOOK
   enum c_abstract_http_error init_err;
+#if defined(C_REST_FRAMEWORK_USE_REAL_CAH) && !defined(__EMSCRIPTEN__) &&      \
+    !defined(CDD_DOS)
   enum c_abstract_http_error tr_err;
+#endif
 #endif
   if (!out_client)
     return C_REST_ERROR_GENERIC;

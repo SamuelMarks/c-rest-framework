@@ -85,6 +85,11 @@ static c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
 #endif
 
 #if defined(CFS_OS_WINDOWS) && defined(CFS_UNICODE)
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (g_mock_hot_reload_fail == 10) {
+    return C_REST_ERROR_GENERIC;
+  }
+#endif
   if (cfs_utf8_to_utf16(path, wpath, sizeof(wpath) / sizeof(wpath[0]), &req) !=
       cfs_errc_success) {
     return C_REST_ERROR_GENERIC;
