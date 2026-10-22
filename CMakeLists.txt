@@ -763,6 +763,7 @@ if(${PROJECT_NAME_SAFE}_FETCH_CDD_C)
 
 
     if (TARGET c_cdd)
+        target_compile_definitions(c_cdd PRIVATE CDD_BUILD_TESTS)
         if (UNIX AND NOT APPLE AND CMAKE_C_COMPILER_ID MATCHES "Clang")
             target_compile_definitions(c_cdd PRIVATE "_Bool=unsigned char")
         endif()

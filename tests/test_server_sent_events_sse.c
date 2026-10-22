@@ -696,8 +696,6 @@ static int test_sse_mock_cases(void) {
   char *out_buf = NULL;
   size_t out_len = 0;
   struct c_rest_response res;
-  extern int g_mock_sse_append_fail;
-  extern int g_mock_res_status_fail;
 
   memset(&src_evt, 0, sizeof(src_evt));
   memset(&dst_evt, 0, sizeof(dst_evt));

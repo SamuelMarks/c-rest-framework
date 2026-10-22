@@ -248,7 +248,6 @@ int test_ts_queue(void) {
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   {
-    extern int g_mock_tsq_fail;
     c_rest_ts_queue tq;
     void *out_val = NULL;
 

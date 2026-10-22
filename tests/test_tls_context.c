@@ -21,7 +21,6 @@ int test_tls_context(void) {
   char buf[10];
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  extern int g_mock_tls_fail;
   g_mock_tls_fail = 3;
   c_rest_tls_write(NULL, NULL, 0, NULL);
   g_mock_tls_fail = 4;

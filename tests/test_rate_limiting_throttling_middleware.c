@@ -212,7 +212,6 @@ int test_rate_limiting_throttling_middleware(void) {
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   {
-    extern int g_mock_rate_limit_fail;
     c_rest_rate_limiter rl;
     size_t remaining;
 

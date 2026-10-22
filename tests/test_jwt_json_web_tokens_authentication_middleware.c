@@ -308,7 +308,6 @@ int test_jwt_json_web_tokens_authentication_middleware(void) {
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   {
-    extern int g_mock_jwt_fail;
     struct c_rest_request mock_req;
     struct c_rest_response mock_res;
     struct c_rest_header mock_hdr;

@@ -1,6 +1,5 @@
-#include "c_rest_export.h"
-C_REST_EXPORT extern int mem_initialized;
 /* clang-format off */
+#include "c_rest_export.h"
 #include "c_rest_platform.h"
 
 #define C_REST_MEM_TRACK 1
@@ -10,6 +9,8 @@ C_REST_EXPORT extern int mem_initialized;
 #include <stdio.h>
 #include <string.h>
 /* clang-format on */
+
+C_REST_EXPORT extern int mem_initialized;
 
 static void *fail_malloc(size_t size) {
   (void)size;
@@ -366,7 +367,6 @@ int test_mem(void) {
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   {
-    extern int g_mock_mem_fail;
     char *dup_str = NULL;
     void *ptr = NULL;
 

@@ -387,7 +387,6 @@ TEST test_hot_reload_logger(void) {
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   {
-    extern int g_mock_hot_reload_fail;
     res = (int)c_rest_hot_reload_init(&ctx, &logger);
     ASSERT_EQ(C_REST_OK, res);
     ctx->watcher_thread = (c_rest_thread_t)1;
