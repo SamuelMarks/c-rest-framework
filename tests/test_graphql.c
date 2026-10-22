@@ -548,7 +548,7 @@ int test_graphql(void) {
   printf("Entering test_graphql_router\n");
   failed += test_graphql_router();
   failed += test_graphql_errors();
-  { failed += test_graphql_mock_run(); }
+  failed += test_graphql_mock_run();
 
   msgs[0] = "test_graphql passed\n";
   msgs[1] = "test_graphql failed\n";

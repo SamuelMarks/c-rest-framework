@@ -1073,7 +1073,6 @@ static void test_coverage(void) {
     c_rest_client_parse_form_urlencoded("a&b", &pf, &pc);
     c_rest_client_form_fields_free(pf, pc);
     pf = NULL;
-    { pf = NULL; }
 
     fields[0].key = "a";
     fields[0].value = "b";
@@ -1083,7 +1082,6 @@ static void test_coverage(void) {
     c_rest_client_parse_form_urlencoded("a=b&c=d", &pf, &pc);
     c_rest_client_form_fields_free(pf, pc);
     pf = NULL;
-    { pf = NULL; }
   }
 
   for (i = 1; i <= 150; i++) {
@@ -1307,7 +1305,7 @@ int test_client(void) {
                                       "Custom-Key", "Custom-Val");
   failed += (res != C_REST_OK);
   failed += (custom_headers_count != 2);
-  { failed += (strcmp(custom_headers[0].key, "Accept") != 0); }
+  failed += (strcmp(custom_headers[0].key, "Accept") != 0);
   c_rest_client_headers_free(custom_headers, custom_headers_count);
 
   /* Test Auth basic/bearer */

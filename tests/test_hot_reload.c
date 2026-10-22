@@ -562,33 +562,6 @@ TEST test_hot_reload_oom(void) {
     g_malloc_fail_count = -1;
     res = (int)c_rest_hot_reload_start(ctx, dummy_reload_callback, NULL);
     ASSERT_EQ(C_REST_ERROR_GENERIC, res);
-
-    /* Corrupt watcher_thread to make c_rest_thread_join fail */
-    /* By passing a valid thread handle format but disconnected, we force a
-     * failure */
-    /* However, casting -1 to c_rest_thread_t might not fail if it's considered
-     * valid enough to crash or valid enough to ignore. */
-    /* Let's try mocking a pthread failure if possible, but c_rest_thread_join
-     * is an external call. */
-    /* If we look at c_rest_thread_join, on POSIX it does pthread_join. Passing
-     * a random pointer or non-existent thread ID returns an error like ESRCH or
-     * EINVAL. */
-
-    {
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer)
-#define C_REST_ASAN_ENABLED 1
-#endif
-#endif
-#if defined(__SANITIZE_ADDRESS__)
-#define C_REST_ASAN_ENABLED 1
-#endif
-
-#ifndef C_REST_ASAN_ENABLED
-      /* On Mac/Linux a completely invalid pointer to pthread_t usually causes
-       * ESRCH or EINVAL */
-#endif
-    }
   }
 
   res = (int)c_rest_hot_reload_destroy(ctx);
