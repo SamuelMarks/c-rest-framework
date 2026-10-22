@@ -63,7 +63,7 @@ c_rest_error_t oauth2_register_user_handler(struct c_rest_request *req,
                                             struct c_rest_response *res,
                                             void *user_data);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 #endif /* OAUTH2_SERVER_H */

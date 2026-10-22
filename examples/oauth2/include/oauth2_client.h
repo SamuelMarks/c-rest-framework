@@ -52,7 +52,7 @@ c_rest_error_t oauth2_client_cleanup(void);
  */
 c_rest_error_t oauth2_client_get_context(c_rest_client_context **out_ctx);
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif /* __cplusplus */
 #endif /* OAUTH2_CLIENT_H */
