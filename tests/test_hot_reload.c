@@ -170,8 +170,9 @@ TEST test_hot_reload_modification(void) {
   ASSERT_EQ(C_REST_OK, res);
   ASSERT_EQ(0, called);
 
-  /* Wait at least 1-2 seconds (file mtime usually has 1s resolution) */
-  sleep_seconds(2);
+  /* Backdate last_modified_times so modified file is immediately detected */
+  sleep_seconds(0);
+  ctx->last_modified_times[0] -= 2;
 
 /* Modify file */
 #if defined(_MSC_VER)
@@ -205,7 +206,7 @@ TEST test_hot_reload_modification(void) {
       fclose(fp);
     }
     c_rest_hot_reload_add_watch(poll_ctx, "test_poll_fail.txt");
-    sleep_seconds(1);
+    poll_ctx->last_modified_times[0] -= 2;
     {
       FILE *fp = fopen("test_poll_fail.txt", "a");
       ASSERT(fp != NULL);
@@ -213,7 +214,6 @@ TEST test_hot_reload_modification(void) {
       fclose(fp);
     }
     c_rest_hot_reload_start(poll_ctx, dummy_fail_reload, &dummy_called);
-    sleep_seconds(1);
     c_rest_hot_reload_destroy(poll_ctx);
     remove("test_poll_fail.txt");
   }
@@ -353,7 +353,7 @@ TEST test_hot_reload_logger(void) {
   ASSERT_EQ(C_REST_OK, res);
 
   /* Modify file to trigger a change in poll */
-  sleep_seconds(2);
+  ctx->last_modified_times[0] -= 2;
   {
     FILE *f = NULL;
 #if defined(_MSC_VER)
@@ -660,8 +660,8 @@ TEST test_hot_reload_sse_routes(void) {
   c_rest_response_cleanup(&res);
   c_rest_request_cleanup(&req);
 
-  /* Second dispatch: wait 2s, modify file, poll, then dispatch */
-  sleep_seconds(2);
+  /* Second dispatch: modify file, poll, then dispatch */
+  hr_ctx->last_modified_times[0] -= 2;
   {
     FILE *f = NULL;
 #if defined(_MSC_VER)

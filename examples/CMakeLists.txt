@@ -36,3 +36,26 @@ add_subdirectory(app_full_multi)
 if(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART AND NOT EMSCRIPTEN)
   add_subdirectory(app_hot_reload)
 endif()
+
+if(CMAKE_CROSSCOMPILING_EMULATOR MATCHES "wine")
+    foreach(_demo_target
+        app_node_style
+        app_threaded
+        app_multi_process
+        app_https_server
+        app_notes
+        app_template_engine
+        oauth2_cli
+        app_openapi
+        app_websockets
+        app_server_sent_events_sse
+        app_graphql_api
+        app_http23
+        app_jwt_json_w
+        app_full_multi
+        app_hot_reload)
+        if(TARGET ${_demo_target})
+            set_target_properties(${_demo_target} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+        endif()
+    endforeach()
+endif()

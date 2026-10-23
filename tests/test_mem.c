@@ -156,6 +156,9 @@ int test_mem(void) {
   /* Realloc an untracked pointer successfully */
   {
     void *untracked = malloc(10);
+    void *untracked_c = calloc(1, 10);
+    untracked_c = realloc(untracked_c, 20);
+    free(untracked_c);
     rc = C_REST_REALLOC(untracked, 20, &untracked);
     failed += (rc != C_REST_OK);
     free(untracked);

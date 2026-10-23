@@ -1,4 +1,5 @@
 /* clang-format off */
+#define C_REST_NO_REDIRECT_STD_ALLOC
 #include "c_rest_error.h"
 #include "greatest.h"
 #include "greatest_clean.h"
@@ -207,6 +208,13 @@ TEST test_mem_error_branches(void) {
     ASSERT(dup_str != NULL);
     c_rest_mem_free(dup_str);
     g_crf_strdup_hook = NULL;
+    {
+      void *def_p = test_c_rest_default_malloc(8);
+      void *def_c = test_c_rest_default_calloc(1, 8);
+      def_p = test_c_rest_default_realloc(def_p, 16);
+      test_c_rest_internal_free(def_p);
+      test_c_rest_internal_free(def_c);
+    }
   }
 
   /* test c_rest_mem_realloc with size=0 and mutex_unlock failure in free */

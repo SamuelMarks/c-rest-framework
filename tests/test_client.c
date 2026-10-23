@@ -379,13 +379,13 @@ static void test_coverage(void) {
         test_safe_response_free(&t_sr);
       }
 
-      c_rest_proxy_request("http://localhost", NULL, NULL);
+      c_rest_proxy_request("://invalid", NULL, NULL);
       g_mock_client_fail = 10;
-      c_rest_proxy_request("http://localhost", NULL, NULL);
+      c_rest_proxy_request("://invalid", NULL, NULL);
       g_mock_client_fail = 11;
-      c_rest_proxy_request("http://localhost", NULL, NULL);
+      c_rest_proxy_request("://invalid", NULL, NULL);
       g_mock_client_fail = 13;
-      c_rest_proxy_request("http://localhost", NULL, NULL);
+      c_rest_proxy_request("://invalid", NULL, NULL);
       g_mock_client_fail = 0;
 
       {
@@ -569,7 +569,7 @@ static void test_coverage(void) {
       fail_malloc_n(0);
       g_crf_malloc_hook = fail_malloc_n;
       g_fail_malloc_at = mm;
-      c_rest_proxy_request("http://a", NULL, NULL);
+      c_rest_proxy_request("://invalid", NULL, NULL);
       g_crf_malloc_hook = NULL;
       g_fail_malloc_at = 0;
     }
@@ -619,8 +619,8 @@ static void test_coverage(void) {
     c_rest_client_context *c = NULL;
     c_rest_client_init(&c);
     {
-      c_rest_client_request_async(c, "http://a", "GET", NULL, 0, NULL, 0, NULL,
-                                  NULL);
+      c_rest_client_request_async(c, "://invalid", "GET", NULL, 0, NULL, 0,
+                                  NULL, NULL);
       c_rest_client_destroy(c);
     }
   }
@@ -1247,19 +1247,18 @@ int test_client(void) {
   headers[0].key = "X-Test-Header";
   headers[0].value = "TestValue";
 
-  res = (int)c_rest_client_request_sync(client, "http://localhost", "GET",
-                                        headers, 1, NULL, 0, &sync_res);
+  res = (int)c_rest_client_request_sync(client, "://invalid", "GET", headers, 1,
+                                        NULL, 0, &sync_res);
   /* Should fail gracefully with connection refused or success if there's a
    * listener */
   test_safe_response_free(&sync_res);
 
-  res =
-      (int)c_rest_client_request_async(client, "http://localhost", "POST", NULL,
-                                       0, "test", 4, async_callback, NULL);
+  res = (int)c_rest_client_request_async(client, "://invalid", "POST", NULL, 0,
+                                         "test", 4, async_callback, NULL);
   /* Async failure is fine as long as it handles the callback correctly or
    * safely fails */
 
-  res = (int)c_rest_proxy_request("http://localhost/proxy", NULL, NULL);
+  res = (int)c_rest_proxy_request("://invalid", NULL, NULL);
 
   /* Test URL encoding/decoding */
   res = (int)c_rest_client_url_encode("test + && = ?", &encoded);
@@ -1321,8 +1320,8 @@ int test_client(void) {
   CRF_FREE(auth_bearer);
 
   /* Test c_rest_client_post_form_sync */
-  res = (int)c_rest_client_post_form_sync(client, "http://localhost", headers,
-                                          1, fields, 2, &sync_res);
+  res = (int)c_rest_client_post_form_sync(client, "://invalid", headers, 1,
+                                          fields, 2, &sync_res);
   test_safe_response_free(&sync_res);
 
   /* Test JSON parsing on dummy response */

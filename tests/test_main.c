@@ -1,10 +1,14 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "test_protos.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "c_rest_modality.h"
+#ifndef CDD_DOS
+#include "parson.h"
+#endif
 /* clang-format on */
 
 static enum c_rest_error test_logger(const char *msg) {
@@ -111,6 +115,10 @@ int main(int argc, char **argv) {
   int failed = 0;
   (void)argc;
   (void)argv;
+#if !defined(CDD_DOS) && defined(C_REST_TESTING_MALLOC_HOOK)
+  json_set_allocation_functions(test_c_rest_default_malloc,
+                                test_c_rest_internal_free);
+#endif
 
 #define RUN_TEST(name, call)                                                   \
   do {                                                                         \

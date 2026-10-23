@@ -1,4 +1,5 @@
 /* clang-format off */
+#define C_REST_NO_REDIRECT_STD_ALLOC
 #include "c_rest_testing_mocks.h"
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
@@ -7,12 +8,6 @@ C_REST_EXPORT void *(*g_crf_malloc_hook)(size_t) = NULL;
 C_REST_EXPORT void *(*g_crf_calloc_hook)(size_t, size_t) = NULL;
 C_REST_EXPORT void *(*g_crf_realloc_hook)(void *, size_t) = NULL;
 C_REST_EXPORT char *(*g_crf_strdup_hook)(const char *) = NULL;
-
-
-
-
-
-
 
 C_REST_EXPORT void *test_c_rest_internal_malloc(size_t size) {
   if (g_crf_malloc_hook) return g_crf_malloc_hook(size);
@@ -26,6 +21,22 @@ C_REST_EXPORT void *test_c_rest_internal_calloc(size_t count, size_t size) {
 
 C_REST_EXPORT void *test_c_rest_internal_realloc(void *ptr, size_t size) {
   if (g_crf_realloc_hook) return g_crf_realloc_hook(ptr, size);
+  return realloc(ptr, size);
+}
+
+C_REST_EXPORT void test_c_rest_internal_free(void *ptr) {
+  free(ptr);
+}
+
+C_REST_EXPORT void *test_c_rest_default_malloc(size_t size) {
+  return malloc(size);
+}
+
+C_REST_EXPORT void *test_c_rest_default_calloc(size_t count, size_t size) {
+  return calloc(count, size);
+}
+
+C_REST_EXPORT void *test_c_rest_default_realloc(void *ptr, size_t size) {
   return realloc(ptr, size);
 }
 #endif

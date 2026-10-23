@@ -13,6 +13,10 @@
 #include "c_rest_export.h"
 /* clang-format on */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @brief Internal wrapper for malloc to allow mocking. */
 #ifndef CRF_MALLOC
 #ifdef C_REST_TESTING_MALLOC_HOOK
@@ -48,7 +52,24 @@ C_REST_EXPORT void *test_c_rest_internal_realloc(void *ptr, size_t size);
 
 /** @brief Internal wrapper for free. */
 #ifndef CRF_FREE
+#ifdef C_REST_TESTING_MALLOC_HOOK
+C_REST_EXPORT void test_c_rest_internal_free(void *ptr);
+C_REST_EXPORT void *test_c_rest_default_malloc(size_t size);
+C_REST_EXPORT void *test_c_rest_default_calloc(size_t count, size_t size);
+C_REST_EXPORT void *test_c_rest_default_realloc(void *ptr, size_t size);
+#define CRF_FREE test_c_rest_internal_free
+#else
 #define CRF_FREE free
+#endif
+#endif
+
+#if !defined(c_rest_framework_EXPORTS) &&                                      \
+    defined(C_REST_TESTING_MALLOC_HOOK) &&                                     \
+    !defined(C_REST_NO_REDIRECT_STD_ALLOC)
+#define malloc test_c_rest_default_malloc
+#define calloc test_c_rest_default_calloc
+#define realloc test_c_rest_default_realloc
+#define free test_c_rest_internal_free
 #endif
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
@@ -68,10 +89,6 @@ C_REST_EXPORT extern char *(*g_crf_strdup_hook)(const char *);
  */
 C_REST_EXPORT extern c_rest_error_t c_rest_internal_strdup(const char *s,
                                                            char **out_str);
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * @brief Initialize the memory tracker.

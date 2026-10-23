@@ -1,7 +1,4 @@
 /* clang-format off */
-#include "c_rest_error.h"
-#include "c_rest_mem.h"
-#include "c_rest_endian.h"
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif
@@ -9,6 +6,9 @@
 #undef _GNU_SOURCE
 #endif
 
+#include "c_rest_error.h"
+#include "c_rest_mem.h"
+#include "c_rest_endian.h"
 #include "c_rest_platform.h"
 #include "c_rest_testing_mocks.h"
 
