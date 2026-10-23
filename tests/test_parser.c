@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "test_protos.h"
 #include "c_rest_parser.h"
 

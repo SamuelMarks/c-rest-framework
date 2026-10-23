@@ -1,5 +1,6 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_modality.h"
 #include "c_rest_orm_crud.h"
 #include "c_rest_orm_middleware.h"
