@@ -21,6 +21,10 @@ static c_rest_client_context *g_client_ctx = NULL;
 c_rest_error_t oauth2_client_init(const char *token_url, const char *client_id,
                                   const char *client_secret, c_orm_db_t *db) {
   c_rest_error_t rc;
+#if !defined(CDD_DOS) && defined(C_REST_TESTING_MALLOC_HOOK)
+  json_set_allocation_functions(test_c_rest_default_malloc,
+                                test_c_rest_internal_free);
+#endif
   if (token_url == NULL || client_id == NULL || client_secret == NULL) {
     return 1;
   }

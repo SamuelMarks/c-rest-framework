@@ -620,15 +620,15 @@ c_rest_error_t oauth2_secret_handler(struct c_rest_request *req,
     return rc;
   }
 
-  CRF_FREE(db_token.access_token);
+  orm_err = c_orm_system_free(db_token.access_token);
   if (db_token.refresh_token)
-    CRF_FREE(db_token.refresh_token);
+    orm_err = c_orm_system_free(db_token.refresh_token);
   if (db_token.token_type)
-    CRF_FREE(db_token.token_type);
+    orm_err = c_orm_system_free(db_token.token_type);
   if (db_token.user_id)
-    CRF_FREE(db_token.user_id);
+    orm_err = c_orm_system_free(db_token.user_id);
   if (db_token.scopes)
-    CRF_FREE(db_token.scopes);
+    orm_err = c_orm_system_free(db_token.scopes);
 
   CRF_FREE(token_str);
 
