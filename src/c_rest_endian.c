@@ -9,7 +9,7 @@
 C_REST_EXPORT c_rest_error_t (*g_crf_is_little_endian_hook)(int *) = NULL;
 #endif
 
-static c_rest_error_t is_little_endian(int *out_is_little) {
+static NO_DISCARD c_rest_error_t is_little_endian(int *out_is_little) {
   unsigned int test = 1;
   unsigned char *p;
 #ifdef C_REST_TESTING_ENDIAN_HOOK
@@ -28,8 +28,9 @@ c_rest_error_t c_rest_htons(unsigned short hostshort,
   unsigned short swapped;
   c_rest_error_t rc;
   if (!out_netshort) {
-    LOG_DEBUG("c_rest_htons: invalid argument out_netshort is NULL");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(
+        C_REST_ERROR_GENERIC,
+        "c_rest_htons: invalid argument out_netshort is NULL");
   }
   rc = is_little_endian(&little);
   if (rc != C_REST_OK) {
@@ -47,8 +48,8 @@ c_rest_error_t c_rest_htonl(unsigned long hostlong,
   unsigned long swapped;
   c_rest_error_t rc;
   if (!out_netlong) {
-    LOG_DEBUG("c_rest_htonl: invalid argument out_netlong is NULL");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC,
+                          "c_rest_htonl: invalid argument out_netlong is NULL");
   }
   rc = is_little_endian(&little);
   if (rc != C_REST_OK) {
@@ -65,8 +66,9 @@ c_rest_error_t c_rest_ntohs(unsigned short netshort,
                             unsigned short *out_hostshort) {
   c_rest_error_t rc;
   if (!out_hostshort) {
-    LOG_DEBUG("c_rest_ntohs: invalid argument out_hostshort is NULL");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(
+        C_REST_ERROR_GENERIC,
+        "c_rest_ntohs: invalid argument out_hostshort is NULL");
   }
   rc = c_rest_htons(netshort, out_hostshort);
   if (rc != C_REST_OK) {
@@ -79,8 +81,9 @@ c_rest_error_t c_rest_ntohl(unsigned long netlong,
                             unsigned long *out_hostlong) {
   c_rest_error_t rc;
   if (!out_hostlong) {
-    LOG_DEBUG("c_rest_ntohl: invalid argument out_hostlong is NULL");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(
+        C_REST_ERROR_GENERIC,
+        "c_rest_ntohl: invalid argument out_hostlong is NULL");
   }
   rc = c_rest_htonl(netlong, out_hostlong);
   if (rc != C_REST_OK) {

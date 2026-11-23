@@ -62,7 +62,11 @@ def main():
                             break
 
                     if not is_valid:
-                        if func_name in ["mock_send"]:
+                        if func_name in [
+                            "mock_send",
+                            "c_rest_zalloc_impl",
+                            "c_rest_brotli_alloc_impl",
+                        ]:
                             continue
                         print(
                             f"{path}: Function {func_name} returns '{ret_type}', which is not an error enum or void."

@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include "c_rest_error.h"
 #include "c_rest_export.h"
+#include "c_rest_no_discard.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -41,7 +42,7 @@ struct c_rest_multipart_callbacks {
  * @param user_data User data to associate with the parser.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_multipart_parser_init(
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t c_rest_multipart_parser_init(
     c_rest_multipart_parser **out_parser, const char *boundary,
     const struct c_rest_multipart_callbacks *callbacks, void *user_data);
 
@@ -53,7 +54,7 @@ C_REST_EXPORT extern c_rest_error_t c_rest_multipart_parser_init(
  * @param out_parsed Pointer to store the number of bytes parsed.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
                                 const char *data, size_t len,
                                 size_t *out_parsed);
@@ -63,7 +64,7 @@ c_rest_multipart_parser_execute(c_rest_multipart_parser *parser,
  * @param parser The parser to destroy.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser);
 
 /**
@@ -72,11 +73,11 @@ c_rest_multipart_parser_destroy(c_rest_multipart_parser *parser);
  * @param out_clone Pointer to store the cloned parser.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_multipart_parser_clone(const c_rest_multipart_parser *parser,
                               c_rest_multipart_parser **out_clone);
 
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_multipart_parser_get_user_data(c_rest_multipart_parser *parser,
                                       void **out_user_data);
 

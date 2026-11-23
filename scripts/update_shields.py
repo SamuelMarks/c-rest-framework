@@ -110,13 +110,23 @@ def update_readme(test_cov, doc_cov):
 
 
 if __name__ == "__main__":
+    import shutil
     # run doxygen
     os.system("doxygen Doxyfile > /dev/null 2>&1")
 
     # generate test coverage summary (this assumes the project is already built with coverage and tests run)
     build_dir = "build" if os.path.exists("build") else ("build_gcc" if os.path.exists("build_gcc") else None)
     if build_dir:
-        cmd = rf"cd {build_dir} && gcovr -r .. --filter '\.\./src/' --filter '\.\./include/' --json-summary coverage_summary.json > /dev/null 2>&1"
+        gcov_bin = next(
+            (shutil.which(c) for c in ("gcov-16", "gcov-15", "gcov-14", "gcov") if shutil.which(c)),
+            "gcov",
+        )
+        search_paths = (
+            f'"{build_dir}/CMakeFiles" "{build_dir}/tests"'
+            if os.path.exists(f"{build_dir}/CMakeFiles")
+            else f'"{build_dir}"'
+        )
+        cmd = f'gcovr -j 1 --gcov-executable "{gcov_bin}" -r . {search_paths} --filter "src/" --json-summary "{build_dir}/coverage_summary.json" > /dev/null 2>&1'
         os.system(cmd)
 
     test_cov = get_test_coverage()

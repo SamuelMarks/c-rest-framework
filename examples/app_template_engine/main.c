@@ -69,7 +69,8 @@ int main(void) {
     printf("Failed to init template\n");
     rc = c_rest_router_destroy(router);
     if (rc != C_REST_OK) {
-      c_rest_destroy(ctx);
+      if (c_rest_destroy(ctx) != C_REST_OK)
+        return 1;
       return 1;
     }
     rc = c_rest_destroy(ctx);
@@ -82,9 +83,13 @@ int main(void) {
   rc = c_rest_router_add_template(router, "GET", "/", &tpl_ctx,
                                   provide_template_data, NULL);
   if (rc != C_REST_OK) {
-    c_rest_template_destroy(&tpl_ctx);
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    rc = c_rest_template_destroy(&tpl_ctx);
+    if (rc != C_REST_OK)
+      return 1;
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -92,9 +97,13 @@ int main(void) {
   printf("Starting server at http://127.0.0.1:8080/\n");
   rc = c_rest_set_router(ctx, router);
   if (rc != C_REST_OK) {
-    c_rest_template_destroy(&tpl_ctx);
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    rc = c_rest_template_destroy(&tpl_ctx);
+    if (rc != C_REST_OK)
+      return 1;
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   /* c_rest_run(ctx); Uncomment to block and run server */
@@ -102,13 +111,16 @@ int main(void) {
   /* Cleanup */
   rc = c_rest_template_destroy(&tpl_ctx);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_router_destroy(router);
   if (rc != C_REST_OK) {
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_destroy(ctx);

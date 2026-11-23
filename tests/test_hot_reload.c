@@ -53,15 +53,9 @@ static void sleep_seconds(int seconds) {
 #endif
 }
 
-#define TEST static int
-#define PASS() return failed
-#define ASSERT_EQ(exp, act) failed += ((exp) != (act))
-#define ASSERT(cond) failed += (!(cond))
-
 TEST test_hot_reload_init_destroy(void) {
   c_rest_hot_reload_ctx_t *ctx = NULL;
   int res;
-  int failed = 0;
 
   res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
@@ -75,7 +69,6 @@ TEST test_hot_reload_init_destroy(void) {
 TEST test_hot_reload_add_watch(void) {
   c_rest_hot_reload_ctx_t *ctx = NULL;
   int res;
-  int failed = 0;
 
   res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
@@ -127,7 +120,6 @@ TEST test_hot_reload_start(void) {
   c_rest_hot_reload_ctx_t *ctx = NULL;
   int res;
   int called = 0;
-  int failed = 0;
 
   res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
@@ -145,7 +137,6 @@ TEST test_hot_reload_modification(void) {
   c_rest_hot_reload_ctx_t *ctx = NULL;
   int res;
   int called = 0;
-  int failed = 0;
   FILE *f;
   const char *test_filename = "test_hot_reload_tmp.txt";
 
@@ -196,25 +187,41 @@ TEST test_hot_reload_modification(void) {
   {
     c_rest_hot_reload_ctx_t *poll_ctx = NULL;
     int dummy_called = 0;
-    c_rest_hot_reload_init(&poll_ctx, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_hot_reload_init(&poll_ctx, NULL));
     poll_ctx->on_reload = dummy_fail_reload;
     poll_ctx->user_data = &dummy_called;
     {
-      FILE *fp = fopen("test_poll_fail.txt", "w");
+      FILE *fp = NULL;
+#if defined(_MSC_VER)
+      if (fopen_s(&fp, "test_poll_fail.txt", "w") != 0) {
+        fp = NULL;
+      }
+#else
+      fp = fopen("test_poll_fail.txt", "w");
+#endif
       ASSERT(fp != NULL);
       fprintf(fp, "data\n");
       fclose(fp);
     }
-    c_rest_hot_reload_add_watch(poll_ctx, "test_poll_fail.txt");
+    ASSERT_EQ(C_REST_OK,
+              c_rest_hot_reload_add_watch(poll_ctx, "test_poll_fail.txt"));
     poll_ctx->last_modified_times[0] -= 2;
     {
-      FILE *fp = fopen("test_poll_fail.txt", "a");
+      FILE *fp = NULL;
+#if defined(_MSC_VER)
+      if (fopen_s(&fp, "test_poll_fail.txt", "a") != 0) {
+        fp = NULL;
+      }
+#else
+      fp = fopen("test_poll_fail.txt", "a");
+#endif
       ASSERT(fp != NULL);
       fprintf(fp, "changed\n");
       fclose(fp);
     }
-    c_rest_hot_reload_start(poll_ctx, dummy_fail_reload, &dummy_called);
-    c_rest_hot_reload_destroy(poll_ctx);
+    ASSERT_EQ(C_REST_OK, c_rest_hot_reload_start(poll_ctx, dummy_fail_reload,
+                                                 &dummy_called));
+    ASSERT_EQ(C_REST_OK, c_rest_hot_reload_destroy(poll_ctx));
     remove("test_poll_fail.txt");
   }
 
@@ -225,9 +232,8 @@ TEST test_hot_reload_modification(void) {
 TEST test_hot_reload_edge_cases(void) {
   c_rest_hot_reload_ctx_t *ctx = NULL;
   int res;
-  int failed = 0;
 
-  dummy_reload_callback(NULL);
+  ASSERT_EQ(C_REST_OK, dummy_reload_callback(NULL));
 
   /* Invalid init */
   res = (int)c_rest_hot_reload_init(NULL, NULL);
@@ -237,8 +243,8 @@ TEST test_hot_reload_edge_cases(void) {
     struct c_rest_logger logger_null_cb;
     c_rest_hot_reload_ctx_t *ctx_null_cb = NULL;
     memset(&logger_null_cb, 0, sizeof(logger_null_cb));
-    c_rest_hot_reload_init(&ctx_null_cb, &logger_null_cb);
-    c_rest_hot_reload_destroy(ctx_null_cb);
+    ASSERT_EQ(C_REST_OK, c_rest_hot_reload_init(&ctx_null_cb, &logger_null_cb));
+    ASSERT_EQ(C_REST_OK, c_rest_hot_reload_destroy(ctx_null_cb));
   }
 
   ASSERT_EQ(C_REST_ERROR_INVALID_ARG, res);
@@ -255,7 +261,7 @@ TEST test_hot_reload_edge_cases(void) {
 
   /* invalid file watch */
   res = (int)c_rest_hot_reload_add_watch(ctx, "does_not_exist_file.txt");
-  ASSERT_EQ(C_REST_ERROR_GENERIC, res);
+  ASSERT_EQ(C_REST_ERROR_NOT_FOUND, res);
 
   /* Invalid start */
   res = (int)c_rest_hot_reload_start(NULL, dummy_reload_callback, NULL);
@@ -278,7 +284,7 @@ TEST test_hot_reload_edge_cases(void) {
   /* Trigger cfs_path_init_str failure in get_file_mtime */
   g_mock_lib_fail = 10;
   res = (int)c_rest_hot_reload_add_watch(ctx, "test_file.txt");
-  ASSERT_EQ(C_REST_ERROR_GENERIC, res);
+  ASSERT_EQ(C_REST_ERROR_NOT_FOUND, res);
   g_mock_lib_fail = 0;
 
   res = (int)c_rest_hot_reload_destroy(ctx);
@@ -330,7 +336,6 @@ TEST test_hot_reload_logger(void) {
   struct c_rest_logger logger;
   struct c_rest_logger err_logger;
   int res;
-  int failed = 0;
 
   logger.log_cb = mock_logger_cb;
   res = (int)c_rest_hot_reload_init(&ctx, &logger);
@@ -415,7 +420,7 @@ TEST test_hot_reload_logger(void) {
       ASSERT_EQ(C_REST_OK, res);
       g_mock_hot_reload_fail = 10;
       res = (int)c_rest_hot_reload_add_watch(ctx_fail, "test_log.txt");
-      ASSERT_EQ(C_REST_ERROR_GENERIC, res);
+      ASSERT_EQ(C_REST_ERROR_OOM, res);
       g_mock_hot_reload_fail = 0;
 
       res = (int)c_rest_hot_reload_add_watch(ctx_fail, "test_log.txt");
@@ -423,7 +428,7 @@ TEST test_hot_reload_logger(void) {
 
       g_mock_hot_reload_fail = 10;
       res = (int)c_rest_hot_reload_poll(ctx_fail, dummy_reload_callback, NULL);
-      ASSERT_EQ(C_REST_ERROR_GENERIC, res);
+      ASSERT_EQ(C_REST_ERROR_OOM, res);
       g_mock_hot_reload_fail = 0;
 
       res = (int)c_rest_hot_reload_destroy(ctx_fail);
@@ -460,7 +465,6 @@ static void *hook_realloc(void *ptr, size_t size) {
 TEST test_hot_reload_oom(void) {
   c_rest_hot_reload_ctx_t *ctx = NULL;
   int res;
-  int failed = 0;
 
   g_crf_malloc_hook = hook_malloc;
   g_crf_realloc_hook = hook_realloc;
@@ -584,7 +588,6 @@ TEST test_hot_reload_sse_routes(void) {
   c_rest_error_t rc;
   c_rest_socket_t client_sock = C_REST_INVALID_SOCKET;
   c_rest_socket_t accepted_sock = C_REST_INVALID_SOCKET;
-  int failed = 0;
 
   (void)client_sock;
 
@@ -598,7 +601,7 @@ TEST test_hot_reload_sse_routes(void) {
   {
     int fds[2];
     int sp_rc = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-    failed += (sp_rc != 0);
+    ASSERT_EQ(0, sp_rc);
     accepted_sock = (c_rest_socket_t)fds[0];
     client_sock = (c_rest_socket_t)fds[1];
   }
@@ -657,8 +660,8 @@ TEST test_hot_reload_sse_routes(void) {
   rc = c_rest_router_dispatch(router, &req, &res);
   ASSERT_EQ(C_REST_OK, rc);
   ASSERT_EQ(200, res.status_code);
-  c_rest_response_cleanup(&res);
-  c_rest_request_cleanup(&req);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+  ASSERT_EQ(C_REST_OK, c_rest_request_cleanup(&req));
 
   /* Second dispatch: modify file, poll, then dispatch */
   hr_ctx->last_modified_times[0] -= 2;
@@ -694,8 +697,8 @@ TEST test_hot_reload_sse_routes(void) {
       res.context = &conn_ctx;
 
       rc = c_rest_router_dispatch(router, &req, &res);
-      c_rest_response_cleanup(&res);
-      c_rest_request_cleanup(&req);
+      ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+      ASSERT_EQ(C_REST_OK, c_rest_request_cleanup(&req));
     }
     g_crf_malloc_hook = NULL;
     g_crf_realloc_hook = NULL;
@@ -720,8 +723,8 @@ TEST test_hot_reload_sse_routes(void) {
   ASSERT_EQ(200, res.status_code);
 
   /* Also test dispatch when hr_ctx is missing */
-  c_rest_response_cleanup(&res);
-  c_rest_request_cleanup(&req);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+  ASSERT_EQ(C_REST_OK, c_rest_request_cleanup(&req));
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
@@ -735,8 +738,8 @@ TEST test_hot_reload_sse_routes(void) {
   ASSERT_EQ(503, res.status_code);
 
   /* Clean up */
-  c_rest_response_cleanup(&res);
-  c_rest_request_cleanup(&req);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+  ASSERT_EQ(C_REST_OK, c_rest_request_cleanup(&req));
 
   /* Also test when malloc fails inside 503 response */
   memset(&req, 0, sizeof(req));
@@ -752,8 +755,8 @@ TEST test_hot_reload_sse_routes(void) {
   ASSERT_EQ(C_REST_OK, rc);
   ASSERT_EQ(503, res.status_code);
 
-  c_rest_response_cleanup(&res);
-  c_rest_request_cleanup(&req);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+  ASSERT_EQ(C_REST_OK, c_rest_request_cleanup(&req));
 
   /* Test event init failure in SSE handler */
   {
@@ -774,8 +777,8 @@ TEST test_hot_reload_sse_routes(void) {
     g_mock_socket_fail = 0;
 #endif
     ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
-    c_rest_response_cleanup(&res);
-    c_rest_request_cleanup(&req);
+    ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+    ASSERT_EQ(C_REST_OK, c_rest_request_cleanup(&req));
   }
 
   /* Test send event failure in SSE handler */
@@ -790,8 +793,8 @@ TEST test_hot_reload_sse_routes(void) {
     rc = c_rest_router_dispatch(router, &req, &res);
     g_mock_socket_fail = 0;
     ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
-    c_rest_response_cleanup(&res);
-    c_rest_request_cleanup(&req);
+    ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+    ASSERT_EQ(C_REST_OK, c_rest_request_cleanup(&req));
   }
 
   /* Test event destroy failure in SSE handler */
@@ -812,17 +815,17 @@ TEST test_hot_reload_sse_routes(void) {
     g_mock_socket_fail = 0;
 #endif
     ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
-    c_rest_response_cleanup(&res);
-    c_rest_request_cleanup(&req);
+    ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+    ASSERT_EQ(C_REST_OK, c_rest_request_cleanup(&req));
   }
 
-  c_rest_router_destroy(router);
-  c_rest_hot_reload_destroy(hr_ctx);
+  ASSERT_EQ(C_REST_OK, c_rest_router_destroy(router));
+  ASSERT_EQ(C_REST_OK, c_rest_hot_reload_destroy(hr_ctx));
   remove("test_sse_file.txt");
 
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
-  c_rest_socket_close(accepted_sock);
-  c_rest_socket_close(client_sock);
+  ASSERT_EQ(C_REST_OK, c_rest_socket_close(accepted_sock));
+  ASSERT_EQ(C_REST_OK, c_rest_socket_close(client_sock));
 #endif
 
   PASS();
@@ -834,7 +837,6 @@ TEST test_hot_reload_multiplatform(void) {
   c_rest_hot_reload_ctx_t *ctx = NULL;
   int res;
   int dummy_called = 0;
-  int failed = 0;
 
   res = (int)c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, res);
@@ -890,25 +892,20 @@ TEST test_hot_reload_multiplatform(void) {
 }
 #endif
 
-int test_hot_reload(void) {
-  int failed = 0;
-#define CHECK_HR(fn) failed += fn()
-
-  CHECK_HR(test_hot_reload_init_destroy);
-  CHECK_HR(test_hot_reload_add_watch);
-  CHECK_HR(test_hot_reload_start);
-  CHECK_HR(test_hot_reload_modification);
-  CHECK_HR(test_hot_reload_edge_cases);
-  CHECK_HR(test_hot_reload_logger);
+SUITE(hot_reload_suite) {
+  RUN_TEST(test_hot_reload_init_destroy);
+  RUN_TEST(test_hot_reload_add_watch);
+  RUN_TEST(test_hot_reload_start);
+  RUN_TEST(test_hot_reload_modification);
+  RUN_TEST(test_hot_reload_edge_cases);
+  RUN_TEST(test_hot_reload_logger);
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  CHECK_HR(test_hot_reload_oom);
+  RUN_TEST(test_hot_reload_oom);
 #endif
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
-  CHECK_HR(test_hot_reload_sse_routes);
+  RUN_TEST(test_hot_reload_sse_routes);
 #endif
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
-  CHECK_HR(test_hot_reload_multiplatform);
+  RUN_TEST(test_hot_reload_multiplatform);
 #endif
-#undef CHECK_HR
-  return failed;
 }

@@ -5,12 +5,12 @@
 #ifndef C_REST_MEM_H
 #define C_REST_MEM_H
 /* clang-format off */
-#include "c_rest_error.h"
-
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include "c_rest_error.h"
 #include "c_rest_export.h"
+#include "c_rest_no_discard.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -18,48 +18,67 @@ extern "C" {
 #endif
 
 /** @brief Internal wrapper for malloc to allow mocking. */
-#ifndef CRF_MALLOC
+#ifndef CRF_INTERNAL_MALLOC
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT extern void *(*g_crf_malloc_hook)(size_t);
 C_REST_EXPORT void *test_c_rest_internal_malloc(size_t size);
-#define CRF_MALLOC test_c_rest_internal_malloc
+#define CRF_INTERNAL_MALLOC test_c_rest_internal_malloc
 #else
-#define CRF_MALLOC malloc
+#define CRF_INTERNAL_MALLOC malloc
 #endif
 #endif
 
 /** @brief Internal wrapper for calloc to allow mocking. */
-#ifndef CRF_CALLOC
+#ifndef CRF_INTERNAL_CALLOC
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT extern void *(*g_crf_calloc_hook)(size_t, size_t);
 C_REST_EXPORT void *test_c_rest_internal_calloc(size_t count, size_t size);
-#define CRF_CALLOC test_c_rest_internal_calloc
+#define CRF_INTERNAL_CALLOC test_c_rest_internal_calloc
 #else
-#define CRF_CALLOC calloc
+#define CRF_INTERNAL_CALLOC calloc
 #endif
 #endif
 
 /** @brief Internal wrapper for realloc to allow mocking. */
-#ifndef CRF_REALLOC
+#ifndef CRF_INTERNAL_REALLOC
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT extern void *(*g_crf_realloc_hook)(void *, size_t);
 C_REST_EXPORT void *test_c_rest_internal_realloc(void *ptr, size_t size);
-#define CRF_REALLOC test_c_rest_internal_realloc
+#define CRF_INTERNAL_REALLOC test_c_rest_internal_realloc
 #else
-#define CRF_REALLOC realloc
+#define CRF_INTERNAL_REALLOC realloc
 #endif
 #endif
 
 /** @brief Internal wrapper for free. */
-#ifndef CRF_FREE
+#ifndef CRF_INTERNAL_FREE
 #ifdef C_REST_TESTING_MALLOC_HOOK
 C_REST_EXPORT void test_c_rest_internal_free(void *ptr);
 C_REST_EXPORT void *test_c_rest_default_malloc(size_t size);
 C_REST_EXPORT void *test_c_rest_default_calloc(size_t count, size_t size);
 C_REST_EXPORT void *test_c_rest_default_realloc(void *ptr, size_t size);
-#define CRF_FREE test_c_rest_internal_free
+#define CRF_INTERNAL_FREE test_c_rest_internal_free
 #else
-#define CRF_FREE free
+#define CRF_INTERNAL_FREE free
+#endif
+#endif
+
+#ifdef C_REST_MEM_INTERNAL
+#ifndef CRF_MALLOC
+/** @brief Allocator-internal CRT malloc hook. */
+#define CRF_MALLOC CRF_INTERNAL_MALLOC
+#endif
+#ifndef CRF_CALLOC
+/** @brief Allocator-internal CRT calloc hook. */
+#define CRF_CALLOC CRF_INTERNAL_CALLOC
+#endif
+#ifndef CRF_REALLOC
+/** @brief Allocator-internal CRT realloc hook. */
+#define CRF_REALLOC CRF_INTERNAL_REALLOC
+#endif
+#ifndef CRF_FREE
+/** @brief Allocator-internal CRT free hook. */
+#define CRF_FREE CRF_INTERNAL_FREE
 #endif
 #endif
 
@@ -76,25 +95,20 @@ C_REST_EXPORT void *test_c_rest_default_realloc(void *ptr, size_t size);
 C_REST_EXPORT extern char *(*g_crf_strdup_hook)(const char *);
 #endif
 
-#ifdef _MSC_VER
-/** @brief Internal strdup implementation */
-#define CRF_STRDUP _strdup
-#endif
-
 /**
  * @brief Internal strdup implementation.
  * @param s String to duplicate.
  * @param out_str Pointer to store duplicated string.
  * @return C_REST_OK on success, error enum on failure.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_internal_strdup(const char *s,
-                                                           char **out_str);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_internal_strdup(const char *s, char **out_str);
 
 /**
  * @brief Initialize the memory tracker.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_mem_tracker_init(void);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t c_rest_mem_tracker_init(void);
 
 /**
  * @brief Allocate memory, optionally tracking the allocation.
@@ -104,7 +118,7 @@ C_REST_EXPORT extern c_rest_error_t c_rest_mem_tracker_init(void);
  * @param out_ptr Pointer to where the allocated memory pointer will be stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_mem_malloc(size_t size, const char *file, int line, void *out_ptr);
 
 /**
@@ -116,9 +130,9 @@ c_rest_mem_malloc(size_t size, const char *file, int line, void *out_ptr);
  * @param out_ptr Pointer to where the allocated memory pointer will be stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_mem_calloc(size_t count, size_t size,
-                                                      const char *file,
-                                                      int line, void *out_ptr);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_mem_calloc(size_t count, size_t size, const char *file, int line,
+                  void *out_ptr);
 
 /**
  * @brief Reallocate memory, optionally tracking the allocation.
@@ -130,9 +144,9 @@ C_REST_EXPORT extern c_rest_error_t c_rest_mem_calloc(size_t count, size_t size,
  * stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size,
-                                                       const char *file,
-                                                       int line, void *out_ptr);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_mem_realloc(void *ptr, size_t size, const char *file, int line,
+                   void *out_ptr);
 
 /**
  * @brief Duplicate a string, optionally tracking the allocation.
@@ -143,7 +157,7 @@ C_REST_EXPORT extern c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size,
  * stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_mem_strdup(const char *str, const char *file, int line, char **out_str);
 
 /**
@@ -151,19 +165,20 @@ c_rest_mem_strdup(const char *str, const char *file, int line, char **out_str);
  * @param ptr A pointer to the memory to free.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_mem_free(void *ptr);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t c_rest_mem_free(void *ptr);
 
 /**
  * @brief Print a report of memory leaks detected by the tracker.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_mem_tracker_print_leaks(void);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_mem_tracker_print_leaks(void);
 
 /**
  * @brief Clean up the memory tracker and release its resources.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_mem_tracker_cleanup(void);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t c_rest_mem_tracker_cleanup(void);
 
 #ifdef C_REST_MEM_TRACK
 /** @brief Macro to allocate memory with tracking. */
@@ -180,15 +195,21 @@ C_REST_EXPORT extern c_rest_error_t c_rest_mem_tracker_cleanup(void);
 #else
 /** @brief Macro to allocate memory without tracking. */
 #define C_REST_MALLOC(size, out_ptr)                                           \
-  (((*((void **)(out_ptr))) = CRF_MALLOC(size)) == NULL)
+  (((*((void **)(out_ptr))) = CRF_INTERNAL_MALLOC(size)) == NULL               \
+       ? C_REST_ERROR_OOM                                                      \
+       : C_REST_OK)
 /** @brief Macro to allocate zero-initialized memory without tracking. */
 #define C_REST_CALLOC(count, size, out_ptr)                                    \
-  (((*((void **)(out_ptr))) = CRF_CALLOC(count, size)) == NULL)
+  (((*((void **)(out_ptr))) = CRF_INTERNAL_CALLOC(count, size)) == NULL        \
+       ? C_REST_ERROR_OOM                                                      \
+       : C_REST_OK)
 /** @brief Macro to reallocate memory without tracking. */
 #define C_REST_REALLOC(ptr, size, out_ptr)                                     \
-  (((*((void **)(out_ptr))) = CRF_REALLOC(ptr, size)) == NULL)
+  (((*((void **)(out_ptr))) = CRF_INTERNAL_REALLOC(ptr, size)) == NULL         \
+       ? C_REST_ERROR_OOM                                                      \
+       : C_REST_OK)
 /** @brief Macro to free memory without tracking. */
-#define C_REST_FREE(ptr) CRF_FREE(ptr)
+#define C_REST_FREE(ptr) CRF_INTERNAL_FREE(ptr)
 #endif
 
 #ifdef __cplusplus

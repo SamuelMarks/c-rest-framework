@@ -1,54 +1,63 @@
+#ifndef C_REST_TEST_PROTOS_H
+#define C_REST_TEST_PROTOS_H
+
 /* clang-format off */
 #include "c_rest_error.h"
 #include "c_rest_testing_mocks.h"
+#include "greatest.h"
+#include "greatest_clean.h"
 /* clang-format on */
-#ifndef C_REST_TEST_PROTOS_H
-#define C_REST_TEST_PROTOS_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int test_multiplatform_integration(void);
-int test_parser(void);
-int test_client(void);
-int test_multipart(void);
-int test_router(void);
-int test_request_response(void);
-int test_orm_integration(void);
-int test_crypto(void);
-int test_time(void);
-int test_tls_context(void);
-int test_tls_integration(void);
-int test_oauth2(void);
-int test_openapi(void);
-int test_platform(void);
-int test_middleware_suite(void);
-int test_modality(void);
-int test_websocket(void);
-int test_base64(void);
-int test_rate_limiting_throttling_middleware(void);
-int test_http23(void);
-int test_full_multipart_form_streaming(void);
-int test_server_sent_events_sse(void);
-int test_graphql(void);
-int test_template(void);
-int test_hot_reload(void);
-int test_response_compression_gzip_brotli(void);
-int test_jwt_json_web_tokens_authentication_middleware(void);
-int test_examples(void);
+/** @brief Shared multiplatform accept counter for modality tests. */
+extern int g_accept_calls;
+
+#ifdef C_REST_TEST_MAIN
+SUITE_EXTERN(log_suite);
+SUITE_EXTERN(endian_suite);
+SUITE_EXTERN(pool_suite);
+SUITE_EXTERN(full_multipart_streaming_suite);
+SUITE_EXTERN(time_suite);
+SUITE_EXTERN(list_suite);
+SUITE_EXTERN(string_suite);
+SUITE_EXTERN(tls_context_suite);
+SUITE_EXTERN(tls_integration_suite);
+SUITE_EXTERN(multiplatform_suite);
+SUITE_EXTERN(base64_suite);
+SUITE_EXTERN(str_utils_suite);
+SUITE_EXTERN(hashmap_suite);
+SUITE_EXTERN(graphql_ext_suite);
+SUITE_EXTERN(examples_suite);
+SUITE_EXTERN(hot_reload_suite);
+SUITE_EXTERN(http23_suite);
+SUITE_EXTERN(oauth2_suite);
+SUITE_EXTERN(jwt_middleware_suite);
+SUITE_EXTERN(middleware_suite);
+SUITE_EXTERN(crypto_suite);
+SUITE_EXTERN(rate_limit_suite);
+SUITE_EXTERN(template_suite);
+SUITE_EXTERN(ts_queue_suite);
+SUITE_EXTERN(mem_suite);
+SUITE_EXTERN(multipart_suite);
+SUITE_EXTERN(graphql_suite);
+SUITE_EXTERN(compression_suite);
+SUITE_EXTERN(sse_suite);
+SUITE_EXTERN(parser_suite);
+SUITE_EXTERN(orm_integration_suite);
+SUITE_EXTERN(websocket_suite);
+SUITE_EXTERN(platform_suite);
+SUITE_EXTERN(openapi_suite);
+SUITE_EXTERN(client_suite);
+SUITE_EXTERN(router_suite);
+SUITE_EXTERN(request_response_suite);
+SUITE_EXTERN(modality_suite);
+#endif /* C_REST_TEST_MAIN */
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
 #endif /* C_REST_TEST_PROTOS_H */
-int test_endian(void);
-int test_hashmap(void);
-int test_list(void);
-int test_str_utils(void);
-int test_mem(void);
-int test_ts_queue(void);
-int test_log(void);
-int test_string(void);
-int test_pool(void);

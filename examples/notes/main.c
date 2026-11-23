@@ -74,7 +74,8 @@ int main(void) {
   res = c_rest_router_init(&router);
   if (res != 0) {
     printf("Failed to init router\n");
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -86,66 +87,84 @@ int main(void) {
   rc = c_rest_router_use(router, "/api/v0",
                          c_rest_orm_transaction_start_middleware, ctx);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_router_use_post(router, "/api/v0",
                               c_rest_orm_transaction_end_middleware, ctx);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
   /* Auto-generate CRUD endpoints using the c_rest_orm_crud handlers */
   rc = c_rest_set_router(ctx, router);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_router_add(router, "GET", "/api/v0/notes",
                          c_rest_orm_crud_get_list, &note_model);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_router_add(router, "POST", "/api/v0/notes",
                          c_rest_orm_crud_create, &note_model);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_router_add(router, "GET", "/api/v0/notes/:id",
                          c_rest_orm_crud_get_one, &note_model);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_router_add(router, "PUT", "/api/v0/notes/:id",
                          c_rest_orm_crud_update, &note_model);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_router_add(router, "DELETE", "/api/v0/notes/:id",
                          c_rest_orm_crud_delete, &note_model);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
   /* Fallback handler */
   rc = c_rest_router_add(router, "GET", "/*", custom_404_handler, NULL);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -160,7 +179,8 @@ int main(void) {
 
   rc = c_rest_router_destroy(router);
   if (rc != C_REST_OK) {
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_destroy(ctx);

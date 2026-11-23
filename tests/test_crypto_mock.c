@@ -21,10 +21,6 @@ static int g_mock_malloc_fail = 0;
 static int g_mock_malloc_fail_size = -1;
 
 /* Forward declarations */
-extern c_rest_error_t c_rest_base64_encode(const unsigned char *src, size_t src_len, char *dst, size_t *dst_len);
-extern c_rest_error_t c_rest_base64url_encode(const unsigned char *src, size_t src_len, char *dst, size_t *dst_len);
-extern c_rest_error_t c_rest_base64_decode(const char *src, size_t src_len, unsigned char *dst, size_t *dst_len);
-extern c_rest_error_t c_rest_base64url_decode(const char *src, size_t src_len, unsigned char *dst, size_t *dst_len);
 extern void *test_c_rest_internal_malloc(size_t size);
 
 static c_rest_error_t mock_c_rest_base64_encode(const unsigned char *src, size_t src_len, char *dst, size_t *dst_len) {
@@ -69,7 +65,7 @@ static void *mock_internal_malloc(size_t size) {
 #define c_rest_base64url_encode mock_c_rest_base64url_encode
 #define c_rest_base64_decode mock_c_rest_base64_decode
 #define c_rest_base64url_decode mock_c_rest_base64url_decode
-#define CRF_MALLOC mock_internal_malloc
+#define CRF_INTERNAL_MALLOC mock_internal_malloc
 
 #include "../src/c_rest_crypto.c"
 
@@ -79,7 +75,7 @@ static void *mock_internal_malloc(size_t size) {
 #undef c_rest_hmac_sha256
 #undef c_rest_base64_decode
 #undef c_rest_base64url_decode
-#undef CRF_MALLOC
+#undef CRF_INTERNAL_MALLOC
 
 /* clang-format on */
 
@@ -166,7 +162,8 @@ TEST test_crypto_error_branches(void) {
     size_t dlen = 10;
     mock_c_rest_base64url_decode("a", 1, dbuf, &dlen);
   }
-  c_rest_jwt_sign_hs256("{}", (const unsigned char *)"key", 3, &jwt);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_jwt_sign_hs256("{}", (const unsigned char *)"key", 3, &jwt));
   g_mock_base64_dec_countdown = 1;
   ASSERT_EQ(
       C_REST_ERROR_GENERIC,
@@ -190,7 +187,7 @@ TEST test_crypto_error_branches(void) {
       c_rest_jwt_verify_hs256(jwt, (const unsigned char *)"key", 3, &payload));
 
   /* Cleanup */
-  CRF_FREE(jwt);
+  C_REST_FREE(jwt);
   reset_mocks(NULL);
 
   /* Password hash and verify tests */
@@ -250,7 +247,7 @@ TEST test_crypto_error_branches(void) {
   /* Success case */
   ASSERT_EQ(C_REST_OK, c_rest_verify_password("pwd", hash));
 
-  CRF_FREE(hash);
+  C_REST_FREE(hash);
 
   /* test c_rest_random_string_generate base64url failures */
   {
@@ -319,7 +316,6 @@ TEST test_crypto_error_branches(void) {
   PASS();
 }
 
-SUITE_EXTERN(crypto_mock_suite);
 SUITE(crypto_mock_suite) {
   SET_SETUP(reset_mocks, NULL);
   RUN_TEST(test_crypto_error_branches);

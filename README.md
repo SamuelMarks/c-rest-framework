@@ -201,7 +201,7 @@ add_subdirectory(c-rest-framework)
 # FetchContent_Declare(
 #     c-rest-framework
 #     GIT_REPOSITORY https://github.com/SamuelMarks/c-rest-framework.git
-#     GIT_TAG        main
+#     GIT_TAG        master
 # )
 # FetchContent_MakeAvailable(c-rest-framework)
 

@@ -9,34 +9,48 @@
 
 #include "c_rest_platform.h"
 #include "c_rest_hot_reload.h"
-
-#undef C_REST_EXPORT
-#define C_REST_EXPORT
-
-
-
-/* Forward declarations */
-extern c_rest_error_t c_rest_thread_join(c_rest_thread_t thread);
+#include <cfs/cfs.h>
 
 static int g_mock_join_fail = 0;
+static int g_mock_cfs_exists_fail = 0;
+static int g_mock_cfs_mtime_fail = 0;
 
 static c_rest_error_t mock_c_rest_thread_join(c_rest_thread_t thread) {
     if (g_mock_join_fail) return C_REST_ERROR_GENERIC;
     return c_rest_thread_join(thread);
 }
 
+static cfs_errc mock_cfs_exists_path(const cfs_path *p, cfs_bool *out,
+                                     cfs_error_code *ec) {
+    if (g_mock_cfs_exists_fail) return cfs_errc_io_error;
+    return cfs_exists_path(p, out, ec);
+}
+
+static cfs_errc mock_cfs_last_write_time(const cfs_path *p,
+                                         cfs_file_time_type *out,
+                                         cfs_error_code *ec) {
+    if (g_mock_cfs_mtime_fail) return cfs_errc_permission_denied;
+    return cfs_last_write_time(p, out, ec);
+}
+
 /* Preprocessor Injection */
 #define c_rest_thread_join mock_c_rest_thread_join
+#define cfs_exists_path mock_cfs_exists_path
+#define cfs_last_write_time mock_cfs_last_write_time
 
 /* Include the actual source file */
 #include "../src/c_rest_hot_reload.c"
 
+#undef cfs_last_write_time
+#undef cfs_exists_path
 #undef c_rest_thread_join
 /* clang-format on */
 
 static void reset_mocks(void *data) {
   (void)data;
   g_mock_join_fail = 0;
+  g_mock_cfs_exists_fail = 0;
+  g_mock_cfs_mtime_fail = 0;
 }
 
 static int logger_fail_countdown = -1;
@@ -109,7 +123,7 @@ TEST test_watcher_thread_func_poll_fail(void) {
 
   remove("test_file_fake");
 
-  c_rest_hot_reload_destroy(ctx);
+  ASSERT_EQ(C_REST_OK, c_rest_hot_reload_destroy(ctx));
   PASS();
 }
 
@@ -170,7 +184,11 @@ TEST test_hot_reload_destroy_join_fail(void) {
   rc = c_rest_hot_reload_init(&ctx, NULL);
   ASSERT_EQ(C_REST_OK, rc);
   rc = c_rest_hot_reload_start(ctx, dummy_on_reload, NULL);
+#ifdef C_REST_NO_THREADS
+  ASSERT_EQ(C_REST_ERROR_NOT_SUPPORTED, rc);
+#else
   ASSERT_EQ(C_REST_OK, rc);
+#endif
   ASSERT_EQ(C_REST_OK, c_rest_hot_reload_destroy(ctx));
   PASS();
 }
@@ -197,14 +215,36 @@ TEST test_hot_reload_path_fail(void) {
 
   g_mock_hot_reload_fail = 10;
   rc = c_rest_hot_reload_add_watch(ctx, "fake_path");
-  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  ASSERT_EQ(C_REST_ERROR_OOM, rc);
   g_mock_hot_reload_fail = 0;
 
-  c_rest_hot_reload_destroy(ctx);
+  g_mock_cfs_exists_fail = 1;
+  rc = c_rest_hot_reload_add_watch(ctx, "fake_path");
+  ASSERT_EQ(C_REST_ERROR_IO, rc);
+  g_mock_cfs_exists_fail = 0;
+
+  {
+    FILE *fp = NULL;
+#if defined(_MSC_VER)
+    fopen_s(&fp, "test_hr_mtime_tmp.txt", "wb");
+#else
+    fp = fopen("test_hr_mtime_tmp.txt", "wb");
+#endif
+    if (fp) {
+      fputs("x", fp);
+      fclose(fp);
+    }
+    g_mock_cfs_mtime_fail = 1;
+    rc = c_rest_hot_reload_add_watch(ctx, "test_hr_mtime_tmp.txt");
+    ASSERT_EQ(C_REST_ERROR_UNAUTHORIZED, rc);
+    g_mock_cfs_mtime_fail = 0;
+    remove("test_hr_mtime_tmp.txt");
+  }
+
+  ASSERT_EQ(C_REST_OK, c_rest_hot_reload_destroy(ctx));
   PASS();
 }
 
-SUITE_EXTERN(hot_reload_mock_suite);
 SUITE(hot_reload_mock_suite) {
   SET_SETUP(reset_mocks, NULL);
   RUN_TEST(test_watcher_thread_func_poll_fail);

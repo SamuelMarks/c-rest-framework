@@ -5,11 +5,10 @@
 #ifndef C_REST_COMPRESSION_H
 #define C_REST_COMPRESSION_H
 /* clang-format off */
-#include "c_rest_error.h"
-
 #include <stddef.h>
 #include "c_rest_error.h"
 #include "c_rest_export.h"
+#include "c_rest_no_discard.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -32,7 +31,7 @@ typedef struct c_rest_compression_ctx c_rest_compression_ctx_t;
  * @param type Compression type to use.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_compression_ctx_init(c_rest_compression_ctx_t **ctx,
                             c_rest_compression_type_t type);
 
@@ -41,7 +40,7 @@ c_rest_compression_ctx_init(c_rest_compression_ctx_t **ctx,
  * @param ctx The context to destroy.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_compression_ctx_destroy(c_rest_compression_ctx_t *ctx);
 
 /**
@@ -55,7 +54,7 @@ c_rest_compression_ctx_destroy(c_rest_compression_ctx_t *ctx);
  * will be stored.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_compress_data(c_rest_compression_ctx_t *ctx,
                      const unsigned char *in_data, size_t in_len,
                      unsigned char **out_data, size_t *out_len);
@@ -69,7 +68,7 @@ c_rest_compress_data(c_rest_compression_ctx_t *ctx,
  * compressed data will be stored.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_compress_finish(c_rest_compression_ctx_t *ctx, unsigned char **out_data,
                        size_t *out_len);
 
@@ -84,7 +83,7 @@ c_rest_compress_finish(c_rest_compression_ctx_t *ctx, unsigned char **out_data,
  * will be stored.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_compress_buffer(c_rest_compression_type_t type,
                        const unsigned char *in_data, size_t in_len,
                        unsigned char **out_data, size_t *out_len);

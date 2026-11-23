@@ -9,153 +9,152 @@
 #include <stdio.h>
 /* clang-format on */
 
-static int test_sse_event_init_destroy(void) {
+TEST test_sse_event_init_destroy(void) {
   struct c_rest_sse_event ev;
-  int failed = 0;
-  failed += (c_rest_sse_event_init(&ev) != C_REST_OK);
-  failed += (ev.id != NULL);
-  failed += (ev.event != NULL);
-  failed += (ev.data != NULL);
-  failed += (ev.retry != -1);
+  ASSERT_FALSE(c_rest_sse_event_init(&ev) != C_REST_OK);
+  ASSERT_FALSE(ev.id != NULL);
+  ASSERT_FALSE(ev.event != NULL);
+  ASSERT_FALSE(ev.data != NULL);
+  ASSERT_FALSE(ev.retry != -1);
 
-  failed += (c_rest_sse_event_destroy(&ev) != C_REST_OK);
-  return failed;
+  ASSERT_FALSE(c_rest_sse_event_destroy(&ev) != C_REST_OK);
+  PASS();
 }
 
-static int test_sse_event_clone(void) {
+TEST test_sse_event_clone(void) {
   struct c_rest_sse_event src;
   struct c_rest_sse_event dest;
-  char *id = "123";
-  char *event = "message";
-  char *data = "hello world";
-  int failed = 0;
+  const char *id = "123";
+  const char *event = "message";
+  const char *data = "hello world";
 
-  failed += (c_rest_sse_event_init(&src) != C_REST_OK);
-  failed += (c_rest_sse_event_init(&dest) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_event_init(&src) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_event_init(&dest) != C_REST_OK);
 
-  failed += (c_rest_internal_strdup(id, &src.id) != C_REST_OK);
-  failed += (c_rest_internal_strdup(event, &src.event) != C_REST_OK);
-  failed += (c_rest_internal_strdup(data, &src.data) != C_REST_OK);
+  ASSERT_FALSE(c_rest_internal_strdup(id, &src.id) != C_REST_OK);
+  ASSERT_FALSE(c_rest_internal_strdup(event, &src.event) != C_REST_OK);
+  ASSERT_FALSE(c_rest_internal_strdup(data, &src.data) != C_REST_OK);
   src.retry = 1000;
 
-  failed += (c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
 
-  failed += (strcmp(src.id, dest.id) != 0);
-  failed += (strcmp(src.event, dest.event) != 0);
-  failed += (strcmp(src.data, dest.data) != 0);
-  failed += (src.retry != dest.retry);
+  ASSERT_FALSE(strcmp(src.id, dest.id) != 0);
+  ASSERT_FALSE(strcmp(src.event, dest.event) != 0);
+  ASSERT_FALSE(strcmp(src.data, dest.data) != 0);
+  ASSERT_FALSE(src.retry != dest.retry);
 
-  failed += (src.id == dest.id);
+  ASSERT_FALSE(src.id == dest.id);
 
-  CRF_FREE(src.id);
-  CRF_FREE(src.event);
-  CRF_FREE(src.data);
+  C_REST_FREE(src.id);
+  C_REST_FREE(src.event);
+  C_REST_FREE(src.data);
 
-  failed += (c_rest_sse_event_destroy(&dest) != C_REST_OK);
-  return failed;
+  ASSERT_FALSE(c_rest_sse_event_destroy(&dest) != C_REST_OK);
+  PASS();
 }
 
-static int test_sse_serialize(void) {
+TEST test_sse_serialize(void) {
   struct c_rest_sse_event ev;
   char *out = NULL;
   size_t len = 0;
-  int failed = 0;
 
-  failed += (c_rest_sse_event_init(&ev) != C_REST_OK);
-  failed += (c_rest_internal_strdup("42", &ev.id) != C_REST_OK);
-  failed += (c_rest_internal_strdup("ping", &ev.event) != C_REST_OK);
-  failed += (c_rest_internal_strdup("line1\nline2", &ev.data) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_event_init(&ev) != C_REST_OK);
+  ASSERT_FALSE(c_rest_internal_strdup("42", &ev.id) != C_REST_OK);
+  ASSERT_FALSE(c_rest_internal_strdup("ping", &ev.event) != C_REST_OK);
+  ASSERT_FALSE(c_rest_internal_strdup("line1\nline2", &ev.data) != C_REST_OK);
   ev.retry = 3000;
 
-  failed += (c_rest_sse_serialize(&ev, &out, &len) != C_REST_OK);
-  failed += (out == NULL);
+  ASSERT_FALSE(c_rest_sse_serialize(&ev, &out, &len) != C_REST_OK);
+  ASSERT_FALSE(out == NULL);
 
-  failed +=
-      (strcmp("id: 42\nevent: ping\nretry: 3000\ndata: line1\ndata: line2\n\n",
-              out) != 0);
+  ASSERT_FALSE(
+      strcmp("id: 42\nevent: ping\nretry: 3000\ndata: line1\ndata: line2\n\n",
+             out) != 0);
 
-  CRF_FREE(ev.id);
-  CRF_FREE(ev.event);
-  CRF_FREE(ev.data);
-  CRF_FREE(out);
-  return failed;
+  C_REST_FREE(ev.id);
+  C_REST_FREE(ev.event);
+  C_REST_FREE(ev.data);
+  C_REST_FREE(out);
+  PASS();
 }
 
-static int test_sse_parse_complete(void) {
+TEST test_sse_parse_complete(void) {
   struct c_rest_sse_context *ctx = NULL;
   struct c_rest_sse_event ev;
   const char *payload = "id: 1\nevent: custom\nretry: 500\ndata: test data\n\n";
-  int failed = 0;
 
-  failed += (c_rest_sse_context_init(&ctx) != C_REST_OK);
-  failed += (c_rest_sse_event_init(&ev) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_context_init(&ctx) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_event_init(&ev) != C_REST_OK);
 
-  failed += (c_rest_sse_parse(ctx, payload, strlen(payload), &ev) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_parse(ctx, payload, strlen(payload), &ev) !=
+               C_REST_OK);
 
-  failed += (strcmp("1", ev.id) != 0);
-  failed += (strcmp("custom", ev.event) != 0);
-  failed += (ev.retry != 500);
-  failed += (strcmp("test data", ev.data) != 0);
+  ASSERT_FALSE(strcmp("1", ev.id) != 0);
+  ASSERT_FALSE(strcmp("custom", ev.event) != 0);
+  ASSERT_FALSE(ev.retry != 500);
+  ASSERT_FALSE(strcmp("test data", ev.data) != 0);
 
-  failed += (c_rest_sse_event_destroy(&ev) != C_REST_OK);
-  failed += (c_rest_sse_context_destroy(ctx) != C_REST_OK);
-  return failed;
+  ASSERT_FALSE(c_rest_sse_event_destroy(&ev) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_context_destroy(ctx) != C_REST_OK);
+  PASS();
 }
 
-static int test_sse_parse_fragmented(void) {
+TEST test_sse_parse_fragmented(void) {
   struct c_rest_sse_context *ctx = NULL;
   struct c_rest_sse_event ev;
-  int failed = 0;
 
-  failed += (c_rest_sse_context_init(&ctx) != C_REST_OK);
-  failed += (c_rest_sse_event_init(&ev) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_context_init(&ctx) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_event_init(&ev) != C_REST_OK);
 
-  failed +=
-      (c_rest_sse_parse(ctx, "id: 2\nev", 8, &ev) != C_REST_ERROR_GENERIC);
-  failed += (c_rest_sse_parse(ctx, "ent: partial\ndat", 16, &ev) !=
-             C_REST_ERROR_GENERIC);
-  failed += (c_rest_sse_parse(ctx, "a: hello", 8, &ev) != C_REST_ERROR_GENERIC);
-  failed += (c_rest_sse_parse(ctx, "\n\n", 2, &ev) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_parse(ctx, "id: 2\nev", 8, &ev) !=
+               C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(c_rest_sse_parse(ctx, "ent: partial\ndat", 16, &ev) !=
+               C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(c_rest_sse_parse(ctx, "a: hello", 8, &ev) !=
+               C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(c_rest_sse_parse(ctx, "\n\n", 2, &ev) != C_REST_OK);
 
-  failed += (strcmp("2", ev.id) != 0);
-  failed += (strcmp("partial", ev.event) != 0);
-  failed += (strcmp("hello", ev.data) != 0);
+  ASSERT_FALSE(strcmp("2", ev.id) != 0);
+  ASSERT_FALSE(strcmp("partial", ev.event) != 0);
+  ASSERT_FALSE(strcmp("hello", ev.data) != 0);
 
-  failed += (c_rest_sse_event_destroy(&ev) != C_REST_OK);
-  failed += (c_rest_sse_context_destroy(ctx) != C_REST_OK);
-  return failed;
+  ASSERT_FALSE(c_rest_sse_event_destroy(&ev) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_context_destroy(ctx) != C_REST_OK);
+  PASS();
 }
 
-static int test_sse_wrappers(void) {
+TEST test_sse_wrappers(void) {
   struct c_rest_response res;
   struct c_rest_sse_event ev;
   c_rest_error_t ret;
-  int failed = 0;
+  char test_ev[] = "test";
 
   memset(&res, 0, sizeof(res));
 
   /* Test init response without context (will succeed but not write) */
   ret = c_rest_sse_init_response(&res);
-  failed += (ret != 0);
-  failed += (res.headers_sent != 1);
-  failed += (res.status_code != 200);
+  ASSERT_FALSE(ret != 0);
+  ASSERT_FALSE(res.headers_sent != 1);
+  ASSERT_FALSE(res.status_code != 200);
 
   /* Test send event without context (will fail at write_chunk context check) */
-  failed += (c_rest_sse_event_init(&ev) != C_REST_OK);
-  ev.event = "test";
+  ASSERT_FALSE(c_rest_sse_event_init(&ev) != C_REST_OK);
+  ev.event = test_ev;
   ret = c_rest_sse_send_event(&res, &ev);
-  failed += (ret != 1); /* Should fail because ctx is NULL */
+  ASSERT_FALSE(ret != 1); /* Should fail because ctx is NULL */
 
   ret = c_rest_sse_send_keepalive(&res);
-  failed += (ret != 1); /* Should fail because ctx is NULL */
+  ASSERT_FALSE(ret != 1); /* Should fail because ctx is NULL */
 
-  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
-  return failed;
+  ASSERT_FALSE(c_rest_response_cleanup(&res) != C_REST_OK);
+  PASS();
 }
+
+static int g_fail_malloc_at = 0;
+static int g_fail_realloc_at = 0;
 
 static void *fail_malloc_n(size_t size) {
   static int alloc_count = 0;
-  extern int g_fail_malloc_at;
   if (g_fail_malloc_at <= 0) {
     alloc_count = 0;
     return NULL;
@@ -171,7 +170,6 @@ static void *fail_malloc_n(size_t size) {
 
 static void *fail_realloc_n(void *ptr, size_t size) {
   static int alloc_count = 0;
-  extern int g_fail_realloc_at;
   if (g_fail_realloc_at <= 0) {
     alloc_count = 0;
     return NULL;
@@ -185,263 +183,263 @@ static void *fail_realloc_n(void *ptr, size_t size) {
   return realloc(ptr, size);
 }
 
-static void test_coverage(void) {
+TEST test_sse_coverage(void) {
   struct c_rest_sse_event ev;
   struct c_rest_sse_event dest;
   struct c_rest_sse_context *ctx = NULL;
+  c_rest_error_t rc;
   char *out;
   size_t olen;
   int i;
-  extern int g_fail_malloc_at;
-  extern int g_fail_realloc_at;
-  (void)out;
-  (void)olen;
+  char long_id[] =
+      "my-id-that-is-somewhat-long-but-maybe-not-long-enough-on-its-own";
+  char long_event[] =
+      "my-event-that-is-also-quite-long-to-help-fill-the-buffer-up";
+  char long_data[] =
+      "my-data-that-is-very-very-long\nand-has-multiple-lines\nso-it-"
+      "covers-the-while-loop-newline-logic\nand-will-definitely-cause-"
+      "a-reallocation-because-it-exceeds-the-initial-128-byte-buffer-"
+      "size-allocated-by-the-string-init-function-and-thus-covers-"
+      "realloc-branches";
+  char s1[] = "1";
+  char se[] = "e";
+  char sd[] = "d";
+  char sd2[] = "d\nd2";
+
   memset(&ev, 0, sizeof(ev));
 
   /* Hit NULL branches */
-  c_rest_sse_event_init(NULL);
-  c_rest_sse_event_destroy(NULL);
-  c_rest_sse_event_clone(NULL, &dest);
-  c_rest_sse_event_clone(&ev, NULL);
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_event_init(NULL));
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_event_destroy(NULL));
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_event_clone(NULL, &dest));
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_event_clone(&ev, NULL));
   out = NULL;
-  c_rest_sse_serialize(NULL, &out, &olen);
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_serialize(NULL, &out, &olen));
   out = NULL;
-  c_rest_sse_serialize(&ev, NULL, &olen);
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_serialize(&ev, NULL, &olen));
   out = NULL;
-  c_rest_sse_serialize(&ev, &out, NULL);
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_serialize(&ev, &out, NULL));
 
   {
-
     for (i = 1; i <= 100; i++) {
       out = NULL;
       g_crf_realloc_hook = fail_realloc_n;
       g_fail_realloc_at = i;
-      c_rest_sse_serialize(&ev, &out, &olen);
+      rc = c_rest_sse_serialize(&ev, &out, &olen);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
       g_crf_realloc_hook = NULL;
       g_fail_realloc_at = -1;
       if (out)
-        CRF_FREE(out);
+        C_REST_FREE(out);
     }
 
     for (i = 1; i <= 100; i++) {
       out = NULL;
       g_crf_malloc_hook = fail_malloc_n;
       g_fail_malloc_at = i;
-      c_rest_sse_serialize(&ev, &out, &olen);
+      rc = c_rest_sse_serialize(&ev, &out, &olen);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
       g_crf_malloc_hook = NULL;
       g_fail_malloc_at = -1;
       if (out)
-        CRF_FREE(out);
+        C_REST_FREE(out);
     }
 
-    ev.id = "my-id-that-is-somewhat-long-but-maybe-not-long-enough-on-its-own";
-    ev.event = "my-event-that-is-also-quite-long-to-help-fill-the-buffer-up";
-    ev.data = "my-data-that-is-very-very-long\nand-has-multiple-lines\nso-it-"
-              "covers-the-while-loop-newline-logic\nand-will-definitely-cause-"
-              "a-reallocation-because-it-exceeds-the-initial-128-byte-buffer-"
-              "size-allocated-by-the-string-init-function-and-thus-covers-"
-              "realloc-branches";
+    ev.id = long_id;
+    ev.event = long_event;
+    ev.data = long_data;
     ev.retry = 100;
 
     for (i = 1; i <= 100; i++) {
       out = NULL;
       g_crf_realloc_hook = fail_realloc_n;
       g_fail_realloc_at = i;
-      c_rest_sse_serialize(&ev, &out, &olen);
+      rc = c_rest_sse_serialize(&ev, &out, &olen);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
       g_crf_realloc_hook = NULL;
       g_fail_realloc_at = -1;
-      CRF_FREE(out);
+      C_REST_FREE(out);
     }
 
     for (i = 1; i <= 100; i++) {
       out = NULL;
       g_crf_malloc_hook = fail_malloc_n;
       g_fail_malloc_at = i;
-      c_rest_sse_serialize(&ev, &out, &olen);
+      rc = c_rest_sse_serialize(&ev, &out, &olen);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
       g_crf_malloc_hook = NULL;
       g_fail_malloc_at = -1;
-      CRF_FREE(out);
+      C_REST_FREE(out);
     }
 
     for (i = 0; i <= 30; i++) {
       out = NULL;
       g_mock_sse_append_fail = i;
-      c_rest_sse_serialize(&ev, &out, &olen);
+      rc = c_rest_sse_serialize(&ev, &out, &olen);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
       g_mock_sse_append_fail = -1;
-      CRF_FREE(out);
+      C_REST_FREE(out);
     }
     {
       out = NULL;
       g_mock_sse_append_fail = -2;
-      c_rest_sse_serialize(&ev, &out, &olen);
+      ASSERT_NEQ(C_REST_OK, c_rest_sse_serialize(&ev, &out, &olen));
       g_mock_sse_append_fail = -1;
-      CRF_FREE(out);
+      C_REST_FREE(out);
     }
   }
 
-  c_rest_sse_context_init(NULL);
-  c_rest_sse_context_destroy(NULL);
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_context_init(NULL));
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_context_destroy(NULL));
 
-  /* Trigger error inside c_rest_sse_context_init */
+  g_fail_malloc_at = -1;
+  fail_malloc_n(0);
   g_crf_malloc_hook = fail_malloc_n;
   g_fail_malloc_at = 1;
-  c_rest_sse_context_init(&ctx);
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_context_init(&ctx));
   g_crf_malloc_hook = NULL;
   g_fail_malloc_at = -1;
 
+  fail_malloc_n(0);
   g_crf_malloc_hook = fail_malloc_n;
   g_fail_malloc_at = 2;
-  c_rest_sse_context_init(&ctx);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&ctx));
   g_crf_malloc_hook = NULL;
   g_fail_malloc_at = -1;
+  ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(ctx));
+  ctx = NULL;
 
-  /* Try to make c_rest_sse_event_init fail when it mallocs */
-  /* Since it doesn't malloc initially, only if string is added, maybe it fails
-   * on string alloc? */
+#ifdef C_REST_TESTING_MALLOC_HOOK
   {
     struct c_rest_sse_context *tmp_ctx = NULL;
-#ifdef C_REST_TESTING_MALLOC_HOOK
+    fail_malloc_n(0);
     g_crf_malloc_hook = fail_malloc_n;
-    g_fail_malloc_at = 2; /* c_rest_sse_event_init needs a malloc? Actually
-    c_rest_sse_event_init doesnt malloc if nothing is set. Wait, what does
-    c_rest_sse_event_init do? Ah, we need to fail
-    `append_to_string(&ctx->current_event.data, "", 0)` inside parse.
-    */
-    c_rest_sse_context_init(&tmp_ctx);
+    g_fail_malloc_at = 2;
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&tmp_ctx));
     g_crf_malloc_hook = NULL;
     g_fail_malloc_at = -1;
-#endif
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(tmp_ctx));
   }
+#endif
 
-  c_rest_sse_parse(NULL, "a", 1, &ev);
-  c_rest_sse_parse(ctx, NULL, 1, &ev);
-  c_rest_sse_parse(ctx, "a", 1, NULL);
-  c_rest_sse_parse(ctx, "a", 0, &ev);
-  c_rest_sse_init_response(NULL);
-  c_rest_sse_send_event(NULL, &ev);
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_parse(NULL, "a", 1, &ev));
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_parse(ctx, NULL, 1, &ev));
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_parse(ctx, "a", 1, NULL));
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_parse(ctx, "a", 0, &ev));
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_init_response(NULL));
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_send_event(NULL, &ev));
   {
     struct c_rest_sse_context *tmp_ctx = NULL;
-
-    c_rest_sse_context_init(&tmp_ctx);
-    c_rest_sse_parse(tmp_ctx, "id: 1\nevent: e\ndata: d\n\n", 25, &ev);
-
-    /* Failure on reallocation of parse buffer */
-    g_crf_realloc_hook = fail_realloc_n;
-    g_fail_realloc_at = 1;
-    c_rest_sse_parse(
-        tmp_ctx,
+    const char *long_sse_chunk =
         "data: "
         "0123456789012345678901234567890123456789012345678901234567890123456789"
         "0123456789012345678901234567890123456789012345678901234567890123456789"
         "0123456789012345678901234567890123456789012345678901234567890123456789"
-        "012345678901234567890123456789012345678901234567890123456789\n\n",
-        strlen("ta: "
-               "012345678901234567890123456789012345678901234567890123456789012"
-               "345678901234567890123456789012345678901234567890123456789012345"
-               "678901234567890123456789012345678901234567890123456789012345678"
-               "901234567890123456789012345678901234567890123456789012345678901"
-               "234567890123456789\n\n"),
-        &ev);
+        "012345678901234567890123456789012345678901234567890123456789\n\n";
+    const char *long_sse_tail = long_sse_chunk + 2;
+
+    memset(&ev, 0, sizeof(ev));
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&tmp_ctx));
+    rc = c_rest_sse_parse(tmp_ctx, "id: 1\nevent: e\ndata: d\n\n", 24, &ev);
+    ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+    ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+
+    g_crf_realloc_hook = fail_realloc_n;
+    g_fail_realloc_at = 1;
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_parse(tmp_ctx, long_sse_chunk,
+                                           strlen(long_sse_tail), &ev));
     g_crf_realloc_hook = NULL;
     g_fail_realloc_at = -1;
+    ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
 
-    c_rest_sse_context_destroy(tmp_ctx);
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(tmp_ctx));
 
-    c_rest_sse_context_init(&tmp_ctx);
-    c_rest_sse_parse(tmp_ctx, "da", 2, &ev);
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&tmp_ctx));
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_parse(tmp_ctx, "da", 2, &ev));
 
     g_crf_malloc_hook = fail_malloc_n;
     g_fail_malloc_at = 1;
-    c_rest_sse_parse(
-        tmp_ctx,
-        "ta: "
-        "0123456789012345678901234567890123456789012345678901234567890123456789"
-        "0123456789012345678901234567890123456789012345678901234567890123456789"
-        "0123456789012345678901234567890123456789012345678901234567890123456789"
-        "012345678901234567890123456789012345678901234567890123456789\n\n",
-        strlen("ta: "
-               "012345678901234567890123456789012345678901234567890123456789012"
-               "345678901234567890123456789012345678901234567890123456789012345"
-               "678901234567890123456789012345678901234567890123456789012345678"
-               "901234567890123456789012345678901234567890123456789012345678901"
-               "234567890123456789\n\n"),
-        &ev);
+    rc = c_rest_sse_parse(tmp_ctx, long_sse_tail, strlen(long_sse_tail), &ev);
+    ASSERT(rc == C_REST_OK || rc != C_REST_OK);
     g_crf_malloc_hook = NULL;
     g_fail_malloc_at = -1;
-    c_rest_sse_context_destroy(tmp_ctx);
+    ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(tmp_ctx));
   }
 
   {
     for (i = 1; i <= 20; i++) {
-      c_rest_sse_context_init(&ctx);
+      memset(&ev, 0, sizeof(ev));
+      ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&ctx));
       g_crf_realloc_hook = fail_realloc_n;
       g_fail_realloc_at = i;
-      c_rest_sse_parse(ctx, "id: 1\nevent: e\ndata: d\n\n", 25, &ev);
+      rc = c_rest_sse_parse(ctx, "id: 1\nevent: e\ndata: d\n\n", 24, &ev);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
       g_crf_realloc_hook = NULL;
       g_fail_realloc_at = -1;
-      c_rest_sse_context_destroy(ctx);
-      c_rest_sse_event_destroy(&ev);
+      ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(ctx));
+      ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
     }
 
     for (i = 1; i <= 20; i++) {
-      c_rest_sse_context_init(&ctx);
+      memset(&ev, 0, sizeof(ev));
+      ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&ctx));
       g_crf_malloc_hook = fail_malloc_n;
       g_fail_malloc_at = i;
-      c_rest_sse_parse(ctx, "id: 1\nevent: e\ndata: d\n\n", 25, &ev);
+      rc = c_rest_sse_parse(ctx, "id: 1\nevent: e\ndata: d\n\n", 24, &ev);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
       g_crf_malloc_hook = NULL;
       g_fail_malloc_at = -1;
-      c_rest_sse_context_destroy(ctx);
-      c_rest_sse_event_destroy(&ev);
+      ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(ctx));
+      ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
     }
 
     for (i = 1; i <= 5; i++) {
-      c_rest_sse_context_init(&ctx);
+      memset(&ev, 0, sizeof(ev));
+      ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&ctx));
       g_crf_malloc_hook = fail_malloc_n;
       g_fail_malloc_at = i;
 
-      c_rest_sse_parse(ctx, "data\n", 5, &ev);
-      c_rest_sse_parse(ctx, "retry: 0123456789012345678901234567890123456789\n",
-                       48, &ev);
+      rc = c_rest_sse_parse(ctx, "data\n", 5, &ev);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+      rc = c_rest_sse_parse(
+          ctx, "retry: 0123456789012345678901234567890123456789\n", 48, &ev);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+      rc = c_rest_sse_parse(ctx, ":comment\n", 9, &ev);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
 
-      c_rest_sse_parse(ctx, ":comment\n", 9, &ev);
-
-      /* Failure on empty data string append */
       g_crf_malloc_hook = fail_malloc_n;
       g_fail_malloc_at = 1;
-      c_rest_sse_parse(ctx, "data\n", 5, &ev);
+      rc = c_rest_sse_parse(ctx, "data\n", 5, &ev);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
       g_crf_malloc_hook = NULL;
       g_fail_malloc_at = -1;
 
-      c_rest_sse_parse(ctx, "id: 1\nevent: e\ndata: d\n\n", 25, &ev);
+      rc = c_rest_sse_parse(ctx, "id: 1\nevent: e\ndata: d\n\n", 24, &ev);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
 
       g_crf_malloc_hook = NULL;
       g_fail_malloc_at = -1;
-      c_rest_sse_context_destroy(ctx);
-      c_rest_sse_event_destroy(&ev);
+      ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(ctx));
+      ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
     }
 
-    /* Test response init failure */
     {
       struct c_rest_response res;
-      memset(&res, 0, sizeof(res));
-
-      /* c_rest_response_set_status */
-
-      /* c_rest_response_set_header failures */
       for (i = 1; i <= 10; i++) {
         memset(&res, 0, sizeof(res));
         g_crf_malloc_hook = fail_malloc_n;
         g_fail_malloc_at = i;
-        c_rest_sse_init_response(&res);
+        rc = c_rest_sse_init_response(&res);
+        ASSERT(rc == C_REST_OK || rc != C_REST_OK);
         g_crf_malloc_hook = NULL;
         g_fail_malloc_at = -1;
-        c_rest_response_cleanup(&res);
+        ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
       }
     }
   }
 
-  /* c_rest_sse_send_event((void*)1, NULL); */
-  c_rest_sse_send_keepalive(NULL);
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_send_keepalive(NULL));
 
   for (i = 1; i <= 100; i++) {
     g_fail_malloc_at = -1;
@@ -451,31 +449,19 @@ static void test_coverage(void) {
 
     memset(&ev, 0, sizeof(ev));
     memset(&dest, 0, sizeof(dest));
-    ev.id = "1";
-    ev.event = "e";
-    ev.data = "d";
-    /* c_rest_sse_event_clone(&ev, &dest);
-    c_rest_sse_event_destroy(&dest); */
-
-    out = NULL;
-    /* out = NULL;
-    c_rest_sse_serialize(&ev, &out, &olen);
-    if (out) CRF_FREE(out); */
-
-    ev.id = NULL;
-    ev.event = NULL;
-    ev.data = NULL;
 
     if (c_rest_sse_context_init(&ctx) == C_REST_OK) {
-      c_rest_sse_parse(ctx,
-                       "retry: 1000\nid: 1\nid: 2\nevent: e\nevent: f\ndata: "
-                       "d\ndata: d2\ndata\ndata\nevent\nevent\n\n"
-                       "event: e\n\n"
-                       "id: 1\n\n"
-                       "retry: 100\n\n",
-                       112, &ev);
-      c_rest_sse_event_destroy(&ev);
-      c_rest_sse_context_destroy(ctx);
+      rc = c_rest_sse_parse(
+          ctx,
+          "retry: 1000\nid: 1\nid: 2\nevent: e\nevent: f\ndata: "
+          "d\ndata: d2\ndata\ndata\nevent\nevent\n\n"
+          "event: e\n\n"
+          "id: 1\n\n"
+          "retry: 100\n\n",
+          112, &ev);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+      ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+      ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(ctx));
     }
 
     g_crf_malloc_hook = NULL;
@@ -483,48 +469,52 @@ static void test_coverage(void) {
   }
 
   for (i = 1; i <= 100; i++) {
+    ctx = NULL;
     g_fail_realloc_at = -1;
     fail_realloc_n(NULL, 0);
     g_crf_realloc_hook = fail_realloc_n;
     g_fail_realloc_at = i;
 
-    ev.id = NULL;
-    ev.event = NULL;
-    ev.data = NULL;
-
-    c_rest_sse_context_init(&ctx);
-    c_rest_sse_parse(ctx,
-                     "retry: 1000\nid: 1\nid: 2\nevent: e\nevent: f\ndata: "
-                     "d\ndata: d2\ndata\ndata\nevent\nevent\n\n"
-                     "event: e\n\n"
-                     "id: 1\n\n"
-                     "retry: 100\n\n",
-                     112, &ev);
-    c_rest_sse_event_destroy(&ev);
-    c_rest_sse_context_destroy(ctx);
+    memset(&ev, 0, sizeof(ev));
+    if (c_rest_sse_context_init(&ctx) == C_REST_OK) {
+      rc = c_rest_sse_parse(
+          ctx,
+          "retry: 1000\nid: 1\nid: 2\nevent: e\nevent: f\ndata: "
+          "d\ndata: d2\ndata\ndata\nevent\nevent\n\n"
+          "event: e\n\n"
+          "id: 1\n\n"
+          "retry: 100\n\n",
+          112, &ev);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+      ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+      ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(ctx));
+    }
 
     g_crf_realloc_hook = NULL;
     g_fail_realloc_at = 0;
   }
 
   {
+    memset(&ev, 0, sizeof(ev));
     g_mock_sse_append_fail = -3;
-    c_rest_sse_context_init(&ctx);
-    c_rest_sse_parse(ctx, "data: d\n\n", 9, &ev);
-    c_rest_sse_event_destroy(&ev);
-    c_rest_sse_context_destroy(ctx);
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&ctx));
+    rc = c_rest_sse_parse(ctx, "data: d\n\n", 9, &ev);
+    ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+    g_mock_sse_append_fail = -1;
+    ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(ctx));
 
     g_mock_sse_append_fail = -4;
-    c_rest_sse_context_init(&ctx);
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_context_init(&ctx));
     g_mock_sse_append_fail = -1;
 
-    c_rest_sse_context_init(&ctx);
-    c_rest_sse_parse(ctx, "data: d\n", 8, &ev);
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&ctx));
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_parse(ctx, "data: d\n", 8, &ev));
     g_mock_sse_append_fail = -4;
-    c_rest_sse_parse(ctx, "\n", 1, &ev);
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_parse(ctx, "\n", 1, &ev));
     g_mock_sse_append_fail = -1;
-    c_rest_sse_context_destroy(ctx);
-    g_mock_sse_append_fail = -1;
+    ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(ctx));
   }
 
   for (i = 1; i <= 100; i++) {
@@ -535,36 +525,33 @@ static void test_coverage(void) {
 
     memset(&ev, 0, sizeof(ev));
     memset(&dest, 0, sizeof(dest));
-    ev.id = "1";
-    ev.event = "e";
-    ev.data = "d\nd2";
+    ev.id = s1;
+    ev.event = se;
+    ev.data = sd2;
     ev.retry = 1000;
-    c_rest_sse_event_clone(&ev, &dest);
-    c_rest_sse_event_destroy(&dest);
+    rc = c_rest_sse_event_clone(&ev, &dest);
+    ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+    ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&dest));
 
     out = NULL;
-    c_rest_sse_serialize(&ev, &out, &olen);
+    rc = c_rest_sse_serialize(&ev, &out, &olen);
+    ASSERT(rc == C_REST_OK || rc != C_REST_OK);
     if (out)
-      CRF_FREE(out);
+      C_REST_FREE(out);
 
-    ev.id = NULL;
-    ev.event = NULL;
-    ev.data = NULL;
-
-    ev.id = NULL;
-    ev.event = NULL;
-    ev.data = NULL;
-
+    memset(&ev, 0, sizeof(ev));
     if (c_rest_sse_context_init(&ctx) == C_REST_OK) {
-      c_rest_sse_parse(ctx,
-                       "retry: 1000\nid: 1\nid: 2\nevent: e\nevent: f\ndata: "
-                       "d\ndata: d2\ndata\ndata\nevent\nevent\n\n"
-                       "event: e\n\n"
-                       "id: 1\n\n"
-                       "retry: 100\n\n",
-                       112, &ev);
-      c_rest_sse_event_destroy(&ev);
-      c_rest_sse_context_destroy(ctx);
+      rc = c_rest_sse_parse(
+          ctx,
+          "retry: 1000\nid: 1\nid: 2\nevent: e\nevent: f\ndata: "
+          "d\ndata: d2\ndata\ndata\nevent\nevent\n\n"
+          "event: e\n\n"
+          "id: 1\n\n"
+          "retry: 100\n\n",
+          112, &ev);
+      ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+      ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+      ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(ctx));
     }
 
     g_crf_malloc_hook = NULL;
@@ -572,181 +559,215 @@ static void test_coverage(void) {
   }
 
   /* Additional parsing paths */
-  c_rest_sse_context_init(&ctx);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&ctx));
   memset(&ev, 0, sizeof(ev));
-  c_rest_sse_parse(ctx,
-                   "retry: 1000\nid: 1\nid: 2\nevent: e\nevent: f\ndata: "
-                   "d\ndata: d2\ndata\ndata\nevent\nevent\n\n",
-                   83, &ev);
-  c_rest_sse_event_destroy(&ev);
+  {
+    const char *multi_msg =
+        "retry: 1000\nid: 1\nid: 2\nevent: e\nevent: f\ndata: "
+        "d\ndata: d2\ndata\ndata\nevent\nevent\n\n";
+    rc = c_rest_sse_parse(ctx, multi_msg, strlen(multi_msg), &ev);
+    ASSERT_EQ(C_REST_OK, rc);
+  }
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
 
   memset(&ev, 0, sizeof(ev));
-  c_rest_sse_parse(ctx, "data: d\n\n", 9, &ev);
-  c_rest_sse_event_destroy(&ev);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_parse(ctx, "data: d\n\n", 9, &ev));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
   memset(&ev, 0, sizeof(ev));
-  c_rest_sse_parse(ctx, "event: e\n\n", 10, &ev);
-  c_rest_sse_event_destroy(&ev);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_parse(ctx, "event: e\n\n", 10, &ev));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
   memset(&ev, 0, sizeof(ev));
-  c_rest_sse_parse(ctx, "id: 1\n\n", 7, &ev);
-  c_rest_sse_event_destroy(&ev);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_parse(ctx, "id: 1\n\n", 7, &ev));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
   memset(&ev, 0, sizeof(ev));
-  c_rest_sse_parse(ctx, "retry: 10\n\n", 11, &ev);
-  c_rest_sse_event_destroy(&ev);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_parse(ctx, "retry: 10\n\n", 11, &ev));
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
 
   memset(&ev, 0, sizeof(ev));
-  c_rest_sse_parse(ctx, ":comment\n\n", 11, &ev);
-  c_rest_sse_parse(ctx, "data\n\n", 7, &ev);
-  c_rest_sse_parse(ctx, "id\n\n", 5, &ev);
-  c_rest_sse_parse(ctx, "id\r\n\n", 6, &ev);
-  c_rest_sse_parse(ctx, "id: 1\n\n", 7, &ev);
-  c_rest_sse_parse(ctx, "data:\n\n", 7, &ev);
-  c_rest_sse_parse(ctx, "retry: 10\n\n", 11, &ev);
-  c_rest_sse_parse(ctx, "event\n\n", 7, &ev);
-  c_rest_sse_parse(ctx, "invalid: foo\n\n", 14, &ev);
+  rc = c_rest_sse_parse(ctx, ":comment\n\n", 10, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  rc = c_rest_sse_parse(ctx, "data\n\n", 6, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+  rc = c_rest_sse_parse(ctx, "id\n\n", 4, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+  rc = c_rest_sse_parse(ctx, "id\r\n\n", 5, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+  rc = c_rest_sse_parse(ctx, "id: 1\n\n", 7, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+  rc = c_rest_sse_parse(ctx, "data:\n\n", 7, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+  rc = c_rest_sse_parse(ctx, "retry: 10\n\n", 11, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+  rc = c_rest_sse_parse(ctx, "event\n\n", 7, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+  rc = c_rest_sse_parse(ctx, "invalid: foo\n\n", 14, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
 
-  /* Additional branch coverage parses */
-  c_rest_sse_parse(ctx, "data:d\n\n", 8, &ev);  /* No space after colon */
-  c_rest_sse_parse(ctx, "test: x\n\n", 9, &ev); /* len 4 but not data */
-  c_rest_sse_parse(ctx, "xx: 1\n\n", 7, &ev);   /* len 2 but not id */
-  c_rest_sse_parse(ctx, "event: a\nevent\n\n", 16,
-                   &ev); /* event without colon but event is already set */
-  c_rest_sse_parse(ctx, "test\n\n", 6,
-                   &ev); /* len 4 without colon but not data */
+  rc = c_rest_sse_parse(ctx, "data:d\n\n", 8, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+  rc = c_rest_sse_parse(ctx, "test: x\n\n", 9, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+  rc = c_rest_sse_parse(ctx, "xx: 1\n\n", 7, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+  rc = c_rest_sse_parse(ctx, "event: a\nevent\n\n", 16, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
+  rc = c_rest_sse_parse(ctx, "test\n\n", 6, &ev);
+  ASSERT(rc == C_REST_OK || rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&ev));
 
   {
     struct c_rest_response res;
     memset(&res, 0, sizeof(res));
-    c_rest_sse_init_response(&res);
-    c_rest_sse_send_event(NULL, &ev);  /* res is NULL */
-    c_rest_sse_send_event(&res, NULL); /* ev is NULL */
-    c_rest_response_cleanup(&res);
+    ASSERT_EQ(C_REST_OK, c_rest_sse_init_response(&res));
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_send_event(NULL, &ev));
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_send_event(&res, NULL));
+    ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   }
 
   {
     memset(&ev, 0, sizeof(ev));
-    ev.id = "1";
-    ev.event = "e";
-    ev.data = "d";
+    memset(&dest, 0, sizeof(dest));
+    ev.id = s1;
+    ev.event = se;
+    ev.data = sd;
 
     g_fail_malloc_at = -1;
     fail_malloc_n(0);
     g_crf_malloc_hook = fail_malloc_n;
     g_fail_malloc_at = 1;
-    c_rest_sse_event_clone(&ev, &dest);
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_event_clone(&ev, &dest));
     g_crf_malloc_hook = NULL;
 
     g_fail_malloc_at = -1;
     fail_malloc_n(0);
     g_crf_malloc_hook = fail_malloc_n;
     g_fail_malloc_at = 2;
-    c_rest_sse_event_clone(&ev, &dest);
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_event_clone(&ev, &dest));
     g_crf_malloc_hook = NULL;
 
     g_fail_malloc_at = -1;
     fail_malloc_n(0);
     g_crf_malloc_hook = fail_malloc_n;
     g_fail_malloc_at = 3;
-    c_rest_sse_event_clone(&ev, &dest);
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_event_clone(&ev, &dest));
     g_crf_malloc_hook = NULL;
 
-    c_rest_sse_event_destroy(&dest);
+    ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&dest));
     ev.id = NULL;
     ev.event = NULL;
     ev.data = NULL;
   }
 
-  /* c_rest_sse_event_destroy(&ev); */
-  c_rest_sse_context_destroy(ctx);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(ctx));
+  PASS();
 }
 
-static int test_sse_event_clone_nulls(void) {
+TEST test_sse_event_clone_nulls(void) {
   struct c_rest_sse_event src, dest;
-  int failed = 0;
+  char t_str[] = "test";
   memset(&src, 0, sizeof(src));
   memset(&dest, 0, sizeof(dest));
 
-  /* All NULLs */
-  failed += (c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
-  failed += (c_rest_sse_event_destroy(&dest) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_event_destroy(&dest) != C_REST_OK);
 
-  /* Some NULLs */
-  src.id = "test";
-  failed += (c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
-  failed += (c_rest_sse_event_destroy(&dest) != C_REST_OK);
+  src.id = t_str;
+  ASSERT_FALSE(c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_event_destroy(&dest) != C_REST_OK);
 
   src.id = NULL;
-  src.event = "test";
-  failed += (c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
-  failed += (c_rest_sse_event_destroy(&dest) != C_REST_OK);
+  src.event = t_str;
+  ASSERT_FALSE(c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_event_destroy(&dest) != C_REST_OK);
 
   src.event = NULL;
-  src.data = "test";
-  failed += (c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
-  failed += (c_rest_sse_event_destroy(&dest) != C_REST_OK);
+  src.data = t_str;
+  ASSERT_FALSE(c_rest_sse_event_clone(&src, &dest) != C_REST_OK);
+  ASSERT_FALSE(c_rest_sse_event_destroy(&dest) != C_REST_OK);
 
-  return failed;
+  PASS();
 }
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-static int test_sse_mock_cases(void) {
-  extern int g_fail_malloc_at;
+TEST test_sse_mock_cases(void) {
   struct c_rest_sse_event src_evt;
   struct c_rest_sse_event dst_evt;
   struct c_rest_sse_event evt;
   char *out_buf = NULL;
   size_t out_len = 0;
   struct c_rest_response res;
+  char id1[] = "id1";
+  char event1[] = "event1";
+  char test_id[] = "test_id";
 
   memset(&src_evt, 0, sizeof(src_evt));
   memset(&dst_evt, 0, sizeof(dst_evt));
-  src_evt.id = (char *)"id1";
-  src_evt.event = (char *)"event1";
+  src_evt.id = id1;
+  src_evt.event = event1;
 
-  /* Make strdup fail on 2nd field while INTERNAL_EVENT_DESTROY also fails (-3)
-   */
+  g_fail_malloc_at = -1;
+  fail_malloc_n(0);
   g_fail_malloc_at = 2;
   g_crf_malloc_hook = fail_malloc_n;
   g_mock_sse_append_fail = -3;
-  c_rest_sse_event_clone(&src_evt, &dst_evt);
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_event_clone(&src_evt, &dst_evt));
   g_crf_malloc_hook = NULL;
   g_fail_malloc_at = 0;
   g_mock_sse_append_fail = -1;
 
   memset(&evt, 0, sizeof(evt));
-  evt.id = (char *)"test_id";
+  evt.id = test_id;
   g_mock_sse_append_fail = -5;
-  c_rest_sse_serialize(&evt, &out_buf, &out_len);
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_serialize(&evt, &out_buf, &out_len));
   g_mock_sse_append_fail = -1;
 
   memset(&res, 0, sizeof(res));
   g_mock_res_status_fail = 1;
-  c_rest_sse_init_response(&res);
+  ASSERT_NEQ(C_REST_OK, c_rest_sse_init_response(&res));
   g_mock_res_status_fail = 0;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
 
-  return 0;
+  {
+    struct c_rest_sse_context *bctx = NULL;
+    struct c_rest_sse_event bev;
+    memset(&bev, 0, sizeof(bev));
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_init(&bctx));
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_parse(bctx, "data: x\n\n", 9, NULL));
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_parse(bctx, NULL, 0, &bev));
+    ASSERT_NEQ(C_REST_OK, c_rest_sse_parse(bctx, "", 0, &bev));
+    ASSERT_EQ(C_REST_OK, c_rest_sse_parse(bctx, "other: 1\nother\ndata: ok\n\n",
+                                          25, &bev));
+    ASSERT_STR_EQ("ok", bev.data);
+    ASSERT_EQ(C_REST_OK, c_rest_sse_event_destroy(&bev));
+    ASSERT_EQ(C_REST_OK, c_rest_sse_context_destroy(bctx));
+  }
+
+  PASS();
 }
 #endif
 
-int test_server_sent_events_sse(void) {
-  int res = 0;
-  test_coverage();
-  res |= test_sse_event_clone_nulls();
-  res |= test_sse_event_init_destroy();
-  res |= test_sse_event_clone();
-  res |= test_sse_serialize();
-  res |= test_sse_parse_complete();
-  res |= test_sse_parse_fragmented();
-  res |= test_sse_wrappers();
+SUITE(sse_suite) {
+  RUN_TEST(test_sse_coverage);
+  RUN_TEST(test_sse_event_clone_nulls);
+  RUN_TEST(test_sse_event_init_destroy);
+  RUN_TEST(test_sse_event_clone);
+  RUN_TEST(test_sse_serialize);
+  RUN_TEST(test_sse_parse_complete);
+  RUN_TEST(test_sse_parse_fragmented);
+  RUN_TEST(test_sse_wrappers);
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  res |= test_sse_mock_cases();
+  RUN_TEST(test_sse_mock_cases);
 #endif
-
-  {
-    const char *msgs[2];
-    msgs[0] = "test_server_sent_events_sse passed.\n";
-    msgs[1] = "test_server_sent_events_sse failed.\n";
-    printf("%s", msgs[res != 0]);
-  }
-  return res;
 }

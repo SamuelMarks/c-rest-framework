@@ -23,19 +23,16 @@
 /* clang-format on */
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
-static c_rest_error_t c_rest_template_handler(struct c_rest_request *req,
-                                              struct c_rest_response *res,
-                                              void *user_data);
+static NO_DISCARD c_rest_error_t c_rest_template_handler(
+    struct c_rest_request *req, struct c_rest_response *res, void *user_data);
 #endif
 
-static c_rest_error_t c_rest_ws_upgrade_handler(struct c_rest_request *req,
-                                                struct c_rest_response *res,
-                                                void *user_data);
+static NO_DISCARD c_rest_error_t c_rest_ws_upgrade_handler(
+    struct c_rest_request *req, struct c_rest_response *res, void *user_data);
 
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
-static c_rest_error_t c_rest_sse_handler_wrapper(struct c_rest_request *req,
-                                                 struct c_rest_response *res,
-                                                 void *user_data);
+static NO_DISCARD c_rest_error_t c_rest_sse_handler_wrapper(
+    struct c_rest_request *req, struct c_rest_response *res, void *user_data);
 #endif
 
 struct c_rest_route_handler {
@@ -72,17 +69,15 @@ struct c_rest_router {
   struct c_rest_openapi_spec *openapi_spec;
 };
 
-static c_rest_error_t create_node(const char *segment, size_t len,
-                                  struct c_rest_route_node **out_node) {
-  struct c_rest_route_node *node;
+static NO_DISCARD c_rest_error_t create_node(
+    const char *segment, size_t len, struct c_rest_route_node **out_node) {
+  struct c_rest_route_node *node = NULL;
 
-  node =
-      (struct c_rest_route_node *)CRF_MALLOC(sizeof(struct c_rest_route_node));
-  if (!node)
+  if (C_REST_MALLOC(sizeof(struct c_rest_route_node), &node) != C_REST_OK)
     return C_REST_ERROR_GENERIC;
 
-  node->segment = (char *)CRF_MALLOC(len + 1);
-  if (!node->segment) {
+  node->segment = NULL;
+  if (C_REST_MALLOC(len + 1, &node->segment) != C_REST_OK) {
     C_REST_FREE((void *)(node));
     return C_REST_ERROR_GENERIC;
   }
@@ -99,8 +94,7 @@ static c_rest_error_t create_node(const char *segment, size_t len,
 
   if (len > 0 && node->segment[0] == ':') {
     node->is_var = 1;
-    node->var_name = (char *)CRF_MALLOC(len);
-    if (node->var_name) {
+    if (C_REST_MALLOC(len, &node->var_name) == C_REST_OK) {
 #if defined(_MSC_VER)
       strcpy_s(node->var_name, len, node->segment + 1);
 #else
@@ -156,14 +150,13 @@ static void free_node(struct c_rest_route_node *node) {
   C_REST_FREE((void *)(node));
 }
 c_rest_error_t c_rest_router_init(c_rest_router **out_router) {
-  struct c_rest_router *router;
+  struct c_rest_router *router = NULL;
   c_rest_error_t rc;
 
   if (!out_router)
     return C_REST_ERROR_GENERIC;
 
-  router = (struct c_rest_router *)CRF_MALLOC(sizeof(struct c_rest_router));
-  if (!router)
+  if (C_REST_MALLOC(sizeof(struct c_rest_router), &router) != C_REST_OK)
     return C_REST_ERROR_GENERIC;
 
   rc = create_node("", 0, &router->root);
@@ -222,9 +215,9 @@ c_rest_error_t c_rest_router_destroy(c_rest_router *router) {
   return C_REST_OK;
 }
 
-static c_rest_error_t find_or_add_child(struct c_rest_route_node *parent,
-                                        const char *segment, size_t len,
-                                        struct c_rest_route_node **out_child) {
+static NO_DISCARD c_rest_error_t
+find_or_add_child(struct c_rest_route_node *parent, const char *segment,
+                  size_t len, struct c_rest_route_node **out_child) {
   struct c_rest_route_node *child;
   struct c_rest_route_node *new_node;
   c_rest_error_t rc;
@@ -293,13 +286,12 @@ c_rest_error_t c_rest_router_add(c_rest_router *router, const char *method,
     }
   }
 
-  h = (struct c_rest_route_handler *)CRF_MALLOC(
-      sizeof(struct c_rest_route_handler));
-  if (!h)
+  h = NULL;
+  if (C_REST_MALLOC(sizeof(struct c_rest_route_handler), &h) != C_REST_OK)
     return C_REST_ERROR_GENERIC;
 
-  h->method = (char *)CRF_MALLOC(strlen(method) + 1);
-  if (!h->method) {
+  h->method = NULL;
+  if (C_REST_MALLOC(strlen(method) + 1, &h->method) != C_REST_OK) {
     C_REST_FREE((void *)(h));
     return C_REST_ERROR_GENERIC;
   }
@@ -339,9 +331,8 @@ struct c_rest_ws_route_data {
   void *user_data;
 };
 
-static c_rest_error_t c_rest_ws_upgrade_handler(struct c_rest_request *req,
-                                                struct c_rest_response *res,
-                                                void *user_data) {
+static NO_DISCARD c_rest_error_t c_rest_ws_upgrade_handler(
+    struct c_rest_request *req, struct c_rest_response *res, void *user_data) {
   (void)user_data; /* Used later by connection logic to call on_message */
   return c_rest_websocket_upgrade(req, res);
 }
@@ -351,14 +342,12 @@ c_rest_router_add_websocket(c_rest_router *router, const char *path,
                             c_rest_websocket_on_message_fn on_message,
                             c_rest_websocket_on_close_fn on_close,
                             void *user_data) {
-  struct c_rest_ws_route_data *ws_data;
+  struct c_rest_ws_route_data *ws_data = NULL;
 
   if (!router || !path)
     return C_REST_ERROR_GENERIC;
 
-  ws_data = (struct c_rest_ws_route_data *)CRF_MALLOC(
-      sizeof(struct c_rest_ws_route_data));
-  if (!ws_data)
+  if (C_REST_MALLOC(sizeof(struct c_rest_ws_route_data), &ws_data) != C_REST_OK)
     return C_REST_ERROR_GENERIC;
 
   ws_data->on_message = on_message;
@@ -391,9 +380,8 @@ struct c_rest_sse_route_data {
   void *user_data;
 };
 
-static c_rest_error_t c_rest_sse_handler_wrapper(struct c_rest_request *req,
-                                                 struct c_rest_response *res,
-                                                 void *user_data) {
+static NO_DISCARD c_rest_error_t c_rest_sse_handler_wrapper(
+    struct c_rest_request *req, struct c_rest_response *res, void *user_data) {
   struct c_rest_sse_route_data *sse_data =
       (struct c_rest_sse_route_data *)user_data;
   c_rest_error_t rc;
@@ -412,14 +400,13 @@ static c_rest_error_t c_rest_sse_handler_wrapper(struct c_rest_request *req,
 c_rest_error_t c_rest_router_add_sse(c_rest_router *router, const char *path,
                                      c_rest_handler_fn handler,
                                      void *user_data) {
-  struct c_rest_sse_route_data *sse_data;
+  struct c_rest_sse_route_data *sse_data = NULL;
 
   if (!router || !path)
     return C_REST_ERROR_GENERIC;
 
-  sse_data = (struct c_rest_sse_route_data *)CRF_MALLOC(
-      sizeof(struct c_rest_sse_route_data));
-  if (!sse_data)
+  if (C_REST_MALLOC(sizeof(struct c_rest_sse_route_data), &sse_data) !=
+      C_REST_OK)
     return C_REST_ERROR_GENERIC;
 
   sse_data->handler = handler;
@@ -446,9 +433,8 @@ c_rest_router_add_sse_openapi(c_rest_router *router, const char *path,
 
 #ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
 
-static c_rest_error_t c_rest_graphql_handler(struct c_rest_request *req,
-                                             struct c_rest_response *res,
-                                             void *user_data) {
+static NO_DISCARD c_rest_error_t c_rest_graphql_handler(
+    struct c_rest_request *req, struct c_rest_response *res, void *user_data) {
   struct c_rest_graphql_schema *schema =
       (struct c_rest_graphql_schema *)user_data;
   struct c_rest_graphql_node *doc = NULL;
@@ -468,10 +454,16 @@ static c_rest_error_t c_rest_graphql_handler(struct c_rest_request *req,
     c_rest_error_t s_rc = c_rest_response_set_status(res, 400);
     if (s_rc != C_REST_OK)
       return s_rc;
-    return C_REST_OK;
+    goto graphql_bad_request;
   }
 
   ret = c_rest_graphql_resolve(doc, schema, &json, &len);
+  if (ret != C_REST_OK) {
+    c_rest_error_t f_rc = c_rest_graphql_node_free(doc);
+    if (f_rc != C_REST_OK)
+      return f_rc;
+    return ret;
+  }
   {
     c_rest_error_t f_rc = c_rest_graphql_node_free(doc);
     if (f_rc != C_REST_OK) {
@@ -486,8 +478,15 @@ static c_rest_error_t c_rest_graphql_handler(struct c_rest_request *req,
     return ret;
   }
   ret = c_rest_response_json(res, json);
+  if (ret != C_REST_OK) {
+    goto graphql_free_json;
+  }
+graphql_free_json:
   C_REST_FREE((void *)(json));
   return ret;
+
+graphql_bad_request:
+  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_router_add_graphql(c_rest_router *router,
@@ -523,9 +522,8 @@ struct c_rest_template_route_data {
   void *user_data;
 };
 
-static c_rest_error_t c_rest_template_handler(struct c_rest_request *req,
-                                              struct c_rest_response *res,
-                                              void *user_data) {
+static NO_DISCARD c_rest_error_t c_rest_template_handler(
+    struct c_rest_request *req, struct c_rest_response *res, void *user_data) {
   struct c_rest_template_route_data *route_data =
       (struct c_rest_template_route_data *)user_data;
   const char **keys = NULL;
@@ -557,15 +555,14 @@ c_rest_error_t c_rest_router_add_template(
     c_rest_router *router, const char *method, const char *path,
     const struct c_rest_template_context *ctx,
     c_rest_template_data_fn data_provider, void *user_data) {
-  struct c_rest_template_route_data *route_data;
+  struct c_rest_template_route_data *route_data = NULL;
 
   if (!router || !path || !ctx || !data_provider) {
     return C_REST_ERROR_GENERIC;
   }
 
-  route_data = (struct c_rest_template_route_data *)CRF_MALLOC(
-      sizeof(struct c_rest_template_route_data));
-  if (!route_data) {
+  if (C_REST_MALLOC(sizeof(struct c_rest_template_route_data), &route_data) !=
+      C_REST_OK) {
     return C_REST_ERROR_GENERIC;
   }
 
@@ -598,8 +595,9 @@ c_rest_error_t
 c_rest_router_get_openapi_spec(c_rest_router *router,
                                struct c_rest_openapi_spec **out_spec) {
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_openapi_fail == 7)
-    return C_REST_ERROR_GENERIC;
+  c_rest_error_t seam_rc = crf_seam_router_openapi_hook();
+  if (seam_rc != C_REST_OK)
+    return seam_rc;
 #endif
   if (!router || !out_spec)
     return C_REST_ERROR_GENERIC;
@@ -610,20 +608,18 @@ c_rest_router_get_openapi_spec(c_rest_router *router,
 c_rest_error_t c_rest_router_use(c_rest_router *router, const char *path_prefix,
                                  c_rest_middleware_fn middleware,
                                  void *user_data) {
-  struct c_rest_middleware_chain *m;
+  struct c_rest_middleware_chain *m = NULL;
   struct c_rest_middleware_chain *tail;
 
   if (!router || !middleware)
     return C_REST_ERROR_GENERIC;
 
-  m = (struct c_rest_middleware_chain *)CRF_MALLOC(
-      sizeof(struct c_rest_middleware_chain));
-  if (!m)
+  if (C_REST_MALLOC(sizeof(struct c_rest_middleware_chain), &m) != C_REST_OK)
     return C_REST_ERROR_GENERIC;
 
   if (path_prefix) {
-    m->path_prefix = (char *)CRF_MALLOC(strlen(path_prefix) + 1);
-    if (!m->path_prefix) {
+    m->path_prefix = NULL;
+    if (C_REST_MALLOC(strlen(path_prefix) + 1, &m->path_prefix) != C_REST_OK) {
       C_REST_FREE((void *)(m));
       return C_REST_ERROR_GENERIC;
     }
@@ -657,20 +653,18 @@ c_rest_error_t c_rest_router_use_post(c_rest_router *router,
                                       const char *path_prefix,
                                       c_rest_middleware_fn middleware,
                                       void *user_data) {
-  struct c_rest_middleware_chain *m;
+  struct c_rest_middleware_chain *m = NULL;
   struct c_rest_middleware_chain *tail;
 
   if (!router || !middleware)
     return C_REST_ERROR_GENERIC;
 
-  m = (struct c_rest_middleware_chain *)CRF_MALLOC(
-      sizeof(struct c_rest_middleware_chain));
-  if (!m)
+  if (C_REST_MALLOC(sizeof(struct c_rest_middleware_chain), &m) != C_REST_OK)
     return C_REST_ERROR_GENERIC;
 
   if (path_prefix) {
-    m->path_prefix = (char *)CRF_MALLOC(strlen(path_prefix) + 1);
-    if (!m->path_prefix) {
+    m->path_prefix = NULL;
+    if (C_REST_MALLOC(strlen(path_prefix) + 1, &m->path_prefix) != C_REST_OK) {
       C_REST_FREE((void *)(m));
       return C_REST_ERROR_GENERIC;
     }
@@ -700,9 +694,9 @@ c_rest_error_t c_rest_router_use_post(c_rest_router *router,
   return C_REST_OK;
 }
 
-static c_rest_error_t match_route(struct c_rest_route_node *node,
-                                  const char *path, struct c_rest_request *req,
-                                  struct c_rest_route_node **out_node) {
+static NO_DISCARD c_rest_error_t
+match_route(struct c_rest_route_node *node, const char *path,
+            struct c_rest_request *req, struct c_rest_route_node **out_node) {
   const char *next_slash;
   size_t len;
   struct c_rest_route_node *child;
@@ -734,43 +728,46 @@ static c_rest_error_t match_route(struct c_rest_route_node *node,
     if (child->is_var || (strlen(child->segment) == len &&
                           strncmp(child->segment, path, len) == 0)) {
       res = match_route(child, next_slash ? next_slash + 1 : "", req, &matched);
-      if (res == C_REST_OK) {
-        if (child->is_var) {
-          struct c_rest_path_var *var = (struct c_rest_path_var *)CRF_MALLOC(
-              sizeof(struct c_rest_path_var));
-          if (var) {
-            var->name = (char *)CRF_MALLOC(strlen(child->var_name) + 1);
-            if (var->name) {
-#if defined(_MSC_VER)
-              strcpy_s(var->name, strlen(child->var_name) + 1, child->var_name);
-#else
-              strcpy(var->name, child->var_name);
-#endif
-            }
-
-            var->value = (char *)CRF_MALLOC(len + 1);
-            if (var->value) {
-#if defined(_MSC_VER)
-              /* CDD_SAFE_CRT */ memcpy_s(var->value, len, path, len);
-#else
-              memcpy(var->value, path, len);
-#endif
-              var->value[len] = '\0';
-            }
-
-            var->next = req->path_vars;
-            req->path_vars = var;
-          }
-        }
-        *out_node = matched;
-        return C_REST_OK;
+      if (res != C_REST_OK) {
+        goto next_child;
       }
+      if (child->is_var) {
+        struct c_rest_path_var *var = NULL;
+        if (C_REST_MALLOC(sizeof(struct c_rest_path_var), &var) == C_REST_OK) {
+          var->name = NULL;
+          if (C_REST_MALLOC(strlen(child->var_name) + 1, &var->name) ==
+              C_REST_OK) {
+#if defined(_MSC_VER)
+            strcpy_s(var->name, strlen(child->var_name) + 1, child->var_name);
+#else
+            strcpy(var->name, child->var_name);
+#endif
+          }
+
+          var->value = NULL;
+          if (C_REST_MALLOC(len + 1, &var->value) == C_REST_OK) {
+#if defined(_MSC_VER)
+            /* CDD_SAFE_CRT */ memcpy_s(var->value, len, path, len);
+#else
+            memcpy(var->value, path, len);
+#endif
+            var->value[len] = '\0';
+          }
+
+          var->next = req->path_vars;
+          req->path_vars = var;
+        }
+      }
+      *out_node = matched;
+      return C_REST_OK;
     }
+  next_child:
     child = child->next;
   }
 
   *out_node = NULL;
-  return C_REST_ERROR_GENERIC;
+  res = C_REST_ERROR_GENERIC;
+  return res;
 }
 
 c_rest_error_t c_rest_router_dispatch(c_rest_router *router,
@@ -794,7 +791,10 @@ c_rest_error_t c_rest_router_dispatch(c_rest_router *router,
         strncmp(req->path, m->path_prefix, strlen(m->path_prefix)) == 0) {
       middleware_res = m->middleware(req, res, m->user_data);
       if (middleware_res != C_REST_OK) {
-        /* Middleware short-circuited or failed */
+        if (middleware_res == C_REST_SHORT_CIRCUIT) {
+          goto dispatch_post_middlewares;
+        }
+        /* Middleware failed */
         return middleware_res;
       }
     }
@@ -805,10 +805,10 @@ c_rest_error_t c_rest_router_dispatch(c_rest_router *router,
   match_res = match_route(router->root, req->path, req, &matched_node);
   if (match_res != C_REST_OK) {
     /* 404 Not Found */
-    match_res = c_rest_response_set_status(res, 404);
-    if (match_res != C_REST_OK)
-      return match_res;
-    return C_REST_OK;
+    c_rest_error_t status_rc = c_rest_response_set_status(res, 404);
+    if (status_rc != C_REST_OK)
+      return status_rc;
+    goto dispatch_not_found;
   }
 
   /* 3. Check Method */
@@ -816,7 +816,7 @@ c_rest_error_t c_rest_router_dispatch(c_rest_router *router,
   while (h) {
     if (strcmp(h->method, req->method) == 0) {
       match_res = h->handler(req, res, h->user_data);
-      if (match_res != C_REST_OK)
+      if (match_res != C_REST_OK && match_res != C_REST_SHORT_CIRCUIT)
         return match_res;
       break;
     }
@@ -828,17 +828,22 @@ c_rest_error_t c_rest_router_dispatch(c_rest_router *router,
     res->status_code = 405;
   }
 
+dispatch_post_middlewares:
   /* 4. Execute post-middleware chain */
   m = router->post_middlewares;
   while (m) {
     if (!m->path_prefix ||
         strncmp(req->path, m->path_prefix, strlen(m->path_prefix)) == 0) {
       middleware_res = m->middleware(req, res, m->user_data);
-      if (middleware_res != C_REST_OK)
-        return (c_rest_error_t)middleware_res;
+      if (middleware_res != C_REST_OK) {
+        if (middleware_res == C_REST_SHORT_CIRCUIT)
+          break;
+        return middleware_res;
+      }
     }
     m = m->next;
   }
 
+dispatch_not_found:
   return C_REST_OK;
 }

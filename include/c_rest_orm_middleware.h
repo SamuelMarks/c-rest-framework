@@ -23,16 +23,30 @@ struct c_rest_response;
  * @brief Middleware that borrows a c-orm connection and starts a transaction.
  *
  * user_data should be a pointer to the c_rest_context containing the db_pool.
+ *
+ * @param req The HTTP request.
+ * @param res The HTTP response.
+ * @param user_data Pointer to the c_rest_context containing the db_pool.
+ * @return C_REST_OK on success, or a non-zero error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_orm_transaction_start_middleware(
-    struct c_rest_request *req, struct c_rest_response *res, void *user_data);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_orm_transaction_start_middleware(struct c_rest_request *req,
+                                        struct c_rest_response *res,
+                                        void *user_data);
 
 /**
  * @brief Post-handler hook to commit/rollback transactions and release the
  * connection.
+ *
+ * @param req The HTTP request.
+ * @param res The HTTP response.
+ * @param user_data Pointer to the c_rest_context containing the db_pool.
+ * @return C_REST_OK on success, or a non-zero error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_orm_transaction_end_middleware(
-    struct c_rest_request *req, struct c_rest_response *res, void *user_data);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_orm_transaction_end_middleware(struct c_rest_request *req,
+                                      struct c_rest_response *res,
+                                      void *user_data);
 
 #ifdef __cplusplus
 }

@@ -29,8 +29,8 @@ static c_rest_error_t resolve_user(const char *field_name, char **out_json,
   (void)field_name;
   (void)user_data;
 
-  *out_json = (char *)CRF_MALLOC(len + 1);
-  if (!*out_json)
+  *out_json = NULL;
+  if (C_REST_MALLOC(len + 1, out_json) != C_REST_OK)
     return C_REST_ERROR_GENERIC;
 
   memcpy(*out_json, res, len + 1);
@@ -47,8 +47,8 @@ static c_rest_error_t resolve_posts(const char *field_name, char **out_json,
   (void)field_name;
   (void)user_data;
 
-  *out_json = (char *)CRF_MALLOC(len + 1);
-  if (!*out_json)
+  *out_json = NULL;
+  if (C_REST_MALLOC(len + 1, out_json) != C_REST_OK)
     return C_REST_ERROR_GENERIC;
 
   memcpy(*out_json, res, len + 1);

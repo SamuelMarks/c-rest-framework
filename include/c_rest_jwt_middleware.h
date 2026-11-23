@@ -5,12 +5,10 @@
 #ifndef C_REST_JWT_MIDDLEWARE_H
 #define C_REST_JWT_MIDDLEWARE_H
 /* clang-format off */
-#include "c_rest_error.h"
-
-#include "c_rest_request.h"
-#include "c_rest_response.h"
 #include <stddef.h>
 #include "c_rest_error.h"
+#include "c_rest_request.h"
+#include "c_rest_response.h"
 #include "c_rest_export.h"
 /* clang-format on */
 
@@ -42,7 +40,8 @@ struct c_rest_jwt_middleware_config {
  * context.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_jwt_middleware_config_init(
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_jwt_middleware_config_init(
     struct c_rest_jwt_middleware_config *config, const unsigned char *secret,
     size_t secret_len, c_rest_error_t (*verify_payload)(const char *, void **));
 
@@ -54,7 +53,7 @@ C_REST_EXPORT extern c_rest_error_t c_rest_jwt_middleware_config_init(
  * @param user_data Pointer to the struct c_rest_jwt_middleware_config.
  * @return 0 to continue, non-zero to stop (e.g., sending 401).
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_jwt_middleware(struct c_rest_request *req, struct c_rest_response *res,
                       void *user_data);
 

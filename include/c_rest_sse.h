@@ -6,9 +6,10 @@
 #define C_REST_SSE_H
 
 /* clang-format off */
-#include "c_rest_error.h"
 #include <stddef.h>
+#include "c_rest_error.h"
 #include "c_rest_export.h"
+#include "c_rest_no_discard.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -39,7 +40,7 @@ struct c_rest_sse_context;
  * @param ev Pointer to the event struct to initialize.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sse_event_init(struct c_rest_sse_event *ev);
 
 /**
@@ -47,7 +48,7 @@ c_rest_sse_event_init(struct c_rest_sse_event *ev);
  * @param ev Pointer to the event struct.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sse_event_destroy(struct c_rest_sse_event *ev);
 
 /**
@@ -56,7 +57,7 @@ c_rest_sse_event_destroy(struct c_rest_sse_event *ev);
  * @param dest The destination event to initialize and copy into.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sse_event_clone(const struct c_rest_sse_event *src,
                        struct c_rest_sse_event *dest);
 
@@ -67,7 +68,7 @@ c_rest_sse_event_clone(const struct c_rest_sse_event *src,
  * @param out_len Pointer to receive the length of the string.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
                      size_t *out_len);
 
@@ -76,7 +77,7 @@ c_rest_sse_serialize(const struct c_rest_sse_event *ev, char **out_buf,
  * @param out_ctx Pointer to receive the context pointer.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sse_context_init(struct c_rest_sse_context **out_ctx);
 
 /**
@@ -84,7 +85,7 @@ c_rest_sse_context_init(struct c_rest_sse_context **out_ctx);
  * @param ctx The context to destroy.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sse_context_destroy(struct c_rest_sse_context *ctx);
 
 /**
@@ -96,7 +97,7 @@ c_rest_sse_context_destroy(struct c_rest_sse_context *ctx);
  * @return 0 on success (event parsed), 1 if more data is needed, or a negative
  * error code.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sse_parse(struct c_rest_sse_context *ctx, const char *data, size_t len,
                  struct c_rest_sse_event *out_event);
 
@@ -107,7 +108,7 @@ struct c_rest_response;
  * @param res The response object.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sse_init_response(struct c_rest_response *res);
 
 /**
@@ -116,7 +117,7 @@ c_rest_sse_init_response(struct c_rest_response *res);
  * @param ev The event to send.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sse_send_event(struct c_rest_response *res,
                       const struct c_rest_sse_event *ev);
 
@@ -125,7 +126,7 @@ c_rest_sse_send_event(struct c_rest_response *res,
  * @param res The response object.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sse_send_keepalive(struct c_rest_response *res);
 
 #ifdef __cplusplus

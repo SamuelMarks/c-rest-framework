@@ -10,12 +10,11 @@
 #include <string.h>
 /* clang-format on */
 
-int test_crypto(void);
-static int test_crypto_errors(void);
-static int test_crypto_rand_fail(void);
-static int test_crypto_malloc_failures(void);
+TEST test_crypto_errors(void);
+TEST test_crypto_rand_fail(void);
+TEST test_crypto_malloc_failures(void);
 
-int test_crypto(void) {
+TEST test_crypto_main(void) {
   const unsigned char data[] = "hello world";
   unsigned char sha1_hash[20];
   unsigned char sha256_hash[32];
@@ -24,8 +23,6 @@ int test_crypto(void) {
   int res;
   char *jwt_token = NULL;
   char *jwt_payload = NULL;
-  int failed = 0;
-  const char *msgs[2];
 
   const unsigned char expected_sha1[20] = {
       0x2a, 0xae, 0x6c, 0x35, 0xc9, 0x4f, 0xcf, 0xb4, 0x15, 0xdb,
@@ -43,101 +40,90 @@ int test_crypto(void) {
       0xc6, 0xc6, 0x0c, 0x06, 0x21, 0xcd, 0xac, 0x48, 0x62, 0x3a};
 
   res = (int)c_rest_sha1(data, 11, sha1_hash);
-  failed += (res != 0);
-  failed += (memcmp(sha1_hash, expected_sha1, 20) != 0);
+  ASSERT_FALSE(res != 0);
+  ASSERT_FALSE(memcmp(sha1_hash, expected_sha1, 20) != 0);
 
   res = (int)c_rest_sha256(data, 11, sha256_hash);
-  failed += (res != 0);
-  failed += (memcmp(sha256_hash, expected_sha256, 32) != 0);
+  ASSERT_FALSE(res != 0);
+  ASSERT_FALSE(memcmp(sha256_hash, expected_sha256, 32) != 0);
 
   res = (int)c_rest_rand_bytes(rand_buf, sizeof(rand_buf));
-  failed += (res != 0);
+  ASSERT_FALSE(res != 0);
 
   res = (int)c_rest_hmac_sha256(hmac_key, 6, data, 11, hmac_hash);
-  failed += (res != 0);
-  failed += (memcmp(hmac_hash, expected_hmac, 32) != 0);
+  ASSERT_FALSE(res != 0);
+  ASSERT_FALSE(memcmp(hmac_hash, expected_hmac, 32) != 0);
 
   {
     unsigned char large_data[100];
     memset(large_data, 'A', 100);
     res = (int)c_rest_sha1(large_data, 100, sha1_hash);
-    failed += (res != 0);
+    ASSERT_FALSE(res != 0);
     res = (int)c_rest_sha256(large_data, 100, sha256_hash);
-    failed += (res != 0);
+    ASSERT_FALSE(res != 0);
   }
 
   res =
       (int)c_rest_jwt_sign_hs256("{\"sub\":\"123\"}", hmac_key, 6, &jwt_token);
-  failed += (res != 0);
-  failed += (jwt_token == NULL);
+  ASSERT_FALSE(res != 0);
+  ASSERT_FALSE(jwt_token == NULL);
 
   res = (int)c_rest_jwt_verify_hs256(jwt_token, hmac_key, 6, &jwt_payload);
-  failed += (res != 0);
-  failed += (jwt_payload == NULL);
+  ASSERT_FALSE(res != 0);
+  ASSERT_FALSE(jwt_payload == NULL);
 
-  failed += (strcmp(jwt_payload, "{\"sub\":\"123\"}") != 0);
-  CRF_FREE(jwt_payload);
-  CRF_FREE(jwt_token);
+  ASSERT_FALSE(strcmp(jwt_payload, "{\"sub\":\"123\"}") != 0);
+  C_REST_FREE(jwt_payload);
+  C_REST_FREE(jwt_token);
 
   {
     const unsigned char pwd[] = "password";
     const unsigned char salt[] = "salt";
     unsigned char dk[32];
     res = (int)c_rest_pbkdf2_hmac_sha256(pwd, 8, salt, 4, 1, 32, dk);
-    failed += (res != 0);
+    ASSERT_FALSE(res != 0);
 
     {
       char *rand_str = NULL;
       res = (int)c_rest_random_string_generate(32, &rand_str);
-      failed += (res != 0);
-      failed += (rand_str == NULL);
-      CRF_FREE(rand_str);
+      ASSERT_FALSE(res != 0);
+      ASSERT_FALSE(rand_str == NULL);
+      C_REST_FREE(rand_str);
     }
   }
 
-  failed += (test_crypto_errors() != 0);
-
   /* jwt token invalid payload base64 */
-  failed +=
-      (c_rest_jwt_verify_hs256("header.!!.sig", (const unsigned char *)"key", 3,
-                               &jwt_payload) != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(c_rest_jwt_verify_hs256("header.!!.sig",
+                                       (const unsigned char *)"key", 3,
+                                       &jwt_payload) != C_REST_ERROR_GENERIC);
 
   {
     unsigned char key[10];
-    failed += (c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3,
-                                         (const unsigned char *)"salt", 4, 1,
-                                         10, key) != C_REST_OK);
+    ASSERT_FALSE(c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3,
+                                           (const unsigned char *)"salt", 4, 1,
+                                           10, key) != C_REST_OK);
   }
 
-  failed += (c_rest_verify_password(
-                 "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
-                        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
-             C_REST_ERROR_GENERIC);
-  failed +=
-      (c_rest_verify_password(
-           "pwd", "$pbkdf2-sha256$i=1000$bad_b64_$"
-                  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") == C_REST_OK);
+  ASSERT_FALSE(c_rest_verify_password(
+                   "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
+                          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
+               C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(c_rest_verify_password(
+                   "pwd", "$pbkdf2-sha256$i=1000$bad_b64_$"
+                          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") ==
+               C_REST_OK);
 
-  failed += (c_rest_verify_password(
-                 "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$!!!") == C_REST_OK);
+  ASSERT_FALSE(c_rest_verify_password(
+                   "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$!!!") == C_REST_OK);
 
-  failed +=
-      (c_rest_verify_password(
-           "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$bad_b64_") == C_REST_OK);
+  ASSERT_FALSE(c_rest_verify_password(
+                   "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$bad_b64_") ==
+               C_REST_OK);
 
-  failed += (test_crypto_rand_fail() != 0);
-
-  failed += (test_crypto_malloc_failures() != 0);
-
-  msgs[0] = "test_crypto passed\n";
-  msgs[1] = "test_crypto failed\n";
-  printf("%s", msgs[failed != 0]);
-
-  return failed;
+  PASS();
 }
 
-static int test_crypto_rand_fail(void) {
-  int failed = 0;
+TEST test_crypto_rand_fail(void) {
   char *hash = NULL;
   char *token = NULL;
   char *jwt = NULL;
@@ -145,10 +131,10 @@ static int test_crypto_rand_fail(void) {
   g_mock_crypto_fail = 11;
   {
     unsigned char h[32];
-    c_rest_sha256((const unsigned char *)"a", 1, h);
-    c_rest_sha256((const unsigned char *)"a", 1, h);
+    ASSERT_EQ(C_REST_OK, c_rest_sha256((const unsigned char *)"a", 1, h));
+    ASSERT_NEQ(C_REST_OK, c_rest_sha256((const unsigned char *)"a", 1, h));
     g_mock_crypto_fail = 999;
-    c_rest_sha256((const unsigned char *)"a", 1, h);
+    ASSERT_EQ(C_REST_OK, c_rest_sha256((const unsigned char *)"a", 1, h));
     g_mock_crypto_fail = 0;
   }
 
@@ -159,159 +145,186 @@ static int test_crypto_rand_fail(void) {
     memset(big_key, 'x', 100);
     for (i = 101; i <= 103; i++) {
       g_mock_crypto_fail = i;
-      c_rest_hmac_sha256(big_key, 100, (const unsigned char *)"data", 4, hmac);
+      ASSERT_NEQ(C_REST_OK,
+                 c_rest_hmac_sha256(big_key, 100, (const unsigned char *)"data",
+                                    4, hmac));
     }
   }
 
   {
     int i;
+    c_rest_error_t rc;
     for (i = 201; i <= 208; i++) {
       g_mock_crypto_fail = i;
-      c_rest_random_string_generate(32, &token);
-      c_rest_jwt_sign_hs256("{}", (const unsigned char *)"secret", 6, &jwt);
-      c_rest_jwt_verify_hs256("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.t-"
-                              "9K23mB5x3oHZZ9tF4K9tqJ3r8",
-                              (const unsigned char *)"secret", 6, &token);
+      rc = c_rest_random_string_generate(32, &token);
+      if (rc == C_REST_OK && token) {
+        C_REST_FREE(token);
+        token = NULL;
+      }
+      rc =
+          c_rest_jwt_sign_hs256("{}", (const unsigned char *)"secret", 6, &jwt);
+      if (rc == C_REST_OK && jwt) {
+        C_REST_FREE(jwt);
+        jwt = NULL;
+      }
+      rc = c_rest_jwt_verify_hs256("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.t-"
+                                   "9K23mB5x3oHZZ9tF4K9tqJ3r8",
+                                   (const unsigned char *)"secret", 6, &token);
+      ASSERT_NEQ(C_REST_OK, rc);
     }
     {
       char *vtok = NULL;
-      c_rest_jwt_sign_hs256("{\"sub\":\"123\"}",
-                            (const unsigned char *)"secret", 6, &vtok);
+      g_mock_crypto_fail = 0;
+      ASSERT_EQ(C_REST_OK, c_rest_jwt_sign_hs256(
+                               "{\"sub\":\"123\"}",
+                               (const unsigned char *)"secret", 6, &vtok));
       for (i = 201; i <= 208; i++) {
         g_mock_crypto_fail = i;
-        c_rest_jwt_verify_hs256(vtok, (const unsigned char *)"secret", 6,
-                                &token);
+        rc = c_rest_jwt_verify_hs256(vtok, (const unsigned char *)"secret", 6,
+                                     &token);
+        if (rc == C_REST_OK && token) {
+          C_REST_FREE(token);
+          token = NULL;
+        }
       }
       for (i = 501; i <= 504; i++) {
         g_mock_crypto_fail = i;
-        c_rest_jwt_verify_hs256(vtok, (const unsigned char *)"secret", 6,
-                                &token);
+        rc = c_rest_jwt_verify_hs256(vtok, (const unsigned char *)"secret", 6,
+                                     &token);
+        if (rc == C_REST_OK && token) {
+          C_REST_FREE(token);
+          token = NULL;
+        }
       }
-      CRF_FREE(vtok);
+      C_REST_FREE(vtok);
     }
     for (i = 301; i <= 306; i++) {
       g_mock_crypto_fail = i;
-      c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
+      rc = c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
+      if (rc == C_REST_OK && hash) {
+        C_REST_FREE(hash);
+        hash = NULL;
+      }
     }
     {
       int k;
       for (k = 401; k <= 405; k++) {
         g_mock_crypto_fail = k;
-        c_rest_verify_password("pwd",
-                               "$pbkdf2-sha256$i=1000$c2FsdA==$"
-                               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        rc = c_rest_verify_password(
+            "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
+                   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        ASSERT_NEQ(C_REST_OK, rc);
       }
     }
   }
 
   g_mock_crypto_fail = 3;
-  failed += (c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256,
-                                  &hash) != C_REST_ERROR_GENERIC);
-  printf("DID HASH FAIL FOR MOCK 3? failed=%d\n", failed);
+  ASSERT_FALSE(c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256,
+                                    &hash) != C_REST_ERROR_GENERIC);
 
   g_mock_crypto_fail = 4;
-  failed += (c_rest_random_string_generate(32, &token) != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(c_rest_random_string_generate(32, &token) !=
+               C_REST_ERROR_GENERIC);
 
   g_mock_crypto_fail = 2;
-  failed += (c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256,
-                                  &hash) != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256,
+                                    &hash) != C_REST_ERROR_GENERIC);
   g_mock_crypto_fail = 5;
-  failed += (c_rest_verify_password(
-                 "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
-                        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
-             C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(c_rest_verify_password(
+                   "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
+                          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
+               C_REST_ERROR_GENERIC);
   g_mock_crypto_fail = 6;
-  failed += (c_rest_verify_password(
-                 "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
-                        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
-             C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(c_rest_verify_password(
+                   "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
+                          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
+               C_REST_ERROR_GENERIC);
   g_mock_crypto_fail = 7;
-  failed += (c_rest_verify_password(
-                 "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
-                        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
-             C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(c_rest_verify_password(
+                   "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
+                          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
+               C_REST_ERROR_GENERIC);
   g_mock_crypto_fail = 0;
 
   g_mock_crypto_fail = 5;
-  failed += (c_rest_verify_password(
-                 "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
-                        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
-             C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(c_rest_verify_password(
+                   "pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$"
+                          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") !=
+               C_REST_ERROR_GENERIC);
 
   g_mock_crypto_fail = 0;
 
-  return failed;
+  PASS();
 }
 
-static int test_crypto_errors(void) {
+TEST test_crypto_errors(void) {
   char *hash = NULL;
   unsigned char dummy_hash[32];
-  int failed = 0;
   int res;
 
   /* hash_password errors */
   res = (int)c_rest_hash_password(NULL, C_REST_HASH_ALG_PBKDF2_SHA256, &hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256, NULL);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_hash_password("pwd", (enum c_rest_password_hash_alg)999,
                                   &hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
 
   /* verify_password errors */
   res = (int)c_rest_verify_password(NULL, "$pbkdf2-sha256$i=1000$salt$hash");
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_verify_password("pwd", NULL);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_verify_password("pwd", "invalid");
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$saltonly");
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$bad$hash");
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$sal~$hash");
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res =
       (int)c_rest_verify_password("pwd", "$pbkdf2-sha256$i=1000$c2FsdA==$has~");
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
 
   /* random_string_generate errors */
   res = (int)c_rest_random_string_generate(10, NULL);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_random_string_generate(0, &hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
 
   /* tls_get_provider errors */
   res = (int)c_rest_tls_get_provider(NULL);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
 
   /* jwt_sign_hs256 errors */
   res =
       (int)c_rest_jwt_sign_hs256(NULL, (const unsigned char *)"key", 3, &hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_jwt_sign_hs256("{}", NULL, 3, &hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_jwt_sign_hs256("{}", (const unsigned char *)"key", 3, NULL);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
 
   /* jwt_verify_hs256 errors */
   res = (int)c_rest_jwt_verify_hs256(NULL, (const unsigned char *)"key", 3,
                                      &hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_jwt_verify_hs256("token", NULL, 3, &hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_jwt_verify_hs256("token", (const unsigned char *)"key", 3,
                                      NULL);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_jwt_verify_hs256("invalid.token",
                                      (const unsigned char *)"key", 3, &hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_jwt_verify_hs256("invalid", (const unsigned char *)"key", 3,
                                      &hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_jwt_verify_hs256("invalid.token.here",
                                      (const unsigned char *)"key", 3, &hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
 
   {
     const unsigned char key[] = "key";
@@ -322,10 +335,13 @@ static int test_crypto_errors(void) {
     char token_buf[200];
     char *out_payload = NULL;
 
-    c_rest_hmac_sha256(key, 3, (const unsigned char *)to_sign, strlen(to_sign),
-                       expected_sig);
-    c_rest_base64url_encode(expected_sig, 32, NULL, &encoded_sig_len);
-    c_rest_base64url_encode(expected_sig, 32, encoded_sig, &encoded_sig_len);
+    ASSERT_EQ(C_REST_OK,
+              c_rest_hmac_sha256(key, 3, (const unsigned char *)to_sign,
+                                 strlen(to_sign), expected_sig));
+    ASSERT_FALSE(c_rest_base64url_encode(expected_sig, 32, NULL,
+                                         &encoded_sig_len) != C_REST_OK);
+    ASSERT_FALSE(c_rest_base64url_encode(expected_sig, 32, encoded_sig,
+                                         &encoded_sig_len) != C_REST_OK);
     encoded_sig[encoded_sig_len] = '\0';
 #if defined(_MSC_VER)
     sprintf_s(token_buf, sizeof(token_buf), "%s.%s", to_sign, encoded_sig);
@@ -334,24 +350,24 @@ static int test_crypto_errors(void) {
 #endif
 
     res = (int)c_rest_jwt_verify_hs256(token_buf, key, 3, &out_payload);
-    failed += (res == C_REST_OK);
+    ASSERT_FALSE(res == C_REST_OK);
   }
 
   /* pbkdf2_hmac_sha256 errors */
   res = (int)c_rest_pbkdf2_hmac_sha256(NULL, 0, (const unsigned char *)"salt",
                                        4, 1, 32, dummy_hash); /* Dummy hash */
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3, NULL, 0,
                                        1, 32, dummy_hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3,
                                        (const unsigned char *)"salt", 4, 1, 32,
                                        NULL);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_pbkdf2_hmac_sha256((const unsigned char *)"pwd", 3,
                                        (const unsigned char *)"salt", 4, 0, 32,
                                        dummy_hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
 
   /* hmac_sha256 errors and large key */
   {
@@ -359,19 +375,19 @@ static int test_crypto_errors(void) {
     memset(large_key, 'A', 100);
     res = (int)c_rest_hmac_sha256(large_key, 100, (const unsigned char *)"data",
                                   4, dummy_hash);
-    failed += (res != C_REST_OK);
+    ASSERT_FALSE(res != C_REST_OK);
   }
   res = (int)c_rest_hmac_sha256(NULL, 3, (const unsigned char *)"data", 4,
                                 dummy_hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_hmac_sha256((const unsigned char *)"key", 3, NULL, 4,
                                 dummy_hash);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
   res = (int)c_rest_hmac_sha256((const unsigned char *)"key", 3,
                                 (const unsigned char *)"data", 4, NULL);
-  failed += (res == C_REST_OK);
+  ASSERT_FALSE(res == C_REST_OK);
 
-  return failed;
+  PASS();
 }
 
 static int g_malloc_fail_after = -1;
@@ -397,17 +413,16 @@ static void *fail_malloc_n(size_t size) {
   return res;
 }
 
-static int test_crypto_malloc_failures(void) {
+TEST test_crypto_malloc_failures(void) {
   char *hash = NULL;
   unsigned char dummy_hash[32];
   int res;
-  int failed = 0;
   int i;
   enum c_rest_crypto_provider provider;
 
   /* Check tls_get_provider valid pointer */
   res = (int)c_rest_tls_get_provider(&provider);
-  failed += (res != C_REST_OK);
+  ASSERT_FALSE(res != C_REST_OK);
 
   g_crf_malloc_hook = fail_malloc_n;
 
@@ -420,7 +435,7 @@ static int test_crypto_malloc_failures(void) {
       res = (int)c_rest_hash_password("pwd", C_REST_HASH_ALG_PBKDF2_SHA256,
                                       &hash);
       if (res == C_REST_OK)
-        CRF_FREE(hash);
+        C_REST_FREE(hash);
     }
   }
   g_malloc_fail_size = -1;
@@ -436,7 +451,7 @@ static int test_crypto_malloc_failures(void) {
     g_malloc_fail_after = i;
     res = (int)c_rest_random_string_generate(10, &hash);
     if (res == C_REST_OK)
-      CRF_FREE(hash);
+      C_REST_FREE(hash);
   }
   g_malloc_fail_after = -1;
   /* Malloc failure when encoding hash/salt */
@@ -447,7 +462,7 @@ static int test_crypto_malloc_failures(void) {
     if (res != C_REST_OK) {
       /* expected failure */
     } else {
-      CRF_FREE(hash);
+      C_REST_FREE(hash);
     }
   }
 
@@ -456,7 +471,7 @@ static int test_crypto_malloc_failures(void) {
     res = (int)c_rest_jwt_sign_hs256("{}", (const unsigned char *)"key", 3,
                                      &hash);
     if (res == C_REST_OK)
-      CRF_FREE(hash);
+      C_REST_FREE(hash);
   }
 
   {
@@ -464,17 +479,16 @@ static int test_crypto_malloc_failures(void) {
     g_malloc_fail_after = -1;
     res = (int)c_rest_jwt_sign_hs256(
         "{\"sub\":\"123\"}", (const unsigned char *)"key", 3, &valid_token);
-    if (res != C_REST_OK)
-      return 1;
+    ASSERT_EQ(C_REST_OK, res);
     for (i = 0; i < 10; i++) {
       g_malloc_fail_size = -1;
       g_malloc_fail_after = i;
       res = (int)c_rest_jwt_verify_hs256(
           valid_token, (const unsigned char *)"key", 3, &hash);
       if (res == C_REST_OK)
-        CRF_FREE(hash);
+        C_REST_FREE(hash);
     }
-    CRF_FREE(valid_token);
+    C_REST_FREE(valid_token);
   }
 
   for (i = 0; i < 5; i++) {
@@ -520,5 +534,12 @@ static int test_crypto_malloc_failures(void) {
 
   g_crf_malloc_hook = NULL;
 
-  return failed;
+  PASS();
+}
+
+SUITE(crypto_suite) {
+  RUN_TEST(test_crypto_main);
+  RUN_TEST(test_crypto_errors);
+  RUN_TEST(test_crypto_rand_fail);
+  RUN_TEST(test_crypto_malloc_failures);
 }

@@ -35,11 +35,13 @@ c_rest_error_t c_rest_request_get_header(struct c_rest_request *req,
   return C_REST_ERROR_GENERIC;
 }
 
-static c_rest_error_t parse_cookies_if_needed(struct c_rest_request *req) {
+static NO_DISCARD c_rest_error_t
+parse_cookies_if_needed(struct c_rest_request *req) {
   c_rest_error_t rc;
   const char *cookie_str;
   const char *p;
   int done = 0;
+  int log_rc = 0;
 
   if (req->cookies) {
     return C_REST_OK;
@@ -78,16 +80,16 @@ static c_rest_error_t parse_cookies_if_needed(struct c_rest_request *req) {
           val_len = (size_t)(semi - eq - 1);
 
           if (C_REST_MALLOC(sizeof(struct c_rest_header), &cp) != 0) {
-            LOG_DEBUG("C_REST_MALLOC failed");
+            log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
             cp = NULL;
           }
           if (cp) {
             if (C_REST_MALLOC(key_len + 1, &cp->key) != 0) {
-              LOG_DEBUG("C_REST_MALLOC failed");
+              log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
               cp->key = NULL;
             }
             if (C_REST_MALLOC(val_len + 1, &cp->value) != 0) {
-              LOG_DEBUG("C_REST_MALLOC failed");
+              log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
               cp->value = NULL;
             }
             if (cp->key && cp->value) {
@@ -120,7 +122,7 @@ static c_rest_error_t parse_cookies_if_needed(struct c_rest_request *req) {
       }
     }
   }
-  return C_REST_OK;
+  return (c_rest_error_t)((int)C_REST_OK | log_rc);
 }
 
 c_rest_error_t c_rest_request_get_cookie(struct c_rest_request *req,
@@ -143,9 +145,11 @@ c_rest_error_t c_rest_request_get_cookie(struct c_rest_request *req,
   return C_REST_ERROR_GENERIC;
 }
 
-static c_rest_error_t parse_query_if_needed(struct c_rest_request *req) {
+static NO_DISCARD c_rest_error_t
+parse_query_if_needed(struct c_rest_request *req) {
   const char *p;
   c_rest_error_t rc;
+  int log_rc = 0;
   if (!req->query || req->query_params) {
     return C_REST_OK; /* Already parsed or no query string */
   }
@@ -162,11 +166,7 @@ static c_rest_error_t parse_query_if_needed(struct c_rest_request *req) {
     }
 
     if (C_REST_MALLOC(sizeof(struct c_rest_header), &qp) != 0) {
-      LOG_DEBUG("C_REST_MALLOC failed");
-      qp = NULL;
-    }
-    if (!qp) {
-      return C_REST_ERROR_OOM; /* Out of memory */
+      return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_MALLOC failed");
     }
     qp->key = NULL;
     qp->value = NULL;
@@ -177,43 +177,47 @@ static c_rest_error_t parse_query_if_needed(struct c_rest_request *req) {
       val_len = (size_t)(amp - eq - 1);
 
       if (C_REST_MALLOC(key_len + 1, &qp->key) != 0) {
-        LOG_DEBUG("C_REST_MALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
         qp->key = NULL;
       }
       if (qp->key) {
         rc = c_rest_url_decode(qp->key, p, key_len);
         if (rc != C_REST_OK) {
           C_REST_FREE(qp->key);
-          qp->key = NULL;
+          C_REST_FREE(qp);
+          return rc;
         }
       }
 
       if (C_REST_MALLOC(val_len + 1, &qp->value) != 0) {
-        LOG_DEBUG("C_REST_MALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
         qp->value = NULL;
       }
       if (qp->value) {
         rc = c_rest_url_decode(qp->value, eq + 1, val_len);
         if (rc != C_REST_OK) {
+          C_REST_FREE(qp->key);
           C_REST_FREE(qp->value);
-          qp->value = NULL;
+          C_REST_FREE(qp);
+          return rc;
         }
       }
     } else {
       key_len = (size_t)(amp - p);
       if (C_REST_MALLOC(key_len + 1, &qp->key) != 0) {
-        LOG_DEBUG("C_REST_MALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
         qp->key = NULL;
       }
       if (qp->key) {
         rc = c_rest_url_decode(qp->key, p, key_len);
         if (rc != C_REST_OK) {
           C_REST_FREE(qp->key);
-          qp->key = NULL;
+          C_REST_FREE(qp);
+          return rc;
         }
       }
       if (C_REST_MALLOC(1, &qp->value) != 0) {
-        LOG_DEBUG("C_REST_MALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
         qp->value = NULL;
       }
       if (qp->value) {
@@ -235,7 +239,7 @@ static c_rest_error_t parse_query_if_needed(struct c_rest_request *req) {
     }
     p = amp + 1;
   }
-  return C_REST_OK;
+  return (c_rest_error_t)((int)C_REST_OK | log_rc);
 }
 
 c_rest_error_t c_rest_request_get_query(struct c_rest_request *req,
@@ -265,6 +269,7 @@ c_rest_error_t c_rest_request_get_query(struct c_rest_request *req,
 c_rest_error_t c_rest_request_parse_urlencoded(struct c_rest_request *req) {
   const char *p;
   c_rest_error_t rc;
+  int log_rc = 0;
   if (!req || req->form_params) {
     return C_REST_OK; /* Already parsed or no body */
   }
@@ -285,11 +290,7 @@ c_rest_error_t c_rest_request_parse_urlencoded(struct c_rest_request *req) {
     }
 
     if (C_REST_MALLOC(sizeof(struct c_rest_header), &qp) != 0) {
-      LOG_DEBUG("C_REST_MALLOC failed");
-      qp = NULL;
-    }
-    if (!qp) {
-      return C_REST_ERROR_OOM; /* Out of memory */
+      return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_MALLOC failed");
     }
     qp->key = NULL;
     qp->value = NULL;
@@ -300,43 +301,47 @@ c_rest_error_t c_rest_request_parse_urlencoded(struct c_rest_request *req) {
       val_len = (size_t)(amp - eq - 1);
 
       if (C_REST_MALLOC(key_len + 1, &qp->key) != 0) {
-        LOG_DEBUG("C_REST_MALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
         qp->key = NULL;
       }
       if (qp->key) {
         rc = c_rest_url_decode(qp->key, p, key_len);
         if (rc != C_REST_OK) {
           C_REST_FREE(qp->key);
-          qp->key = NULL;
+          C_REST_FREE(qp);
+          return rc;
         }
       }
 
       if (C_REST_MALLOC(val_len + 1, &qp->value) != 0) {
-        LOG_DEBUG("C_REST_MALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
         qp->value = NULL;
       }
       if (qp->value) {
         rc = c_rest_url_decode(qp->value, eq + 1, val_len);
         if (rc != C_REST_OK) {
+          C_REST_FREE(qp->key);
           C_REST_FREE(qp->value);
-          qp->value = NULL;
+          C_REST_FREE(qp);
+          return rc;
         }
       }
     } else {
       key_len = (size_t)(amp - p);
       if (C_REST_MALLOC(key_len + 1, &qp->key) != 0) {
-        LOG_DEBUG("C_REST_MALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
         qp->key = NULL;
       }
       if (qp->key) {
         rc = c_rest_url_decode(qp->key, p, key_len);
         if (rc != C_REST_OK) {
           C_REST_FREE(qp->key);
-          qp->key = NULL;
+          C_REST_FREE(qp);
+          return rc;
         }
       }
       if (C_REST_MALLOC(1, &qp->value) != 0) {
-        LOG_DEBUG("C_REST_MALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
         qp->value = NULL;
       }
       if (qp->value) {
@@ -358,7 +363,7 @@ c_rest_error_t c_rest_request_parse_urlencoded(struct c_rest_request *req) {
     }
     p = amp + 1;
   }
-  return C_REST_OK;
+  return (c_rest_error_t)((int)C_REST_OK | log_rc);
 }
 
 c_rest_error_t c_rest_request_get_form_param(struct c_rest_request *req,
@@ -434,10 +439,10 @@ c_rest_error_t c_rest_request_parse_json(struct c_rest_request *req,
 c_rest_error_t c_rest_request_cleanup(struct c_rest_request *req) {
   struct c_rest_header *h;
   struct c_rest_header *next_h;
-
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_req_cleanup_fail)
-    return C_REST_ERROR_GENERIC;
+  c_rest_error_t seam_rc = crf_seam_req_cleanup_hook();
+  if (seam_rc != C_REST_OK)
+    return seam_rc;
 #endif
 
   if (!req) {
@@ -521,11 +526,9 @@ c_rest_error_t c_rest_request_get_auth_bearer(struct c_rest_request *req,
   }
 
   if (C_REST_MALLOC(strlen(auth_val + 7) + 1, out_token) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
     *out_token = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!*out_token)
-    return C_REST_ERROR_GENERIC;
 
 #if defined(_MSC_VER)
   strcpy_s(*out_token, strlen(auth_val + 7) + 1, auth_val + 7);
@@ -545,6 +548,7 @@ c_rest_error_t c_rest_request_get_auth_basic(struct c_rest_request *req,
   size_t decoded_len;
   char *colon;
   size_t auth_len;
+  int log_rc = 0;
 
   if (!req || !out_username || !out_password)
     return C_REST_ERROR_GENERIC;
@@ -567,11 +571,8 @@ c_rest_error_t c_rest_request_get_auth_basic(struct c_rest_request *req,
   }
 
   if (C_REST_MALLOC(decoded_len + 1, &decoded) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    decoded = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!decoded)
-    return C_REST_ERROR_GENERIC;
 
   rc = c_rest_base64_decode(auth_val, auth_len, (unsigned char *)decoded,
                             &decoded_len);
@@ -589,7 +590,7 @@ c_rest_error_t c_rest_request_get_auth_basic(struct c_rest_request *req,
 
   *colon = '\0';
   if (C_REST_MALLOC(strlen(decoded) + 1, out_username) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+    log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
     *out_username = NULL;
   }
   if (*out_username) {
@@ -601,7 +602,7 @@ c_rest_error_t c_rest_request_get_auth_basic(struct c_rest_request *req,
   }
 
   if (C_REST_MALLOC(strlen(colon + 1) + 1, out_password) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+    log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
     *out_password = NULL;
   }
   if (*out_password) {
@@ -618,7 +619,7 @@ c_rest_error_t c_rest_request_get_auth_basic(struct c_rest_request *req,
       C_REST_FREE((void *)(*out_username));
     if (*out_password)
       C_REST_FREE((void *)(*out_password));
-    return C_REST_ERROR_GENERIC;
+    return (c_rest_error_t)((int)C_REST_ERROR_GENERIC | log_rc);
   }
 
   return C_REST_OK;

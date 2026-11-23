@@ -92,10 +92,6 @@ def is_memory_management_function(name: str) -> bool:
     if not name:
         return False
     name_lower = name.lower()
-    if name_lower.startswith("c_rest_mem_"):
-        return True
-    if name_lower == "remove_node":
-        return True
     for kw in ["destroy", "free"]:
         if (
             name_lower == kw
@@ -205,7 +201,7 @@ def is_strdup(name: str) -> bool:
     """
     if not name:
         return False
-    return "strdup" in name
+    return name == "strdup"
 
 
 def is_predicate(name: str) -> bool:

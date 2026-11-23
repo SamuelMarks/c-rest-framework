@@ -51,8 +51,8 @@ struct c_rest_hot_reload_ctx {
 #endif
 };
 
-static c_rest_error_t hot_reload_log(c_rest_hot_reload_ctx_t *ctx,
-                                     const char *msg) {
+static NO_DISCARD c_rest_error_t hot_reload_log(c_rest_hot_reload_ctx_t *ctx,
+                                                const char *msg) {
   (void)ctx;
   (void)msg;
   if (ctx->logger && ctx->logger->log_cb) {
@@ -61,11 +61,18 @@ static c_rest_error_t hot_reload_log(c_rest_hot_reload_ctx_t *ctx,
   return C_REST_OK;
 }
 
-static c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
-                                     const char *path, time_t *out_mtime) {
+static NO_DISCARD c_rest_error_t cfs_to_rest_error(cfs_errc ec) {
+  return c_rest_error_from_cfs((int)ec);
+}
+
+static NO_DISCARD c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
+                                                const char *path,
+                                                time_t *out_mtime) {
   cfs_path p = {0};
   cfs_file_time_type ftime = 0;
+  cfs_bool exists = 0;
   cfs_error_code ec = {0};
+  cfs_errc cfs_rc;
 #if defined(CFS_OS_WINDOWS) && defined(CFS_UNICODE)
   wchar_t wpath[CFS_MAX_PATH];
   cfs_size_t req = 0;
@@ -77,53 +84,63 @@ static c_rest_error_t get_file_mtime(c_rest_hot_reload_ctx_t *ctx,
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
   if (ctx && ctx->cm_env) {
     unsigned long mtime_ul;
-    if (cm_file_get_mtime(ctx->cm_env, path, &mtime_ul) == 0) {
-      *out_mtime = (time_t)mtime_ul;
-      return C_REST_OK;
-    }
+    c_rest_error_t cm_rc = cm_file_get_mtime(ctx->cm_env, path, &mtime_ul);
+    if (cm_rc != C_REST_OK)
+      return cm_rc;
+    *out_mtime = (time_t)mtime_ul;
+    return C_REST_OK;
   }
 #endif
 
 #if defined(CFS_OS_WINDOWS) && defined(CFS_UNICODE)
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_hot_reload_fail == 10) {
-    return C_REST_ERROR_GENERIC;
-  }
+  if (crf_seam_hot_reload_check(10, C_REST_ERROR_OOM) != C_REST_OK)
+    return C_REST_ERROR_OOM;
 #endif
-  if (cfs_utf8_to_utf16(path, wpath, sizeof(wpath) / sizeof(wpath[0]), &req) !=
-      cfs_errc_success) {
-    return C_REST_ERROR_GENERIC;
+  cfs_rc =
+      cfs_utf8_to_utf16(path, wpath, sizeof(wpath) / sizeof(wpath[0]), &req);
+  if (cfs_rc != cfs_errc_success) {
+    return cfs_to_rest_error(cfs_rc);
   }
-  if (cfs_path_init_str(&p, wpath) != cfs_errc_success) {
-    return C_REST_ERROR_GENERIC;
+  cfs_rc = cfs_path_init_str(&p, wpath);
+  if (cfs_rc != cfs_errc_success) {
+    return cfs_to_rest_error(cfs_rc);
   }
 #else
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if ((g_mock_hot_reload_fail == 10
-           ? cfs_errc_not_enough_memory
-           : cfs_path_init_str(&p, (const cfs_char_t *)path)) !=
-      cfs_errc_success) {
-    return C_REST_ERROR_GENERIC;
-  }
+  cfs_rc = (crf_seam_hot_reload_check(10, C_REST_ERROR_OOM) != C_REST_OK)
+               ? cfs_errc_not_enough_memory
+               : cfs_path_init_str(&p, (const cfs_char_t *)path);
 #else
-  if (cfs_path_init_str(&p, (const cfs_char_t *)path) != cfs_errc_success) {
-    return C_REST_ERROR_GENERIC;
+  cfs_rc = cfs_path_init_str(&p, (const cfs_char_t *)path);
+#endif
+  if (cfs_rc != cfs_errc_success) {
+    return cfs_to_rest_error(cfs_rc);
   }
 #endif
-#endif
-  if (cfs_last_write_time(&p, &ftime, &ec) == 0) {
-    *out_mtime = (time_t)ftime;
+  cfs_rc = cfs_exists_path(&p, &exists, &ec);
+  if (cfs_rc != cfs_errc_success) {
     cfs_path_destroy(&p);
-    return C_REST_OK;
+    return cfs_to_rest_error(cfs_rc);
   }
+  if (!exists) {
+    cfs_path_destroy(&p);
+    return C_REST_ERROR_NOT_FOUND;
+  }
+  cfs_rc = cfs_last_write_time(&p, &ftime, &ec);
+  if (cfs_rc != cfs_errc_success) {
+    cfs_path_destroy(&p);
+    return cfs_to_rest_error(cfs_rc);
+  }
+  *out_mtime = (time_t)ftime;
   cfs_path_destroy(&p);
-  return C_REST_ERROR_GENERIC;
+  return C_REST_OK;
 }
 
 /* static c_rest_error_t sleep_seconds(c_rest_hot_reload_ctx_t *ctx, int
  * seconds) { (void)ctx; (void)seconds; return C_REST_OK; } */
 
-static c_rest_error_t watcher_thread_func(void *arg) {
+static NO_DISCARD c_rest_error_t watcher_thread_func(void *arg) {
   c_rest_hot_reload_ctx_t *ctx = (c_rest_hot_reload_ctx_t *)arg;
   c_rest_error_t rc;
   /* Poll once for the test environment */
@@ -142,10 +159,6 @@ c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *ctx,
   ctx->cm_env = env;
   return C_REST_OK;
 }
-#endif
-
-#ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_hot_reload_fail = 0;
 #endif
 
 c_rest_error_t c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
@@ -342,66 +355,71 @@ c_rest_error_t c_rest_hot_reload_start(c_rest_hot_reload_ctx_t *ctx,
   return C_REST_OK;
 }
 
-c_rest_error_t c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
-  c_rest_error_t rc = C_REST_OK;
-  c_rest_error_t ret_rc = C_REST_OK;
+static void free_hot_reload_ctx_mem(c_rest_hot_reload_ctx_t *ctx) {
   size_t i;
-
-  if (!ctx) {
-    return C_REST_ERROR_INVALID_ARG;
-  }
-
-  ctx->state = C_REST_HOT_RELOAD_STATE_STOPPED;
-  if (ctx->watcher_thread) {
-#ifdef C_REST_TESTING_MALLOC_HOOK
-    if (g_mock_hot_reload_fail == 1) {
-      rc = C_REST_ERROR_GENERIC;
-    } else
-#endif
-    {
-#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
-      if (ctx->cm_env) {
-        rc = (c_rest_error_t)cm_thread_join(ctx->cm_env,
-                                            (cm_thread_t)ctx->watcher_thread);
-      } else {
-        rc = c_rest_thread_join(ctx->watcher_thread);
-      }
-#else
-      rc = c_rest_thread_join(ctx->watcher_thread);
-#endif
-    }
-    if (rc != C_REST_OK) {
-      c_rest_error_t log_rc =
-          hot_reload_log(ctx, "[HOT RELOAD] Failed to join watcher thread");
-      if (log_rc != C_REST_OK)
-        ret_rc = log_rc;
-      else
-        ret_rc = rc;
-    }
-    ctx->watcher_thread = (c_rest_thread_t)0;
-  }
-
   if (ctx->watched_paths) {
     for (i = 0; i < ctx->watch_count; ++i) {
       C_REST_FREE(ctx->watched_paths[i]);
     }
     C_REST_FREE(ctx->watched_paths);
   }
-
   if (ctx->last_modified_times) {
     C_REST_FREE(ctx->last_modified_times);
   }
-
   C_REST_FREE(ctx);
+}
 
-  return ret_rc;
+c_rest_error_t c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx) {
+  c_rest_error_t rc = C_REST_OK;
+
+  if (!ctx) {
+    return C_REST_ERROR_INVALID_ARG;
+  }
+
+  ctx->state = C_REST_HOT_RELOAD_STATE_STOPPED;
+
+  if (ctx->watcher_thread) {
+    c_rest_thread_t th = ctx->watcher_thread;
+    ctx->watcher_thread = (c_rest_thread_t)0;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+    rc = crf_seam_hot_reload_check(1, C_REST_ERROR_GENERIC);
+    if (rc != C_REST_OK)
+      goto hr_join_err;
+#endif
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+    if (ctx->cm_env) {
+      rc = (c_rest_error_t)cm_thread_join(ctx->cm_env, (cm_thread_t)th);
+    } else {
+      rc = c_rest_thread_join(th);
+    }
+#else
+    rc = c_rest_thread_join(th);
+#endif
+    if (rc != C_REST_OK) {
+#ifdef C_REST_TESTING_MALLOC_HOOK
+    hr_join_err:;
+#endif
+      {
+        c_rest_error_t log_rc =
+            hot_reload_log(ctx, "[HOT RELOAD] Failed to join watcher thread");
+        if (log_rc != C_REST_OK) {
+          free_hot_reload_ctx_mem(ctx);
+          return log_rc;
+        }
+        free_hot_reload_ctx_mem(ctx);
+        return rc;
+      }
+    }
+  }
+
+  free_hot_reload_ctx_mem(ctx);
+  return C_REST_OK;
 }
 
 #ifdef C_REST_ENABLE_SERVER_SENT_EVENTS_SSE
 
-static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
-                                             struct c_rest_response *res,
-                                             void *user_data) {
+static NO_DISCARD c_rest_error_t hot_reload_sse_handler(
+    struct c_rest_request *req, struct c_rest_response *res, void *user_data) {
   c_rest_error_t rc;
   struct c_rest_connection_context *conn_ctx = NULL;
   struct c_rest_hot_reload_ctx *hr_ctx = NULL;
@@ -429,22 +447,16 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
 
   res->status_code = 200;
   rc = c_rest_sse_init_response(res);
-  if (rc != 0) {
-
-    return C_REST_OK;
+  if (rc != C_REST_OK) {
+    goto sse_init_done;
   }
-
-  /* while (hr_ctx->state == C_REST_HOT_RELOAD_STATE_WATCHING) {
-    if (c_rest_sse_send_keepalive(res) != 0) { break; }
-    sleep_seconds(hr_ctx, 1);
-  } */
 
   if (hr_ctx->state == C_REST_HOT_RELOAD_STATE_CHANGED) {
     struct c_rest_sse_event ev;
     c_rest_error_t ev_rc;
+    c_rest_error_t send_rc;
 #ifdef C_REST_TESTING_MALLOC_HOOK
-    rc = (g_mock_hot_reload_fail == 4 ? C_REST_ERROR_GENERIC
-                                      : c_rest_sse_event_init(&ev));
+    rc = crf_seam_hr_sse_event_init(&ev);
 #else
     rc = c_rest_sse_event_init(&ev);
 #endif
@@ -452,49 +464,57 @@ static c_rest_error_t hot_reload_sse_handler(struct c_rest_request *req,
       return rc;
 
     /* We must dup strings if we rely on c_rest_sse_event_destroy */
-    if (C_REST_MALLOC(7, (void **)&ev.event)) {
+    rc = C_REST_MALLOC(7, (void **)&ev.event);
+    if (rc != C_REST_OK) {
+      send_rc = rc;
+      goto destroy_sse_ev;
     }
-    if (ev.event) {
 #if defined(_MSC_VER)
-      strcpy_s(ev.event, 7, "reload");
+    strcpy_s(ev.event, 7, "reload");
 #else
-      memcpy(ev.event, "reload", 7);
+    memcpy(ev.event, "reload", 7);
 #endif
-    }
 
-    if (C_REST_MALLOC(5, (void **)&ev.data)) {
+    rc = C_REST_MALLOC(5, (void **)&ev.data);
+    if (rc != C_REST_OK) {
+      send_rc = rc;
+      goto destroy_sse_ev;
     }
-    if (ev.data) {
 #if defined(_MSC_VER)
-      strcpy_s(ev.data, 5, "true");
+    strcpy_s(ev.data, 5, "true");
 #else
-      memcpy(ev.data, "true", 5);
+    memcpy(ev.data, "true", 5);
 #endif
-    }
 
-    rc = c_rest_sse_send_event(res, &ev);
+    send_rc = c_rest_sse_send_event(res, &ev);
+    if (send_rc != C_REST_OK)
+      goto destroy_sse_ev;
+  destroy_sse_ev:;
 #ifdef C_REST_TESTING_MALLOC_HOOK
-    ev_rc = (g_mock_hot_reload_fail == 3 ? C_REST_ERROR_GENERIC
-                                         : c_rest_sse_event_destroy(&ev));
+    ev_rc = crf_seam_hr_sse_event_destroy(&ev);
 #else
     ev_rc = c_rest_sse_event_destroy(&ev);
 #endif
     if (ev_rc != C_REST_OK)
       return ev_rc;
-    if (rc != C_REST_OK)
-      return rc;
+    if (send_rc != C_REST_OK)
+      return send_rc;
   }
+  return C_REST_OK;
+
+sse_init_done:
   return C_REST_OK;
 }
 
 c_rest_error_t c_rest_hot_reload_register_routes(struct c_rest_router *router,
                                                  const char *path) {
+  c_rest_error_t rc;
   if (!router) {
     return C_REST_ERROR_INVALID_ARG;
   }
-  if (c_rest_router_add(router, "GET", path, hot_reload_sse_handler, NULL) !=
-      0) {
-    return C_REST_ERROR_GENERIC;
+  rc = c_rest_router_add(router, "GET", path, hot_reload_sse_handler, NULL);
+  if (rc != C_REST_OK) {
+    return rc;
   }
   return C_REST_OK;
 }

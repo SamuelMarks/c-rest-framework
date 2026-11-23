@@ -11,58 +11,235 @@
 #include "c_rest_export.h"
 #include "c_rest_log.h"
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+c_rest_error_t mock_c_rest_socket_create(c_rest_socket_t *sock);
+c_rest_error_t mock_c_rest_socket_bind(c_rest_socket_t sock, const char *host,
+                                       unsigned short port);
+c_rest_error_t mock_c_rest_socket_listen(c_rest_socket_t sock, int backlog);
+#define CRF_SP_SOCK_CREATE mock_c_rest_socket_create
+#define CRF_SP_SOCK_BIND mock_c_rest_socket_bind
+#define CRF_SP_SOCK_LISTEN mock_c_rest_socket_listen
+#define CRF_SP_SOCK_ACCEPT mock_c_rest_socket_accept
+#define CRF_SP_SOCK_CLOSE mock_c_rest_socket_close
+#define CRF_SP_HANDLE_CONN mock_c_rest_handle_connection
+#else
+#define CRF_SP_SOCK_CREATE c_rest_socket_create
+#define CRF_SP_SOCK_BIND c_rest_socket_bind
+#define CRF_SP_SOCK_LISTEN c_rest_socket_listen
+#define CRF_SP_SOCK_ACCEPT c_rest_socket_accept
+#define CRF_SP_SOCK_CLOSE c_rest_socket_close
+#define CRF_SP_HANDLE_CONN c_rest_handle_connection
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 /* clang-format on */
 
-C_REST_EXPORT extern const struct c_rest_modality_vtable sync_vtable;
-C_REST_EXPORT extern const struct c_rest_modality_vtable single_thread_vtable;
-C_REST_EXPORT extern const struct c_rest_modality_vtable async_vtable;
-C_REST_EXPORT extern const struct c_rest_modality_vtable multi_thread_vtable;
-#if !defined(__EMSCRIPTEN__) && !defined(CDD_DOS)
-C_REST_EXPORT extern const struct c_rest_modality_vtable multi_process_vtable;
+static NO_DISCARD c_rest_error_t
+single_process_init(struct c_rest_context *ctx) {
+  if (!ctx)
+    return C_REST_ERROR_INVALID_ARG;
+  ctx->sp_server_sock = C_REST_INVALID_SOCKET;
+  ctx->sp_is_running = 0;
+  if (ctx->logger.log_cb) {
+    c_rest_error_t rc =
+        ctx->logger.log_cb("SINGLE_PROCESS modality initialized");
+    if (rc != C_REST_OK)
+      return rc;
+  }
+  return C_REST_OK;
+}
+
+static NO_DISCARD c_rest_error_t
+single_process_destroy(struct c_rest_context *ctx) {
+  c_rest_error_t rc;
+  if (!ctx)
+    return C_REST_ERROR_INVALID_ARG;
+  if (ctx->sp_server_sock != C_REST_INVALID_SOCKET) {
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+    if (ctx->cm_env) {
+      rc = cm_socket_close(ctx->cm_env, ctx->sp_server_sock);
+      if (rc != C_REST_OK)
+        return rc;
+    } else {
+      rc = CRF_SP_SOCK_CLOSE(ctx->sp_server_sock);
+      if (rc != C_REST_OK)
+        return rc;
+    }
+#else
+    rc = CRF_SP_SOCK_CLOSE(ctx->sp_server_sock);
+    if (rc != C_REST_OK)
+      return rc;
 #endif
-C_REST_EXPORT extern const struct c_rest_modality_vtable greenthread_vtable;
-C_REST_EXPORT extern const struct c_rest_modality_vtable message_passing_vtable;
-
-/* We will reuse a dummy vtable for the unimplemented modalities for now */
-static c_rest_error_t dummy_init(struct c_rest_context *ctx) {
+    ctx->sp_server_sock = C_REST_INVALID_SOCKET;
+  }
   if (ctx->logger.log_cb) {
-    c_rest_error_t rc = ctx->logger.log_cb("Initializing Dummy modality");
+    rc = ctx->logger.log_cb("SINGLE_PROCESS modality destroyed");
     if (rc != C_REST_OK)
       return rc;
   }
   return C_REST_OK;
 }
 
-static c_rest_error_t dummy_destroy(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t
+single_process_run(struct c_rest_context *ctx) {
+  c_rest_error_t rc;
+  if (!ctx)
+    return C_REST_ERROR_INVALID_ARG;
+
+  ctx->sp_is_running = 1;
   if (ctx->logger.log_cb) {
-    c_rest_error_t rc = ctx->logger.log_cb("Destroying Dummy modality");
+    rc = ctx->logger.log_cb("SINGLE_PROCESS modality run started");
+    if (rc != C_REST_OK)
+      return rc;
+  }
+
+  if (ctx->sp_server_sock == C_REST_INVALID_SOCKET &&
+      (ctx->listen_address != NULL || ctx->listen_port != 0)) {
+    const char *addr = ctx->listen_address ? ctx->listen_address : "0.0.0.0";
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+    if (ctx->cm_env) {
+      rc = cm_socket_create(ctx->cm_env, &ctx->sp_server_sock);
+      if (rc != C_REST_OK)
+        return rc;
+      rc = cm_socket_bind(ctx->cm_env, ctx->sp_server_sock, addr,
+                          ctx->listen_port);
+      if (rc != C_REST_OK) {
+        c_rest_socket_t sock_to_close = ctx->sp_server_sock;
+        c_rest_error_t cl_rc;
+        ctx->sp_server_sock = C_REST_INVALID_SOCKET;
+        cl_rc = cm_socket_close(ctx->cm_env, sock_to_close);
+        if (cl_rc != C_REST_OK)
+          return cl_rc;
+        return rc;
+      }
+      rc = cm_socket_listen(ctx->cm_env, ctx->sp_server_sock, 128);
+      if (rc != C_REST_OK) {
+        c_rest_socket_t sock_to_close = ctx->sp_server_sock;
+        c_rest_error_t cl_rc;
+        ctx->sp_server_sock = C_REST_INVALID_SOCKET;
+        cl_rc = cm_socket_close(ctx->cm_env, sock_to_close);
+        if (cl_rc != C_REST_OK)
+          return cl_rc;
+        return rc;
+      }
+    } else
+#endif
+    {
+      rc = CRF_SP_SOCK_CREATE(&ctx->sp_server_sock);
+      if (rc != C_REST_OK)
+        return rc;
+      rc = CRF_SP_SOCK_BIND(ctx->sp_server_sock, addr, ctx->listen_port);
+      if (rc != C_REST_OK) {
+        c_rest_socket_t sock_to_close = ctx->sp_server_sock;
+        c_rest_error_t cl_rc;
+        ctx->sp_server_sock = C_REST_INVALID_SOCKET;
+        cl_rc = CRF_SP_SOCK_CLOSE(sock_to_close);
+        if (cl_rc != C_REST_OK)
+          return cl_rc;
+        return rc;
+      }
+      rc = CRF_SP_SOCK_LISTEN(ctx->sp_server_sock, 128);
+      if (rc != C_REST_OK) {
+        c_rest_socket_t sock_to_close = ctx->sp_server_sock;
+        c_rest_error_t cl_rc;
+        ctx->sp_server_sock = C_REST_INVALID_SOCKET;
+        cl_rc = CRF_SP_SOCK_CLOSE(sock_to_close);
+        if (cl_rc != C_REST_OK)
+          return cl_rc;
+        return rc;
+      }
+    }
+  }
+
+  if (ctx->sp_server_sock != C_REST_INVALID_SOCKET) {
+    while (ctx->sp_is_running) {
+      c_rest_socket_t client_sock = C_REST_INVALID_SOCKET;
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+      if (ctx->cm_env) {
+        rc = cm_socket_accept(ctx->cm_env, ctx->sp_server_sock, &client_sock);
+      } else {
+        rc = CRF_SP_SOCK_ACCEPT(ctx->sp_server_sock, &client_sock);
+      }
+#else
+      rc = CRF_SP_SOCK_ACCEPT(ctx->sp_server_sock, &client_sock);
+#endif
+      if (rc != C_REST_OK) {
+        goto sp_loop_done;
+      }
+      if (client_sock != C_REST_INVALID_SOCKET) {
+        c_rest_error_t h_rc;
+        c_rest_error_t cl_rc;
+        h_rc = CRF_SP_HANDLE_CONN(ctx, client_sock);
+        if (h_rc != C_REST_OK) {
+          goto sp_close_client;
+        }
+      sp_close_client:;
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+        if (ctx->cm_env) {
+          cl_rc = cm_socket_close(ctx->cm_env, client_sock);
+        } else {
+          cl_rc = CRF_SP_SOCK_CLOSE(client_sock);
+        }
+#else
+        cl_rc = CRF_SP_SOCK_CLOSE(client_sock);
+#endif
+        if (cl_rc != C_REST_OK)
+          return cl_rc;
+        if (h_rc != C_REST_OK)
+          return h_rc;
+      }
+    }
+  }
+
+sp_loop_done:
+  ctx->sp_is_running = 0;
+  if (ctx->logger.log_cb) {
+    rc = ctx->logger.log_cb("SINGLE_PROCESS modality run finished");
     if (rc != C_REST_OK)
       return rc;
   }
   return C_REST_OK;
 }
 
-static c_rest_error_t dummy_run(struct c_rest_context *ctx) {
-  (void)ctx;
-  return C_REST_OK;
-}
-
-static c_rest_error_t dummy_stop(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t
+single_process_stop(struct c_rest_context *ctx) {
+  c_rest_error_t rc;
+  if (!ctx)
+    return C_REST_ERROR_INVALID_ARG;
+  ctx->sp_is_running = 0;
+  if (ctx->sp_server_sock != C_REST_INVALID_SOCKET) {
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+    if (ctx->cm_env) {
+      rc = cm_socket_close(ctx->cm_env, ctx->sp_server_sock);
+      if (rc != C_REST_OK)
+        return rc;
+    } else {
+      rc = CRF_SP_SOCK_CLOSE(ctx->sp_server_sock);
+      if (rc != C_REST_OK)
+        return rc;
+    }
+#else
+    rc = CRF_SP_SOCK_CLOSE(ctx->sp_server_sock);
+    if (rc != C_REST_OK)
+      return rc;
+#endif
+    ctx->sp_server_sock = C_REST_INVALID_SOCKET;
+  }
   if (ctx->logger.log_cb) {
-    c_rest_error_t rc = ctx->logger.log_cb("Stopping Dummy modality");
+    rc = ctx->logger.log_cb("SINGLE_PROCESS modality stopped");
     if (rc != C_REST_OK)
       return rc;
   }
   return C_REST_OK;
 }
 
-static const struct c_rest_modality_vtable dummy_vtable = {
-    dummy_init, dummy_destroy, dummy_run, dummy_stop};
+const struct c_rest_modality_vtable single_process_vtable = {
+    single_process_init, single_process_destroy, single_process_run,
+    single_process_stop};
 
-static c_rest_error_t
+static NO_DISCARD c_rest_error_t
 get_vtable(enum c_rest_modality_type type,
            const struct c_rest_modality_vtable **out_vtable) {
   switch (type) {
@@ -90,7 +267,7 @@ get_vtable(enum c_rest_modality_type type,
     *out_vtable = &message_passing_vtable;
     return C_REST_OK;
   case C_REST_MODALITY_SINGLE_PROCESS:
-    *out_vtable = &dummy_vtable;
+    *out_vtable = &single_process_vtable;
     return C_REST_OK;
   default:
     *out_vtable = NULL;
@@ -100,12 +277,9 @@ get_vtable(enum c_rest_modality_type type,
 
 c_rest_error_t c_rest_init(enum c_rest_modality_type type,
                            struct c_rest_context **out_ctx) {
-  struct c_rest_context *ctx;
-  const struct c_rest_modality_vtable *vtable;
+  struct c_rest_context *ctx = NULL;
+  const struct c_rest_modality_vtable *vtable = NULL;
   c_rest_error_t res;
-#ifdef C_REST_TESTING_MALLOC_HOOK
-  C_REST_EXPORT extern void *(*g_crf_malloc_hook)(size_t);
-#endif
 
   if (!out_ctx) {
     return C_REST_ERROR_GENERIC;
@@ -113,12 +287,14 @@ c_rest_error_t c_rest_init(enum c_rest_modality_type type,
 
   *out_ctx = NULL;
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  res = crf_seam_modality_platform_init();
+#else
   res = c_rest_platform_init();
-#if defined(_WIN32)
+#endif
   if (res != C_REST_OK) {
     return res;
   }
-#endif
 
   res = get_vtable(type, &vtable);
   if (res != C_REST_OK) {
@@ -126,11 +302,7 @@ c_rest_error_t c_rest_init(enum c_rest_modality_type type,
   }
 
   if (C_REST_MALLOC(sizeof(struct c_rest_context), &ctx) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    ctx = NULL;
-  }
-  if (!ctx) {
-    return C_REST_ERROR_GENERIC; /* Out of memory */
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
 
   ctx->modality = type;
@@ -148,6 +320,8 @@ c_rest_error_t c_rest_init(enum c_rest_modality_type type,
   ctx->internal_state = NULL;
   ctx->listen_address = "0.0.0.0";
   ctx->listen_port = 8080;
+  ctx->sp_server_sock = C_REST_INVALID_SOCKET;
+  ctx->sp_is_running = 0;
   ctx->tls_ctx = NULL;
 
   /* Initialize db fields to zero */
@@ -310,95 +484,81 @@ struct connection_state {
   int is_done;
 };
 
-static c_rest_error_t on_method(c_rest_parser_context *pctx, const char *method,
-                                size_t len) {
+static NO_DISCARD c_rest_error_t on_method(c_rest_parser_context *pctx,
+                                           const char *method, size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
   if (C_REST_MALLOC(len + 1, &st->method) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
     st->method = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_MALLOC failed");
   }
-  if (st->method) {
 #if defined(_MSC_VER)
-    /* CDD_SAFE_CRT */ memcpy_s(st->method, len, method, len);
+  /* CDD_SAFE_CRT */ memcpy_s(st->method, len, method, len);
 #else
-    memcpy(st->method, method, len);
+  memcpy(st->method, method, len);
 #endif
-    st->method[len] = '\0';
-  }
+  st->method[len] = '\0';
   return C_REST_OK;
 }
 
-static c_rest_error_t on_url(c_rest_parser_context *pctx, const char *url,
-                             size_t len) {
+static NO_DISCARD c_rest_error_t on_url(c_rest_parser_context *pctx,
+                                        const char *url, size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
   if (C_REST_MALLOC(len + 1, &st->url) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
     st->url = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_MALLOC failed");
   }
-  if (st->url) {
 #if defined(_MSC_VER)
-    /* CDD_SAFE_CRT */ memcpy_s(st->url, len, url, len);
+  /* CDD_SAFE_CRT */ memcpy_s(st->url, len, url, len);
 #else
-    memcpy(st->url, url, len);
+  memcpy(st->url, url, len);
 #endif
-    st->url[len] = '\0';
-  }
+  st->url[len] = '\0';
   return C_REST_OK;
 }
 
-static c_rest_error_t on_header(c_rest_parser_context *pctx, const char *key,
-                                size_t key_len, const char *val,
-                                size_t val_len) {
+static NO_DISCARD c_rest_error_t on_header(c_rest_parser_context *pctx,
+                                           const char *key, size_t key_len,
+                                           const char *val, size_t val_len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
   struct c_rest_header *h = NULL;
   if (C_REST_MALLOC(sizeof(struct c_rest_header), &h) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+    return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_MALLOC failed");
   }
-  if (h) {
-    if (C_REST_MALLOC(key_len + 1, &h->key) != 0) {
-      LOG_DEBUG("C_REST_MALLOC failed");
-      h->key = NULL;
-    }
-    if (C_REST_MALLOC(val_len + 1, &h->value) != 0) {
-      LOG_DEBUG("C_REST_MALLOC failed");
-      h->value = NULL;
-    }
-    if (h->key && h->value) {
-#if defined(_MSC_VER)
-      /* CDD_SAFE_CRT */ memcpy_s(h->key, key_len, key, key_len);
-#else
-      memcpy(h->key, key, key_len);
-#endif
-      h->key[key_len] = '\0';
-#if defined(_MSC_VER)
-      /* CDD_SAFE_CRT */ memcpy_s(h->value, val_len, val, val_len);
-#else
-      memcpy(h->value, val, val_len);
-#endif
-      h->value[val_len] = '\0';
-      h->next = st->req.headers;
-      st->req.headers = h;
-    } else {
-      if (h->key)
-        C_REST_FREE((void *)(h->key));
-      if (h->value)
-        C_REST_FREE((void *)(h->value));
-      C_REST_FREE((void *)(h));
-    }
+  if (C_REST_MALLOC(key_len + 1, &h->key) != 0) {
+    C_REST_FREE((void *)(h));
+    return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_MALLOC failed");
   }
+  if (C_REST_MALLOC(val_len + 1, &h->value) != 0) {
+    C_REST_FREE((void *)(h->key));
+    C_REST_FREE((void *)(h));
+    return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_MALLOC failed");
+  }
+#if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(h->key, key_len, key, key_len);
+#else
+  memcpy(h->key, key, key_len);
+#endif
+  h->key[key_len] = '\0';
+#if defined(_MSC_VER)
+  /* CDD_SAFE_CRT */ memcpy_s(h->value, val_len, val, val_len);
+#else
+  memcpy(h->value, val, val_len);
+#endif
+  h->value[val_len] = '\0';
+  h->next = st->req.headers;
+  st->req.headers = h;
   return C_REST_OK;
 }
 
-static c_rest_error_t on_body(c_rest_parser_context *pctx, const char *data,
-                              size_t len) {
+static NO_DISCARD c_rest_error_t on_body(c_rest_parser_context *pctx,
+                                         const char *data, size_t len) {
   struct connection_state *st = (struct connection_state *)pctx->user_data;
   char *new_body = NULL;
-  c_rest_error_t rc;
 
-  rc = C_REST_REALLOC(st->req.body, st->req.body_len + len + 1,
-                      (void **)&new_body);
-  if (rc != C_REST_OK)
-    return rc;
+  if (C_REST_REALLOC(st->req.body, st->req.body_len + len + 1,
+                     (void **)&new_body) != 0) {
+    return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_REALLOC failed");
+  }
 
 #if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(new_body + st->req.body_len, len, data, len);
@@ -411,7 +571,7 @@ static c_rest_error_t on_body(c_rest_parser_context *pctx, const char *data,
   return C_REST_OK;
 }
 
-static c_rest_error_t on_complete(c_rest_parser_context *pctx) {
+static NO_DISCARD c_rest_error_t on_complete(c_rest_parser_context *pctx) {
   (void)pctx;
   /* parsing done */
   ((struct connection_state *)pctx->user_data)->is_done = 1;
@@ -423,7 +583,6 @@ c_rest_error_t c_rest_handle_connection(struct c_rest_context *ctx,
   struct c_rest_tls_connection *tls_conn = NULL;
   char buf[4096];
   size_t read_bytes, parsed_bytes;
-  c_rest_error_t res;
   int keep_alive = 0;
   c_rest_error_t rc;
 
@@ -469,31 +628,44 @@ c_rest_error_t c_rest_handle_connection(struct c_rest_context *ctx,
       rc = c_rest_parser_get_basic_vtable(&vt);
       if (rc != C_REST_OK) {
         keep_alive = 0;
-        break;
+        goto conn_finish;
       }
       rc = c_rest_parser_init(&pctx, vt, &cbs, &st);
       if (rc != C_REST_OK) {
         keep_alive = 0;
-      } else {
+        goto conn_iter_done;
+      }
+      {
+        int read_eof = 0;
         for (;;) {
-          if (tls_conn) {
-            res = c_rest_tls_read(tls_conn, buf, sizeof(buf), &read_bytes);
-          } else {
-            res = c_rest_socket_recv((c_rest_socket_t)sock, buf, sizeof(buf),
-                                     &read_bytes);
+          if (!tls_conn) {
+            rc = c_rest_socket_recv((c_rest_socket_t)sock, buf, sizeof(buf),
+                                    &read_bytes);
+            if (rc != C_REST_OK) {
+              read_eof = 1;
+              goto conn_read_done;
+            }
+            goto conn_parse_exec;
           }
-          if (res != 0)
-            break;
+          rc = c_rest_tls_read(tls_conn, buf, sizeof(buf), &read_bytes);
+          if (rc != C_REST_OK) {
+            read_eof = 1;
+            goto conn_read_done;
+          }
+        conn_parse_exec:;
 
           rc = c_rest_parser_execute(&pctx, buf, read_bytes, &parsed_bytes);
-          if (rc != C_REST_OK)
-            break;
+          if (rc != C_REST_OK) {
+            read_eof = 1;
+            goto conn_read_done;
+          }
 
           if (st.is_done)
             break;
         }
+      conn_read_done:;
 
-        if (st.method && st.url) {
+        if (st.is_done) {
           st.req.method = st.method;
 
           /* split path and query */
@@ -515,53 +687,65 @@ c_rest_error_t c_rest_handle_connection(struct c_rest_context *ctx,
 
           if (ctx->router) {
             rc = c_rest_router_dispatch(ctx->router, &st.req, &res_obj);
+            if (rc != C_REST_OK) {
+              goto conn_cleanup_req;
+            }
           }
 
-          if (rc == C_REST_OK && !res_obj.headers_sent) {
-            c_rest_error_t send_rc = c_rest_response_send(&res_obj);
-            if (send_rc != C_REST_OK)
-              rc = send_rc;
-          }
-
-          {
-            c_rest_error_t clean_rc = c_rest_request_cleanup(&st.req);
-            if (clean_rc != C_REST_OK)
-              rc = clean_rc;
-            clean_rc = c_rest_response_cleanup(&res_obj);
-            if (clean_rc != C_REST_OK)
-              rc = clean_rc;
+          if (!res_obj.headers_sent) {
+            rc = c_rest_response_send(&res_obj);
+            if (rc != C_REST_OK) {
+              goto conn_cleanup_req;
+            }
           }
         }
 
-        {
-          c_rest_error_t ka_rc =
-              c_rest_parser_should_keep_alive(&pctx, &keep_alive);
-          if (ka_rc != C_REST_OK)
-            keep_alive = 0;
-          if (res != 0)
-            keep_alive = 0;
-          ka_rc = c_rest_parser_destroy(&pctx);
-          if (ka_rc != C_REST_OK)
-            rc = ka_rc;
+      conn_cleanup_req:;
+        rc = c_rest_request_cleanup(&st.req);
+        if (rc != C_REST_OK) {
+          goto conn_cleanup_res;
+        }
+      conn_cleanup_res:;
+        rc = c_rest_response_cleanup(&res_obj);
+        if (rc != C_REST_OK) {
+          goto conn_parser_cleanup;
         }
 
+      conn_parser_cleanup:;
+        rc = c_rest_parser_should_keep_alive(&pctx, &keep_alive);
+        if (rc != C_REST_OK) {
+          keep_alive = 0;
+          goto conn_destroy_parser;
+        }
+        if (read_eof)
+          keep_alive = 0;
+      conn_destroy_parser:;
+        rc = c_rest_parser_destroy(&pctx);
+        if (rc != C_REST_OK) {
+          goto conn_free_strings;
+        }
+
+      conn_free_strings:;
         if (st.method)
           C_REST_FREE((void *)(st.method));
         if (st.url)
           C_REST_FREE((void *)(st.url));
       }
 
+    conn_iter_done:
       if (!keep_alive) {
         done = 1;
       }
     }
   }
 
+conn_finish:
   if (tls_conn) {
-    rc = c_rest_tls_close(tls_conn);
-    if (rc != C_REST_OK)
-      return rc;
+    c_rest_error_t tls_close_rc = c_rest_tls_close(tls_conn);
+    if (tls_close_rc != C_REST_OK)
+      return tls_close_rc;
   }
 
-  return C_REST_OK;
+  rc = C_REST_OK;
+  return rc;
 }

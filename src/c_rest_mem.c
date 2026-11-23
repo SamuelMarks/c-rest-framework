@@ -1,5 +1,6 @@
 /* clang-format off */
 #define C_REST_NO_REDIRECT_STD_ALLOC
+#define C_REST_MEM_INTERNAL 1
 #include "c_rest_testing_mocks.h"
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
@@ -50,61 +51,14 @@ C_REST_EXPORT void *test_c_rest_default_realloc(void *ptr, size_t size) {
 /* clang-format on */
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_mem_fail = 0;
-#if !defined(c_rest_mutex_lock) && !defined(c_rest_mutex_unlock)
-extern c_rest_error_t c_rest_mutex_lock(c_rest_mutex_t mutex);
-extern c_rest_error_t c_rest_mutex_unlock(c_rest_mutex_t mutex);
-
-static c_rest_error_t mock_mem_lock(c_rest_mutex_t m) {
-  if (g_mock_mem_fail == 12) {
-    static int lock_count = 0;
-    lock_count++;
-    if (lock_count == 2) {
-      lock_count = 0;
-      g_mock_mem_fail = 0;
-      return C_REST_ERROR_GENERIC;
-    }
-    return (c_rest_mutex_lock)(m);
-  }
-  if (g_mock_mem_fail == 14) {
-    return (c_rest_mutex_lock)(m);
-  }
-  if (g_mock_mem_fail == 5 || g_mock_mem_fail == 7 || g_mock_mem_fail == 9) {
-    return C_REST_ERROR_GENERIC;
-  }
-  return (c_rest_mutex_lock)(m);
-}
-
-static c_rest_error_t mock_mem_unlock(c_rest_mutex_t m) {
-  if (g_mock_mem_fail == 14) {
-    static int unlock_count = 0;
-    unlock_count++;
-    if (unlock_count == 2) {
-      unlock_count = 0;
-      g_mock_mem_fail = 0;
-      (c_rest_mutex_unlock)(m);
-      return C_REST_ERROR_GENERIC;
-    }
-    return (c_rest_mutex_unlock)(m);
-  }
-  if (g_mock_mem_fail == 1 || g_mock_mem_fail == 2 || g_mock_mem_fail == 4 ||
-      g_mock_mem_fail == 6 || g_mock_mem_fail == 8 || g_mock_mem_fail == 10) {
-    (c_rest_mutex_unlock)(m);
-    return C_REST_ERROR_GENERIC;
-  }
-  return (c_rest_mutex_unlock)(m);
-}
-
-#ifndef c_rest_mutex_unlock
-#define c_rest_mutex_unlock(m) (mock_mem_unlock(m))
-#endif
 #ifndef c_rest_mutex_lock
-#define c_rest_mutex_lock(m) (mock_mem_lock(m))
+#define c_rest_mutex_lock crf_seam_mem_lock
 #endif
+#ifndef c_rest_mutex_unlock
+#define c_rest_mutex_unlock crf_seam_mem_unlock
 #endif
 #ifndef c_rest_mutex_destroy
-#define c_rest_mutex_destroy(m)                                                \
-  (g_mock_mem_fail == 11 ? C_REST_ERROR_GENERIC : c_rest_mutex_destroy(m))
+#define c_rest_mutex_destroy crf_seam_mem_destroy
 #endif
 #endif
 
@@ -152,19 +106,17 @@ c_rest_error_t c_rest_mem_tracker_init(void) {
   return C_REST_OK;
 }
 
-static c_rest_error_t add_node(void *ptr, size_t size, const char *file,
-                               int line) {
+static NO_DISCARD c_rest_error_t add_node(void *ptr, size_t size,
+                                          const char *file, int line) {
   c_rest_mem_node *node;
   c_rest_error_t rc;
   if (!mem_initialized)
     return C_REST_ERROR_GENERIC;
 
-  if (C_REST_MALLOC(sizeof(c_rest_mem_node), &node) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    node = NULL;
+  node = (c_rest_mem_node *)CRF_MALLOC(sizeof(c_rest_mem_node));
+  if (!node) {
+    return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_MALLOC failed");
   }
-  if (!node)
-    return C_REST_ERROR_OOM;
 
   node->ptr = ptr;
   node->size = size;
@@ -179,12 +131,15 @@ static c_rest_error_t add_node(void *ptr, size_t size, const char *file,
   node->next = mem_list;
   mem_list = node;
   rc = c_rest_mutex_unlock(mem_mutex);
-  if (rc != C_REST_OK)
+  if (rc != C_REST_OK) {
+    mem_list = node->next;
+    CRF_FREE(node);
     return rc;
+  }
   return C_REST_OK;
 }
 
-static c_rest_error_t remove_node(void *ptr) {
+static NO_DISCARD c_rest_error_t remove_node(void *ptr) {
   c_rest_mem_node *curr;
   c_rest_mem_node *prev = NULL;
 
@@ -224,15 +179,15 @@ c_rest_error_t c_rest_mem_malloc(size_t size, const char *file, int line,
   c_rest_error_t rc;
   if (!real_out)
     return C_REST_ERROR_GENERIC;
-  if (C_REST_MALLOC(size, &ptr) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    ptr = NULL;
+  ptr = CRF_MALLOC(size);
+  if (!ptr) {
+    return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_MALLOC failed");
   }
-  if (!ptr)
-    return C_REST_ERROR_OOM;
   rc = add_node(ptr, size, file, line);
-  if (rc != C_REST_OK)
+  if (rc != C_REST_OK) {
+    CRF_FREE(ptr);
     return rc;
+  }
   *real_out = ptr;
   return C_REST_OK;
 }
@@ -244,12 +199,12 @@ c_rest_error_t c_rest_mem_calloc(size_t count, size_t size, const char *file,
   c_rest_error_t rc;
   if (!real_out)
     return C_REST_ERROR_GENERIC;
-  if (C_REST_CALLOC(count, size, &ptr) != 0) {
-    LOG_DEBUG("C_REST_CALLOC failed");
-    ptr = NULL;
-  }
-  if (!ptr)
+  if (size != 0 && count > ((size_t)-1) / size)
     return C_REST_ERROR_OOM;
+  ptr = CRF_CALLOC(count, size);
+  if (!ptr) {
+    return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_CALLOC failed");
+  }
   rc = add_node(ptr, count * size, file, line);
   if (rc != C_REST_OK) {
     CRF_FREE(ptr);
@@ -270,16 +225,20 @@ c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size, const char *file,
     return C_REST_ERROR_GENERIC;
 
   if (!mem_initialized) {
-    if (C_REST_REALLOC(ptr, size, &new_ptr) != 0) {
-      LOG_DEBUG("C_REST_REALLOC failed");
-      new_ptr = NULL;
+    new_ptr = CRF_REALLOC(ptr, size);
+    if (!new_ptr) {
+      *real_out = NULL;
+      return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_REALLOC failed");
     }
     *real_out = new_ptr;
-    return new_ptr ? C_REST_OK : C_REST_ERROR_OOM;
+    return C_REST_OK;
   }
 
   if (!ptr) {
-    return c_rest_mem_malloc(size, file, line, out_ptr);
+    rc = c_rest_mem_malloc(size, file, line, out_ptr);
+    if (rc != C_REST_OK)
+      return rc;
+    return C_REST_OK;
   }
   if (size == 0) {
     {
@@ -295,39 +254,32 @@ c_rest_error_t c_rest_mem_realloc(void *ptr, size_t size, const char *file,
   if (rc != C_REST_OK)
     return rc;
   curr = mem_list;
-  if (!curr)
-    goto end_search2;
-search_loop2:
-  if (curr->ptr == ptr) {
-    goto end_search2;
+  while (curr) {
+    if (curr->ptr == ptr) {
+      break;
+    }
+    curr = curr->next;
   }
-  curr = curr->next;
-  if (curr)
-    goto search_loop2;
-end_search2:
-  rc = c_rest_mutex_unlock(mem_mutex);
-  if (rc != C_REST_OK)
-    return rc;
 
-  if (C_REST_REALLOC(ptr, size, &new_ptr) != 0) {
-    LOG_DEBUG("C_REST_REALLOC failed");
-    new_ptr = NULL;
+  new_ptr = CRF_REALLOC(ptr, size);
+  if (!new_ptr) {
+    *real_out = NULL;
+    rc = c_rest_mutex_unlock(mem_mutex);
+    if (rc != C_REST_OK)
+      return rc;
+    return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_REALLOC failed");
   }
-  if (new_ptr && curr) {
+  if (curr) {
     curr->ptr = new_ptr;
     curr->size = size;
     curr->file = file;
     curr->line = line;
-    *real_out = new_ptr;
-    rc = c_rest_mutex_lock(mem_mutex);
-    if (rc != C_REST_OK)
-      return rc;
-    rc = c_rest_mutex_unlock(mem_mutex);
-    if (rc != C_REST_OK)
-      return rc;
   }
   *real_out = new_ptr;
-  return new_ptr ? C_REST_OK : C_REST_ERROR_OOM;
+  rc = c_rest_mutex_unlock(mem_mutex);
+  if (rc != C_REST_OK)
+    return rc;
+  return C_REST_OK;
 }
 c_rest_error_t c_rest_mem_strdup(const char *str, const char *file, int line,
                                  char **out_str) {

@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_testing_mocks.h"
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
 #include "c_rest_ts_queue.h"
@@ -8,43 +9,26 @@
 /* clang-format on */
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_tsq_fail = 0;
 #ifndef c_rest_cond_create
-#define c_rest_cond_create(c)                                                  \
-  ((g_mock_tsq_fail == 1 || g_mock_tsq_fail == 2) ? C_REST_ERROR_GENERIC       \
-                                                  : c_rest_cond_create(c))
+#define c_rest_cond_create crf_seam_tsq_cond_create
 #endif
 #ifndef c_rest_mutex_destroy
-#define c_rest_mutex_destroy(m)                                                \
-  ((g_mock_tsq_fail == 2 || g_mock_tsq_fail == 13) ? C_REST_ERROR_GENERIC      \
-                                                   : c_rest_mutex_destroy(m))
+#define c_rest_mutex_destroy crf_seam_tsq_mutex_destroy
 #endif
 #ifndef c_rest_mutex_lock
-#define c_rest_mutex_lock(m)                                                   \
-  ((g_mock_tsq_fail == 3) ? C_REST_ERROR_GENERIC : c_rest_mutex_lock(m))
+#define c_rest_mutex_lock crf_seam_tsq_mutex_lock
 #endif
 #ifndef c_rest_cond_signal
-#define c_rest_cond_signal(c)                                                  \
-  ((g_mock_tsq_fail == 4 || g_mock_tsq_fail == 5 || g_mock_tsq_fail == 9 ||    \
-    g_mock_tsq_fail == 10)                                                     \
-       ? C_REST_ERROR_GENERIC                                                  \
-       : c_rest_cond_signal(c))
+#define c_rest_cond_signal crf_seam_tsq_cond_signal
 #endif
 #ifndef c_rest_mutex_unlock
-#define c_rest_mutex_unlock(m)                                                 \
-  ((g_mock_tsq_fail == 5 || g_mock_tsq_fail == 6 || g_mock_tsq_fail == 7 ||    \
-    g_mock_tsq_fail == 8 || g_mock_tsq_fail == 10 || g_mock_tsq_fail == 11 ||  \
-    g_mock_tsq_fail == 12 || g_mock_tsq_fail == 14)                            \
-       ? C_REST_ERROR_GENERIC                                                  \
-       : c_rest_mutex_unlock(m))
+#define c_rest_mutex_unlock crf_seam_tsq_mutex_unlock
 #endif
 #ifndef c_rest_cond_wait
-#define c_rest_cond_wait(c, m)                                                 \
-  ((g_mock_tsq_fail == 7) ? C_REST_ERROR_GENERIC : c_rest_cond_wait(c, m))
+#define c_rest_cond_wait crf_seam_tsq_cond_wait
 #endif
 #ifndef c_rest_cond_destroy
-#define c_rest_cond_destroy(c)                                                 \
-  ((g_mock_tsq_fail == 15) ? C_REST_ERROR_GENERIC : c_rest_cond_destroy(c))
+#define c_rest_cond_destroy crf_seam_tsq_cond_destroy
 #endif
 #endif
 
@@ -81,11 +65,8 @@ c_rest_error_t c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data) {
     return C_REST_ERROR_GENERIC;
 
   if (C_REST_MALLOC(sizeof(c_rest_ts_queue_node), &node) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    node = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!node)
-    return C_REST_ERROR_GENERIC;
 
   node->data = data;
   node->next = NULL;
@@ -97,8 +78,8 @@ c_rest_error_t c_rest_ts_queue_push(c_rest_ts_queue *queue, void *data) {
   }
 
   if (queue->is_closed) {
-    unlock_rc = c_rest_mutex_unlock(queue->mutex);
     C_REST_FREE((void *)(node));
+    unlock_rc = c_rest_mutex_unlock(queue->mutex);
     if (unlock_rc != C_REST_OK)
       return unlock_rc;
     return C_REST_ERROR_GENERIC;

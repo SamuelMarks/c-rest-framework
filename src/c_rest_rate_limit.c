@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_testing_mocks.h"
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
 #include "c_rest_rate_limit.h"
@@ -6,50 +7,30 @@
 /* clang-format on */
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_rate_limit_fail = 0;
 #ifndef c_rest_mutex_create
-#define c_rest_mutex_create(m)                                                 \
-  ((g_mock_rate_limit_fail == 1 || g_mock_rate_limit_fail == 2)                \
-       ? (c_rest_error_t)C_REST_ERROR_GENERIC                                  \
-       : c_rest_mutex_create(m))
+#define c_rest_mutex_create crf_seam_rl_mutex_create
 #endif
 #ifndef c_rest_mutex_lock
-#define c_rest_mutex_lock(m)                                                   \
-  ((g_mock_rate_limit_fail == 3 || g_mock_rate_limit_fail == 7)                \
-       ? (c_rest_error_t)C_REST_ERROR_GENERIC                                  \
-       : c_rest_mutex_lock(m))
+#define c_rest_mutex_lock crf_seam_rl_mutex_lock
 #endif
 #ifndef c_rest_hashmap_put
-#define c_rest_hashmap_put(m, k, v)                                            \
-  ((g_mock_rate_limit_fail == 4 || g_mock_rate_limit_fail == 12)               \
-       ? (c_rest_error_t)C_REST_ERROR_GENERIC                                  \
-       : c_rest_hashmap_put(m, k, v))
+#define c_rest_hashmap_put crf_seam_rl_hashmap_put
 #endif
 #ifndef c_rest_mutex_unlock
-#define c_rest_mutex_unlock(m)                                                 \
-  ((g_mock_rate_limit_fail == 5 || g_mock_rate_limit_fail == 6 ||              \
-    g_mock_rate_limit_fail == 8 || g_mock_rate_limit_fail == 10 ||             \
-    g_mock_rate_limit_fail == 12)                                              \
-       ? ((c_rest_mutex_unlock)(m), (c_rest_error_t)C_REST_ERROR_GENERIC)      \
-       : (c_rest_mutex_unlock)(m))
+#define c_rest_mutex_unlock crf_seam_rl_mutex_unlock
 #endif
 #ifndef c_rest_hashmap_destroy
-#define c_rest_hashmap_destroy(m, f)                                           \
-  ((g_mock_rate_limit_fail == 2 || g_mock_rate_limit_fail == 9 ||              \
-    g_mock_rate_limit_fail == 10 || g_mock_rate_limit_fail == 12)              \
-       ? (c_rest_error_t)C_REST_ERROR_GENERIC                                  \
-       : c_rest_hashmap_destroy(m, f))
+#define c_rest_hashmap_destroy crf_seam_rl_hashmap_destroy
 #endif
 #ifndef c_rest_mutex_destroy
-#define c_rest_mutex_destroy(m)                                                \
-  (g_mock_rate_limit_fail == 11 ? (c_rest_error_t)C_REST_ERROR_GENERIC         \
-                                : c_rest_mutex_destroy(m))
+#define c_rest_mutex_destroy crf_seam_rl_mutex_destroy
 #endif
 #endif
 
-static void c_rest_rate_limiter_bucket_free(void *bucket_ptr) {
-
+static NO_DISCARD c_rest_error_t
+c_rest_rate_limiter_bucket_free(void *bucket_ptr) {
   C_REST_FREE(bucket_ptr);
+  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
@@ -63,6 +44,7 @@ c_rest_error_t c_rest_rate_limiter_init(c_rest_rate_limiter *limiter,
 
   limiter->config.capacity = capacity;
   limiter->config.fill_rate = fill_rate;
+  limiter->config.max_entities = max_entities;
   limiter->initialized = 0;
 
   ret = c_rest_hashmap_init(&limiter->buckets, max_entities);
@@ -117,7 +99,38 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
     return rc;
 
   ret = c_rest_hashmap_get(&limiter->buckets, identifier, &val);
-  if (ret == 0) {
+  if (ret != C_REST_OK) {
+    /* Create new bucket */
+    void *new_bucket_ptr = NULL;
+    c_rest_error_t put_rc;
+    if (limiter->buckets.size >= limiter->config.max_entities) {
+      *out_remaining = 0;
+      rc = c_rest_mutex_unlock(limiter->mutex);
+      if (rc != C_REST_OK)
+        return rc;
+      return C_REST_ERROR_GENERIC;
+    }
+    if (C_REST_MALLOC(sizeof(c_rest_rate_limit_bucket), &new_bucket_ptr) != 0) {
+      rc = c_rest_mutex_unlock(limiter->mutex);
+      if (rc != C_REST_OK)
+        return rc;
+      return C_REST_ERROR_OOM;
+    }
+
+    bucket = (c_rest_rate_limit_bucket *)new_bucket_ptr;
+    bucket->tokens = limiter->config.capacity;
+    bucket->last_refill = now;
+
+    put_rc = c_rest_hashmap_put(&limiter->buckets, identifier, bucket);
+    if (put_rc != C_REST_OK) {
+      C_REST_FREE(bucket);
+      rc = c_rest_mutex_unlock(limiter->mutex);
+      if (rc != C_REST_OK)
+        return rc;
+      return put_rc;
+    }
+    goto check_tokens;
+  } else {
     bucket = (c_rest_rate_limit_bucket *)val;
     elapsed = (size_t)difftime(now, bucket->last_refill);
     tokens_to_add = elapsed * limiter->config.fill_rate;
@@ -129,40 +142,16 @@ c_rest_error_t c_rest_rate_limiter_check(c_rest_rate_limiter *limiter,
       }
       bucket->last_refill = now;
     }
-  } else {
-    /* Create new bucket */
-    void *new_bucket_ptr = NULL;
-    ret = C_REST_MALLOC(sizeof(c_rest_rate_limit_bucket), &new_bucket_ptr);
-
-    if (ret != 0) {
-      rc = c_rest_mutex_unlock(limiter->mutex);
-      if (rc != C_REST_OK)
-        return rc;
-      return C_REST_ERROR_OOM;
-    }
-
-    bucket = (c_rest_rate_limit_bucket *)new_bucket_ptr;
-    bucket->tokens = limiter->config.capacity;
-    bucket->last_refill = now;
-
-    ret = c_rest_hashmap_put(&limiter->buckets, identifier, bucket);
-
-    if (ret != 0) {
-      C_REST_FREE(bucket);
-      rc = c_rest_mutex_unlock(limiter->mutex);
-      if (rc != C_REST_OK)
-        return rc;
-      return ret;
-    }
   }
 
+check_tokens:
   if (bucket->tokens >= tokens_needed) {
     bucket->tokens -= tokens_needed;
     *out_remaining = bucket->tokens;
-    ret = 0;
+    ret = C_REST_OK;
   } else {
     *out_remaining = bucket->tokens;
-    ret = 1; /* Rate limited */
+    ret = C_REST_ERROR_GENERIC; /* Rate limited */
   }
 
   {

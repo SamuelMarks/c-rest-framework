@@ -12,19 +12,17 @@
 #include "c_rest_response.h"
 #include "c_rest_router.h"
 
-static int g_mock_res_status_fail = 0;
+static int g_local_res_status_fail = 0;
 static int g_mock_res_json_fail = 0;
 static int g_mock_res_html_fail = 0;
 static int g_mock_router_get_fail = 0;
 static int g_mock_router_get_spec_null = 0;
 
-extern c_rest_error_t c_rest_router_get_openapi_spec(struct c_rest_router *router, struct c_rest_openapi_spec **out_spec);
-
 static c_rest_error_t mock_c_rest_response_set_status(struct c_rest_response *res, int status) {
     (void)res;
     (void)status;
-    if (g_mock_res_status_fail) {
-        g_mock_res_status_fail = 0;
+    if (g_local_res_status_fail) {
+        g_local_res_status_fail = 0;
         return C_REST_ERROR_GENERIC;
     }
     return C_REST_OK;
@@ -84,7 +82,7 @@ static void *fail_malloc(size_t size) {
 
 static void reset_mocks(void *data) {
   (void)data;
-  g_mock_res_status_fail = 0;
+  g_local_res_status_fail = 0;
   g_mock_res_json_fail = 0;
   g_mock_res_html_fail = 0;
   g_mock_router_get_fail = 0;
@@ -97,7 +95,7 @@ TEST test_openapi_error_branches(void) {
   struct c_rest_response res = {0};
   struct c_rest_router *router = NULL;
 
-  c_rest_router_init(&router);
+  ASSERT_EQ(C_REST_OK, c_rest_router_init(&router));
 
   /* openapi_handler: c_rest_router_get_openapi_spec failure */
   g_mock_router_get_fail = 1;
@@ -105,12 +103,12 @@ TEST test_openapi_error_branches(void) {
 
   /* openapi_handler: c_rest_openapi_spec_to_json failure */
   g_mock_router_get_spec_null = 1;
-  mock_c_rest_router_get_openapi_spec(router, NULL);
+  ASSERT_EQ(C_REST_OK, mock_c_rest_router_get_openapi_spec(router, NULL));
   ASSERT_EQ(C_REST_ERROR_GENERIC, openapi_handler(&req, &res, router));
   g_mock_router_get_spec_null = 0;
 
   /* openapi_handler: set_status 200 failure */
-  g_mock_res_status_fail = 1;
+  g_local_res_status_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, openapi_handler(&req, &res, router));
 
   /* openapi_handler: response_json failure */
@@ -125,7 +123,7 @@ TEST test_openapi_error_branches(void) {
   ASSERT_EQ(C_REST_ERROR_GENERIC, swagger_ui_handler(&req, &res, router));
 
   /* swagger_ui_handler: set_status failure */
-  g_mock_res_status_fail = 1;
+  g_local_res_status_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, swagger_ui_handler(&req, &res, router));
 
   /* swagger_ui_handler: response_html failure */
@@ -173,22 +171,22 @@ TEST test_openapi_error_branches(void) {
     char *json_out = NULL;
     int i;
     memset(&op, 0, sizeof(op));
-    c_rest_openapi_spec_init(&spec);
-    c_rest_openapi_spec_add_path(spec, "/test", "GET", &op);
+    ASSERT_EQ(C_REST_OK, c_rest_openapi_spec_init(&spec));
+    ASSERT_EQ(C_REST_OK,
+              c_rest_openapi_spec_add_path(spec, "/test", "GET", &op));
     for (i = 10; i <= 18; i++) {
       g_mock_openapi_fail = i;
       ASSERT_EQ(C_REST_ERROR_GENERIC,
                 c_rest_openapi_spec_to_json(spec, &json_out));
     }
     g_mock_openapi_fail = 0;
-    c_rest_openapi_spec_destroy(spec);
+    ASSERT_EQ(C_REST_OK, c_rest_openapi_spec_destroy(spec));
   }
 
-  c_rest_router_destroy(router);
+  ASSERT_EQ(C_REST_OK, c_rest_router_destroy(router));
   PASS();
 }
 
-SUITE_EXTERN(openapi_mock_suite);
 SUITE(openapi_mock_suite) {
   SET_SETUP(reset_mocks, NULL);
   RUN_TEST(test_openapi_error_branches);

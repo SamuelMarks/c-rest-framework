@@ -5,8 +5,6 @@
 #ifndef C_REST_LIST_H
 #define C_REST_LIST_H
 /* clang-format off */
-#include "c_rest_error.h"
-
 #include <stddef.h>
 #include "c_rest_error.h"
 #include "c_rest_export.h"
@@ -40,7 +38,8 @@ typedef struct c_rest_list {
  * @param list The list to initialize.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_list_init(c_rest_list *list);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_list_init(c_rest_list *list);
 
 /**
  * @brief Pushes data to the back of the linked list.
@@ -49,8 +48,8 @@ C_REST_EXPORT extern c_rest_error_t c_rest_list_init(c_rest_list *list);
  * @param data The data to push.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_list_push_back(c_rest_list *list,
-                                                          void *data);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_list_push_back(c_rest_list *list, void *data);
 
 /**
  * @brief Pops data from the front of the linked list.
@@ -59,8 +58,16 @@ C_REST_EXPORT extern c_rest_error_t c_rest_list_push_back(c_rest_list *list,
  * @param out_data Pointer to hold the popped data.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_list_pop_front(c_rest_list *list,
-                                                          void **out_data);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_list_pop_front(c_rest_list *list, void **out_data);
+
+/**
+ * @brief Callback signature for freeing data stored in linked list nodes.
+ *
+ * @param data Pointer to the node data to free.
+ * @return C_REST_OK on success, or an error code on failure.
+ */
+typedef c_rest_error_t (*c_rest_list_free_fn)(void *data);
 
 /**
  * @brief Destroys the linked list.
@@ -69,8 +76,8 @@ C_REST_EXPORT extern c_rest_error_t c_rest_list_pop_front(c_rest_list *list,
  * @param free_data Function to free the data in the list nodes.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
-c_rest_list_destroy(c_rest_list *list, void (*free_data)(void *));
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_list_destroy(c_rest_list *list, c_rest_list_free_fn free_data);
 
 #ifdef __cplusplus
 }

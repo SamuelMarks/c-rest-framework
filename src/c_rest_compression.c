@@ -1,4 +1,5 @@
 /* clang-format off */
+#define C_REST_MEM_INTERNAL 1
 #include "c_rest_testing_mocks.h"
 #include "c_rest_error.h"
 #include "../include/c_rest_compression.h"
@@ -12,36 +13,65 @@
 #endif
 /* clang-format on */
 
-#ifndef C_REST_TESTING_MALLOC_HOOK
-#define c_rest_deflateInit2 deflateInit2
-#define c_rest_deflate deflate
-#define c_rest_BrotliEncoderCreateInstance BrotliEncoderCreateInstance
-#define c_rest_BrotliEncoderCompressStream BrotliEncoderCompressStream
+#if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP)
+static NO_DISCARD c_rest_error_t gzip_deflate_step(z_stream *strm, int flush) {
+  int d_rc;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (crf_seam_lib_check(3) != C_REST_OK)
+    d_rc = Z_STREAM_ERROR;
+  else
+    d_rc = deflate(strm, flush);
+#else
+  d_rc = deflate(strm, flush);
+#endif
+  if (d_rc == Z_STREAM_ERROR)
+    return C_REST_ERROR_GENERIC;
+  return C_REST_OK;
+}
 #endif
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_lib_fail = 0;
-#if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP)
-#define c_rest_deflateInit2(a, b, c, d, e, f)                                  \
-  (g_mock_lib_fail == 1 ? Z_STREAM_ERROR : deflateInit2(a, b, c, d, e, f))
-#define c_rest_deflate(a, b)                                                   \
-  (g_mock_lib_fail == 3 ? Z_STREAM_ERROR : deflate(a, b))
-#endif
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI)
-#define c_rest_BrotliEncoderCreateInstance(a, b, c)                            \
-  (g_mock_lib_fail == 2 ? NULL : BrotliEncoderCreateInstance(a, b, c))
-static c_rest_error_t
-test_mock_brotli_compress(BrotliEncoderState *state, BrotliEncoderOperation op,
-                          size_t *available_in, const uint8_t **next_in,
-                          size_t *available_out, uint8_t **next_out,
-                          size_t *total_out) {
-  if (g_mock_lib_fail == 4)
-    return C_REST_OK; /* 0 corresponds to failure in Brotli */
-  return (c_rest_error_t)BrotliEncoderCompressStream(
-      state, op, available_in, next_in, available_out, next_out, total_out);
-}
-#define c_rest_BrotliEncoderCompressStream test_mock_brotli_compress
+static NO_DISCARD c_rest_error_t brotli_compress_step(
+    BrotliEncoderState *state, BrotliEncoderOperation op, size_t *available_in,
+    const uint8_t **next_in, size_t *available_out, uint8_t **next_out) {
+  int b_ok;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  if (crf_seam_lib_check(4) != C_REST_OK)
+    b_ok = 0;
+  else
+    b_ok = (int)BrotliEncoderCompressStream(state, op, available_in, next_in,
+                                            available_out, next_out, NULL);
+#else
+  b_ok = (int)BrotliEncoderCompressStream(state, op, available_in, next_in,
+                                          available_out, next_out, NULL);
 #endif
+  return b_ok ? C_REST_OK : C_REST_ERROR_GENERIC;
+}
+#endif
+
+#if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP)
+static voidpf c_rest_zalloc_impl(voidpf opaque, uInt items, uInt size) {
+  (void)opaque;
+  return (voidpf)CRF_MALLOC((size_t)items * (size_t)size);
+}
+
+static void c_rest_zlib_free(voidpf opaque, voidpf address) {
+  (void)opaque;
+  CRF_FREE(address);
+}
+#endif
+
+#if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI) &&            \
+    defined(C_REST_BROTLI_CLEANUP_ON_OOM)
+static void *c_rest_brotli_alloc_impl(void *opaque, size_t size) {
+  (void)opaque;
+  return CRF_MALLOC(size);
+}
+
+static void c_rest_brotli_free(void *opaque, void *address) {
+  (void)opaque;
+  CRF_FREE(address);
+}
 #endif
 
 struct c_rest_compression_ctx {
@@ -74,12 +104,22 @@ c_rest_error_t c_rest_compression_ctx_init(c_rest_compression_ctx_t **ctx,
 
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP)
   if (type == C_REST_COMPRESSION_GZIP) {
-    new_ctx->z_strm.zalloc = Z_NULL;
-    new_ctx->z_strm.zfree = Z_NULL;
+    int z_init_rc;
+    new_ctx->z_strm.zalloc = c_rest_zalloc_impl;
+    new_ctx->z_strm.zfree = c_rest_zlib_free;
     new_ctx->z_strm.opaque = Z_NULL;
     /* 15 + 16 for gzip encoding */
-    if (c_rest_deflateInit2(&new_ctx->z_strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
-                            15 + 16, 8, Z_DEFAULT_STRATEGY) != Z_OK) {
+#ifdef C_REST_TESTING_MALLOC_HOOK
+    if (crf_seam_lib_check(1) != C_REST_OK)
+      z_init_rc = Z_STREAM_ERROR;
+    else
+      z_init_rc = deflateInit2(&new_ctx->z_strm, Z_DEFAULT_COMPRESSION,
+                               Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
+#else
+    z_init_rc = deflateInit2(&new_ctx->z_strm, Z_DEFAULT_COMPRESSION,
+                             Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
+#endif
+    if (z_init_rc != Z_OK) {
       C_REST_FREE(new_ctx);
       return C_REST_ERROR_GENERIC;
     }
@@ -87,7 +127,19 @@ c_rest_error_t c_rest_compression_ctx_init(c_rest_compression_ctx_t **ctx,
 #endif
 #if defined(C_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_BROTLI)
       if (type == C_REST_COMPRESSION_BROTLI) {
-    new_ctx->b_strm = c_rest_BrotliEncoderCreateInstance(NULL, NULL, NULL);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+    if (crf_seam_lib_check(2) != C_REST_OK) {
+      new_ctx->b_strm = NULL;
+    } else
+#endif
+    {
+#if defined(C_REST_BROTLI_CLEANUP_ON_OOM)
+      new_ctx->b_strm = BrotliEncoderCreateInstance(c_rest_brotli_alloc_impl,
+                                                    c_rest_brotli_free, NULL);
+#else
+      new_ctx->b_strm = BrotliEncoderCreateInstance(NULL, NULL, NULL);
+#endif
+    }
     if (!new_ctx->b_strm) {
       C_REST_FREE(new_ctx);
       return C_REST_ERROR_GENERIC;
@@ -125,7 +177,11 @@ c_rest_error_t c_rest_compression_ctx_destroy(c_rest_compression_ctx_t *ctx) {
   {
   }
   C_REST_FREE(ctx);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  return crf_seam_lib_check(99);
+#else
   return C_REST_OK;
+#endif
 #else
   return C_REST_ERROR_GENERIC;
 #endif
@@ -171,7 +227,7 @@ c_rest_error_t c_rest_compress_data(c_rest_compression_ctx_t *ctx,
       ctx->z_strm.avail_out = (uInt)(out_capacity - total_out);
       ctx->z_strm.next_out = out_buf + total_out;
 
-      if (c_rest_deflate(&ctx->z_strm, Z_NO_FLUSH) == Z_STREAM_ERROR) {
+      if (gzip_deflate_step(&ctx->z_strm, Z_NO_FLUSH) != C_REST_OK) {
         C_REST_FREE(out_buf);
         return C_REST_ERROR_GENERIC;
       }
@@ -212,9 +268,9 @@ c_rest_error_t c_rest_compress_data(c_rest_compression_ctx_t *ctx,
         available_out = out_capacity - offset;
       }
 
-      if (!c_rest_BrotliEncoderCompressStream(
-              ctx->b_strm, BROTLI_OPERATION_FLUSH, &available_in, &next_in,
-              &available_out, &next_out, NULL)) {
+      if (brotli_compress_step(ctx->b_strm, BROTLI_OPERATION_FLUSH,
+                               &available_in, &next_in, &available_out,
+                               &next_out) != C_REST_OK) {
         C_REST_FREE(out_buf);
         return C_REST_ERROR_GENERIC;
       }
@@ -268,7 +324,7 @@ c_rest_error_t c_rest_compress_finish(c_rest_compression_ctx_t *ctx,
       ctx->z_strm.avail_out = (uInt)(out_capacity - total_out);
       ctx->z_strm.next_out = out_buf + total_out;
 
-      if (c_rest_deflate(&ctx->z_strm, Z_FINISH) == Z_STREAM_ERROR) {
+      if (gzip_deflate_step(&ctx->z_strm, Z_FINISH) != C_REST_OK) {
         C_REST_FREE(out_buf);
         return C_REST_ERROR_GENERIC;
       }
@@ -290,9 +346,9 @@ c_rest_error_t c_rest_compress_finish(c_rest_compression_ctx_t *ctx,
     uint8_t *next_out = out_buf;
 
     while (!BrotliEncoderIsFinished(ctx->b_strm)) {
-      if (!c_rest_BrotliEncoderCompressStream(
-              ctx->b_strm, BROTLI_OPERATION_FINISH, &available_in, &next_in,
-              &available_out, &next_out, NULL)) {
+      if (brotli_compress_step(ctx->b_strm, BROTLI_OPERATION_FINISH,
+                               &available_in, &next_in, &available_out,
+                               &next_out) != C_REST_OK) {
         C_REST_FREE(out_buf);
         return C_REST_ERROR_GENERIC;
       }
@@ -348,33 +404,37 @@ c_rest_error_t c_rest_compress_buffer(c_rest_compression_type_t type,
     return rc;
 
   rc = c_rest_compress_data(ctx, in_data, in_len, &data1, &len1);
-  if (rc == C_REST_OK) {
-    rc = c_rest_compress_finish(ctx, &data2, &len2);
-    if (rc == C_REST_OK) {
-      if (C_REST_MALLOC(len1 + len2, (void **)&(*out_data)) != 0) {
-        rc = C_REST_ERROR_GENERIC;
-      } else {
-        if (len1 > 0) {
-          for (i = 0; i < len1; ++i) {
-            (*out_data)[i] = data1[i];
-          }
-        }
-        for (i = 0; i < len2; ++i) {
-          (*out_data)[len1 + i] = data2[i];
-        }
-        *out_len = len1 + len2;
-      }
-    }
+  if (rc != C_REST_OK)
+    goto compress_cleanup;
+
+  rc = c_rest_compress_finish(ctx, &data2, &len2);
+  if (rc != C_REST_OK)
+    goto compress_cleanup;
+
+  if (C_REST_MALLOC(len1 + len2, (void **)&(*out_data)) != 0) {
+    rc = C_REST_ERROR_GENERIC;
+    goto compress_cleanup;
   }
 
+  if (len1 > 0) {
+    for (i = 0; i < len1; ++i) {
+      (*out_data)[i] = data1[i];
+    }
+  }
+  for (i = 0; i < len2; ++i) {
+    (*out_data)[len1 + i] = data2[i];
+  }
+  *out_len = len1 + len2;
+
+compress_cleanup:
   if (data1)
     C_REST_FREE(data1);
   if (data2)
     C_REST_FREE(data2);
   {
     c_rest_error_t destroy_rc = c_rest_compression_ctx_destroy(ctx);
-    if (rc == C_REST_OK)
-      rc = destroy_rc;
+    if (destroy_rc != C_REST_OK)
+      return destroy_rc;
   }
   return rc;
 }

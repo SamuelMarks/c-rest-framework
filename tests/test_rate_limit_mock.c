@@ -10,18 +10,14 @@
 
 #include "c_rest_rate_limit.h"
 #include "c_rest_request.h"
+#include "c_rest_platform.h"
+#include "c_rest_hashmap.h"
 
 static int g_mock_mutex_lock_fail = 0;
 static int g_mock_mutex_unlock_fail = 0;
 static int g_mock_mutex_destroy_fail = 0;
 static int g_mock_hashmap_destroy_fail = 0;
 static int g_mock_hashmap_put_fail = 0;
-
-extern c_rest_error_t c_rest_mutex_lock(c_rest_mutex_t mutex);
-extern c_rest_error_t c_rest_mutex_unlock(c_rest_mutex_t mutex);
-extern c_rest_error_t c_rest_mutex_destroy(c_rest_mutex_t mutex);
-extern c_rest_error_t c_rest_hashmap_destroy(struct c_rest_hashmap *map, void (*free_value)(void *));
-extern c_rest_error_t c_rest_hashmap_put(struct c_rest_hashmap *map, const char *key, void *value);
 
 static c_rest_error_t mock_c_rest_mutex_lock(c_rest_mutex_t mutex) {
     if (g_mock_mutex_lock_fail) {
@@ -34,8 +30,8 @@ static c_rest_error_t mock_c_rest_mutex_lock(c_rest_mutex_t mutex) {
 static c_rest_error_t mock_c_rest_mutex_unlock(c_rest_mutex_t mutex) {
     if (g_mock_mutex_unlock_fail) {
         g_mock_mutex_unlock_fail = 0;
-        c_rest_mutex_unlock(mutex);
-        return C_REST_ERROR_GENERIC;
+        return (c_rest_error_t)((int)C_REST_ERROR_GENERIC |
+                                (int)c_rest_mutex_unlock(mutex));
     }
     return c_rest_mutex_unlock(mutex);
 }
@@ -48,7 +44,7 @@ static c_rest_error_t mock_c_rest_mutex_destroy(c_rest_mutex_t mutex) {
     return c_rest_mutex_destroy(mutex);
 }
 
-static c_rest_error_t mock_c_rest_hashmap_destroy(struct c_rest_hashmap *map, void (*free_value)(void *)) {
+static c_rest_error_t mock_c_rest_hashmap_destroy(struct c_rest_hashmap *map, c_rest_hashmap_free_fn free_value) {
     if (g_mock_hashmap_destroy_fail) {
         g_mock_hashmap_destroy_fail = 0;
         return C_REST_ERROR_GENERIC;
@@ -62,7 +58,6 @@ static c_rest_error_t mock_c_rest_hashmap_put(struct c_rest_hashmap *map, const 
 }
 
 static int g_mock_mutex_create_fail = 0;
-extern c_rest_error_t c_rest_mutex_create(c_rest_mutex_t *mutex);
 
 static c_rest_error_t mock_c_rest_mutex_create(c_rest_mutex_t *mutex) {
     if (g_mock_mutex_create_fail) {
@@ -134,8 +129,9 @@ TEST test_rate_limit_error_branches(void) {
   g_mock_mutex_create_fail = 1;
   g_mock_hashmap_destroy_fail = 0;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_rate_limiter_init(&rl, 10, 60, 1));
+  g_mock_mutex_create_fail = 0;
 
-  c_rest_rate_limiter_init(&rl, 10, 60, 1);
+  ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 60, 1));
 
   /* check: fails on mutex_lock */
   g_mock_mutex_lock_fail = 1;
@@ -167,6 +163,16 @@ TEST test_rate_limit_error_branches(void) {
 
   /* check: normal bucket creation (first call) */
   ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &tokens));
+
+  /* check: max_entities (1) reached - second distinct IP rejected */
+  ASSERT_EQ(C_REST_ERROR_GENERIC,
+            c_rest_rate_limiter_check(&rl, "127.0.0.2", 1, &tokens));
+  ASSERT_EQ(0, tokens);
+
+  /* check: max_entities reached AND unlock fails */
+  g_mock_mutex_unlock_fail = 1;
+  ASSERT_EQ(C_REST_ERROR_GENERIC,
+            c_rest_rate_limiter_check(&rl, "127.0.0.3", 1, &tokens));
 
   /* check: existing bucket with tokens (tokens_to_add > 0) */
   ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &tokens));
@@ -214,7 +220,6 @@ TEST test_rate_limit_error_branches(void) {
   PASS();
 }
 
-SUITE_EXTERN(rate_limit_mock_suite);
 SUITE(rate_limit_mock_suite) {
   SET_SETUP(reset_mocks, NULL);
   RUN_TEST(test_rate_limit_error_branches);

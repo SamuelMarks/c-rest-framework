@@ -49,8 +49,7 @@ static c_rest_error_t dummy_resolver(const char *field_name, char **out_json,
   return C_REST_OK;
 }
 
-static int test_graphql_basic_parse(void) {
-  int failed = 0;
+TEST test_graphql_basic_parse(void) {
   const char *query = "query getUser { user { id name } }";
   struct c_rest_graphql_node *doc = NULL;
   struct c_rest_graphql_node *op;
@@ -58,26 +57,25 @@ static int test_graphql_basic_parse(void) {
   c_rest_error_t rc;
 
   rc = c_rest_graphql_parse(query, strlen(query), &doc);
-  failed += (rc != C_REST_OK);
-  failed += (doc == NULL);
-  failed += (doc->type != C_REST_GRAPHQL_NODE_DOCUMENT);
-  failed += (doc->definitions->count != 1);
+  ASSERT_FALSE(rc != C_REST_OK);
+  ASSERT_FALSE(doc == NULL);
+  ASSERT_FALSE(doc->type != C_REST_GRAPHQL_NODE_DOCUMENT);
+  ASSERT_FALSE(doc->definitions->count != 1);
   op = doc->definitions->nodes[0];
-  failed += (op->type != C_REST_GRAPHQL_NODE_OPERATION);
-  failed += (op->op_type != C_REST_GRAPHQL_OP_QUERY);
-  failed += (strcmp(op->name, "getUser") != 0);
-  failed += (op->selection_set->count != 1);
+  ASSERT_FALSE(op->type != C_REST_GRAPHQL_NODE_OPERATION);
+  ASSERT_FALSE(op->op_type != C_REST_GRAPHQL_OP_QUERY);
+  ASSERT_FALSE(strcmp(op->name, "getUser") != 0);
+  ASSERT_FALSE(op->selection_set->count != 1);
   field_user = op->selection_set->nodes[0];
-  failed += (field_user->type != C_REST_GRAPHQL_NODE_FIELD);
-  failed += (strcmp(field_user->name, "user") != 0);
-  failed += (field_user->selection_set->count != 2);
+  ASSERT_FALSE(field_user->type != C_REST_GRAPHQL_NODE_FIELD);
+  ASSERT_FALSE(strcmp(field_user->name, "user") != 0);
+  ASSERT_FALSE(field_user->selection_set->count != 2);
 
-  failed += (c_rest_graphql_node_free(doc) != C_REST_OK);
-  return failed;
+  ASSERT_FALSE(c_rest_graphql_node_free(doc) != C_REST_OK);
+  PASS();
 }
 
-static int test_graphql_parse_alias(void) {
-  int failed = 0;
+TEST test_graphql_parse_alias(void) {
   const char *query = "{ myUser: user { id } }";
   struct c_rest_graphql_node *doc = NULL;
   struct c_rest_graphql_node *op;
@@ -85,19 +83,18 @@ static int test_graphql_parse_alias(void) {
   c_rest_error_t rc;
 
   rc = c_rest_graphql_parse(query, strlen(query), &doc);
-  failed += (rc != C_REST_OK);
-  failed += (doc == NULL);
+  ASSERT_FALSE(rc != C_REST_OK);
+  ASSERT_FALSE(doc == NULL);
   op = doc->definitions->nodes[0];
   field_user = op->selection_set->nodes[0];
-  failed += (strcmp(field_user->name, "user") != 0);
-  failed += (strcmp(field_user->alias, "myUser") != 0);
+  ASSERT_FALSE(strcmp(field_user->name, "user") != 0);
+  ASSERT_FALSE(strcmp(field_user->alias, "myUser") != 0);
 
-  failed += (c_rest_graphql_node_free(doc) != C_REST_OK);
-  return failed;
+  ASSERT_FALSE(c_rest_graphql_node_free(doc) != C_REST_OK);
+  PASS();
 }
 
-static int test_graphql_resolve_dummy(void) {
-  int failed = 0;
+TEST test_graphql_resolve_dummy(void) {
   const char *query = "{ user { id } }";
   struct c_rest_graphql_node *doc = NULL;
   struct c_rest_graphql_schema *schema = NULL;
@@ -107,54 +104,54 @@ static int test_graphql_resolve_dummy(void) {
   int called = 0;
 
   rc = c_rest_graphql_schema_init(&schema);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   rc = c_rest_graphql_schema_add_resolver(schema, "user", dummy_resolver,
                                           &called);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   rc = c_rest_graphql_schema_add_resolver(schema, "null_json", dummy_resolver,
                                           NULL);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   rc = c_rest_graphql_schema_add_resolver(schema, "no_called", dummy_resolver,
                                           NULL);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   /* Test resolver with no called pointer */
   rc = c_rest_graphql_parse("{ no_called }", 13, &doc);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
   rc = c_rest_graphql_resolve(doc, schema, &json, &len);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
   C_REST_FREE(json);
   json = NULL;
-  failed += (c_rest_graphql_node_free(doc) != C_REST_OK);
+  ASSERT_FALSE(c_rest_graphql_node_free(doc) != C_REST_OK);
   doc = NULL;
 
   rc = c_rest_graphql_parse(query, strlen(query), &doc);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   rc = c_rest_graphql_resolve(doc, schema, &json, &len);
-  failed += (rc != C_REST_OK);
-  failed += (json == NULL);
-  failed += (len == 0);
-  failed += (strcmp(json, "{\"data\": {}}") != 0);
-  failed += (called != 1);
+  ASSERT_FALSE(rc != C_REST_OK);
+  ASSERT_FALSE(json == NULL);
+  ASSERT_FALSE(len == 0);
+  ASSERT_FALSE(strcmp(json, "{\"data\": {}}") != 0);
+  ASSERT_FALSE(called != 1);
 
   C_REST_FREE(json);
   json = NULL;
-  failed += (c_rest_graphql_node_free(doc) != C_REST_OK);
+  ASSERT_FALSE(c_rest_graphql_node_free(doc) != C_REST_OK);
 
   /* Test null json return */
   doc = NULL;
   json = NULL;
   rc = c_rest_graphql_parse("{ null_json }", 13, &doc);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
   rc = c_rest_graphql_resolve(doc, schema, &json, &len);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
   C_REST_FREE(json);
   json = NULL;
-  c_rest_graphql_node_free(doc);
+  ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
 
   /* Test missing fields manually constructed */
   {
@@ -162,77 +159,94 @@ static int test_graphql_resolve_dummy(void) {
     struct c_rest_graphql_node *op = NULL;
     struct c_rest_graphql_node *field = NULL;
 
-    failed += (C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node),
-                             (void **)&manual_doc) != C_REST_OK);
+    ASSERT_FALSE(C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node),
+                               (void **)&manual_doc) != C_REST_OK);
     manual_doc->type = C_REST_GRAPHQL_NODE_DOCUMENT;
-    c_rest_graphql_resolve(manual_doc, schema, &json, &len);
+    ASSERT_EQ(C_REST_OK,
+              c_rest_graphql_resolve(manual_doc, schema, &json, &len));
     C_REST_FREE(json);
     json = NULL;
 
-    failed += (C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node_list),
-                             (void **)&manual_doc->definitions) != C_REST_OK);
-    failed +=
-        (C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node *),
-                       (void **)&manual_doc->definitions->nodes) != C_REST_OK);
+    ASSERT_FALSE(C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node_list),
+                               (void **)&manual_doc->definitions) != C_REST_OK);
+    ASSERT_FALSE(C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node *),
+                               (void **)&manual_doc->definitions->nodes) !=
+                 C_REST_OK);
     manual_doc->definitions->count = 1;
 
-    failed += (C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node),
-                             (void **)&op) != C_REST_OK);
+    ASSERT_FALSE(C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node),
+                               (void **)&op) != C_REST_OK);
     manual_doc->definitions->nodes[0] = op;
 
     op->type = C_REST_GRAPHQL_NODE_FIELD; /* wrong type */
-    c_rest_graphql_resolve(manual_doc, schema, &json, &len);
+    ASSERT_EQ(C_REST_OK,
+              c_rest_graphql_resolve(manual_doc, schema, &json, &len));
     C_REST_FREE(json);
     json = NULL;
 
     op->type = C_REST_GRAPHQL_NODE_OPERATION;
-    c_rest_graphql_resolve(manual_doc, schema, &json, &len);
+    ASSERT_EQ(C_REST_OK,
+              c_rest_graphql_resolve(manual_doc, schema, &json, &len));
     C_REST_FREE(json);
     json = NULL;
 
-    failed += (C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node_list),
-                             (void **)&op->selection_set) != C_REST_OK);
-    failed += (C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node *),
-                             (void **)&op->selection_set->nodes) != C_REST_OK);
+    ASSERT_FALSE(C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node_list),
+                               (void **)&op->selection_set) != C_REST_OK);
+    ASSERT_FALSE(C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node *),
+                               (void **)&op->selection_set->nodes) !=
+                 C_REST_OK);
     op->selection_set->count = 1;
 
-    failed += (C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node),
-                             (void **)&field) != C_REST_OK);
+    ASSERT_FALSE(C_REST_CALLOC(1, sizeof(struct c_rest_graphql_node),
+                               (void **)&field) != C_REST_OK);
     op->selection_set->nodes[0] = field;
 
     field->type = C_REST_GRAPHQL_NODE_DOCUMENT; /* wrong type */
-    c_rest_graphql_resolve(manual_doc, schema, &json, &len);
+    ASSERT_EQ(C_REST_OK,
+              c_rest_graphql_resolve(manual_doc, schema, &json, &len));
     C_REST_FREE(json);
     json = NULL;
 
-    c_rest_graphql_node_free(manual_doc);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(manual_doc));
   }
 
-  failed += (c_rest_graphql_schema_free(schema) != C_REST_OK);
-  return failed;
+  ASSERT_FALSE(c_rest_graphql_schema_free(schema) != C_REST_OK);
+  PASS();
 }
 
-static int test_graphql_malformed(void) {
-  int failed = 0;
+TEST test_graphql_malformed(void) {
   const char *query = "# This is a comment\n{ user { id ";
   struct c_rest_graphql_node *doc = NULL;
   c_rest_error_t rc;
 
   rc = c_rest_graphql_parse(query, strlen(query), &doc);
-  failed += (rc == C_REST_OK);
-  failed += (c_rest_graphql_node_free(doc) != C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
+  ASSERT_FALSE(c_rest_graphql_node_free(doc) != C_REST_OK);
 
   query = "query { }";
   doc = NULL;
   rc = c_rest_graphql_parse(query, strlen(query), &doc);
-  failed += (rc == C_REST_OK);
-  failed += (c_rest_graphql_node_free(doc) != C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
+  ASSERT_FALSE(c_rest_graphql_node_free(doc) != C_REST_OK);
 
-  return failed;
+  PASS();
 }
 
-static int test_graphql_router(void) {
-  int failed = 0;
+static c_rest_error_t fail_resolver_alloc(const char *field, char **out_json,
+                                          size_t *out_len, void *user_data) {
+  (void)field;
+  (void)user_data;
+  *out_json = NULL;
+  if (C_REST_MALLOC(4, out_json) == C_REST_OK && *out_json) {
+    (*out_json)[0] = '{';
+    (*out_json)[1] = '}';
+    (*out_json)[2] = '\0';
+  }
+  *out_len = 2;
+  return C_REST_ERROR_GENERIC;
+}
+
+TEST test_graphql_router(void) {
   struct c_rest_router *router = NULL;
   struct c_rest_graphql_schema *schema = NULL;
   struct c_rest_request req;
@@ -243,20 +257,20 @@ static int test_graphql_router(void) {
   struct c_rest_openapi_operation op_meta;
 
   ret = c_rest_router_init(&router);
-  failed += (ret != C_REST_OK);
+  ASSERT_FALSE(ret != C_REST_OK);
 
   ret = c_rest_graphql_schema_init(&schema);
-  failed += (ret != C_REST_OK);
+  ASSERT_FALSE(ret != C_REST_OK);
 
   ret = c_rest_graphql_schema_add_resolver(schema, "user", dummy_resolver,
                                            &called);
-  failed += (ret != C_REST_OK);
+  ASSERT_FALSE(ret != C_REST_OK);
 
   memset(&op_meta, 0, sizeof(op_meta));
   op_meta.summary = "GraphQL API";
 
   ret = c_rest_router_add_graphql_openapi(router, "/graphql", schema, &op_meta);
-  failed += (ret != C_REST_OK);
+  ASSERT_FALSE(ret != C_REST_OK);
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
@@ -267,21 +281,64 @@ static int test_graphql_router(void) {
   req.body_len = strlen(query);
 
   ret = c_rest_router_dispatch(router, &req, &res);
-  failed += (ret != C_REST_OK);
-  failed += (res.status_code != 200);
-  failed += (called != 1);
-  failed += (res.body == NULL);
-  failed += (res.body_len == 0);
+  ASSERT_FALSE(ret != C_REST_OK);
+  ASSERT_FALSE(res.status_code != 200);
+  ASSERT_FALSE(called != 1);
+  ASSERT_FALSE(res.body == NULL);
+  ASSERT_FALSE(res.body_len == 0);
+  ASSERT_FALSE(c_rest_response_cleanup(&res) != C_REST_OK);
 
-  failed += (c_rest_response_cleanup(&res) != C_REST_OK);
-  failed += (c_rest_graphql_schema_free(schema) != C_REST_OK);
-  failed += (c_rest_router_destroy(router) != C_REST_OK);
+  /* Resolver failure path + node_free failure path + response_json OOM path */
+  {
+    struct c_rest_router *r2 = NULL;
+    struct c_rest_graphql_schema *s2 = NULL;
+    ASSERT_EQ(C_REST_OK, c_rest_router_init(&r2));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_schema_init(&s2));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_schema_add_resolver(
+                             s2, "user", fail_resolver_alloc, NULL));
+    ASSERT_EQ(C_REST_OK, c_rest_router_add_graphql(r2, "/graphql", s2));
 
-  return failed;
+    memset(&res, 0, sizeof(res));
+    ret = c_rest_router_dispatch(r2, &req, &res);
+    ASSERT_FALSE(ret == C_REST_OK);
+    ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+
+#ifdef C_REST_TESTING_MALLOC_HOOK
+    g_mock_graphql_free_countdown = 1;
+    memset(&res, 0, sizeof(res));
+    ret = c_rest_router_dispatch(r2, &req, &res);
+    ASSERT_FALSE(ret == C_REST_OK);
+    g_mock_graphql_free_countdown = -1;
+    ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+#endif
+
+    {
+      int k;
+      for (k = 0; k < 15; k++) {
+        c_rest_error_t d_rc;
+        memset(&res, 0, sizeof(res));
+        g_crf_malloc_hook = fail_malloc_n;
+        g_malloc_fail_after = k;
+        d_rc = c_rest_router_dispatch(router, &req, &res);
+        ASSERT(d_rc == C_REST_OK || d_rc == C_REST_ERROR_OOM ||
+               d_rc == C_REST_ERROR_GENERIC);
+        g_crf_malloc_hook = NULL;
+        g_malloc_fail_after = -1;
+        ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+      }
+    }
+
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_schema_free(s2));
+    ASSERT_EQ(C_REST_OK, c_rest_router_destroy(r2));
+  }
+
+  ASSERT_FALSE(c_rest_graphql_schema_free(schema) != C_REST_OK);
+  ASSERT_FALSE(c_rest_router_destroy(router) != C_REST_OK);
+
+  PASS();
 }
 
-static int test_graphql_errors(void) {
-  int failed = 0;
+TEST test_graphql_errors(void) {
   struct c_rest_graphql_node *doc = NULL;
   struct c_rest_graphql_schema *schema = NULL;
   char *json = NULL;
@@ -292,36 +349,37 @@ static int test_graphql_errors(void) {
   /* no brackets valid start */
   {
     const char *q9 = "query abc";
-    c_rest_graphql_parse(q9, strlen(q9), &doc);
-    c_rest_graphql_node_free(doc);
+    ASSERT_NEQ(C_REST_OK, c_rest_graphql_parse(q9, strlen(q9), &doc));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
   }
 
   {
     const char *q3 = "query test";
-    c_rest_graphql_parse(q3, strlen(q3), &doc);
-    c_rest_graphql_node_free(doc);
+    ASSERT_NEQ(C_REST_OK, c_rest_graphql_parse(q3, strlen(q3), &doc));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
 
     /* schema null, definitions valid */
-    c_rest_graphql_parse("query { a }", 11, &doc);
-    c_rest_graphql_resolve(doc, NULL, &json, &len);
-    CRF_FREE(json);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_parse("query { a }", 11, &doc));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_resolve(doc, NULL, &json, &len));
+    C_REST_FREE(json);
     json = NULL;
-    c_rest_graphql_node_free(doc);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
 
-    c_rest_graphql_parse("query { a }", 11, &doc);
-    c_rest_graphql_resolve(doc, NULL, &json, &len);
-    CRF_FREE(json);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_parse("query { a }", 11, &doc));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_resolve(doc, NULL, &json, &len));
+    C_REST_FREE(json);
     json = NULL;
-    c_rest_graphql_node_free(doc);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
 
     {
       struct c_rest_graphql_node fake_doc;
       memset(&fake_doc, 0, sizeof(fake_doc));
-      c_rest_graphql_resolve(&fake_doc, schema, NULL, NULL);
+      ASSERT_NEQ(C_REST_OK,
+                 c_rest_graphql_resolve(&fake_doc, schema, NULL, NULL));
     }
   }
 
@@ -332,54 +390,54 @@ static int test_graphql_errors(void) {
     const char *q7 = "query\t{\ta\t}";
     const char *q8 = "query _test { a }";
 
-    c_rest_graphql_parse(q4, strlen(q4), &doc);
-    c_rest_graphql_node_free(doc);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_parse(q4, strlen(q4), &doc));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
 
-    c_rest_graphql_parse(q5, strlen(q5), &doc);
-    c_rest_graphql_node_free(doc);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_parse(q5, strlen(q5), &doc));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
 
-    c_rest_graphql_parse(q6, strlen(q6), &doc);
-    c_rest_graphql_node_free(doc);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_parse(q6, strlen(q6), &doc));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
 
-    c_rest_graphql_parse(q7, strlen(q7), &doc);
-    c_rest_graphql_node_free(doc);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_parse(q7, strlen(q7), &doc));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
 
-    c_rest_graphql_parse(q8, strlen(q8), &doc);
-    c_rest_graphql_node_free(doc);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_parse(q8, strlen(q8), &doc));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
   }
 
   {
     const char *q_mb = "query test X";
-    c_rest_graphql_parse(q_mb, strlen(q_mb), &doc);
-    c_rest_graphql_node_free(doc);
+    ASSERT_NEQ(C_REST_OK, c_rest_graphql_parse(q_mb, strlen(q_mb), &doc));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
   }
 
   {
-    c_rest_graphql_parse("query { a }", 11, &doc);
-    c_rest_graphql_resolve(doc, NULL, &json, &len);
-    CRF_FREE(json);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_parse("query { a }", 11, &doc));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_resolve(doc, NULL, &json, &len));
+    C_REST_FREE(json);
     json = NULL;
-    c_rest_graphql_node_free(doc);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
   }
 
   rc = c_rest_graphql_parse(NULL, 10, &doc);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_graphql_parse("query {}", 8, NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   g_crf_malloc_hook = fail_malloc_n;
   for (i = 0; i < 20; i++) {
     g_malloc_fail_after = i;
     rc = c_rest_graphql_parse("query getUser { user }", 22, &doc);
-    c_rest_graphql_node_free(doc);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
   }
 
@@ -389,14 +447,14 @@ static int test_graphql_errors(void) {
     g_mock_graphql_free_countdown = 0;
     rc = c_rest_graphql_parse("query getUser { user }", 22, &doc);
     g_mock_graphql_free_countdown = -1;
-    c_rest_graphql_node_free(doc);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
   }
 
   for (i = 0; i < 5; i++) {
     g_malloc_fail_after = i;
     rc = c_rest_graphql_schema_init(&schema);
-    c_rest_graphql_schema_free(schema);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_schema_free(schema));
     schema = NULL;
   }
 
@@ -404,16 +462,16 @@ static int test_graphql_errors(void) {
   g_malloc_fail_after = -1;
 
   rc = c_rest_graphql_schema_init(&schema);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   rc = c_rest_graphql_schema_add_resolver(NULL, "f", dummy_resolver, NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_graphql_schema_add_resolver(schema, NULL, dummy_resolver, NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_graphql_schema_add_resolver(schema, "f", NULL, NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   g_crf_malloc_hook = fail_malloc_n;
   for (i = 0; i < 5; i++) {
@@ -425,24 +483,24 @@ static int test_graphql_errors(void) {
 
   doc = NULL;
   rc = c_rest_graphql_resolve(doc, schema, &json, &len);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_graphql_parse("{ user { id } }", 15, &doc);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   rc = c_rest_graphql_resolve(NULL, schema, &json, &len);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_graphql_resolve(doc, schema, NULL, &len);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_graphql_resolve(doc, schema, &json, NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   g_crf_malloc_hook = fail_malloc_n;
   g_malloc_fail_after = 0;
   rc = dummy_resolver("user", &json, &len, NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
   g_crf_malloc_hook = NULL;
   g_malloc_fail_after = -1;
 
@@ -456,30 +514,21 @@ static int test_graphql_errors(void) {
   g_crf_malloc_hook = NULL;
   g_malloc_fail_after = -1;
 
-  failed += (c_rest_graphql_node_free(doc) != C_REST_OK);
-  failed += (c_rest_graphql_schema_free(schema) != C_REST_OK);
+  ASSERT_FALSE(c_rest_graphql_node_free(doc) != C_REST_OK);
+  ASSERT_FALSE(c_rest_graphql_schema_free(schema) != C_REST_OK);
 
-  return failed;
+  PASS();
 }
 
-static int test_graphql_mock_run(void);
+TEST test_graphql_mock_run(void);
 
-int test_graphql(void) {
-  int failed = 0;
+TEST test_graphql_mutations_and_edge_cases(void) {
   c_rest_error_t rc;
-  const char *msgs[2];
-  printf("Running graphql tests...\n");
-
-  failed += test_graphql_basic_parse();
-  failed += test_graphql_parse_alias();
-  failed += test_graphql_resolve_dummy();
-  failed += test_graphql_malformed();
-
   {
     struct c_rest_graphql_node *manual_node = NULL;
     struct c_rest_graphql_node *op;
     struct c_rest_graphql_node *field;
-    c_rest_graphql_parse("{ a }", 5, &manual_node);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_parse("{ a }", 5, &manual_node));
     op = manual_node->definitions->nodes[0];
     field = op->selection_set->nodes[0];
     field->value = malloc(10);
@@ -492,8 +541,9 @@ int test_graphql(void) {
     field->arguments->count = 1;
     field->arguments->capacity = 1;
     field->arguments->nodes = malloc(sizeof(struct c_rest_graphql_node *));
-    c_rest_graphql_parse("{ b }", 5, &field->arguments->nodes[0]);
-    c_rest_graphql_node_free(manual_node);
+    ASSERT_EQ(C_REST_OK,
+              c_rest_graphql_parse("{ b }", 5, &field->arguments->nodes[0]));
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(manual_node));
   }
 
   {
@@ -501,17 +551,17 @@ int test_graphql(void) {
     const char *mut_query = "mutation createUser { user { id } }";
     const char *mut_anon = "mutation { user { id } }";
     rc = c_rest_graphql_parse(mut_anon, strlen(mut_anon), &doc);
-    failed += (rc != C_REST_OK);
-    c_rest_graphql_node_free(doc);
+    ASSERT_FALSE(rc != C_REST_OK);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
     rc = c_rest_graphql_parse(mut_query, strlen(mut_query), &doc);
-    failed += (rc != C_REST_OK);
-    c_rest_graphql_node_free(doc);
+    ASSERT_FALSE(rc != C_REST_OK);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
   }
 
-  c_rest_graphql_schema_init(NULL);
-  c_rest_graphql_schema_free(NULL);
+  ASSERT_NEQ(C_REST_OK, c_rest_graphql_schema_init(NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_graphql_schema_free(NULL));
 
   {
     struct c_rest_graphql_node *doc = NULL;
@@ -520,41 +570,27 @@ int test_graphql(void) {
     const char *missing_brace = "query  ";
     const char *missing_alias = "query { alias: }";
 
-    printf("test long_query\n");
     rc = c_rest_graphql_parse(long_query, strlen(long_query), &doc);
-    failed += (rc != C_REST_OK);
-    c_rest_graphql_node_free(doc);
+    ASSERT_FALSE(rc != C_REST_OK);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
 
-    printf("test eof_ws\n");
     rc = c_rest_graphql_parse(eof_ws, strlen(eof_ws), &doc);
-    failed += (rc == C_REST_OK);
-    c_rest_graphql_node_free(doc);
+    ASSERT_FALSE(rc == C_REST_OK);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
 
-    printf("test missing_brace\n");
     rc = c_rest_graphql_parse(missing_brace, strlen(missing_brace), &doc);
-    failed += (rc == C_REST_OK);
-    c_rest_graphql_node_free(doc);
+    ASSERT_FALSE(rc == C_REST_OK);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
 
-    printf("test missing_alias\n");
     rc = c_rest_graphql_parse(missing_alias, strlen(missing_alias), &doc);
-    failed += (rc == C_REST_OK);
-    c_rest_graphql_node_free(doc);
+    ASSERT_FALSE(rc == C_REST_OK);
+    ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
     doc = NULL;
   }
-
-  printf("Entering test_graphql_router\n");
-  failed += test_graphql_router();
-  failed += test_graphql_errors();
-  failed += test_graphql_mock_run();
-
-  msgs[0] = "test_graphql passed\n";
-  msgs[1] = "test_graphql failed\n";
-  printf("%s", msgs[failed != 0]);
-
-  return failed;
+  PASS();
 }
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
@@ -575,39 +611,38 @@ static void *fail_malloc_graphql(size_t size) {
 }
 #endif
 
-static int test_graphql_mock_run(void) {
+TEST test_graphql_mock_run(void) {
+#ifdef C_REST_TESTING_MALLOC_HOOK
   struct c_rest_graphql_node *doc = NULL;
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
   /* parse_field error branches */
   g_mock_graphql_free_countdown = 0;
-  /* fail in parse_arguments */
-  c_rest_graphql_parse("query { a ( }", 13, &doc);
+  ASSERT_NEQ(C_REST_OK, c_rest_graphql_parse("query { a ( }", 13, &doc));
 
   g_mock_graphql_free_countdown = 0;
-  /* fail in parse_selection_set */
-  c_rest_graphql_parse("query { a { }", 13, &doc);
+  ASSERT_NEQ(C_REST_OK, c_rest_graphql_parse("query { a { }", 13, &doc));
 
   /* parse_operation error branches */
   g_mock_graphql_free_countdown = 1;
-  c_rest_graphql_parse("query { a }", 11, &doc);
-  c_rest_graphql_node_free(doc);
+  ASSERT_EQ(C_REST_OK, c_rest_graphql_parse("query { a }", 11, &doc));
+  ASSERT_NEQ(C_REST_OK, c_rest_graphql_node_free(doc));
+  g_mock_graphql_free_countdown = -1;
+  ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
   doc = NULL;
 
   g_mock_graphql_free_countdown = 0;
-  /* fail in parse_selection_set */
-  c_rest_graphql_parse("query { ", 8, &doc);
+  ASSERT_NEQ(C_REST_OK, c_rest_graphql_parse("query { ", 8, &doc));
 
   g_mock_graphql_free_countdown = 0;
-  /* fail in parse_name */
-  c_rest_graphql_parse("query 123", 9, &doc);
+  ASSERT_NEQ(C_REST_OK, c_rest_graphql_parse("query 123", 9, &doc));
 
   {
     int i;
     for (i = 0; i < 20; i++) {
       g_mock_graphql_free_countdown = i;
-      c_rest_graphql_parse("query { alias: a { b (arg: 1) { c } ! } }", 41,
-                           &doc);
+      ASSERT_NEQ(C_REST_OK,
+                 c_rest_graphql_parse(
+                     "query { alias: a { b (arg: 1) { c } ! } }", 41, &doc));
     }
     g_mock_graphql_free_countdown = -1;
   }
@@ -616,7 +651,8 @@ static int test_graphql_mock_run(void) {
     int i;
     for (i = 0; i < 5; i++) {
       g_mock_graphql_free_countdown = i;
-      c_rest_graphql_parse("query { alias: 123 }", 20, &doc);
+      ASSERT_NEQ(C_REST_OK,
+                 c_rest_graphql_parse("query { alias: 123 }", 20, &doc));
     }
     g_mock_graphql_free_countdown = -1;
   }
@@ -627,7 +663,7 @@ static int test_graphql_mock_run(void) {
   g_crf_malloc_hook = fail_malloc_graphql;
   g_fail_malloc_at = 2;
   g_mock_graphql_free_countdown = 0;
-  c_rest_graphql_parse("query { a }", 11, &doc);
+  ASSERT_NEQ(C_REST_OK, c_rest_graphql_parse("query { a }", 11, &doc));
   g_crf_malloc_hook = NULL;
   g_fail_malloc_at = 0;
 
@@ -658,7 +694,7 @@ static int test_graphql_mock_run(void) {
     n->arguments = args_list;
 
     g_mock_graphql_free_countdown = 1;
-    c_rest_graphql_node_free(n);
+    ASSERT_NEQ(C_REST_OK, c_rest_graphql_node_free(n));
     g_mock_graphql_free_countdown = -1;
 
     n->arguments = NULL;
@@ -669,7 +705,7 @@ static int test_graphql_mock_run(void) {
     n->selection_set = sel_list;
 
     g_mock_graphql_free_countdown = 1;
-    c_rest_graphql_node_free(n);
+    ASSERT_NEQ(C_REST_OK, c_rest_graphql_node_free(n));
     g_mock_graphql_free_countdown = -1;
 
     free(args_list->nodes);
@@ -682,5 +718,16 @@ static int test_graphql_mock_run(void) {
   }
 #endif
 
-  return 0;
+  PASS();
+}
+
+SUITE(graphql_suite) {
+  RUN_TEST(test_graphql_basic_parse);
+  RUN_TEST(test_graphql_parse_alias);
+  RUN_TEST(test_graphql_resolve_dummy);
+  RUN_TEST(test_graphql_malformed);
+  RUN_TEST(test_graphql_mutations_and_edge_cases);
+  RUN_TEST(test_graphql_router);
+  RUN_TEST(test_graphql_errors);
+  RUN_TEST(test_graphql_mock_run);
 }

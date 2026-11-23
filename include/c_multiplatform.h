@@ -63,14 +63,14 @@ struct cm_logger {
  * @param out_env Pointer to where the environment handle will be stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t cm_env_create(cm_env_t *out_env);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t cm_env_create(cm_env_t *out_env);
 
 /**
  * @brief Destroy a multiplatform environment.
  * @param env The environment handle to destroy.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t cm_env_destroy(cm_env_t env);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t cm_env_destroy(cm_env_t env);
 
 /**
  * @brief Set a custom allocator for the environment.
@@ -78,7 +78,7 @@ C_REST_EXPORT extern c_rest_error_t cm_env_destroy(cm_env_t env);
  * @param alloc Pointer to the allocator structure.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 cm_env_set_allocator(cm_env_t env, const struct cm_allocator *alloc);
 
 /**
@@ -87,7 +87,7 @@ cm_env_set_allocator(cm_env_t env, const struct cm_allocator *alloc);
  * @param logger Pointer to the logger structure.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 cm_env_set_logger(cm_env_t env, const struct cm_logger *logger);
 
 /**
@@ -96,8 +96,8 @@ cm_env_set_logger(cm_env_t env, const struct cm_logger *logger);
  * @param out_sock Pointer to where the socket handle will be stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t cm_socket_create(cm_env_t env,
-                                                     cm_socket_t *out_sock);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+cm_socket_create(cm_env_t env, cm_socket_t *out_sock);
 
 /**
  * @brief Bind a socket to a host and port.
@@ -107,10 +107,9 @@ C_REST_EXPORT extern c_rest_error_t cm_socket_create(cm_env_t env,
  * @param port The port number.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t cm_socket_bind(cm_env_t env,
-                                                   cm_socket_t sock,
-                                                   const char *host,
-                                                   unsigned short port);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+cm_socket_bind(cm_env_t env, cm_socket_t sock, const char *host,
+               unsigned short port);
 
 /**
  * @brief Listen for incoming connections on a socket.
@@ -119,7 +118,7 @@ C_REST_EXPORT extern c_rest_error_t cm_socket_bind(cm_env_t env,
  * @param backlog The maximum number of pending connections.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 cm_socket_listen(cm_env_t env, cm_socket_t sock, int backlog);
 
 /**
@@ -129,7 +128,7 @@ cm_socket_listen(cm_env_t env, cm_socket_t sock, int backlog);
  * @param out_client Pointer to where the client socket handle will be stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 cm_socket_accept(cm_env_t env, cm_socket_t server, cm_socket_t *out_client);
 
 /**
@@ -138,8 +137,8 @@ cm_socket_accept(cm_env_t env, cm_socket_t server, cm_socket_t *out_client);
  * @param sock The socket handle to close.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t cm_socket_close(cm_env_t env,
-                                                    cm_socket_t sock);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+cm_socket_close(cm_env_t env, cm_socket_t sock);
 
 /**
  * @brief Set a socket to non-blocking mode.
@@ -148,7 +147,7 @@ C_REST_EXPORT extern c_rest_error_t cm_socket_close(cm_env_t env,
  * @param nonblocking 1 for non-blocking, 0 for blocking.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 cm_socket_set_nonblocking(cm_env_t env, cm_socket_t sock, int nonblocking);
 
 /**
@@ -159,10 +158,9 @@ cm_socket_set_nonblocking(cm_env_t env, cm_socket_t sock, int nonblocking);
  * @param arg The argument to pass to the thread function.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t cm_thread_create(cm_env_t env,
-                                                     cm_thread_t *out_thread,
-                                                     void (*func)(void *),
-                                                     void *arg);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+cm_thread_create(cm_env_t env, cm_thread_t *out_thread, void (*func)(void *),
+                 void *arg);
 
 /**
  * @brief Wait for a thread to terminate.
@@ -170,8 +168,8 @@ C_REST_EXPORT extern c_rest_error_t cm_thread_create(cm_env_t env,
  * @param thread The thread handle to wait for.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t cm_thread_join(cm_env_t env,
-                                                   cm_thread_t thread);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+cm_thread_join(cm_env_t env, cm_thread_t thread);
 
 /**
  * @brief Get the current time in milliseconds.
@@ -179,8 +177,8 @@ C_REST_EXPORT extern c_rest_error_t cm_thread_join(cm_env_t env,
  * @param out_ms Pointer to where the time in milliseconds will be stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t cm_timer_get_ms(cm_env_t env,
-                                                    unsigned long *out_ms);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+cm_timer_get_ms(cm_env_t env, unsigned long *out_ms);
 
 /**
  * @brief Sleep for a specified number of milliseconds.
@@ -188,8 +186,8 @@ C_REST_EXPORT extern c_rest_error_t cm_timer_get_ms(cm_env_t env,
  * @param ms The number of milliseconds to sleep.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t cm_thread_sleep_ms(cm_env_t env,
-                                                       unsigned long ms);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+cm_thread_sleep_ms(cm_env_t env, unsigned long ms);
 
 /**
  * @brief Get the modification time of a file.
@@ -198,7 +196,7 @@ C_REST_EXPORT extern c_rest_error_t cm_thread_sleep_ms(cm_env_t env,
  * @param out_mtime Pointer to where the modification time will be stored.
  * @return C_REST_OK on success, or an error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 cm_file_get_mtime(cm_env_t env, const char *path, unsigned long *out_mtime);
 
 #ifdef __cplusplus

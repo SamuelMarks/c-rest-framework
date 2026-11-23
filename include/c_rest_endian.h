@@ -5,8 +5,6 @@
 #ifndef C_REST_ENDIAN_H
 #define C_REST_ENDIAN_H
 /* clang-format off */
-#include "c_rest_error.h"
-
 #include <stddef.h>
 #include "c_rest_error.h"
 #include "c_rest_export.h"
@@ -25,8 +23,8 @@ extern "C" {
  * byte order.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_htons(unsigned short hostshort,
-                                                 unsigned short *out_netshort);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_htons(unsigned short hostshort, unsigned short *out_netshort);
 
 /**
  * @brief Converts a 32-bit unsigned integer from host byte order to network
@@ -37,8 +35,8 @@ C_REST_EXPORT extern c_rest_error_t c_rest_htons(unsigned short hostshort,
  * byte order.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_htonl(unsigned long hostlong,
-                                                 unsigned long *out_netlong);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_htonl(unsigned long hostlong, unsigned long *out_netlong);
 
 /**
  * @brief Converts a 16-bit unsigned integer from network byte order to host
@@ -49,8 +47,8 @@ C_REST_EXPORT extern c_rest_error_t c_rest_htonl(unsigned long hostlong,
  * byte order.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_ntohs(unsigned short netshort,
-                                                 unsigned short *out_hostshort);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_ntohs(unsigned short netshort, unsigned short *out_hostshort);
 
 /**
  * @brief Converts a 32-bit unsigned integer from network byte order to host
@@ -61,8 +59,8 @@ C_REST_EXPORT extern c_rest_error_t c_rest_ntohs(unsigned short netshort,
  * order.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_ntohl(unsigned long netlong,
-                                                 unsigned long *out_hostlong);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_ntohl(unsigned long netlong, unsigned long *out_hostlong);
 
 #ifdef __cplusplus
 }

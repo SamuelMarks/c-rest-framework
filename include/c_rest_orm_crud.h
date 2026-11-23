@@ -5,14 +5,12 @@
 #ifndef C_REST_ORM_CRUD_H
 #define C_REST_ORM_CRUD_H
 /* clang-format off */
+#include <stddef.h>
 #include "c_rest_error.h"
-
 #include "c_rest_router.h"
 #include "c_rest_orm.h"
 #include "c_rest_export.h"
 /* clang-format on */
-
-#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,15 +18,21 @@ extern "C" {
 
 /** @brief Supported column types for the CRUD ORM models */
 typedef enum {
+  /** @brief Integer column type */
   C_REST_ORM_TYPE_INT,
+  /** @brief String column type */
   C_REST_ORM_TYPE_STRING,
+  /** @brief Boolean column type */
   C_REST_ORM_TYPE_BOOL,
+  /** @brief Floating-point column type */
   C_REST_ORM_TYPE_FLOAT
 } c_rest_orm_type_t;
 
 /** @brief ORM column definition */
 struct c_rest_orm_column {
+  /** @brief Column name */
   const char *name;
+  /** @brief Column data type */
   c_rest_orm_type_t type;
 };
 
@@ -52,7 +56,7 @@ struct c_rest_orm_model {
  * @param user_data Pointer to the c_rest_orm_model.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_orm_crud_get_list(struct c_rest_request *req,
                          struct c_rest_response *res, void *user_data);
 
@@ -65,7 +69,7 @@ c_rest_orm_crud_get_list(struct c_rest_request *req,
  * @param user_data Pointer to the c_rest_orm_model.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_orm_crud_get_one(struct c_rest_request *req, struct c_rest_response *res,
                         void *user_data);
 
@@ -77,7 +81,7 @@ c_rest_orm_crud_get_one(struct c_rest_request *req, struct c_rest_response *res,
  * @param user_data Pointer to the c_rest_orm_model.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_orm_crud_create(struct c_rest_request *req, struct c_rest_response *res,
                        void *user_data);
 
@@ -89,7 +93,7 @@ c_rest_orm_crud_create(struct c_rest_request *req, struct c_rest_response *res,
  * @param user_data Pointer to the c_rest_orm_model.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_orm_crud_update(struct c_rest_request *req, struct c_rest_response *res,
                        void *user_data);
 
@@ -101,7 +105,7 @@ c_rest_orm_crud_update(struct c_rest_request *req, struct c_rest_response *res,
  * @param user_data Pointer to the c_rest_orm_model.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_orm_crud_delete(struct c_rest_request *req, struct c_rest_response *res,
                        void *user_data);
 
@@ -114,7 +118,7 @@ c_rest_orm_crud_delete(struct c_rest_request *req, struct c_rest_response *res,
  * @param user_data User data.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_orm_health_check(struct c_rest_request *req, struct c_rest_response *res,
                         void *user_data);
 
@@ -126,7 +130,7 @@ struct c_rest_context;
  * @param migration_dir The path to the directory containing migration files.
  * @return 0 on success, non-zero error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_orm_run_migrations(struct c_rest_context *ctx,
                           const char *migration_dir);
 

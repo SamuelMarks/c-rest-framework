@@ -5,12 +5,13 @@
 #ifndef C_REST_RATE_LIMIT_H
 #define C_REST_RATE_LIMIT_H
 /* clang-format off */
+#include <stddef.h>
+#include <time.h>
+#include "c_rest_error.h"
+#include "c_rest_export.h"
+#include "c_rest_no_discard.h"
 #include "c_rest_hashmap.h"
 #include "c_rest_platform.h"
-#include <stddef.h>
-#include "c_rest_error.h"
-#include <time.h>
-#include "c_rest_export.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -25,6 +26,8 @@ typedef struct c_rest_rate_limit_config {
   size_t capacity;
   /** @brief Tokens added per second */
   size_t fill_rate;
+  /** @brief Maximum number of distinct entities tracked simultaneously */
+  size_t max_entities;
 } c_rest_rate_limit_config;
 
 /**
@@ -60,7 +63,7 @@ typedef struct c_rest_rate_limiter {
  * track.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_rate_limiter_init(c_rest_rate_limiter *limiter, size_t capacity,
                          size_t fill_rate, size_t max_entities);
 
@@ -73,7 +76,7 @@ c_rest_rate_limiter_init(c_rest_rate_limiter *limiter, size_t capacity,
  * @return 0 if the request is allowed (enough tokens), non-zero if rate limited
  * or on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_rate_limiter_check(c_rest_rate_limiter *limiter, const char *identifier,
                           size_t tokens_needed, size_t *out_remaining);
 
@@ -82,7 +85,7 @@ c_rest_rate_limiter_check(c_rest_rate_limiter *limiter, const char *identifier,
  * @param limiter Pointer to the rate limiter to destroy.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_rate_limiter_destroy(c_rest_rate_limiter *limiter);
 
 #ifdef __cplusplus

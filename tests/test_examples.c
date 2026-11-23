@@ -22,12 +22,6 @@
 #endif
 #include "c_rest_testing_mocks.h"
 
-static int g_examples_failed = 0;
-#define TEST static int
-#define PASS() return g_examples_failed
-#define ASSERT_EQ(a, b) do { g_examples_failed += ((a) != (b)); } while (0)
-#define ASSERT(a) do { g_examples_failed += (!(a)); } while (0)
-
 int app_node_style_main(void);
 int app_threaded_main(void);
 #if !defined(__EMSCRIPTEN__) && !defined(CDD_DOS)
@@ -629,31 +623,38 @@ TEST test_app_node_style(void) {
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
 
-  handle_hello_world(&req, &res, NULL);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, handle_hello_world(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
-  req.query = "name=Alice";
-  handle_echo(&req, &res, NULL);
-  c_rest_response_cleanup(&res);
-  memset(&res, 0, sizeof(res));
+  {
+    char q1[] = "name=Alice";
+    char q2[] = "other=Alice";
 
-  req.query = "other=Alice";
-  handle_echo(&req, &res, NULL);
-  c_rest_response_cleanup(&res);
-  memset(&res, 0, sizeof(res));
+    req.query = q1;
+    ASSERT_EQ(C_REST_OK, handle_echo(&req, &res, NULL));
+    ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+    memset(&res, 0, sizeof(res));
+
+    req.query = q2;
+    ASSERT_EQ(C_REST_OK, handle_echo(&req, &res, NULL));
+    ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+    memset(&res, 0, sizeof(res));
+  }
 
   req.query = NULL;
-  handle_echo(&req, &res, NULL);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, handle_echo(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Test sig_handler */
   sig_handler(0);
 
   /* Normal execution */
+  g_intercept_run = 2;
   ret = app_node_style_main();
   ASSERT_EQ(0, ret);
+  g_intercept_run = 0;
 
   /* Test fail c_rest_init */
   g_crf_malloc_hook = fail_malloc;
@@ -696,6 +697,7 @@ TEST test_app_node_style(void) {
   g_ex_router_add_count = 0;
 
   /* Test fail c_rest_router_destroy */
+  g_intercept_run = 2;
   g_ex_router_destroy_fail = 1;
   ret = app_node_style_main();
   ASSERT_EQ(1, ret);
@@ -706,6 +708,7 @@ TEST test_app_node_style(void) {
   ret = app_node_style_main();
   ASSERT_EQ(1, ret);
   g_ex_destroy_fail = 0;
+  g_intercept_run = 0;
 
   PASS();
 }
@@ -718,8 +721,8 @@ TEST test_app_threaded(void) {
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
 
-  handle_db_query(&req, &res, NULL);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, handle_db_query(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Test sig_handler */
@@ -791,16 +794,18 @@ TEST test_app_multi_process(void) {
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
 
-  handle_work(&req, &res, NULL);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, handle_work(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Test sig_handler */
   sig_handler_mp(0);
 
   /* Normal execution */
+  g_intercept_run = 2;
   ret = app_multi_process_main();
   ASSERT_EQ(0, ret);
+  g_intercept_run = 0;
 
   /* Test fail c_rest_init */
   g_crf_malloc_hook = fail_malloc;
@@ -902,8 +907,8 @@ TEST test_app_openapi(void) {
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
 
-  handle_hello_world_openapi(&req, &res, NULL);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, handle_hello_world_openapi(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   sig_handler_openapi(0);
@@ -1004,7 +1009,7 @@ TEST test_app_template_engine(void) {
   const char **vals = NULL;
   size_t count = 0;
 
-  provide_template_data(NULL, &keys, &vals, &count, NULL);
+  ASSERT_EQ(C_REST_OK, provide_template_data(NULL, &keys, &vals, &count, NULL));
   ASSERT_EQ(3, (int)count);
 
   sig_handler_tpl(0);
@@ -1107,8 +1112,8 @@ TEST test_app_https_server(void) {
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
 
-  hello_handler(&req, &res, NULL);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, hello_handler(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   sig_handler_https(0);
@@ -1205,12 +1210,12 @@ TEST test_app_hot_reload(void) {
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
 
-  handle_home(&req, &res, NULL);
+  ASSERT_EQ(C_REST_OK, handle_home(&req, &res, NULL));
   res.body = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
-  on_file_changed(NULL);
+  ASSERT_EQ(C_REST_OK, on_file_changed(NULL));
   sig_handler_hr(0);
 
   ASSERT_EQ(C_REST_ERROR_INVALID_ARG, mock_hr_add_watch(NULL, "a"));
@@ -1351,38 +1356,38 @@ TEST test_app_server_sent_events_sse(void) {
   memset(&res, 0, sizeof(res));
 
   /* 0. Event init failure branch (lines 60-61) */
-  c_rest_sse_init_response(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_init_response(&res));
   g_sse_event_init_fail = 1;
-  my_sse_handler(&req, &res, NULL);
+  ASSERT_NEQ(C_REST_OK, my_sse_handler(&req, &res, NULL));
   g_sse_event_init_fail = 0;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 1. Send event failure branch (res->context is NULL, so send_event fails) */
-  c_rest_sse_init_response(&res);
-  my_sse_handler(&req, &res, NULL);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_init_response(&res));
+  ASSERT_NEQ(C_REST_OK, my_sse_handler(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 2. Full success loop (all 5 iterations) via mocks */
-  c_rest_sse_init_response(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_init_response(&res));
   g_sse_send_event_ret = 0;
   g_sse_keepalive_ret = 0;
-  my_sse_handler(&req, &res, NULL);
+  ASSERT_EQ(C_REST_OK, my_sse_handler(&req, &res, NULL));
   g_sse_send_event_ret = -1;
   g_sse_keepalive_ret = -1;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 3. Keepalive failure branch */
-  c_rest_sse_init_response(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_sse_init_response(&res));
   g_sse_send_event_ret = 0;
   g_sse_keepalive_ret = 1;
-  my_sse_handler(&req, &res, NULL);
+  ASSERT_NEQ(C_REST_OK, my_sse_handler(&req, &res, NULL));
   g_sse_send_event_ret = -1;
   g_sse_keepalive_ret = -1;
-  mock_c_rest_sse_send_keepalive(&res);
-  c_rest_response_cleanup(&res);
+  ASSERT_NEQ(C_REST_OK, mock_c_rest_sse_send_keepalive(&res));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   sig_handler_sse(0);
@@ -1445,9 +1450,11 @@ TEST test_app_websockets(void) {
   memset(&req, 0, sizeof(req));
 
   /* Test callbacks */
-  my_ws_on_message(&req, bin_msg, sizeof(bin_msg), 1, NULL);
-  my_ws_on_message(&req, txt_msg, sizeof(txt_msg) - 1, 0, NULL);
-  my_ws_on_close(&req, 1000, NULL);
+  ASSERT_EQ(C_REST_OK,
+            my_ws_on_message(&req, bin_msg, sizeof(bin_msg), 1, NULL));
+  ASSERT_EQ(C_REST_OK,
+            my_ws_on_message(&req, txt_msg, sizeof(txt_msg) - 1, 0, NULL));
+  ASSERT_EQ(C_REST_OK, my_ws_on_close(&req, 1000, NULL));
 
   sig_handler_ws(0);
 
@@ -1504,71 +1511,75 @@ TEST test_app_full_multi(void) {
   int ret;
   struct c_rest_request req;
   struct c_rest_response res;
-  const char *valid_multipart =
-      "--boundary\r\nContent-Disposition: form-data; "
-      "name=\"field\"\r\n\r\nvalue\r\n--boundary--\r\n";
-  const char *invalid_multipart = "not_starting_with_hyphens";
+  char valid_multipart[] = "--boundary\r\nContent-Disposition: form-data; "
+                           "name=\"field\"\r\n\r\nvalue\r\n--boundary--\r\n";
+  char invalid_multipart[] = "not_starting_with_hyphens";
+  char some_body[] = "some_body";
 
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
 
   /* 1. Normal valid upload */
-  req.body = (char *)valid_multipart;
+  req.body = valid_multipart;
   req.body_len = strlen(valid_multipart);
-  upload_handler(&req, &res, NULL);
-  res.body = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, upload_handler(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 2. Invalid multipart payload (triggers parse_res != 0) */
-  req.body = (char *)invalid_multipart;
+  req.body = invalid_multipart;
   req.body_len = strlen(invalid_multipart);
-  upload_handler(&req, &res, NULL);
-  res.body = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT(upload_handler(&req, &res, NULL) != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 2b. Parser execute failure */
-  req.body = (char *)valid_multipart;
+  req.body = valid_multipart;
   req.body_len = strlen(valid_multipart);
   g_multi_parser_exec_fail = 1;
-  upload_handler(&req, &res, NULL);
+  ASSERT(upload_handler(&req, &res, NULL) != C_REST_OK);
   g_multi_parser_exec_fail = 0;
-  res.body = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 2c. Parser destroy failure */
-  req.body = (char *)valid_multipart;
+  req.body = valid_multipart;
   req.body_len = strlen(valid_multipart);
   g_multi_parser_destroy_fail = 1;
-  upload_handler(&req, &res, NULL);
+  ASSERT(upload_handler(&req, &res, NULL) != C_REST_OK);
   g_multi_parser_destroy_fail = 0;
-  res.body = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+  memset(&res, 0, sizeof(res));
+
+  /* 2d. Parser execute + destroy both fail */
+  req.body = valid_multipart;
+  req.body_len = strlen(valid_multipart);
+  g_multi_parser_exec_fail = 1;
+  g_multi_parser_destroy_fail = 1;
+  ASSERT(upload_handler(&req, &res, NULL) != C_REST_OK);
+  g_multi_parser_exec_fail = 0;
+  g_multi_parser_destroy_fail = 0;
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 3. Empty body */
-  req.body = (char *)"some_body";
+  req.body = some_body;
   req.body_len = 0;
-  upload_handler(&req, &res, NULL);
-  res.body = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, upload_handler(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   req.body = NULL;
   req.body_len = 0;
-  upload_handler(&req, &res, NULL);
-  res.body = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, upload_handler(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 4. Parser init fail branch */
   g_multi_parser_init_fail = 1;
-  upload_handler(&req, &res, NULL);
+  ASSERT(upload_handler(&req, &res, NULL) != C_REST_OK);
   g_multi_parser_init_fail = 0;
-  res.body = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   sig_handler_full_multi(0);
@@ -1638,41 +1649,41 @@ TEST test_app_jwt_json_w(void) {
 
   /* 3. protected_route_handler with auth_context == 1 */
   req.auth_context = (void *)1;
-  protected_route_handler(&req, &res, NULL);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, protected_route_handler(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 4. protected_route_handler with auth_context != 1 */
   req.auth_context = NULL;
-  protected_route_handler(&req, &res, NULL);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, protected_route_handler(&req, &res, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 5. generate_token_handler success */
-  generate_token_handler(&req, &res, (void *)secret);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, generate_token_handler(&req, &res, (void *)secret));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 6. generate_token_handler failure via malloc hook */
   g_crf_malloc_hook = fail_malloc;
-  generate_token_handler(&req, &res, (void *)secret);
+  ASSERT_NEQ(C_REST_OK, generate_token_handler(&req, &res, (void *)secret));
   g_crf_malloc_hook = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 7. generate_token_handler failure via sign fail */
   g_jwt_sign_fail = 1;
-  generate_token_handler(&req, &res, (void *)secret);
+  ASSERT_NEQ(C_REST_OK, generate_token_handler(&req, &res, (void *)secret));
   g_jwt_sign_fail = 0;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* 8. generate_token_handler failure via NULL res (lines 60-61) */
-  generate_token_handler(&req, NULL, (void *)secret);
+  ASSERT_NEQ(C_REST_OK, generate_token_handler(&req, NULL, (void *)secret));
 
   /* 9. generate_token_handler failure via sign fail + NULL res (lines 64-65) */
   g_jwt_sign_fail = 1;
-  generate_token_handler(&req, NULL, (void *)secret);
+  ASSERT_NEQ(C_REST_OK, generate_token_handler(&req, NULL, (void *)secret));
   g_jwt_sign_fail = 0;
 
   sig_handler_jwt_app(0);
@@ -1744,12 +1755,12 @@ TEST test_app_graphql_api(void) {
   size_t out_len = 0;
 
   /* 1. Test logger_cb */
-  logger_cb_graphql_app("test log message");
+  ASSERT_EQ(C_REST_OK, logger_cb_graphql_app("test log message"));
 
   /* 2. Test resolve_user success and OOM */
   ret = (int)resolve_user("user", &out_json, &out_len, NULL);
   ASSERT_EQ(0, ret);
-  CRF_FREE(out_json);
+  C_REST_FREE(out_json);
   out_json = NULL;
 
   g_crf_malloc_hook = fail_malloc;
@@ -1760,7 +1771,7 @@ TEST test_app_graphql_api(void) {
   /* 3. Test resolve_posts success and OOM */
   ret = (int)resolve_posts("posts", &out_json, &out_len, NULL);
   ASSERT_EQ(0, ret);
-  CRF_FREE(out_json);
+  C_REST_FREE(out_json);
   out_json = NULL;
 
   g_crf_malloc_hook = fail_malloc;
@@ -1859,25 +1870,31 @@ TEST test_app_graphql_api(void) {
   PASS();
 }
 
-int test_examples(void) {
-  int failed = 0;
-  failed += (test_app_node_style() != 0);
-  failed += (test_app_threaded() != 0);
+SUITE(examples_suite) {
+  RUN_TEST(test_app_node_style);
+#ifndef C_REST_NO_THREADS
+  RUN_TEST(test_app_threaded);
+#else
+  (void)test_app_threaded;
+#endif
 #if !defined(__EMSCRIPTEN__) && !defined(CDD_DOS)
-  failed += (test_app_multi_process() != 0);
+  RUN_TEST(test_app_multi_process);
 #endif
-  failed += (test_app_http23() != 0);
-  failed += (test_app_openapi() != 0);
-  failed += (test_app_template_engine() != 0);
-  failed += (test_app_https_server() != 0);
+  RUN_TEST(test_app_http23);
+  RUN_TEST(test_app_openapi);
+  RUN_TEST(test_app_template_engine);
+  RUN_TEST(test_app_https_server);
 #if defined(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART) &&                       \
+    !defined(__EMSCRIPTEN__) && !defined(CDD_DOS) &&                           \
+    !defined(C_REST_NO_THREADS)
+  RUN_TEST(test_app_hot_reload);
+#elif defined(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART) &&                     \
     !defined(__EMSCRIPTEN__) && !defined(CDD_DOS)
-  failed += (test_app_hot_reload() != 0);
+  (void)test_app_hot_reload;
 #endif
-  failed += (test_app_server_sent_events_sse() != 0);
-  failed += (test_app_websockets() != 0);
-  failed += (test_app_full_multi() != 0);
-  failed += (test_app_jwt_json_w() != 0);
-  failed += (test_app_graphql_api() != 0);
-  return failed;
+  RUN_TEST(test_app_server_sent_events_sse);
+  RUN_TEST(test_app_websockets);
+  RUN_TEST(test_app_full_multi);
+  RUN_TEST(test_app_jwt_json_w);
+  RUN_TEST(test_app_graphql_api);
 }

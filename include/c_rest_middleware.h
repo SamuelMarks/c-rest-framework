@@ -6,9 +6,9 @@
 #define C_REST_MIDDLEWARE_H
 /* clang-format off */
 #include "c_rest_error.h"
-
 #include "c_rest_router.h"
 #include "c_rest_export.h"
+#include "c_rest_no_discard.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -21,21 +21,26 @@ extern "C" {
  * @param req The request.
  * @param res The response.
  * @param user_data User data.
- * @return 0 to continue, non-zero to stop.
+ * @return C_REST_OK to continue, C_REST_SHORT_CIRCUIT for 204 OPTIONS
+ * preflight, or error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_cors_middleware(struct c_rest_request *req, struct c_rest_response *res,
                        void *user_data);
 
 /**
  * @brief Built-in Logger Middleware
  *
+ * Delegates formatted request log messages to a struct c_rest_logger pointer
+ * passed via user_data, falling back to the connection's framework logger or
+ * debug logger when user_data is NULL.
+ *
  * @param req The request.
  * @param res The response.
- * @param user_data User data.
- * @return 0 to continue, non-zero to stop.
+ * @param user_data Optional pointer to struct c_rest_logger.
+ * @return C_REST_OK on success, or error code if logger fails.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_logger_middleware(struct c_rest_request *req,
                          struct c_rest_response *res, void *user_data);
 
@@ -46,9 +51,10 @@ c_rest_logger_middleware(struct c_rest_request *req,
  * @param req The request.
  * @param res The response.
  * @param user_data Pointer to the physical root path string.
- * @return 0 to continue, non-zero to stop.
+ * @return C_REST_SHORT_CIRCUIT when a file or 403 traversal rejection is
+ * served, C_REST_OK to pass through, or error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_static_middleware(struct c_rest_request *req,
                          struct c_rest_response *res, void *user_data);
 
@@ -58,9 +64,9 @@ c_rest_static_middleware(struct c_rest_request *req,
  * @param req The request.
  * @param res The response.
  * @param user_data User data.
- * @return 0 to continue, non-zero to stop.
+ * @return C_REST_OK to continue, or error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_hsts_middleware(struct c_rest_request *req, struct c_rest_response *res,
                        void *user_data);
 
@@ -70,9 +76,10 @@ c_rest_hsts_middleware(struct c_rest_request *req, struct c_rest_response *res,
  * @param req The request.
  * @param res The response.
  * @param user_data User data.
- * @return 0 to continue, non-zero to stop.
+ * @return C_REST_OK to continue, C_REST_SHORT_CIRCUIT on 301 redirect, or error
+ * code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_https_redirect_middleware(struct c_rest_request *req,
                                  struct c_rest_response *res, void *user_data);
 
@@ -97,7 +104,7 @@ struct c_rest_auth_verifier {
  * @param user_data Pointer to the struct c_rest_auth_verifier.
  * @return 0 to continue, non-zero to stop (e.g., sending 401).
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_auth_middleware(struct c_rest_request *req, struct c_rest_response *res,
                        void *user_data);
 
@@ -118,7 +125,7 @@ typedef c_rest_error_t (*c_rest_oauth2_verify_fn)(const char *token,
  * @param user_data Pointer to the verification function.
  * @return 0 to continue, non-zero to stop (e.g., sending 401).
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_oauth2_middleware(struct c_rest_request *req,
                          struct c_rest_response *res, void *user_data);
 

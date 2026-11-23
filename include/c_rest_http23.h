@@ -46,7 +46,7 @@ typedef struct c_rest_http23_ctx c_rest_http23_ctx_t;
  * @param out_ctx Pointer to the pointer that will receive the context.
  * @return 0 on success, or a negative error code.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_http23_ctx_init(c_rest_protocol_t protocol,
                        c_rest_http23_ctx_t **out_ctx);
 
@@ -56,7 +56,7 @@ c_rest_http23_ctx_init(c_rest_protocol_t protocol,
  * @param ctx The context to destroy.
  * @return 0 on success, or a negative error code.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_http23_ctx_destroy(c_rest_http23_ctx_t *ctx);
 
 /**
@@ -68,7 +68,7 @@ c_rest_http23_ctx_destroy(c_rest_http23_ctx_t *ctx);
  * @param out_consumed Pointer to store the number of bytes consumed.
  * @return 0 on success, or a negative error code.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_http23_process(c_rest_http23_ctx_t *ctx, const char *data, size_t len,
                       size_t *out_consumed);
 
@@ -79,7 +79,7 @@ c_rest_http23_process(c_rest_http23_ctx_t *ctx, const char *data, size_t len,
  * @param out_ready Pointer to store 1 if ready, 0 otherwise.
  * @return 0 on success, or a negative error code.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_http23_is_request_ready(c_rest_http23_ctx_t *ctx, int *out_ready);
 
 /**
@@ -89,7 +89,7 @@ c_rest_http23_is_request_ready(c_rest_http23_ctx_t *ctx, int *out_ready);
  * @param out_request Pointer to store the request pointer.
  * @return 0 on success, or a negative error code.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_http23_get_request(c_rest_http23_ctx_t *ctx,
                           struct c_rest_request **out_request);
 
@@ -102,7 +102,7 @@ c_rest_http23_get_request(c_rest_http23_ctx_t *ctx,
  * @param out_len Pointer to store the length of the output buffer.
  * @return 0 on success, or a negative error code.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_http23_format_response(c_rest_http23_ctx_t *ctx,
                               struct c_rest_response *response,
                               char **out_buffer, size_t *out_len);

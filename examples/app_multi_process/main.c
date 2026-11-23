@@ -49,20 +49,25 @@ int main(void) {
   rc = c_rest_router_init(&router);
   if (rc != 0) {
     fprintf(stderr, "Failed to initialize router.\n");
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
   rc = c_rest_set_router(ctx, router);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_router_add(router, "GET", "/api/v0/work", handle_work, NULL);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -75,7 +80,8 @@ int main(void) {
   printf("Shutting down...\n");
   rc = c_rest_router_destroy(router);
   if (rc != C_REST_OK) {
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_destroy(ctx);

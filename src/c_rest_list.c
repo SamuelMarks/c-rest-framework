@@ -22,11 +22,8 @@ c_rest_error_t c_rest_list_push_back(c_rest_list *list, void *data) {
     return C_REST_ERROR_GENERIC;
 
   if (C_REST_MALLOC(sizeof(c_rest_list_node), &node) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    node = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!node)
-    return C_REST_ERROR_GENERIC;
 
   node->data = data;
   node->next = NULL;
@@ -70,9 +67,11 @@ c_rest_error_t c_rest_list_pop_front(c_rest_list *list, void **out_data) {
 }
 
 c_rest_error_t c_rest_list_destroy(c_rest_list *list,
-                                   void (*free_data)(void *)) {
+                                   c_rest_list_free_fn free_data) {
   c_rest_list_node *node;
   c_rest_list_node *next;
+  c_rest_error_t err_rc = C_REST_OK;
+  c_rest_error_t cb_rc = C_REST_OK;
 
   if (!list)
     return C_REST_ERROR_GENERIC;
@@ -81,8 +80,15 @@ c_rest_error_t c_rest_list_destroy(c_rest_list *list,
   while (node) {
     next = node->next;
     if (free_data && node->data) {
-      free_data(node->data);
+      cb_rc = free_data(node->data);
+      if (cb_rc != C_REST_OK) {
+        if (err_rc == C_REST_OK) {
+          err_rc = cb_rc;
+        }
+        goto next_list_node;
+      }
     }
+  next_list_node:
     C_REST_FREE((void *)(node));
     node = next;
   }
@@ -90,5 +96,7 @@ c_rest_error_t c_rest_list_destroy(c_rest_list *list,
   list->head = NULL;
   list->tail = NULL;
   list->size = 0;
-  return C_REST_OK;
+  if (err_rc != C_REST_OK)
+    return err_rc;
+  return cb_rc;
 }

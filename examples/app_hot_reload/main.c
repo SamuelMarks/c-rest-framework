@@ -53,29 +53,38 @@ int main(void) {
   signal(SIGINT, sig_handler);
   rc = c_rest_init(C_REST_MODALITY_MULTI_THREAD, &ctx);
   if (rc != C_REST_OK) {
-    c_rest_platform_cleanup();
+    if (c_rest_platform_cleanup() != C_REST_OK)
+      return 1;
     return 1;
   }
 
   rc = c_rest_router_init(&router);
   if (rc != C_REST_OK) {
-    c_rest_destroy(ctx);
-    c_rest_platform_cleanup();
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
+    if (c_rest_platform_cleanup() != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_router_add(router, "GET", "/", handle_home, NULL);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
-    c_rest_platform_cleanup();
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
+    if (c_rest_platform_cleanup() != C_REST_OK)
+      return 1;
     return 1;
   }
 
   rc = c_rest_hot_reload_init(&hr_ctx, NULL);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
-    c_rest_platform_cleanup();
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
+    if (c_rest_platform_cleanup() != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_hot_reload_add_watch(hr_ctx, "examples/app_hot_reload/main.c");
@@ -88,26 +97,38 @@ int main(void) {
                                      "../../examples/app_hot_reload/main.c");
   }
   if (rc != C_REST_OK) {
-    c_rest_hot_reload_destroy(hr_ctx);
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
-    c_rest_platform_cleanup();
+    if (c_rest_hot_reload_destroy(hr_ctx) != C_REST_OK)
+      return 1;
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
+    if (c_rest_platform_cleanup() != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_hot_reload_register_routes(router, "/_hot_reload");
   if (rc != C_REST_OK) {
-    c_rest_hot_reload_destroy(hr_ctx);
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
-    c_rest_platform_cleanup();
+    if (c_rest_hot_reload_destroy(hr_ctx) != C_REST_OK)
+      return 1;
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
+    if (c_rest_platform_cleanup() != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_hot_reload_start(hr_ctx, on_file_changed, NULL);
   if (rc != C_REST_OK) {
-    c_rest_hot_reload_destroy(hr_ctx);
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
-    c_rest_platform_cleanup();
+    if (c_rest_hot_reload_destroy(hr_ctx) != C_REST_OK)
+      return 1;
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
+    if (c_rest_platform_cleanup() != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -118,10 +139,14 @@ int main(void) {
 
   rc = c_rest_set_router(ctx, router);
   if (rc != C_REST_OK) {
-    c_rest_hot_reload_destroy(hr_ctx);
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
-    c_rest_platform_cleanup();
+    if (c_rest_hot_reload_destroy(hr_ctx) != C_REST_OK)
+      return 1;
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
+    if (c_rest_platform_cleanup() != C_REST_OK)
+      return 1;
     return 1;
   }
 

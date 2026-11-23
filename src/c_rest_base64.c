@@ -13,9 +13,11 @@ static const char base64url_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                       "abcdefghijklmnopqrstuvwxyz"
                                       "0123456789-_";
 
-static c_rest_error_t encode_internal(const unsigned char *src, size_t src_len,
-                                      char *dst, size_t *dst_len,
-                                      const char *chars, int use_padding) {
+static NO_DISCARD c_rest_error_t encode_internal(const unsigned char *src,
+                                                 size_t src_len, char *dst,
+                                                 size_t *dst_len,
+                                                 const char *chars,
+                                                 int use_padding) {
   size_t i = 0;
   size_t j = 0;
   size_t out_len = 4 * ((src_len + 2) / 3);
@@ -74,8 +76,8 @@ static c_rest_error_t encode_internal(const unsigned char *src, size_t src_len,
   return C_REST_OK;
 }
 
-static c_rest_error_t get_val(unsigned char c, int is_url,
-                              unsigned char *out_val) {
+static NO_DISCARD c_rest_error_t get_val(unsigned char c, int is_url,
+                                         unsigned char *out_val) {
   if (c >= 'A' && c <= 'Z') {
     *out_val = c - 'A';
     return C_REST_OK;
@@ -112,9 +114,10 @@ static c_rest_error_t get_val(unsigned char c, int is_url,
   return C_REST_ERROR_PARSE;
 }
 
-static c_rest_error_t decode_internal(const char *src, size_t src_len,
-                                      unsigned char *dst, size_t *dst_len,
-                                      int is_url) {
+static NO_DISCARD c_rest_error_t decode_internal(const char *src,
+                                                 size_t src_len,
+                                                 unsigned char *dst,
+                                                 size_t *dst_len, int is_url) {
   size_t i = 0;
   size_t j = 0;
   size_t in_len = src_len;

@@ -20,8 +20,10 @@ extern "C" {
  * @param db c-orm database connection to store credentials locally (optional).
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t oauth2_client_init(const char *token_url, const char *client_id,
-                                  const char *client_secret, c_orm_db_t *db);
+NO_DISCARD c_rest_error_t oauth2_client_init(const char *token_url,
+                                             const char *client_id,
+                                             const char *client_secret,
+                                             c_orm_db_t *db);
 
 /**
  * @brief Perform a password grant flow to retrieve a token.
@@ -33,16 +35,16 @@ c_rest_error_t oauth2_client_init(const char *token_url, const char *client_id,
  * @param out_expires_in Pointer to store the expiration time in seconds.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t oauth2_client_password_grant(const char *username,
-                                            const char *password,
-                                            char **out_access_token,
-                                            int *out_expires_in);
+NO_DISCARD c_rest_error_t oauth2_client_password_grant(const char *username,
+                                                       const char *password,
+                                                       char **out_access_token,
+                                                       int *out_expires_in);
 
 /**
  * @brief Clean up the OAuth2 client.
  * @return 0 on success.
  */
-c_rest_error_t oauth2_client_cleanup(void);
+NO_DISCARD c_rest_error_t oauth2_client_cleanup(void);
 
 /**
  * @brief Get the internal client context.
@@ -50,7 +52,8 @@ c_rest_error_t oauth2_client_cleanup(void);
  * @param out_ctx Pointer to store the client context.
  * @return 0 on success, non-zero on failure.
  */
-c_rest_error_t oauth2_client_get_context(c_rest_client_context **out_ctx);
+NO_DISCARD c_rest_error_t
+oauth2_client_get_context(c_rest_client_context **out_ctx);
 
 #ifdef __cplusplus
 }

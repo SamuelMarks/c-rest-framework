@@ -9,12 +9,8 @@
 c_rest_error_t mock_c_rest_socket_create(c_rest_socket_t *sock);
 c_rest_error_t mock_c_rest_socket_bind(c_rest_socket_t sock, const char *host, unsigned short port);
 c_rest_error_t mock_c_rest_socket_listen(c_rest_socket_t sock, int backlog);
-c_rest_error_t mock_c_rest_socket_accept(c_rest_socket_t server, c_rest_socket_t *out_client);
-c_rest_error_t mock_c_rest_thread_create(c_rest_thread_t *thread, c_rest_error_t (*func)(void *), void *arg);
-c_rest_error_t mock_c_rest_socket_close(c_rest_socket_t sock);
 c_rest_error_t mock_c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock, struct c_rest_tls_connection **out_conn);
 c_rest_error_t mock_c_rest_tls_close(struct c_rest_tls_connection *conn);
-c_rest_error_t mock_c_rest_handle_connection(struct c_rest_context *ctx, c_rest_socket_t sock);
 
 #define c_rest_socket_create mock_c_rest_socket_create
 #define c_rest_socket_bind mock_c_rest_socket_bind
@@ -42,20 +38,21 @@ struct multi_thread_state {
   int worker_count;
 };
 
-static c_rest_error_t multi_thread_init(struct c_rest_context *ctx) {
-  struct multi_thread_state *state;
+static NO_DISCARD c_rest_error_t multi_thread_init(struct c_rest_context *ctx) {
+#if defined(CDD_DOS) || defined(C_REST_NO_THREADS)
   c_rest_error_t rc;
-#if defined(CDD_DOS)
   if (ctx && ctx->logger.log_cb) {
     rc = ctx->logger.log_cb(
-        "FATAL ERROR: MULTI_THREAD modality initialized on DOS "
-        "which lacks native threading.");
+        "FATAL ERROR: MULTI_THREAD modality initialized without "
+        "native threading.");
     if (rc != C_REST_OK) {
       return rc;
     }
   }
   return C_REST_ERROR_NOT_SUPPORTED;
-#endif
+#else
+  struct multi_thread_state *state;
+  c_rest_error_t rc;
 
   if (!ctx) {
     return C_REST_ERROR_INVALID_ARG;
@@ -87,6 +84,7 @@ static c_rest_error_t multi_thread_init(struct c_rest_context *ctx) {
   if (ctx->logger.log_cb) {
     rc = ctx->logger.log_cb("MULTI_THREAD modality initialized");
     if (rc != C_REST_OK) {
+      ctx->allocator.free_cb(state->workers);
       ctx->allocator.free_cb(state);
       ctx->internal_state = NULL;
       return rc;
@@ -94,9 +92,11 @@ static c_rest_error_t multi_thread_init(struct c_rest_context *ctx) {
   }
 
   return C_REST_OK;
+#endif
 }
 
-static c_rest_error_t multi_thread_destroy(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t
+multi_thread_destroy(struct c_rest_context *ctx) {
   struct multi_thread_state *state;
   c_rest_error_t rc;
   int i;
@@ -164,42 +164,50 @@ struct connection_worker_args {
   c_rest_free_fn free_cb;
 };
 
-static c_rest_error_t worker_thread(void *arg) {
+static NO_DISCARD c_rest_error_t worker_thread(void *arg) {
   struct connection_worker_args *wargs = (struct connection_worker_args *)arg;
   c_rest_error_t rc;
-  c_rest_error_t final_rc;
+  c_rest_error_t close_rc;
   c_rest_free_fn free_cb = wargs->free_cb;
 
   rc = c_rest_handle_connection(wargs->ctx, wargs->client_sock);
-  final_rc = rc;
+  if (rc != C_REST_OK)
+    goto worker_close_sock;
 
+worker_close_sock:;
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
   if (wargs->ctx->cm_env) {
-    rc = cm_socket_close(wargs->ctx->cm_env, wargs->client_sock);
+    close_rc = cm_socket_close(wargs->ctx->cm_env, wargs->client_sock);
+    if (close_rc != C_REST_OK) {
+      if (free_cb)
+        free_cb(wargs);
+      return close_rc;
+    }
   } else {
-    rc = c_rest_socket_close(wargs->client_sock);
-    if (rc != C_REST_OK && final_rc == C_REST_OK) {
-      final_rc = rc;
+    close_rc = c_rest_socket_close(wargs->client_sock);
+    if (close_rc != C_REST_OK) {
+      if (free_cb)
+        free_cb(wargs);
+      return close_rc;
     }
   }
 #else
-  rc = c_rest_socket_close(wargs->client_sock);
-  if (rc != C_REST_OK && final_rc == C_REST_OK) {
-    final_rc = rc;
+  close_rc = c_rest_socket_close(wargs->client_sock);
+  if (close_rc != C_REST_OK) {
+    if (free_cb) {
+      free_cb(wargs);
+    }
+    return close_rc;
   }
 #endif
 
   if (free_cb) {
     free_cb(wargs);
-  } else {
-#if defined(_WIN32)
-    C_REST_FREE((void *)(wargs));
-#endif
   }
-  return final_rc;
+  return rc;
 }
 
-static c_rest_error_t multi_thread_run(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t multi_thread_run(struct c_rest_context *ctx) {
   struct multi_thread_state *state;
   c_rest_error_t rc;
   if (!ctx || !ctx->internal_state) {
@@ -213,15 +221,14 @@ static c_rest_error_t multi_thread_run(struct c_rest_context *ctx) {
    * We target newer TLS backends (OpenSSL 3+ / mbedTLS 3+), so this is natively
    * safe. C_REST_USE_OPENSSL_LEGACY would register thread-id and lock callbacks
    * here. */
-  if (ctx->logger.log_cb) {
 #if defined(_WIN32)
+  if (ctx->logger.log_cb) {
     rc = ctx->logger.log_cb("MULTI_THREAD modality run started");
     if (rc != C_REST_OK) {
       return rc;
     }
-
-#endif
   }
+#endif
 
   if (state->server_sock == C_REST_INVALID_SOCKET) {
     rc = c_rest_socket_create(&state->server_sock);
@@ -293,32 +300,26 @@ static c_rest_error_t multi_thread_run(struct c_rest_context *ctx) {
         wargs->client_sock = client_sock;
         wargs->free_cb = ctx->allocator.free_cb;
         rc = c_rest_thread_create(&thread_handle, worker_thread, wargs);
-        if (rc == C_REST_OK) {
-          if (state->workers && state->worker_count < 64) {
-            state->workers[state->worker_count++] = thread_handle;
-          }
-        }
-#if defined(_WIN32)
         if (rc != C_REST_OK) {
+          c_rest_error_t close_rc;
           fprintf(stderr, "MULTI_THREAD: Failed to create thread\n");
-          /* cleanup and close on failure */
           if (ctx->allocator.free_cb) {
             ctx->allocator.free_cb(wargs);
           } else {
             C_REST_FREE((void *)(wargs));
           }
-          rc = c_rest_socket_close(client_sock);
-          if (rc != C_REST_OK)
-            return rc;
+          close_rc = c_rest_socket_close(client_sock);
+          if (close_rc != C_REST_OK)
+            return close_rc;
           return rc;
         }
-#endif
+        if (state->workers && state->worker_count < 64) {
+          state->workers[state->worker_count++] = thread_handle;
+        }
       } else {
-#if defined(_WIN32)
         rc = c_rest_socket_close(client_sock);
         if (rc != C_REST_OK)
           return rc;
-#endif
       }
     } else {
       break;
@@ -357,7 +358,7 @@ static c_rest_error_t multi_thread_run(struct c_rest_context *ctx) {
   return C_REST_OK;
 }
 
-static c_rest_error_t multi_thread_stop(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t multi_thread_stop(struct c_rest_context *ctx) {
   struct multi_thread_state *state;
   c_rest_error_t rc;
   if (!ctx || !ctx->internal_state) {

@@ -1,9 +1,6 @@
-cmake_minimum_required(VERSION 3.14)
-
 if(C_REST_FRAMEWORK_ENABLE_GRAPHQL)
     add_executable(app_graphql_api main.c)
     target_link_libraries(app_graphql_api PRIVATE c-rest-framework)
-    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-        target_link_libraries(app_graphql_api PRIVATE pthread)
-    endif()
+    c_rest_configure_target(app_graphql_api)
+    c_rest_copy_runtime_dlls(app_graphql_api)
 endif()

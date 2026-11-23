@@ -36,37 +36,73 @@ static void *fail_malloc_graphql(size_t size) {
 
 TEST test_graphql_error_branches(void) {
   struct c_rest_graphql_node *doc = NULL;
+  c_rest_error_t rc;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   /* parse_field error branches */
   g_mock_graphql_free_countdown = 0;
   /* fail in parse_arguments */
-  c_rest_graphql_parse("query { a ( }", 13, &doc);
+  rc = c_rest_graphql_parse("query { a ( }", 13, &doc);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  ASSERT_EQ(NULL, doc);
 
   g_mock_graphql_free_countdown = 0;
   /* fail in parse_selection_set */
-  c_rest_graphql_parse("query { a { }", 13, &doc);
+  rc = c_rest_graphql_parse("query { a { }", 13, &doc);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  ASSERT_EQ(NULL, doc);
 
   /* parse_operation error branches */
   g_mock_graphql_free_countdown = 1;
-  c_rest_graphql_parse("query { a }", 11, &doc);
-  c_rest_graphql_node_free(doc);
+  rc = c_rest_graphql_parse("query { a }", 11, &doc);
+  ASSERT_EQ(C_REST_OK, rc);
+  ASSERT(doc != NULL);
+  g_mock_graphql_free_countdown = -1;
+  rc = c_rest_graphql_node_free(doc);
+  ASSERT_EQ(C_REST_OK, rc);
   doc = NULL;
 
   g_mock_graphql_free_countdown = 0;
   /* fail in parse_selection_set */
-  c_rest_graphql_parse("query { ", 8, &doc);
+  rc = c_rest_graphql_parse("query { ", 8, &doc);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  ASSERT_EQ(NULL, doc);
 
   g_mock_graphql_free_countdown = 0;
   /* fail in parse_name */
-  c_rest_graphql_parse("query 123", 9, &doc);
+  rc = c_rest_graphql_parse("query 123", 9, &doc);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  ASSERT_EQ(NULL, doc);
+
+  rc = c_rest_graphql_parse("mutation 123", 12, &doc);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  ASSERT_EQ(NULL, doc);
+
+  rc = c_rest_graphql_parse("mutation", 8, &doc);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  ASSERT_EQ(NULL, doc);
+
+  g_mock_graphql_ws_countdown = 2;
+  rc = c_rest_graphql_parse("mutation { a }", 14, &doc);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  g_mock_graphql_ws_countdown = -1;
+
+  g_mock_graphql_free_countdown = 0;
+  rc = c_rest_graphql_parse("! ", 2, &doc);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  g_mock_graphql_free_countdown = -1;
+
+  rc = c_rest_graphql_parse("   ", 3, &doc);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
 
   {
     int i;
     for (i = 0; i < 20; i++) {
+      doc = NULL;
       g_mock_graphql_free_countdown = i;
-      c_rest_graphql_parse("query { alias: a { b (arg: 1) { c } ! } }", 41,
-                           &doc);
+      rc = c_rest_graphql_parse("query { alias: a { b (arg: 1) { c } ! } }", 41,
+                                &doc);
+      ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
     }
     g_mock_graphql_free_countdown = -1;
   }
@@ -74,8 +110,10 @@ TEST test_graphql_error_branches(void) {
   {
     int i;
     for (i = 0; i < 5; i++) {
+      doc = NULL;
       g_mock_graphql_free_countdown = i;
-      c_rest_graphql_parse("query { alias: 123 }", 20, &doc);
+      rc = c_rest_graphql_parse("query { alias: 123 }", 20, &doc);
+      ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
     }
     g_mock_graphql_free_countdown = -1;
   }
@@ -83,21 +121,33 @@ TEST test_graphql_error_branches(void) {
   {
     int i;
     for (i = 0; i < 25; i++) {
+      doc = NULL;
       g_mock_graphql_ws_countdown = i;
-      c_rest_graphql_parse("query q { alias: a { b } }", 26, &doc);
+      rc = c_rest_graphql_parse("query q { alias: a { b } }", 26, &doc);
+      if (rc == C_REST_OK) {
+        ASSERT(doc != NULL);
+        g_mock_graphql_ws_countdown = -1;
+        ASSERT_EQ(C_REST_OK, c_rest_graphql_node_free(doc));
+        doc = NULL;
+      } else {
+        ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+      }
     }
     g_mock_graphql_ws_countdown = -1;
   }
 
   /* Line 328: fail alloc_list for doc->definitions */
+  doc = NULL;
   g_fail_malloc_at = 0;
   fail_malloc_graphql(0);
   g_crf_malloc_hook = fail_malloc_graphql;
   g_fail_malloc_at = 2;
   g_mock_graphql_free_countdown = 0;
-  c_rest_graphql_parse("query { a }", 11, &doc);
+  rc = c_rest_graphql_parse("query { a }", 11, &doc);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
   g_crf_malloc_hook = NULL;
   g_fail_malloc_at = 0;
+  g_mock_graphql_free_countdown = -1;
 
   /* Lines 383 & 394: fail c_rest_graphql_node_free inside arguments /
    * selection_set */
@@ -126,7 +176,8 @@ TEST test_graphql_error_branches(void) {
     n->arguments = args_list;
 
     g_mock_graphql_free_countdown = 1;
-    c_rest_graphql_node_free(n);
+    rc = c_rest_graphql_node_free(n);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
     g_mock_graphql_free_countdown = -1;
 
     n->arguments = NULL;
@@ -137,7 +188,8 @@ TEST test_graphql_error_branches(void) {
     n->selection_set = sel_list;
 
     g_mock_graphql_free_countdown = 1;
-    c_rest_graphql_node_free(n);
+    rc = c_rest_graphql_node_free(n);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
     g_mock_graphql_free_countdown = -1;
 
     free(args_list->nodes);
@@ -148,12 +200,14 @@ TEST test_graphql_error_branches(void) {
     free(sel);
     free(n);
   }
+#else
+  (void)doc;
+  (void)rc;
 #endif
 
   PASS();
 }
 
-SUITE_EXTERN(graphql_mock_suite);
 SUITE(graphql_mock_suite) {
   SET_SETUP(reset_mocks, NULL);
   RUN_TEST(test_graphql_error_branches);

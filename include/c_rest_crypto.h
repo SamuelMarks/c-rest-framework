@@ -5,11 +5,10 @@
 #ifndef C_REST_CRYPTO_H
 #define C_REST_CRYPTO_H
 /* clang-format off */
-#include "c_rest_error.h"
-
 #include <stddef.h>
 #include "c_rest_error.h"
 #include "c_rest_export.h"
+#include "c_rest_no_discard.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -23,7 +22,7 @@ extern "C" {
  * @param hash The 20-byte array to store the resulting SHA1 hash.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]);
 
 /**
@@ -33,7 +32,7 @@ c_rest_sha1(const unsigned char *data, size_t len, unsigned char hash[20]);
  * @param hash The 32-byte array to store the resulting SHA256 hash.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_sha256(const unsigned char *data, size_t len, unsigned char hash[32]);
 
 /**
@@ -42,8 +41,8 @@ c_rest_sha256(const unsigned char *data, size_t len, unsigned char hash[32]);
  * @param len The number of random bytes to generate.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_rand_bytes(unsigned char *buf,
-                                                      size_t len);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_rand_bytes(unsigned char *buf, size_t len);
 
 /**
  * @brief Computes the HMAC-SHA256 of the given data.
@@ -54,7 +53,7 @@ C_REST_EXPORT extern c_rest_error_t c_rest_rand_bytes(unsigned char *buf,
  * @param hash The 32-byte array to store the resulting HMAC.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
                    const unsigned char *data, size_t data_len,
                    unsigned char hash[32]);
@@ -71,7 +70,7 @@ c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
  * bytes).
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
                           const unsigned char *salt, size_t salt_len,
                           unsigned long iterations, size_t dk_len,
@@ -83,7 +82,7 @@ c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
  * @param out_str Pointer to store the newly allocated base64url-encoded string.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_random_string_generate(size_t entropy_bytes, char **out_str);
 
 /**
@@ -92,7 +91,7 @@ c_rest_random_string_generate(size_t entropy_bytes, char **out_str);
  * @param out_token Pointer to store the newly allocated access token string.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_oauth2_generate_access_token(char **out_token);
 
 /**
@@ -103,7 +102,7 @@ c_rest_oauth2_generate_access_token(char **out_token);
  * @param out_token Pointer to store the newly allocated JWT token string.
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
                       size_t secret_len, char **out_token);
 
@@ -117,7 +116,7 @@ c_rest_jwt_sign_hs256(const char *json_payload, const unsigned char *secret,
  * @return 0 on success (valid signature), non-zero on failure or invalid
  * signature.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_jwt_verify_hs256(const char *token, const unsigned char *secret,
                         size_t secret_len, char **out_payload);
 
@@ -139,7 +138,7 @@ enum c_rest_password_hash_alg {
  * format).
  * @return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_hash_password(const char *password, enum c_rest_password_hash_alg alg,
                      char **out_hash);
 
@@ -149,8 +148,8 @@ c_rest_hash_password(const char *password, enum c_rest_password_hash_alg alg,
  * @param hash The MCF format hash string to verify against.
  * @return 0 on success (match), non-zero on failure (no match or error).
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_verify_password(const char *password,
-                                                           const char *hash);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_verify_password(const char *password, const char *hash);
 
 #ifdef __cplusplus
 }

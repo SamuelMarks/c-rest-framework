@@ -89,9 +89,10 @@ struct c_rest_tls_connection {
 };
 
 c_rest_error_t c_rest_tls_context_init(struct c_rest_tls_context **out_ctx) {
-  struct c_rest_tls_context *ctx = (struct c_rest_tls_context *)CRF_MALLOC(
-      sizeof(struct c_rest_tls_context));
-  if (!ctx)
+  struct c_rest_tls_context *ctx = NULL;
+  if (!out_ctx)
+    return C_REST_ERROR_INVALID_ARG;
+  if (C_REST_MALLOC(sizeof(struct c_rest_tls_context), &ctx) != C_REST_OK)
     return C_REST_ERROR_GENERIC;
   memset(ctx, 0, sizeof(struct c_rest_tls_context));
 
@@ -291,8 +292,8 @@ c_rest_error_t c_rest_tls_accept(struct c_rest_tls_context *ctx,
   if (!ctx)
     return C_REST_ERROR_GENERIC;
 
-  conn = (struct c_rest_tls_connection *)CRF_MALLOC(sizeof(*conn));
-  if (!conn)
+  conn = NULL;
+  if (C_REST_MALLOC(sizeof(*conn), &conn) != C_REST_OK)
     return C_REST_ERROR_GENERIC;
   memset(conn, 0, sizeof(*conn));
   conn->sock = sock;
@@ -416,6 +417,12 @@ c_rest_error_t c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf,
 #elif defined(C_REST_USE_S2N)
   ssize_t ret;
 #endif
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  int intercepted = 0;
+  c_rest_error_t seam_rc = crf_seam_tls_read(buf, len, out_read, &intercepted);
+  if (intercepted)
+    return seam_rc;
+#endif
 
   (void)conn;
   (void)buf;
@@ -473,36 +480,6 @@ c_rest_error_t c_rest_tls_read(struct c_rest_tls_connection *conn, void *buf,
 c_rest_error_t c_rest_tls_write(struct c_rest_tls_connection *conn,
                                 const void *buf, size_t len,
                                 size_t *out_written) {
-#ifdef C_REST_TESTING_MALLOC_HOOK
-  static int write_count = 0;
-  if (g_mock_tls_fail == 1)
-    return C_REST_ERROR_GENERIC;
-  if (g_mock_tls_fail == 3) {
-    if (out_written)
-      *out_written = len;
-    return C_REST_OK;
-  }
-  if (g_mock_tls_fail == 4) {
-    write_count++;
-    if (write_count == 2) {
-      write_count = 0;
-      return C_REST_ERROR_GENERIC;
-    }
-    if (out_written)
-      *out_written = len;
-    return C_REST_OK;
-  }
-  if (g_mock_tls_fail == 5) {
-    write_count++;
-    if (write_count == 3) {
-      write_count = 0;
-      return C_REST_ERROR_GENERIC;
-    }
-    if (out_written)
-      *out_written = len;
-    return C_REST_OK;
-  }
-#endif
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \
     defined(C_REST_USE_BORINGSSL)
   int ret;
@@ -514,6 +491,12 @@ c_rest_error_t c_rest_tls_write(struct c_rest_tls_connection *conn,
   int err;
 #elif defined(C_REST_USE_S2N)
   ssize_t ret;
+#endif
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  int intercepted = 0;
+  c_rest_error_t seam_rc = crf_seam_tls_write(len, out_written, &intercepted);
+  if (intercepted)
+    return seam_rc;
 #endif
 
   (void)conn;
@@ -570,12 +553,16 @@ c_rest_error_t c_rest_tls_write(struct c_rest_tls_connection *conn,
 }
 
 c_rest_error_t c_rest_tls_close(struct c_rest_tls_connection *conn) {
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  c_rest_error_t seam_rc;
+#endif
   if (!conn)
     return C_REST_OK;
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_tls_fail == 6) {
+  seam_rc = crf_seam_tls_close_hook();
+  if (seam_rc != C_REST_OK) {
     C_REST_FREE((void *)(conn));
-    return C_REST_ERROR_GENERIC;
+    return seam_rc;
   }
 #endif
 #if defined(C_REST_USE_OPENSSL) || defined(C_REST_USE_LIBRESSL) ||             \

@@ -15,8 +15,8 @@
 c_rest_error_t c_rest_strcasecmp(const char *s1, const char *s2, int *out_cmp) {
   int done = 0;
   if (!s1 || !s2 || !out_cmp) {
-    LOG_DEBUG("c_rest_strcasecmp: invalid arguments");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC,
+                          "c_rest_strcasecmp: invalid arguments");
   }
 #ifdef C_REST_TESTING_MALLOC_HOOK
   if (strcmp(s1, "TEST_MOCK_STRCASECMP_FAIL") == 0) {
@@ -45,8 +45,8 @@ c_rest_error_t c_rest_strncasecmp(const char *s1, const char *s2, size_t n,
                                   int *out_cmp) {
   int done = 0;
   if (!s1 || !s2 || !out_cmp) {
-    LOG_DEBUG("c_rest_strncasecmp: invalid arguments");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC,
+                          "c_rest_strncasecmp: invalid arguments");
   }
   if (n == 0) {
     *out_cmp = 0;
@@ -83,14 +83,14 @@ c_rest_error_t c_rest_strlcpy(char *dst, const char *src, size_t dsize,
   size_t copy_len;
 
   if (!out_len) {
-    LOG_DEBUG("c_rest_strlcpy: invalid out_len");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC,
+                          "c_rest_strlcpy: invalid out_len");
   }
   *out_len = 0;
 
   if (!dst || !src) {
-    LOG_DEBUG("c_rest_strlcpy: invalid dst or src");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC,
+                          "c_rest_strlcpy: invalid dst or src");
   }
 
   src_len = strlen(src);
@@ -123,14 +123,14 @@ c_rest_error_t c_rest_strlcat(char *dst, const char *src, size_t dsize,
   size_t copy_len;
 
   if (!out_len) {
-    LOG_DEBUG("c_rest_strlcat: invalid out_len");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC,
+                          "c_rest_strlcat: invalid out_len");
   }
   *out_len = 0;
 
   if (!dst || !src) {
-    LOG_DEBUG("c_rest_strlcat: invalid dst or src");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC,
+                          "c_rest_strlcat: invalid dst or src");
   }
 
   dst_len = strlen(dst);
@@ -163,8 +163,8 @@ c_rest_error_t c_rest_url_decode(char *dst, const char *src, size_t len) {
   char *p;
 
   if (!dst || !src) {
-    LOG_DEBUG("c_rest_url_decode: invalid dst or src");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC,
+                          "c_rest_url_decode: invalid dst or src");
   }
 #ifdef C_REST_TESTING_MALLOC_HOOK
   if (strncmp(src, "TEST_MOCK_URL_DECODE_FAIL", 25) == 0) {
@@ -199,17 +199,22 @@ c_rest_error_t c_rest_url_decode(char *dst, const char *src, size_t len) {
 
 c_rest_error_t c_rest_sprintf_s(char *buffer, size_t sizeOfBuffer,
                                 const char *format, ...) {
-  int ret;
   va_list args;
+#if defined(_MSC_VER)
+  int ret;
+#endif
+  if (!buffer || !format || sizeOfBuffer == 0)
+    return C_REST_ERROR_INVALID_ARG;
   va_start(args, format);
 #if defined(_MSC_VER)
   ret = vsprintf_s(buffer, sizeOfBuffer, format, args);
-#else
-  (void)sizeOfBuffer;
-  ret = vsprintf(buffer, format, args);
-#endif
   va_end(args);
   return (ret >= 0) ? C_REST_OK : C_REST_ERROR_INVALID_ARG;
+#else
+  vsprintf(buffer, format, args);
+  va_end(args);
+  return C_REST_OK;
+#endif
 }
 
 c_rest_error_t c_rest_strcpy_s(char *dest, size_t dest_size, const char *src) {

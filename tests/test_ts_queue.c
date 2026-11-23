@@ -24,7 +24,7 @@ static void *fail_malloc(size_t size) {
   return NULL;
 }
 
-#if !defined(__EMSCRIPTEN__)
+#if !defined(__EMSCRIPTEN__) && !defined(C_REST_NO_THREADS)
 static c_rest_error_t pusher_thread(void *arg) {
   c_rest_ts_queue *queue = (c_rest_ts_queue *)arg;
 #if defined(_WIN32)
@@ -41,68 +41,72 @@ static c_rest_error_t pusher_thread(void *arg) {
 }
 #endif
 
-int test_ts_queue(void) {
+TEST test_ts_queue_cases(void) {
   c_rest_ts_queue q;
   c_rest_ts_queue q2;
-  int failed = 0;
   void *val = NULL;
   c_rest_error_t rc;
   c_rest_cond_t real_cond;
   c_rest_mutex_t real_mutex;
-  const char *msgs[2];
+  char test1[] = "test1";
+  char test2[] = "test2";
+  char test3[] = "test3";
+  char test4[] = "test4";
+  char test_cond_fail[] = "test_cond_fail";
+  char fail_str[] = "fail";
+#if !defined(_WIN32)
+  char test_data[] = "test_data";
+#endif
 
   /* Test NULL pointer handling */
   rc = c_rest_ts_queue_init(NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   /* Test c_rest_ts_queue_init cond fail */
   g_crf_malloc_hook = fail_malloc;
   /* c_rest_cond_create fails when malloc fails */
   rc = c_rest_ts_queue_init(&q);
   g_crf_malloc_hook = NULL;
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
-  rc = c_rest_ts_queue_push(NULL, "test1");
-  failed += (rc == C_REST_OK);
+  rc = c_rest_ts_queue_push(NULL, test1);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_ts_queue_pop(NULL, &val);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_ts_queue_pop(&q, NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_ts_queue_close(NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_ts_queue_destroy(NULL, NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   /* Test c_rest_ts_queue_init malloc failure */
   g_crf_malloc_hook = fail_malloc;
   rc = c_rest_ts_queue_init(&q);
   g_crf_malloc_hook = NULL;
-  failed += (rc == C_REST_OK);
-  /* We might need a slightly more sophisticated mock if we want to fail
-     condition creation but not mutex creation... But malloc hook failure fails
-     the first allocation (mutex). So c_rest_mutex_create fails. */
+  ASSERT_FALSE(rc == C_REST_OK);
 
   /* Normal flow */
   rc = c_rest_ts_queue_init(&q);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   /* Test push malloc failure */
   g_crf_malloc_hook = fail_malloc;
-  rc = c_rest_ts_queue_push(&q, "fail");
+  rc = c_rest_ts_queue_push(&q, fail_str);
   g_crf_malloc_hook = NULL;
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   /* Push first item */
-  rc = c_rest_ts_queue_push(&q, "test1");
-  failed += (rc != C_REST_OK);
+  rc = c_rest_ts_queue_push(&q, test1);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   /* Push second item to hit the queue->tail branch */
-  rc = c_rest_ts_queue_push(&q, "test2");
-  failed += (rc != C_REST_OK);
+  rc = c_rest_ts_queue_push(&q, test2);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   /* Test pop cond wait failure */
   real_cond = q.cond;
@@ -113,136 +117,128 @@ int test_ts_queue(void) {
 
   /* Pop first item (head->next not NULL) */
   rc = c_rest_ts_queue_pop(&q, &val);
-  failed += (rc != C_REST_OK);
-  failed += (strcmp((const char *)val, "test1") != 0);
+  ASSERT_FALSE(rc != C_REST_OK);
+  ASSERT_FALSE(strcmp((const char *)val, "test1") != 0);
 
   /* Pop second item (head->next is NULL, becomes empty) */
   rc = c_rest_ts_queue_pop(&q, &val);
-  failed += (rc != C_REST_OK);
-  failed += (strcmp((const char *)val, "test2") != 0);
+  ASSERT_FALSE(rc != C_REST_OK);
+  ASSERT_FALSE(strcmp((const char *)val, "test2") != 0);
 
   /* Test pop from empty queue (will block unless closed or cond fails) */
   /* If cond fails, it returns error */
   real_cond = q.cond;
   q.cond = (c_rest_cond_t)0;
   rc = c_rest_ts_queue_pop(&q, &val);
-  failed += (rc != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
   q.cond = real_cond;
   q.cond = (c_rest_cond_t)0;
-  rc = c_rest_ts_queue_push(&q, "test_cond_fail");
-  failed += (rc != C_REST_ERROR_GENERIC);
+  rc = c_rest_ts_queue_push(&q, test_cond_fail);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
   q.cond = real_cond;
 
-  /* Although push returned error, the node was added and mutex unlocked!
-     Wait, if cond signal fails, it returns error, but the item IS in the queue!
-     Let's pop it! */
   rc = c_rest_ts_queue_pop(&q, &val);
-  failed += (rc != C_REST_OK);
-  failed += (strcmp((const char *)val, "test_cond_fail") != 0);
+  ASSERT_FALSE(rc != C_REST_OK);
+  ASSERT_FALSE(strcmp((const char *)val, "test_cond_fail") != 0);
 
-  /* Test pop with background thread pushing to hit cond_wait success and break
-   */
-#if !defined(__EMSCRIPTEN__)
+#if !defined(__EMSCRIPTEN__) && !defined(C_REST_NO_THREADS)
   {
     c_rest_ts_queue q_bg;
     c_rest_thread_t th;
     void *bg_val = NULL;
     rc = c_rest_ts_queue_init(&q_bg);
-    failed += (rc != C_REST_OK);
+    ASSERT_FALSE(rc != C_REST_OK);
     rc = c_rest_thread_create(&th, pusher_thread, &q_bg);
-    failed += (rc != C_REST_OK);
+    ASSERT_FALSE(rc != C_REST_OK);
     rc = c_rest_ts_queue_pop(&q_bg, &bg_val);
-    failed += (rc != C_REST_OK);
-    failed += (strcmp((const char *)bg_val, "thread_item") != 0);
-    c_rest_thread_join(th);
-    c_rest_ts_queue_destroy(&q_bg, NULL);
+    ASSERT_FALSE(rc != C_REST_OK);
+    ASSERT_FALSE(strcmp((const char *)bg_val, "thread_item") != 0);
+    ASSERT_EQ(C_REST_OK, c_rest_thread_join(th));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&q_bg, NULL));
   }
 #endif
 
   /* Close queue */
   rc = c_rest_ts_queue_close(&q);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   /* Test close with cond signal failure */
   rc = c_rest_ts_queue_init(&q2);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
   real_cond = q2.cond;
   q2.cond = (c_rest_cond_t)0;
   rc = c_rest_ts_queue_close(&q2);
-  failed += (rc != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
   q2.cond = real_cond;
   rc = c_rest_ts_queue_destroy(&q2, NULL);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   /* Push to closed queue should fail */
-  rc = c_rest_ts_queue_push(&q, "test3");
-  failed += (rc == C_REST_OK);
+  rc = c_rest_ts_queue_push(&q, test3);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   /* Pop from closed, empty queue should fail */
   rc = c_rest_ts_queue_pop(&q, &val);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   /* Test mutex failures (lock) */
   real_mutex = q.mutex;
   q.mutex = (c_rest_mutex_t)0;
 
-  rc = c_rest_ts_queue_push(&q, "fail");
-  failed += (rc == C_REST_OK);
+  rc = c_rest_ts_queue_push(&q, fail_str);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_ts_queue_pop(&q, &val);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_ts_queue_close(&q);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   rc = c_rest_ts_queue_destroy(&q, NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_FALSE(rc == C_REST_OK);
 
   q.mutex = real_mutex;
 
   /* Destroy queue */
   rc = c_rest_ts_queue_destroy(&q, NULL);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   /* Test destroy with data */
   dummy_free_count = 0;
   rc = c_rest_ts_queue_init(&q);
-  failed += (rc != C_REST_OK);
+  ASSERT_FALSE(rc != C_REST_OK);
 
-  rc = c_rest_ts_queue_push(&q, "test4");
-  failed += (rc != C_REST_OK);
+  rc = c_rest_ts_queue_push(&q, test4);
+  ASSERT_FALSE(rc != C_REST_OK);
 
   rc = c_rest_ts_queue_destroy(&q, dummy_free);
-  failed += (rc != C_REST_OK);
-  failed += (dummy_free_count != 1);
+  ASSERT_FALSE(rc != C_REST_OK);
+  ASSERT_FALSE(dummy_free_count != 1);
 
 #if !defined(_WIN32)
   {
     c_rest_ts_queue q3;
     /* Test destroy failure branches */
     rc = c_rest_ts_queue_init(&q3);
-    failed += (rc != C_REST_OK);
-    rc = c_rest_ts_queue_push(&q3, "test_data");
-    failed += (rc != C_REST_OK);
+    ASSERT_FALSE(rc != C_REST_OK);
+    rc = c_rest_ts_queue_push(&q3, test_data);
+    ASSERT_FALSE(rc != C_REST_OK);
     real_cond = q3.cond;
     q3.cond = (c_rest_cond_t)0;
     rc = c_rest_ts_queue_destroy(&q3, NULL);
-    failed += (rc != C_REST_ERROR_GENERIC);
-    /* The mutex was successfully destroyed by c_rest_ts_queue_destroy,
-     * only the condition variable was left dangling */
-    c_rest_cond_destroy(real_cond);
+    ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
+    ASSERT_EQ(C_REST_OK, c_rest_cond_destroy(real_cond));
 
     rc = c_rest_ts_queue_init(&q3);
-    failed += (rc != C_REST_OK);
-    rc = c_rest_ts_queue_push(&q3, "test_data");
-    failed += (rc != C_REST_OK);
+    ASSERT_FALSE(rc != C_REST_OK);
+    rc = c_rest_ts_queue_push(&q3, test_data);
+    ASSERT_FALSE(rc != C_REST_OK);
     real_mutex = q3.mutex;
     q3.mutex = (c_rest_mutex_t)0;
     rc = c_rest_ts_queue_destroy(&q3, NULL);
-    failed += (rc != C_REST_ERROR_GENERIC);
-    /* Destroy what wasn't destroyed */
-    c_rest_mutex_destroy(real_mutex);
-    c_rest_cond_destroy(q3.cond);
+    ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_destroy(real_mutex));
+    ASSERT_EQ(C_REST_OK, c_rest_cond_destroy(q3.cond));
   }
 #endif
 
@@ -251,162 +247,130 @@ int test_ts_queue(void) {
     c_rest_ts_queue tq;
     void *out_val = NULL;
 
-    printf("TSQ SUBSTEP 1\n");
-    fflush(stdout);
     /* 1: cond_create fail with mutex_destroy success */
     g_mock_tsq_fail = 1;
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_init(&tq));
 
-    printf("TSQ SUBSTEP 2\n");
-    fflush(stdout);
     /* 2: cond_create fail with mutex_destroy fail */
     g_mock_tsq_fail = 2;
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 0;
-    c_rest_mutex_destroy(tq.mutex);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_destroy(tq.mutex));
 
-    printf("TSQ SUBSTEP 3\n");
-    fflush(stdout);
     /* 3: push mutex_lock fail */
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 3;
-    c_rest_ts_queue_push(&tq, (void *)1);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_push(&tq, (void *)1));
     g_mock_tsq_fail = 0;
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
     /* is_closed unlock fail */
-    c_rest_ts_queue_init(&tq);
-    c_rest_ts_queue_close(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_close(&tq));
     g_mock_tsq_fail = 5;
-    c_rest_ts_queue_push(&tq, (void *)1);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_push(&tq, (void *)1));
     g_mock_tsq_fail = 0;
-    c_rest_mutex_unlock(tq.mutex);
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_unlock(tq.mutex));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
-    printf("TSQ SUBSTEP 4\n");
-    fflush(stdout);
     /* 4: push cond_signal fail, unlock ok */
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 4;
-    c_rest_ts_queue_push(&tq, (void *)1);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_push(&tq, (void *)1));
     g_mock_tsq_fail = 0;
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
-    printf("TSQ SUBSTEP 5\n");
-    fflush(stdout);
     /* 5: push cond_signal fail, unlock fail */
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 5;
-    c_rest_ts_queue_push(&tq, (void *)1);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_push(&tq, (void *)1));
     g_mock_tsq_fail = 0;
-    c_rest_mutex_unlock(tq.mutex);
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_unlock(tq.mutex));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
-    printf("TSQ SUBSTEP 6\n");
-    fflush(stdout);
     /* 6: push normal unlock fail */
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 6;
-    c_rest_ts_queue_push(&tq, (void *)1);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_push(&tq, (void *)1));
     g_mock_tsq_fail = 0;
-    c_rest_mutex_unlock(tq.mutex);
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_unlock(tq.mutex));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
-    printf("TSQ SUBSTEP 7\n");
-    fflush(stdout);
     /* 7: pop cond_wait fail */
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 7;
-    c_rest_ts_queue_pop(&tq, &out_val);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_pop(&tq, &out_val));
     g_mock_tsq_fail = 0;
-    c_rest_mutex_unlock(tq.mutex);
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_unlock(tq.mutex));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
-    printf("TSQ SUBSTEP 8\n");
-    fflush(stdout);
     /* 8: pop size==0 unlock fail */
-    c_rest_ts_queue_init(&tq);
-    c_rest_ts_queue_close(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_close(&tq));
     g_mock_tsq_fail = 8;
-    c_rest_ts_queue_pop(&tq, &out_val);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_pop(&tq, &out_val));
     g_mock_tsq_fail = 0;
-    c_rest_mutex_unlock(tq.mutex);
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_unlock(tq.mutex));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
-    printf("TSQ SUBSTEP 9\n");
-    fflush(stdout);
     /* 9: close cond_signal fail, unlock ok */
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 9;
-    c_rest_ts_queue_close(&tq);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_close(&tq));
     g_mock_tsq_fail = 0;
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
-    printf("TSQ SUBSTEP 10\n");
-    fflush(stdout);
     /* 10: close cond_signal fail, unlock fail */
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 10;
-    c_rest_ts_queue_close(&tq);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_close(&tq));
     g_mock_tsq_fail = 0;
-    c_rest_mutex_unlock(tq.mutex);
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_unlock(tq.mutex));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
-    printf("TSQ SUBSTEP 11\n");
-    fflush(stdout);
     /* 11: close normal unlock fail */
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 11;
-    c_rest_ts_queue_close(&tq);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_close(&tq));
     g_mock_tsq_fail = 0;
-    c_rest_mutex_unlock(tq.mutex);
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_unlock(tq.mutex));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
-    printf("TSQ SUBSTEP 12\n");
-    fflush(stdout);
     /* 12: destroy unlock fail */
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 12;
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_destroy(&tq, NULL));
     g_mock_tsq_fail = 0;
-    c_rest_mutex_unlock(tq.mutex);
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_unlock(tq.mutex));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
-    printf("TSQ SUBSTEP 13\n");
-    fflush(stdout);
     /* 13: destroy mutex_destroy fail */
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 13;
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_destroy(&tq, NULL));
     g_mock_tsq_fail = 0;
-    c_rest_mutex_destroy(tq.mutex);
-    c_rest_cond_destroy(tq.cond);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_destroy(tq.mutex));
+    ASSERT_EQ(C_REST_OK, c_rest_cond_destroy(tq.cond));
 
-    printf("TSQ SUBSTEP 14\n");
-    fflush(stdout);
     /* 14: pop normal unlock fail */
-    c_rest_ts_queue_init(&tq);
-    c_rest_ts_queue_push(&tq, (void *)1);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_push(&tq, (void *)1));
     g_mock_tsq_fail = 14;
-    c_rest_ts_queue_pop(&tq, &out_val);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_pop(&tq, &out_val));
     g_mock_tsq_fail = 0;
-    c_rest_mutex_unlock(tq.mutex);
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_unlock(tq.mutex));
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(&tq, NULL));
 
-    printf("TSQ SUBSTEP 15\n");
-    fflush(stdout);
     /* 15: destroy cond_destroy fail */
-    c_rest_ts_queue_init(&tq);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(&tq));
     g_mock_tsq_fail = 15;
-    c_rest_ts_queue_destroy(&tq, NULL);
+    ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_destroy(&tq, NULL));
     g_mock_tsq_fail = 0;
-    c_rest_cond_destroy(tq.cond);
+    ASSERT_EQ(C_REST_OK, c_rest_cond_destroy(tq.cond));
   }
 #endif
 
-  msgs[0] = "test_ts_queue passed\n";
-  msgs[1] = "test_ts_queue failed\n";
-  printf("%s", msgs[failed != 0]);
-
-  return failed;
+  PASS();
 }
+
+SUITE(ts_queue_suite) { RUN_TEST(test_ts_queue_cases); }

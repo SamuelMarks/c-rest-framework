@@ -14,7 +14,8 @@
 #define SAFE_STRCPY(dest, size, src) strcpy(dest, src)
 #endif
 
-static c_rest_error_t hash_string(const char *str, size_t *out_hash) {
+static NO_DISCARD c_rest_error_t hash_string(const char *str,
+                                             size_t *out_hash) {
   size_t hash = 5381;
   int c;
   if (strcmp(str, "TEST_MOCK_HASH_FAIL") == 0)
@@ -32,11 +33,9 @@ c_rest_error_t c_rest_hashmap_init(c_rest_hashmap *map, size_t capacity) {
     return C_REST_ERROR_GENERIC;
   if (C_REST_MALLOC(capacity * sizeof(c_rest_hashmap_entry *),
                     &(map->buckets)) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
     map->buckets = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!map->buckets)
-    return C_REST_ERROR_GENERIC;
   for (i = 0; i < capacity; ++i) {
     map->buckets[i] = NULL;
   }
@@ -69,19 +68,12 @@ c_rest_error_t c_rest_hashmap_put(c_rest_hashmap *map, const char *key,
   }
 
   if (C_REST_MALLOC(sizeof(c_rest_hashmap_entry), &new_entry) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    new_entry = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!new_entry)
-    return C_REST_ERROR_GENERIC;
 
   if (C_REST_MALLOC(strlen(key) + 1, &new_entry->key) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    new_entry->key = NULL;
-  }
-  if (!new_entry->key) {
     C_REST_FREE((void *)(new_entry));
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
   SAFE_STRCPY(new_entry->key, strlen(key) + 1, key);
   new_entry->value = value;
@@ -149,8 +141,10 @@ c_rest_error_t c_rest_hashmap_remove(c_rest_hashmap *map, const char *key) {
 }
 
 c_rest_error_t c_rest_hashmap_destroy(c_rest_hashmap *map,
-                                      void (*free_value)(void *)) {
+                                      c_rest_hashmap_free_fn free_value) {
   size_t i;
+  c_rest_error_t err_rc = C_REST_OK;
+  c_rest_error_t cb_rc = C_REST_OK;
   if (!map)
     return C_REST_ERROR_GENERIC;
   if (map->buckets) {
@@ -160,8 +154,15 @@ c_rest_error_t c_rest_hashmap_destroy(c_rest_hashmap *map,
         c_rest_hashmap_entry *next = entry->next;
         C_REST_FREE((void *)(entry->key));
         if (free_value && entry->value) {
-          free_value(entry->value);
+          cb_rc = free_value(entry->value);
+          if (cb_rc != C_REST_OK) {
+            if (err_rc == C_REST_OK) {
+              err_rc = cb_rc;
+            }
+            goto next_hashmap_entry;
+          }
         }
+      next_hashmap_entry:
         C_REST_FREE((void *)(entry));
         entry = next;
       }
@@ -171,5 +172,7 @@ c_rest_error_t c_rest_hashmap_destroy(c_rest_hashmap *map,
   map->buckets = NULL;
   map->capacity = 0;
   map->size = 0;
-  return C_REST_OK;
+  if (err_rc != C_REST_OK)
+    return err_rc;
+  return cb_rc;
 }

@@ -1,4 +1,5 @@
 /* clang-format off */
+#include "c_rest_testing_mocks.h"
 #include "c_rest_error.h"
 #include "c_rest_mem.h"
 #include "c_rest_graphql.h"
@@ -14,8 +15,8 @@
 /**
  * @brief Allocates a new node.
  */
-static c_rest_error_t alloc_node(enum c_rest_graphql_node_type type,
-                                 struct c_rest_graphql_node **out_node) {
+static NO_DISCARD c_rest_error_t alloc_node(
+    enum c_rest_graphql_node_type type, struct c_rest_graphql_node **out_node) {
   struct c_rest_graphql_node *node = NULL;
   if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node), &node) != 0) {
     return C_REST_ERROR_GENERIC;
@@ -35,7 +36,8 @@ static c_rest_error_t alloc_node(enum c_rest_graphql_node_type type,
 /**
  * @brief Allocates a new node list.
  */
-static c_rest_error_t alloc_list(struct c_rest_graphql_node_list **out_list) {
+static NO_DISCARD c_rest_error_t
+alloc_list(struct c_rest_graphql_node_list **out_list) {
   struct c_rest_graphql_node_list *list = NULL;
   if (C_REST_MALLOC(sizeof(struct c_rest_graphql_node_list), &list) != 0) {
     return C_REST_ERROR_GENERIC;
@@ -50,8 +52,8 @@ static c_rest_error_t alloc_list(struct c_rest_graphql_node_list **out_list) {
 /**
  * @brief Appends a node to a list.
  */
-static c_rest_error_t list_append(struct c_rest_graphql_node_list *list,
-                                  struct c_rest_graphql_node *node) {
+static NO_DISCARD c_rest_error_t list_append(
+    struct c_rest_graphql_node_list *list, struct c_rest_graphql_node *node) {
   size_t new_cap;
   struct c_rest_graphql_node **new_nodes;
   size_t i;
@@ -82,20 +84,13 @@ static c_rest_error_t list_append(struct c_rest_graphql_node_list *list,
   return C_REST_OK;
 }
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_graphql_ws_countdown = -1;
-#endif
-
-static c_rest_error_t skip_whitespace(struct c_rest_graphql_context *ctx) {
+static NO_DISCARD c_rest_error_t
+skip_whitespace(struct c_rest_graphql_context *ctx) {
   int done = 0;
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_graphql_ws_countdown >= 0) {
-    if (g_mock_graphql_ws_countdown == 0) {
-      g_mock_graphql_ws_countdown--;
-      return C_REST_ERROR_GENERIC;
-    }
-    g_mock_graphql_ws_countdown--;
-  }
+  c_rest_error_t seam_rc = crf_seam_graphql_ws_step();
+  if (seam_rc != C_REST_OK)
+    return seam_rc;
 #endif
   while (!done) {
     if (ctx->position >= ctx->length) {
@@ -120,8 +115,8 @@ static c_rest_error_t skip_whitespace(struct c_rest_graphql_context *ctx) {
   return C_REST_OK;
 }
 
-static c_rest_error_t parse_name(struct c_rest_graphql_context *ctx,
-                                 char **out_name) {
+static NO_DISCARD c_rest_error_t parse_name(struct c_rest_graphql_context *ctx,
+                                            char **out_name) {
   size_t start;
   size_t len;
   char *str;
@@ -168,10 +163,10 @@ static c_rest_error_t parse_name(struct c_rest_graphql_context *ctx,
   return C_REST_OK;
 }
 
-static c_rest_error_t parse_field(struct c_rest_graphql_context *ctx,
-                                  struct c_rest_graphql_node **out_node);
+static NO_DISCARD c_rest_error_t parse_field(
+    struct c_rest_graphql_context *ctx, struct c_rest_graphql_node **out_node);
 
-static c_rest_error_t
+static NO_DISCARD c_rest_error_t
 parse_selection_set(struct c_rest_graphql_context *ctx,
                     struct c_rest_graphql_node_list **out_list) {
   struct c_rest_graphql_node_list *list = NULL;
@@ -192,31 +187,32 @@ parse_selection_set(struct c_rest_graphql_context *ctx,
     struct c_rest_graphql_node *field = NULL;
     rc = skip_whitespace(ctx);
     if (rc != C_REST_OK)
-      break;
+      goto selection_err;
     if (ctx->position < ctx->length && ctx->input[ctx->position] == '}') {
       ctx->position++; /* skip '}' */
       if (list->count == 0) {
-        break;
-        /* Error: Empty selection set not allowed */
+        rc = C_REST_ERROR_GENERIC;
+        goto selection_err;
       }
       *out_list = list;
       return C_REST_OK;
     }
 
     rc = parse_field(ctx, &field);
-    if (rc == C_REST_OK) {
-      rc = list_append(list, field);
-      if (rc != C_REST_OK) {
-        c_rest_error_t free_rc = c_rest_graphql_node_free(field);
-        if (free_rc != C_REST_OK)
-          return free_rc;
-        break;
-      }
-    } else {
-      break; /* fallback or error */
+    if (rc != C_REST_OK)
+      goto selection_err;
+
+    rc = list_append(list, field);
+    if (rc != C_REST_OK) {
+      c_rest_error_t free_rc = c_rest_graphql_node_free(field);
+      if (free_rc != C_REST_OK)
+        return free_rc;
+      goto selection_err;
     }
   }
+  rc = C_REST_ERROR_GENERIC;
 
+selection_err:
   /* Error handling: EOF without '}' or parse error inside */
   for (i = 0; i < list->count; i++) {
     c_rest_error_t free_rc = c_rest_graphql_node_free(list->nodes[i]);
@@ -229,11 +225,11 @@ parse_selection_set(struct c_rest_graphql_context *ctx,
   if (list->nodes)
     C_REST_FREE(list->nodes);
   C_REST_FREE(list);
-  return C_REST_ERROR_GENERIC;
+  return rc;
 }
 
-static c_rest_error_t parse_field(struct c_rest_graphql_context *ctx,
-                                  struct c_rest_graphql_node **out_node) {
+static NO_DISCARD c_rest_error_t parse_field(
+    struct c_rest_graphql_context *ctx, struct c_rest_graphql_node **out_node) {
   char *name = NULL;
   struct c_rest_graphql_node *node;
   c_rest_error_t rc;
@@ -294,8 +290,8 @@ static c_rest_error_t parse_field(struct c_rest_graphql_context *ctx,
   return C_REST_OK;
 }
 
-static c_rest_error_t parse_operation(struct c_rest_graphql_context *ctx,
-                                      struct c_rest_graphql_node **out_node) {
+static NO_DISCARD c_rest_error_t parse_operation(
+    struct c_rest_graphql_context *ctx, struct c_rest_graphql_node **out_node) {
   struct c_rest_graphql_node *node;
   char *name = NULL;
   enum c_rest_graphql_operation_type op_type = C_REST_GRAPHQL_OP_QUERY;
@@ -310,16 +306,26 @@ static c_rest_error_t parse_operation(struct c_rest_graphql_context *ctx,
       strncmp(&ctx->input[ctx->position], "query", 5) == 0) {
     ctx->position += 5;
     op_type = C_REST_GRAPHQL_OP_QUERY;
-    rc = parse_name(ctx, &name);
+    rc = skip_whitespace(ctx);
     if (rc != C_REST_OK)
-      name = NULL;
+      return rc;
+    if (ctx->position < ctx->length && ctx->input[ctx->position] != '{') {
+      rc = parse_name(ctx, &name);
+      if (rc != C_REST_OK)
+        return rc;
+    }
   } else if (ctx->position + 8 <= ctx->length &&
              strncmp(&ctx->input[ctx->position], "mutation", 8) == 0) {
     ctx->position += 8;
     op_type = C_REST_GRAPHQL_OP_MUTATION;
-    rc = parse_name(ctx, &name);
+    rc = skip_whitespace(ctx);
     if (rc != C_REST_OK)
-      name = NULL;
+      return rc;
+    if (ctx->position < ctx->length && ctx->input[ctx->position] != '{') {
+      rc = parse_name(ctx, &name);
+      if (rc != C_REST_OK)
+        return rc;
+    }
   }
 
   rc = alloc_node(C_REST_GRAPHQL_NODE_OPERATION, &node);
@@ -397,53 +403,51 @@ c_rest_error_t c_rest_graphql_parse(const char *query, size_t query_len,
   }
   while (ctx.position < ctx.length) {
     rc = parse_operation(&ctx, &op);
-    if (rc == C_REST_OK) {
-      rc = list_append(doc->definitions, op);
-      if (rc != C_REST_OK) {
-        c_rest_error_t free_rc = c_rest_graphql_node_free(op);
-        if (free_rc != C_REST_OK)
-          return free_rc;
-        break;
-      }
-    } else {
-      break;
+    if (rc != C_REST_OK)
+      goto doc_parse_err;
+    rc = list_append(doc->definitions, op);
+    if (rc != C_REST_OK) {
+      c_rest_error_t free_rc = c_rest_graphql_node_free(op);
+      if (free_rc != C_REST_OK)
+        return free_rc;
+      goto doc_parse_err;
     }
     rc = skip_whitespace(&ctx);
     if (rc != C_REST_OK) {
       ctx.position = 0;
-      break;
+      goto doc_parse_err;
     }
   }
 
-  if (ctx.position < ctx.length || doc->definitions->count == 0) {
-    c_rest_error_t free_rc = c_rest_graphql_node_free(doc);
-    if (free_rc != C_REST_OK)
-      return free_rc;
-    return C_REST_ERROR_GENERIC;
+  if (doc->definitions->count == 0) {
+    rc = C_REST_ERROR_GENERIC;
+    goto doc_parse_err;
   }
 
   *out_doc = doc;
   return C_REST_OK;
-}
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_graphql_free_countdown = -1;
-#endif
+doc_parse_err: {
+  c_rest_error_t free_rc = c_rest_graphql_node_free(doc);
+  if (free_rc != C_REST_OK)
+    return free_rc;
+}
+  return rc;
+}
 
 c_rest_error_t c_rest_graphql_node_free(struct c_rest_graphql_node *node) {
   size_t i;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  c_rest_error_t seam_rc;
+#endif
 
   if (!node)
     return C_REST_OK;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_graphql_free_countdown >= 0) {
-    if (g_mock_graphql_free_countdown == 0) {
-      g_mock_graphql_free_countdown--;
-      return C_REST_ERROR_GENERIC;
-    }
-    g_mock_graphql_free_countdown--;
-  }
+  seam_rc = crf_seam_graphql_free_step();
+  if (seam_rc != C_REST_OK)
+    return seam_rc;
 #endif
 
   if (node->name)
@@ -564,6 +568,9 @@ c_rest_error_t c_rest_graphql_resolve(struct c_rest_graphql_node *doc,
   if (!doc || !out_json || !out_len)
     return C_REST_ERROR_GENERIC;
 
+  *out_json = NULL;
+  *out_len = 0;
+
   /* Basic mock traversal: look for requested fields and trigger resolvers */
   if (schema && doc->definitions) {
     for (i = 0; i < doc->definitions->count; i++) {
@@ -577,9 +584,14 @@ c_rest_error_t c_rest_graphql_resolve(struct c_rest_graphql_node *doc,
               if (strcmp(entry->field_name, field->name) == 0) {
                 char *res_json = NULL;
                 size_t res_len = 0;
-                /* Fire resolver (ignore output for this basic skeleton) */
-                entry->resolver(field->name, &res_json, &res_len,
-                                entry->user_data);
+                c_rest_error_t res_rc = entry->resolver(
+                    field->name, &res_json, &res_len, entry->user_data);
+                if (res_rc != C_REST_OK) {
+                  if (res_json) {
+                    C_REST_FREE(res_json);
+                  }
+                  return res_rc;
+                }
                 if (res_json) {
                   C_REST_FREE(res_json);
                 }
@@ -592,7 +604,6 @@ c_rest_error_t c_rest_graphql_resolve(struct c_rest_graphql_node *doc,
     }
   }
 
-  *out_json = NULL;
   if (C_REST_MALLOC(len + 1, out_json) != 0)
     return C_REST_ERROR_GENERIC;
 

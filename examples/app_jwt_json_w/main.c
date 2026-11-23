@@ -51,24 +51,25 @@ static c_rest_error_t generate_token_handler(struct c_rest_request *req,
   (void)req;
   sign_rc = c_rest_jwt_sign_hs256("{\"sub\":\"user123\"}", secret,
                                   strlen((const char *)secret), &token);
-  if (sign_rc == C_REST_OK) {
-#if defined(_MSC_VER)
-    sprintf_s(response_buf, sizeof(response_buf), "Your token is: %s", token);
-#else
-    sprintf(response_buf, "Your token is: %s", token);
-#endif
-    CRF_FREE(token);
-    res_rc = c_rest_response_html(res, response_buf);
-    if (res_rc != C_REST_OK)
-      return res_rc;
-  } else {
+  if (sign_rc != C_REST_OK) {
     res_rc = c_rest_response_set_status(res, 500);
     if (res_rc != C_REST_OK)
       return res_rc;
     res_rc = c_rest_response_html(res, "Failed to generate token");
     if (res_rc != C_REST_OK)
       return res_rc;
+    return sign_rc;
   }
+
+#if defined(_MSC_VER)
+  sprintf_s(response_buf, sizeof(response_buf), "Your token is: %s", token);
+#else
+  sprintf(response_buf, "Your token is: %s", token);
+#endif
+  C_REST_FREE(token);
+  res_rc = c_rest_response_html(res, response_buf);
+  if (res_rc != C_REST_OK)
+    return res_rc;
 
   return C_REST_OK;
 }
@@ -105,15 +106,24 @@ int main(void) {
   }
 
   /* Init JWT middleware config */
-  c_rest_jwt_middleware_config_init(&jwt_config, secret, sizeof(secret) - 1,
-                                    my_verify_payload);
+  rc = c_rest_jwt_middleware_config_init(&jwt_config, secret,
+                                         sizeof(secret) - 1, my_verify_payload);
+  if (rc != C_REST_OK) {
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
+    return 1;
+  }
 
   /* Set up routes */
   rc = c_rest_router_add(router, "GET", "/token", generate_token_handler,
                          (void *)secret);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -121,15 +131,19 @@ int main(void) {
   rc = c_rest_router_use(router, "/protected", c_rest_jwt_middleware,
                          &jwt_config);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_router_add(router, "GET", "/protected", protected_route_handler,
                          NULL);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -143,7 +157,8 @@ int main(void) {
 
   rc = c_rest_router_destroy(router);
   if (rc != C_REST_OK) {
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_destroy(ctx);

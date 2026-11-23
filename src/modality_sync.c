@@ -9,9 +9,6 @@
 c_rest_error_t mock_c_rest_socket_create(c_rest_socket_t *sock);
 c_rest_error_t mock_c_rest_socket_bind(c_rest_socket_t sock, const char *host, unsigned short port);
 c_rest_error_t mock_c_rest_socket_listen(c_rest_socket_t sock, int backlog);
-c_rest_error_t mock_c_rest_socket_accept(c_rest_socket_t server, c_rest_socket_t *out_client);
-c_rest_error_t mock_c_rest_thread_create(c_rest_thread_t *thread, c_rest_error_t (*func)(void *), void *arg);
-c_rest_error_t mock_c_rest_socket_close(c_rest_socket_t sock);
 c_rest_error_t mock_c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock, struct c_rest_tls_connection **out_conn);
 c_rest_error_t mock_c_rest_tls_close(struct c_rest_tls_connection *conn);
 
@@ -23,6 +20,7 @@ c_rest_error_t mock_c_rest_tls_close(struct c_rest_tls_connection *conn);
 #define c_rest_socket_close mock_c_rest_socket_close
 #define c_rest_tls_accept mock_c_rest_tls_accept
 #define c_rest_tls_close mock_c_rest_tls_close
+#define c_rest_handle_connection mock_c_rest_handle_connection
 #endif
 #include "c_rest_platform.h"
 
@@ -35,7 +33,7 @@ struct sync_state {
   volatile int is_running;
 };
 
-static c_rest_error_t sync_init(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t sync_init(struct c_rest_context *ctx) {
   struct sync_state *state;
   c_rest_error_t rc;
   if (!ctx) {
@@ -65,7 +63,7 @@ static c_rest_error_t sync_init(struct c_rest_context *ctx) {
   return C_REST_OK;
 }
 
-static c_rest_error_t sync_destroy(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t sync_destroy(struct c_rest_context *ctx) {
   struct sync_state *state;
   c_rest_error_t rc;
   if (!ctx || !ctx->internal_state) {
@@ -78,6 +76,9 @@ static c_rest_error_t sync_destroy(struct c_rest_context *ctx) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     if (ctx->cm_env) {
       rc = cm_socket_close(ctx->cm_env, state->server_sock);
+      if (rc != C_REST_OK) {
+        return rc;
+      }
     } else {
       rc = c_rest_socket_close(state->server_sock);
       if (rc != C_REST_OK) {
@@ -91,9 +92,7 @@ static c_rest_error_t sync_destroy(struct c_rest_context *ctx) {
     }
 
 #endif
-#if defined(_WIN32)
     state->server_sock = C_REST_INVALID_SOCKET;
-#endif
   }
 
   ctx->allocator.free_cb(state);
@@ -109,9 +108,10 @@ static c_rest_error_t sync_destroy(struct c_rest_context *ctx) {
   return C_REST_OK;
 }
 
-static c_rest_error_t sync_run(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t sync_run(struct c_rest_context *ctx) {
   struct sync_state *state;
   c_rest_error_t rc;
+  c_rest_error_t res = C_REST_OK;
   if (!ctx || !ctx->internal_state) {
     return C_REST_ERROR_INVALID_ARG;
   }
@@ -120,19 +120,80 @@ static c_rest_error_t sync_run(struct c_rest_context *ctx) {
   state->is_running = 1;
 
   if (ctx->logger.log_cb) {
-#if defined(_WIN32)
     rc = ctx->logger.log_cb("SYNC modality run started");
     if (rc != C_REST_OK) {
       return rc;
     }
-
-#endif
   }
 
-  /* Typical synchronous accept loop */
+  if (state->server_sock == C_REST_INVALID_SOCKET &&
+      (ctx->listen_address != NULL || ctx->listen_port != 0)) {
+    const char *addr = ctx->listen_address ? ctx->listen_address : "0.0.0.0";
+#ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
+    if (ctx->cm_env) {
+      rc = cm_socket_create(ctx->cm_env, &state->server_sock);
+      if (rc != C_REST_OK) {
+        return rc;
+      }
+      rc = cm_socket_bind(ctx->cm_env, state->server_sock, addr,
+                          ctx->listen_port);
+      if (rc != C_REST_OK) {
+        c_rest_socket_t sock_to_close = state->server_sock;
+        c_rest_error_t cl_rc;
+        state->server_sock = C_REST_INVALID_SOCKET;
+        cl_rc = cm_socket_close(ctx->cm_env, sock_to_close);
+        if (cl_rc != C_REST_OK) {
+          return cl_rc;
+        }
+        return rc;
+      }
+      rc = cm_socket_listen(ctx->cm_env, state->server_sock, 128);
+      if (rc != C_REST_OK) {
+        c_rest_socket_t sock_to_close = state->server_sock;
+        c_rest_error_t cl_rc;
+        state->server_sock = C_REST_INVALID_SOCKET;
+        cl_rc = cm_socket_close(ctx->cm_env, sock_to_close);
+        if (cl_rc != C_REST_OK) {
+          return cl_rc;
+        }
+        return rc;
+      }
+    } else
+#endif
+    {
+      rc = c_rest_socket_create(&state->server_sock);
+      if (rc != C_REST_OK) {
+        return rc;
+      }
+      rc = c_rest_socket_bind(state->server_sock, addr, ctx->listen_port);
+      if (rc != C_REST_OK) {
+        c_rest_socket_t sock_to_close = state->server_sock;
+        c_rest_error_t cl_rc;
+        state->server_sock = C_REST_INVALID_SOCKET;
+        cl_rc = c_rest_socket_close(sock_to_close);
+        if (cl_rc != C_REST_OK) {
+          return cl_rc;
+        }
+        return rc;
+      }
+      rc = c_rest_socket_listen(state->server_sock, 128);
+      if (rc != C_REST_OK) {
+        c_rest_socket_t sock_to_close = state->server_sock;
+        c_rest_error_t cl_rc;
+        state->server_sock = C_REST_INVALID_SOCKET;
+        cl_rc = c_rest_socket_close(sock_to_close);
+        if (cl_rc != C_REST_OK) {
+          return cl_rc;
+        }
+        return rc;
+      }
+    }
+  }
+
+  /* Synchronous accept + c_rest_handle_connection loop */
   while (state->is_running) {
     c_rest_socket_t client_sock;
-    c_rest_error_t res = C_REST_ERROR_GENERIC;
+    res = C_REST_ERROR_GENERIC;
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
     if (ctx->cm_env) {
@@ -148,71 +209,59 @@ static c_rest_error_t sync_run(struct c_rest_context *ctx) {
 #endif
 
     if (res != C_REST_OK) {
-      if (!state->is_running)
-        continue;
-      return res;
+      goto sync_loop_done;
     }
-
     if (client_sock != C_REST_INVALID_SOCKET) {
-      struct c_rest_tls_connection *tls_conn = NULL;
-      c_rest_error_t tls_res = C_REST_ERROR_GENERIC;
-
-      if (ctx->tls_ctx) {
-        tls_res = c_rest_tls_accept(ctx->tls_ctx, client_sock, &tls_conn);
-        if (tls_res == C_REST_OK) {
-          /* Synchronous request reading and response writing would happen here
-           * over TLS. */
-          /* For now, we immediately close to prevent leaking. */
-          rc = c_rest_tls_close(tls_conn);
-          if (rc != C_REST_OK) {
-            return rc;
-          }
-
-        } else {
-          /* Handshake failed, return tls_res */
-          return tls_res;
+      c_rest_error_t handle_rc;
+      if (ctx->tls_ctx && !ctx->router) {
+        struct c_rest_tls_connection *tls_conn = NULL;
+        handle_rc = c_rest_tls_accept(ctx->tls_ctx, client_sock, &tls_conn);
+        if (handle_rc != C_REST_OK) {
+          goto sync_close_client;
+        }
+        handle_rc = c_rest_tls_close(tls_conn);
+        if (handle_rc != C_REST_OK) {
+          goto sync_close_client;
         }
       } else {
-        /* Synchronous request reading and response writing would happen here
-         * over cleartext. */
-        /* For now, we immediately close to prevent leaking. */
+        handle_rc = c_rest_handle_connection(ctx, client_sock);
+        if (handle_rc != C_REST_OK) {
+          goto sync_close_client;
+        }
       }
-
+    sync_close_client:;
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
       if (ctx->cm_env) {
         rc = cm_socket_close(ctx->cm_env, client_sock);
       } else {
         rc = c_rest_socket_close(client_sock);
-        if (rc != C_REST_OK)
-          return rc;
       }
 #else
       rc = c_rest_socket_close(client_sock);
-      if (rc != C_REST_OK)
-        return rc;
 #endif
-    } else {
-      /* Error or interrupt, potentially break loop */
-      break;
+      if (rc != C_REST_OK) {
+        return rc;
+      }
+      if (handle_rc != C_REST_OK) {
+        return handle_rc;
+      }
     }
   }
 
+sync_loop_done:
   state->is_running = 0;
 
   if (ctx->logger.log_cb) {
-#if defined(_WIN32)
     rc = ctx->logger.log_cb("SYNC modality run finished");
     if (rc != C_REST_OK) {
       return rc;
     }
-
-#endif
   }
-
-  return C_REST_OK;
+  res = C_REST_OK;
+  return res;
 }
 
-static c_rest_error_t sync_stop(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t sync_stop(struct c_rest_context *ctx) {
   struct sync_state *state;
   c_rest_error_t rc;
   if (!ctx || !ctx->internal_state)
@@ -221,9 +270,11 @@ static c_rest_error_t sync_stop(struct c_rest_context *ctx) {
   state->is_running = 0;
   if (state->server_sock != C_REST_INVALID_SOCKET) {
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
-    if (ctx->cm_env)
+    if (ctx->cm_env) {
       rc = cm_socket_close(ctx->cm_env, state->server_sock);
-    else {
+      if (rc != C_REST_OK)
+        return rc;
+    } else {
       rc = c_rest_socket_close(state->server_sock);
       if (rc != C_REST_OK)
         return rc;
@@ -233,9 +284,7 @@ static c_rest_error_t sync_stop(struct c_rest_context *ctx) {
     if (rc != C_REST_OK)
       return rc;
 #endif
-#if defined(_WIN32)
     state->server_sock = C_REST_INVALID_SOCKET;
-#endif
   }
   if (ctx->logger.log_cb) {
     rc = ctx->logger.log_cb("SYNC modality stopped");

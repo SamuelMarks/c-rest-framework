@@ -145,7 +145,6 @@ TEST test_dos_process_and_misc(void) {
   PASS();
 }
 
-SUITE_EXTERN(platform_dos_suite);
 SUITE(platform_dos_suite) {
   RUN_TEST(test_dos_platform_lifecycle);
   RUN_TEST(test_dos_socket_ops);

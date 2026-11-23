@@ -9,12 +9,8 @@
 c_rest_error_t mock_c_rest_socket_create(c_rest_socket_t *sock);
 c_rest_error_t mock_c_rest_socket_bind(c_rest_socket_t sock, const char *host, unsigned short port);
 c_rest_error_t mock_c_rest_socket_listen(c_rest_socket_t sock, int backlog);
-c_rest_error_t mock_c_rest_socket_accept(c_rest_socket_t server, c_rest_socket_t *out_client);
-c_rest_error_t mock_c_rest_thread_create(c_rest_thread_t *thread, c_rest_error_t (*func)(void *), void *arg);
-c_rest_error_t mock_c_rest_socket_close(c_rest_socket_t sock);
 c_rest_error_t mock_c_rest_tls_accept(struct c_rest_tls_context *ctx, c_rest_socket_t sock, struct c_rest_tls_connection **out_conn);
 c_rest_error_t mock_c_rest_tls_close(struct c_rest_tls_connection *conn);
-c_rest_error_t mock_c_rest_handle_connection(struct c_rest_context *ctx, c_rest_socket_t sock);
 
 #define c_rest_socket_create mock_c_rest_socket_create
 #define c_rest_socket_bind mock_c_rest_socket_bind
@@ -38,7 +34,8 @@ struct single_thread_state {
   volatile int is_running;
 };
 
-static c_rest_error_t single_thread_init(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t
+single_thread_init(struct c_rest_context *ctx) {
   struct single_thread_state *state;
   c_rest_error_t rc;
   if (!ctx) {
@@ -68,7 +65,8 @@ static c_rest_error_t single_thread_init(struct c_rest_context *ctx) {
   return C_REST_OK;
 }
 
-static c_rest_error_t single_thread_destroy(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t
+single_thread_destroy(struct c_rest_context *ctx) {
   struct single_thread_state *state;
   c_rest_error_t rc;
   if (!ctx || !ctx->internal_state) {
@@ -112,7 +110,7 @@ static c_rest_error_t single_thread_destroy(struct c_rest_context *ctx) {
   return C_REST_OK;
 }
 
-static c_rest_error_t single_thread_run(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t single_thread_run(struct c_rest_context *ctx) {
   struct single_thread_state *state;
   c_rest_error_t rc;
   if (!ctx || !ctx->internal_state) {
@@ -233,7 +231,8 @@ static c_rest_error_t single_thread_run(struct c_rest_context *ctx) {
 
   return C_REST_OK;
 }
-static c_rest_error_t single_thread_stop(struct c_rest_context *ctx) {
+static NO_DISCARD c_rest_error_t
+single_thread_stop(struct c_rest_context *ctx) {
   struct single_thread_state *state;
   c_rest_error_t rc;
   if (!ctx || !ctx->internal_state)

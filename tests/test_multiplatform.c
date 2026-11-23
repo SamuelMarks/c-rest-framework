@@ -2,11 +2,9 @@
 #include "c_rest_error.h"
 #include "test_protos.h"
 #include "c_rest_modality.h"
-#include <stdio.h>
 /* clang-format on */
 
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
-/* Mock c-multiplatform implementations */
 c_rest_error_t cm_env_create(cm_env_t *out_env) {
   *out_env = (cm_env_t)1;
   return C_REST_OK;
@@ -112,49 +110,40 @@ c_rest_error_t cm_file_get_mtime(cm_env_t env, const char *path,
     return C_REST_ERROR_GENERIC;
   (void)env;
   (void)path;
-  *out_mtime = 123456789;
+  *out_mtime = 123456789UL;
   return C_REST_OK;
 }
 
 c_rest_error_t cm_timer_get_ms(cm_env_t env, unsigned long *out_ms) {
   (void)env;
-  *out_ms = 1000;
+  *out_ms = 1000UL;
   return C_REST_OK;
 }
 
-int test_multiplatform_integration(void) {
-  struct c_rest_context *ctx;
-  cm_env_t env;
-  int res;
+TEST test_multiplatform_env_hooks(void) {
+  struct c_rest_context *ctx = NULL;
+  cm_env_t env = NULL;
+  cm_socket_t sock = 0;
+  unsigned long mtime = 0;
+  unsigned long ms = 0;
 
-  printf("Running multiplatform integration test...\n");
+  ASSERT_EQ(C_REST_OK, cm_env_create(&env));
+  ASSERT(env != NULL);
+  ASSERT_EQ(C_REST_OK, cm_socket_create(env, &sock));
+  ASSERT_EQ((cm_socket_t)2, sock);
+  ASSERT_EQ(C_REST_OK, cm_file_get_mtime(env, "test", &mtime));
+  ASSERT_EQ(123456789UL, mtime);
+  ASSERT_EQ(C_REST_OK, cm_timer_get_ms(env, &ms));
+  ASSERT_EQ(1000UL, ms);
 
-  res = cm_env_create(&env);
-  if (res != 0)
-    return C_REST_ERROR_GENERIC;
-
-  res = (int)c_rest_init(C_REST_MODALITY_SYNC, &ctx);
-  if (res != 0)
-    return C_REST_ERROR_GENERIC;
-
-  res = (int)c_rest_set_multiplatform_env(ctx, env);
-  if (res != 0)
-    return C_REST_ERROR_GENERIC;
-
-  /* Should use mock cm_socket_close via cm_env */
-  res = (int)c_rest_destroy(ctx);
-  if (res != 0)
-    return C_REST_ERROR_GENERIC;
-
-  res = cm_env_destroy(env);
-  if (res != 0)
-    return C_REST_ERROR_GENERIC;
-
-  return C_REST_OK;
+  ASSERT_EQ(C_REST_OK, c_rest_init(C_REST_MODALITY_SYNC, &ctx));
+  ASSERT_EQ(C_REST_OK, c_rest_set_multiplatform_env(ctx, env));
+  ASSERT_EQ(C_REST_OK, c_rest_destroy(ctx));
+  ASSERT_EQ(C_REST_OK, cm_env_destroy(env));
+  PASS();
 }
 #else
-int test_multiplatform_integration(void) {
-  printf("Multiplatform integration not enabled, skipping test.\n");
-  return C_REST_OK;
-}
+TEST test_multiplatform_env_hooks(void) { PASS(); }
 #endif
+
+SUITE(multiplatform_suite) { RUN_TEST(test_multiplatform_env_hooks); }

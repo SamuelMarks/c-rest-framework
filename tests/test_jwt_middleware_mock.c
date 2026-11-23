@@ -14,15 +14,15 @@
 #include "c_rest_crypto.h"
 #include "c_rest_mem.h"
 
-static int g_mock_res_status_fail = 0;
+static int s_jwt_mock_res_status_fail = 0;
 static int g_mock_res_html_fail = 0;
 static int g_mock_res_header_fail = 0;
 
 static c_rest_error_t mock_c_rest_response_set_status(struct c_rest_response *res, int status_code) {
     (void)res;
     (void)status_code;
-    if (g_mock_res_status_fail) {
-        g_mock_res_status_fail = 0;
+    if (s_jwt_mock_res_status_fail) {
+        s_jwt_mock_res_status_fail = 0;
         return C_REST_ERROR_GENERIC;
     }
     return C_REST_OK;
@@ -63,7 +63,7 @@ static c_rest_error_t mock_c_rest_response_set_header(struct c_rest_response *re
 
 static void reset_mocks(void *data) {
   (void)data;
-  g_mock_res_status_fail = 0;
+  s_jwt_mock_res_status_fail = 0;
   g_mock_res_html_fail = 0;
   g_mock_res_header_fail = 0;
 }
@@ -105,7 +105,7 @@ TEST test_jwt_middleware_error_branches(void) {
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_jwt_middleware(&req, NULL, &cfg));
 
   /* Test user_data NULL branches */
-  g_mock_res_status_fail = 1;
+  s_jwt_mock_res_status_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_jwt_middleware(&req, &res, NULL));
 
   g_mock_res_html_fail = 1;
@@ -114,7 +114,7 @@ TEST test_jwt_middleware_error_branches(void) {
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_jwt_middleware(&req, &res, NULL));
 
   /* Test missing bearer token branches (req.headers == NULL) */
-  g_mock_res_status_fail = 1;
+  s_jwt_mock_res_status_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_jwt_middleware(&req, &res, &cfg));
 
   g_mock_res_header_fail = 1;
@@ -126,13 +126,17 @@ TEST test_jwt_middleware_error_branches(void) {
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_jwt_middleware(&req, &res, &cfg));
 
   /* Set up invalid bearer token */
-  auth_hdr.key = "Authorization";
-  auth_hdr.value = "Bearer invalid.token.value";
+  {
+    static char k_auth[] = "Authorization";
+    static char v_inv[] = "Bearer invalid.token.value";
+    auth_hdr.key = k_auth;
+    auth_hdr.value = v_inv;
+  }
   auth_hdr.next = NULL;
   req.headers = &auth_hdr;
 
   /* Test invalid token signature branches */
-  g_mock_res_status_fail = 1;
+  s_jwt_mock_res_status_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_jwt_middleware(&req, &res, &cfg));
 
   g_mock_res_header_fail = 1;
@@ -157,7 +161,7 @@ TEST test_jwt_middleware_error_branches(void) {
   /* Test verify_payload failure branches */
   cfg.verify_payload = mock_payload_fail;
 
-  g_mock_res_status_fail = 1;
+  s_jwt_mock_res_status_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_jwt_middleware(&req, &res, &cfg));
 
   g_mock_res_header_fail = 1;
@@ -182,7 +186,6 @@ TEST test_jwt_middleware_error_branches(void) {
   PASS();
 }
 
-SUITE_EXTERN(jwt_middleware_mock_suite);
 SUITE(jwt_middleware_mock_suite) {
   SET_SETUP(reset_mocks, NULL);
   RUN_TEST(test_jwt_middleware_error_branches);

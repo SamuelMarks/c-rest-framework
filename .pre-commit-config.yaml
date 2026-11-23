@@ -87,13 +87,19 @@ repos:
         pass_filenames: false
       - id: check-enum-returns
         name: Check Enum Returns
-        entry: python scripts/check_enum_returns_clang.py -p build_cdb src include
+        entry: python scripts/check_enum_returns_clang.py -p build_cdb src include examples
         language: python
         additional_dependencies: [libclang]
         pass_filenames: false
       - id: check-no-discard-void
         name: Check No-Discard Void Casts
-        entry: python -c "import clang.cindex, glob, os, sys, urllib.request; lib = next((p for pat in ['/opt/homebrew/Cellar/llvm*/*/lib/libclang.dylib', '/opt/homebrew/lib/libclang.dylib', '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib', '/usr/lib/libclang.so*', '/usr/lib/llvm-*/lib/libclang.so*'] for p in glob.glob(pat)), None); clang.cindex.Config.set_library_file(lib) if lib else None; bdir = 'build_cdb' if os.path.exists('build_cdb/compile_commands.json') else ('build' if os.path.exists('build/compile_commands.json') else None); sys.argv[1:1] = ['--build-dir', bdir] if bdir and '--build-dir' not in sys.argv else []; sys.argv.extend(['src', 'include']) if not [a for a in sys.argv[1:] if not a.startswith('-')] else None; exec(urllib.request.urlopen('https://raw.githubusercontent.com/SamuelMarks/c-ci/refs/heads/master/precommit_hooks/check_no_discard_void_clang.py').read())"
+        entry: python -c "import clang.cindex, glob, os, sys, urllib.request; lib = next((p for pat in ['/opt/homebrew/Cellar/llvm*/*/lib/libclang.dylib', '/opt/homebrew/lib/libclang.dylib', '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib', '/usr/lib/libclang.so*', '/usr/lib/llvm-*/lib/libclang.so*'] for p in glob.glob(pat)), None); clang.cindex.Config.set_library_file(lib) if lib else None; bdir = 'build_cdb' if os.path.exists('build_cdb/compile_commands.json') else ('build' if os.path.exists('build/compile_commands.json') else None); sys.argv[1:1] = ['--build-dir', bdir] if bdir and '--build-dir' not in sys.argv else []; sys.argv.extend(['src', 'include', 'examples', 'tests']) if not [a for a in sys.argv[1:] if not a.startswith('-')] else None; exec(urllib.request.urlopen('https://raw.githubusercontent.com/SamuelMarks/c-ci/refs/heads/master/precommit_hooks/check_no_discard_void_clang.py').read())"
         language: python
         additional_dependencies: [libclang]
         types_or: [c]
+      - id: check-error-percolation
+        name: Check Error Percolation
+        entry: python -c "import glob, os, subprocess, sys, urllib.request; lib = next((p for pat in ['/Library/Developer/CommandLineTools/usr/lib/libclang.dylib', '/opt/homebrew/lib/libclang.dylib', '/usr/lib/libclang.so*', '/usr/lib/llvm-*/lib/libclang.so*'] for p in glob.glob(pat)), None); code = urllib.request.urlopen('https://raw.githubusercontent.com/SamuelMarks/c-ci/refs/heads/master/precommit_hooks/check_error_percolation_clang.py').read().decode('utf-8'); defs = ['-DC_REST_FRAMEWORK_USE_CDD_C', '-DC_REST_FRAMEWORK_USE_REAL_CAH', '-DC_REST_FRAMEWORK_USE_REAL_C_ORM', '-DC_REST_FRAMEWORK_ENABLE_RESPONSE_COMPRESSION_GZIP_BROTLI', '-DC_REST_ENABLE_RATE_LIMITING_THROTTLING_MIDDLEWARE', '-DC_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE', '-DC_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING', '-DC_REST_ENABLE_SERVER_SENT_EVENTS_SSE', '-DC_REST_FRAMEWORK_ENABLE_GRAPHQL', '-DC_REST_FRAMEWORK_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING', '-DC_REST_ENABLE_HOT_RELOADING_AUTO_RESTART']; sys.argv = ['check_error_percolation_clang.py'] + (['--libclang-path', lib] if lib else []) + ['src', 'examples'] + ['--compile-args', '-Ibuild_cdb/crf_parson_inc', '-Iinclude', '-Ibuild_cdb'] + [f'-I{d}' for d in glob.glob('build_cdb/_deps/*-src/include') + glob.glob('build_cdb/_deps/*-src') + glob.glob('build_cdb/_deps/*-build/*') + glob.glob('build_cdb/_deps/*-build')] + defs; exec(compile(code, 'check_error_percolation_clang.py', 'exec'))"
+        language: python
+        additional_dependencies: [libclang]
+        pass_filenames: false

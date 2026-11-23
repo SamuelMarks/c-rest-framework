@@ -17,17 +17,13 @@
 /* clang-format on */
 
 #ifndef CDD_DOS
-#ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_openapi_fail = 0;
-#endif
 c_rest_error_t c_rest_openapi_spec_init(struct c_rest_openapi_spec **out_spec) {
   struct c_rest_openapi_spec *spec;
   if (!out_spec)
     return C_REST_ERROR_GENERIC;
 
   if (C_REST_MALLOC(sizeof(struct c_rest_openapi_spec), (void **)&spec) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
 
   memset(spec, 0, sizeof(struct c_rest_openapi_spec));
@@ -273,13 +269,12 @@ c_rest_error_t c_rest_openapi_spec_destroy(struct c_rest_openapi_spec *spec) {
   return C_REST_OK;
 }
 
-static c_rest_error_t copy_string(void *dst_ptr, const char *src) {
+static NO_DISCARD c_rest_error_t copy_string(void *dst_ptr, const char *src) {
   const char **dst = (const char **)dst_ptr;
   if (src) {
     if (C_REST_MALLOC(strlen(src) + 1, dst) != 0) {
-      LOG_DEBUG("C_REST_MALLOC failed");
       *dst = NULL;
-      return C_REST_ERROR_OOM;
+      return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_MALLOC failed");
     }
 #if defined(_MSC_VER)
     strcpy_s((char *)*dst, strlen(src) + 1, src);
@@ -290,12 +285,13 @@ static c_rest_error_t copy_string(void *dst_ptr, const char *src) {
   return C_REST_OK;
 }
 
-static c_rest_error_t copy_operation(struct c_rest_openapi_operation *dst,
-                                     const void *src_ptr) {
+static NO_DISCARD c_rest_error_t
+copy_operation(struct c_rest_openapi_operation *dst, const void *src_ptr) {
   const struct c_rest_openapi_operation *src =
       (const struct c_rest_openapi_operation *)src_ptr;
   c_rest_error_t rc;
   size_t i;
+  int log_rc = 0;
 
   rc = copy_string((void *)(size_t)&dst->operation_id, src->operation_id);
   if (rc != C_REST_OK)
@@ -309,7 +305,7 @@ static c_rest_error_t copy_operation(struct c_rest_openapi_operation *dst,
 
   if (src->tags) {
     if (C_REST_MALLOC(sizeof(char *) * src->n_tags, &dst->tags) != 0) {
-      LOG_DEBUG("C_REST_MALLOC failed");
+      log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
       dst->tags = NULL;
     }
     if (dst->tags) {
@@ -343,7 +339,7 @@ static c_rest_error_t copy_operation(struct c_rest_openapi_operation *dst,
     if (C_REST_MALLOC(sizeof(struct c_rest_openapi_security_requirement) *
                           src->n_security,
                       &(dst->security)) != 0) {
-      LOG_DEBUG("C_REST_MALLOC failed");
+      log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
       dst->security = NULL;
     }
     if (dst->security) {
@@ -361,7 +357,7 @@ static c_rest_error_t copy_operation(struct c_rest_openapi_operation *dst,
         if (src->security[i].scopes) {
           if (C_REST_MALLOC(sizeof(char *) * src->security[i].n_scopes,
                             &(dst->security[i].scopes)) != 0) {
-            LOG_DEBUG("C_REST_MALLOC failed");
+            log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
             dst->security[i].scopes = NULL;
           }
           if (dst->security[i].scopes) {
@@ -380,7 +376,7 @@ static c_rest_error_t copy_operation(struct c_rest_openapi_operation *dst,
       }
     }
   }
-  return C_REST_OK;
+  return (c_rest_error_t)((int)C_REST_OK | log_rc);
 }
 
 c_rest_error_t
@@ -396,16 +392,17 @@ c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
         spec->capacity_components == 0 ? 8 : spec->capacity_components * 2;
     char **new_keys = NULL;
     char **new_json = NULL;
+    int log_rc = 0;
 
     if (spec->component_schemas_keys) {
       if (C_REST_REALLOC(spec->component_schemas_keys, sizeof(char *) * new_cap,
                          (void **)&new_keys) != 0) {
-        LOG_DEBUG("C_REST_REALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_REALLOC failed");
         new_keys = NULL;
       }
     } else {
       if (C_REST_MALLOC(sizeof(char *) * new_cap, (void **)&new_keys) != 0) {
-        LOG_DEBUG("C_REST_MALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
         new_keys = NULL;
       }
     }
@@ -413,12 +410,12 @@ c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
     if (spec->component_schemas_json) {
       if (C_REST_REALLOC(spec->component_schemas_json, sizeof(char *) * new_cap,
                          (void **)&new_json) != 0) {
-        LOG_DEBUG("C_REST_REALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_REALLOC failed");
         new_json = NULL;
       }
     } else {
       if (C_REST_MALLOC(sizeof(char *) * new_cap, (void **)&new_json) != 0) {
-        LOG_DEBUG("C_REST_MALLOC failed");
+        log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
         new_json = NULL;
       }
     }
@@ -429,7 +426,7 @@ c_rest_openapi_spec_add_component_schema(struct c_rest_openapi_spec *spec,
       spec->component_schemas_json = new_json;
 
     if (!new_keys || !new_json) {
-      return C_REST_ERROR_GENERIC;
+      return (c_rest_error_t)((int)C_REST_ERROR_GENERIC | log_rc);
     }
     spec->component_schemas_keys = new_keys;
     spec->component_schemas_json = new_json;
@@ -480,18 +477,14 @@ c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
         if (C_REST_REALLOC(spec->paths,
                            sizeof(struct c_rest_openapi_path) * new_cap,
                            (void **)&(new_paths)) != 0) {
-          LOG_DEBUG("C_REST_REALLOC failed");
-          new_paths = NULL;
+          return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_REALLOC failed");
         }
       } else {
         if (C_REST_MALLOC(sizeof(struct c_rest_openapi_path) * new_cap,
                           (void **)&(new_paths)) != 0) {
-          LOG_DEBUG("C_REST_MALLOC failed");
-          new_paths = NULL;
+          return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
         }
       }
-      if (!new_paths)
-        return C_REST_ERROR_GENERIC;
 
       spec->paths = new_paths;
       spec->capacity_paths = new_cap;
@@ -527,7 +520,7 @@ c_rest_openapi_spec_add_path(struct c_rest_openapi_spec *spec,
   return C_REST_OK;
 }
 
-static c_rest_error_t
+static NO_DISCARD c_rest_error_t
 serialize_operation(JSON_Object *methods_obj, const char *method_name,
                     const struct c_rest_openapi_operation *op) {
   JSON_Value *op_val;
@@ -535,13 +528,10 @@ serialize_operation(JSON_Object *methods_obj, const char *method_name,
   JSON_Value *tags_val;
   JSON_Array *tags_arr;
   size_t i;
-
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_openapi_fail >= 10 && g_mock_openapi_fail <= 18) {
-    if (g_mock_openapi_fail == 10)
-      return C_REST_ERROR_GENERIC;
-    g_mock_openapi_fail--;
-  }
+  c_rest_error_t seam_rc = crf_seam_openapi_op_step();
+  if (seam_rc != C_REST_OK)
+    return seam_rc;
 #endif
 
   op_val = json_value_init_object();
@@ -964,19 +954,19 @@ c_rest_openapi_spec_to_json(const struct c_rest_openapi_spec *spec,
   return C_REST_OK;
 }
 
-static c_rest_error_t openapi_handler(struct c_rest_request *req,
-                                      struct c_rest_response *res,
-                                      void *user_data) {
+static NO_DISCARD c_rest_error_t openapi_handler(struct c_rest_request *req,
+                                                 struct c_rest_response *res,
+                                                 void *user_data) {
   struct c_rest_router *router = (struct c_rest_router *)user_data;
   struct c_rest_openapi_spec *spec = NULL;
   char *json_str = NULL;
   c_rest_error_t rc;
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_openapi_fail == 1)
-    rc = C_REST_ERROR_GENERIC;
-  else
+  rc = crf_seam_openapi_check(1);
+  if (rc != C_REST_OK)
+    return rc;
 #endif
-    rc = c_rest_router_get_openapi_spec(router, &spec);
+  rc = c_rest_router_get_openapi_spec(router, &spec);
   if (rc != C_REST_OK)
     return rc;
 
@@ -984,18 +974,19 @@ static c_rest_error_t openapi_handler(struct c_rest_request *req,
   (void)req;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_openapi_fail == 2)
-    rc = C_REST_ERROR_GENERIC;
-  else
+  rc = crf_seam_openapi_check(2);
+  if (rc != C_REST_OK)
+    return rc;
 #endif
-    rc = c_rest_openapi_spec_to_json(spec, &json_str);
+  rc = c_rest_openapi_spec_to_json(spec, &json_str);
   if (rc != C_REST_OK)
     return rc;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_openapi_fail == 3) {
+  rc = crf_seam_openapi_check(3);
+  if (rc != C_REST_OK) {
     json_free_serialized_string(json_str);
-    return C_REST_ERROR_GENERIC;
+    return rc;
   }
 #endif
   rc = c_rest_response_set_status(res, 200);
@@ -1051,9 +1042,9 @@ static const char *swagger_html_template_1 =
   "</body>\n"                                                                  \
   "</html>"
 
-static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
-                                         struct c_rest_response *res,
-                                         void *user_data) {
+static NO_DISCARD c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
+                                                    struct c_rest_response *res,
+                                                    void *user_data) {
   struct c_rest_router *router = (struct c_rest_router *)user_data;
   struct c_rest_openapi_spec *spec = NULL;
   char *html_buf;
@@ -1062,11 +1053,11 @@ static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
   const char *openapi_url = "/openapi.json";
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_openapi_fail == 4)
-    rc = C_REST_ERROR_GENERIC;
-  else
+  rc = crf_seam_openapi_check(4);
+  if (rc != C_REST_OK)
+    return rc;
 #endif
-    rc = c_rest_router_get_openapi_spec(router, &spec);
+  rc = c_rest_router_get_openapi_spec(router, &spec);
   if (rc != C_REST_OK)
     return rc;
 
@@ -1094,11 +1085,14 @@ static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
           openapi_url);
 #endif
 
-  rc = c_rest_response_set_status(res, 200);
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_openapi_fail == 5)
-    rc = C_REST_ERROR_GENERIC;
+  rc = crf_seam_openapi_check(5);
+  if (rc != C_REST_OK) {
+    C_REST_FREE((void *)(html_buf));
+    return rc;
+  }
 #endif
+  rc = c_rest_response_set_status(res, 200);
   if (rc != C_REST_OK) {
     C_REST_FREE((void *)(html_buf));
     return rc;
@@ -1108,6 +1102,7 @@ static c_rest_error_t swagger_ui_handler(struct c_rest_request *req,
     C_REST_FREE((void *)(html_buf));
     return rc;
   }
+
   C_REST_FREE((void *)(html_buf));
   return C_REST_OK;
 }
@@ -1125,11 +1120,11 @@ c_rest_error_t c_rest_enable_swagger_ui(struct c_rest_router *router,
     return C_REST_ERROR_GENERIC;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_openapi_fail == 6)
-    rc = C_REST_ERROR_GENERIC;
-  else
+  rc = crf_seam_openapi_check(6);
+  if (rc != C_REST_OK)
+    return rc;
 #endif
-    rc = c_rest_router_get_openapi_spec(router, &spec);
+  rc = c_rest_router_get_openapi_spec(router, &spec);
   if (rc != C_REST_OK)
     return rc;
   C_REST_FREE((void *)(spec->swagger_openapi_url));

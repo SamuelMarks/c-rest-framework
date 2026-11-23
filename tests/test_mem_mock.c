@@ -1,5 +1,6 @@
 /* clang-format off */
 #define C_REST_NO_REDIRECT_STD_ALLOC
+#define C_REST_MEM_INTERNAL 1
 #include "c_rest_error.h"
 #include "greatest.h"
 #include "greatest_clean.h"
@@ -10,6 +11,7 @@
 
 #include "c_rest_mem.h"
 #include "c_rest_ts_queue.h"
+#include "c_rest_platform.h"
 
 static int g_mock_mutex_unlock_countdown = -1;
 static int g_mock_mutex_lock_countdown = -1;
@@ -21,6 +23,12 @@ static int g_mock_cond_wait_fail = 0;
 static int g_mock_cond_signal_fail = 0;
 
 static void *fail_malloc(size_t size) {
+  (void)size;
+  return NULL;
+}
+
+static void *fail_realloc_mock(void *ptr, size_t size) {
+  (void)ptr;
   (void)size;
   return NULL;
 }
@@ -41,13 +49,6 @@ static char *dummy_success_strdup(const char *str) {
   return d;
 }
 
-extern c_rest_error_t c_rest_mutex_unlock(c_rest_mutex_t mutex);
-extern c_rest_error_t c_rest_mutex_lock(c_rest_mutex_t mutex);
-extern c_rest_error_t c_rest_mutex_destroy(c_rest_mutex_t mutex);
-extern c_rest_error_t c_rest_cond_create(c_rest_cond_t *cond);
-extern c_rest_error_t c_rest_cond_wait(c_rest_cond_t cond, c_rest_mutex_t mutex);
-extern c_rest_error_t c_rest_cond_signal(c_rest_cond_t cond);
-
 static c_rest_error_t mock_c_rest_cond_signal(c_rest_cond_t cond) {
   if (g_mock_cond_signal_fail) {
     g_mock_cond_signal_fail = 0;
@@ -59,14 +60,14 @@ static c_rest_error_t mock_c_rest_cond_signal(c_rest_cond_t cond) {
 static c_rest_error_t mock_c_rest_mutex_unlock(c_rest_mutex_t mutex) {
     if (g_mock_mutex_unlock_fail) {
         g_mock_mutex_unlock_fail = 0;
-        c_rest_mutex_unlock(mutex);
-        return C_REST_ERROR_GENERIC;
+        return (c_rest_error_t)((int)C_REST_ERROR_GENERIC |
+                                (int)c_rest_mutex_unlock(mutex));
     }
     if (g_mock_mutex_unlock_countdown >= 0) {
         if (g_mock_mutex_unlock_countdown == 0) {
             g_mock_mutex_unlock_countdown = -1;
-            c_rest_mutex_unlock(mutex);
-            return C_REST_ERROR_GENERIC;
+            return (c_rest_error_t)((int)C_REST_ERROR_GENERIC |
+                                    (int)c_rest_mutex_unlock(mutex));
         }
         g_mock_mutex_unlock_countdown--;
     }
@@ -146,28 +147,28 @@ static void reset_mocks(void *data) {
 TEST test_mem_error_branches(void) {
   void *ptr = NULL;
 
-  c_rest_mem_tracker_init();
+  ASSERT_EQ(C_REST_OK, c_rest_mem_tracker_init());
 
   /* test c_rest_mutex_unlock failure in malloc */
   g_mock_mutex_unlock_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_mem_malloc(10, "file", 1, &ptr));
 
   /* test c_rest_mutex_lock failure in free */
-  c_rest_mem_malloc(10, "file", 1, &ptr);
+  ASSERT_EQ(C_REST_OK, c_rest_mem_malloc(10, "file", 1, &ptr));
   g_mock_mutex_lock_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_mem_free(ptr));
-  c_rest_mem_free(ptr); /* actually free it */
+  ASSERT_EQ(C_REST_OK, c_rest_mem_free(ptr)); /* actually free it */
 
   /* test c_rest_mutex_unlock failure in free */
-  c_rest_mem_malloc(10, "file", 1, &ptr);
+  ASSERT_EQ(C_REST_OK, c_rest_mem_malloc(10, "file", 1, &ptr));
   g_mock_mutex_unlock_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_mem_free(ptr));
 
   /* test lock and unlock failure in print_leaks */
   g_mock_mutex_lock_fail = 1;
-  c_rest_mem_tracker_print_leaks();
+  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_mem_tracker_print_leaks());
   g_mock_mutex_unlock_fail = 1;
-  c_rest_mem_tracker_print_leaks();
+  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_mem_tracker_print_leaks());
 
   /* test c_rest_mutex_unlock failure in cleanup */
   g_mock_mutex_unlock_fail = 1;
@@ -176,7 +177,7 @@ TEST test_mem_error_branches(void) {
   /* test c_rest_mutex_destroy failure in cleanup */
   g_mock_mutex_destroy_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_mem_tracker_cleanup());
-  c_rest_mem_tracker_cleanup(); /* actually clean up */
+  ASSERT_EQ(C_REST_OK, c_rest_mem_tracker_cleanup()); /* actually clean up */
 
   /* test c_rest_internal_strdup with NULL, valid string, and malloc failure */
   {
@@ -201,12 +202,12 @@ TEST test_mem_error_branches(void) {
     g_crf_strdup_hook = NULL;
 
     dup_str = NULL;
-    c_rest_mem_tracker_init();
+    ASSERT_EQ(C_REST_OK, c_rest_mem_tracker_init());
     g_crf_strdup_hook = dummy_success_strdup;
     ASSERT_EQ(C_REST_OK,
               c_rest_mem_strdup("test", __FILE__, __LINE__, &dup_str));
     ASSERT(dup_str != NULL);
-    c_rest_mem_free(dup_str);
+    ASSERT_EQ(C_REST_OK, c_rest_mem_free(dup_str));
     g_crf_strdup_hook = NULL;
     {
       void *def_p = test_c_rest_default_malloc(8);
@@ -218,32 +219,33 @@ TEST test_mem_error_branches(void) {
   }
 
   /* test c_rest_mem_realloc with size=0 and mutex_unlock failure in free */
-  c_rest_mem_tracker_init();
-  c_rest_mem_malloc(10, "file", 1, &ptr);
+  ASSERT_EQ(C_REST_OK, c_rest_mem_tracker_init());
+  ASSERT_EQ(C_REST_OK, c_rest_mem_malloc(10, "file", 1, &ptr));
   g_mock_mutex_unlock_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_mem_realloc(ptr, 0, "file", 1, &ptr));
-  c_rest_mem_free(ptr);
+  ASSERT_EQ(C_REST_OK, c_rest_mem_free(ptr));
 
   /* test c_rest_mem_realloc with mutex_lock failure on search */
-  c_rest_mem_malloc(10, "file", 1, &ptr);
+  ASSERT_EQ(C_REST_OK, c_rest_mem_malloc(10, "file", 1, &ptr));
   g_mock_mutex_lock_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_mem_realloc(ptr, 20, "file", 1, &ptr));
 
-  /* test c_rest_mem_realloc with mutex_unlock failure on search */
+  /* test c_rest_mem_realloc OOM with mutex_unlock failure */
+  g_crf_realloc_hook = fail_realloc_mock;
+  g_mock_mutex_unlock_fail = 1;
+  {
+    void *oom_out = NULL;
+    ASSERT_EQ(C_REST_ERROR_GENERIC,
+              c_rest_mem_realloc(ptr, 20, "file", 1, &oom_out));
+  }
+  g_crf_realloc_hook = NULL;
+
+  /* test c_rest_mem_realloc success with mutex_unlock failure */
   g_mock_mutex_unlock_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_mem_realloc(ptr, 20, "file", 1, &ptr));
 
-  /* test c_rest_mem_realloc with mutex_lock failure on update (countdown 1) */
-  g_mock_mutex_lock_countdown = 1;
-  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_mem_realloc(ptr, 20, "file", 1, &ptr));
-
-  /* test c_rest_mem_realloc with mutex_unlock failure on update (countdown 1)
-   */
-  g_mock_mutex_unlock_countdown = 1;
-  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_mem_realloc(ptr, 30, "file", 1, &ptr));
-
-  c_rest_mem_free(ptr);
-  c_rest_mem_tracker_cleanup();
+  ASSERT_EQ(C_REST_OK, c_rest_mem_free(ptr));
+  ASSERT_EQ(C_REST_OK, c_rest_mem_tracker_cleanup());
 
   PASS();
 }
@@ -262,7 +264,7 @@ TEST test_ts_queue_error_branches(void) {
   g_mock_cond_create_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_init(q));
 
-  c_rest_ts_queue_init(q);
+  ASSERT_EQ(C_REST_OK, c_rest_ts_queue_init(q));
 
   /* test push to closed queue with unlock failure */
   q->is_closed = 1;
@@ -281,7 +283,7 @@ TEST test_ts_queue_error_branches(void) {
 
   /* Pop all items so queue is empty for cond_wait test */
   while (q->size > 0) {
-    c_rest_ts_queue_pop(q, &item);
+    ASSERT_EQ(C_REST_OK, c_rest_ts_queue_pop(q, &item));
   }
 
   /* test c_rest_cond_wait failure and unlock failure in pop */
@@ -304,7 +306,7 @@ TEST test_ts_queue_error_branches(void) {
             mock_c_rest_cond_wait((c_rest_cond_t)0, (c_rest_mutex_t)0));
 
   /* Push an item so queue is not empty when testing unlock failure in pop */
-  c_rest_ts_queue_push(q, (void *)2);
+  ASSERT_EQ(C_REST_OK, c_rest_ts_queue_push(q, (void *)2));
 
   /* test c_rest_mutex_unlock failure in pop */
   g_mock_mutex_unlock_fail = 1;
@@ -327,13 +329,12 @@ TEST test_ts_queue_error_branches(void) {
   g_mock_mutex_destroy_fail = 1;
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_ts_queue_destroy(q, NULL));
 
-  c_rest_ts_queue_destroy(q, NULL); /* clean up */
+  ASSERT_EQ(C_REST_OK, c_rest_ts_queue_destroy(q, NULL)); /* clean up */
   free(q);
 
   PASS();
 }
 
-SUITE_EXTERN(mem_mock_suite);
 SUITE(mem_mock_suite) {
   SET_SETUP(reset_mocks, NULL);
   RUN_TEST(test_mem_error_branches);

@@ -12,6 +12,7 @@
 #include "c_rest_platform.h"
 #include "c_rest_testing_mocks.h"
 
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include "c_rest_log.h"
@@ -20,7 +21,9 @@
 
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
 #include <unistd.h>
+#ifndef C_REST_NO_THREADS
 #include <pthread.h>
+#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -35,19 +38,33 @@ c_rest_error_t c_rest_platform_init(void) { return C_REST_OK; }
 
 c_rest_error_t c_rest_platform_cleanup(void) {
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_platform_cleanup_fail)
-    return C_REST_ERROR_GENERIC;
-#endif
+  return crf_seam_platform_cleanup_hook();
+#else
   return C_REST_OK;
+#endif
 }
 
 c_rest_error_t c_rest_socket_create(c_rest_socket_t *out_sock) {
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   int sock;
+  c_rest_error_t seam_rc = C_REST_ERROR_NETWORK;
   if (!out_sock)
     return C_REST_ERROR_GENERIC;
 
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  seam_rc = crf_seam_socket_check(300, C_REST_ERROR_NETWORK);
+  if (seam_rc != C_REST_OK) {
+    sock = -1;
+    goto posix_sock_check;
+  }
+#endif
   sock = socket(AF_INET, SOCK_STREAM, 0);
+  seam_rc = C_REST_ERROR_NETWORK;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+posix_sock_check:
+#endif
+  if (sock < 0)
+    return seam_rc;
 
   *out_sock = (c_rest_socket_t)sock;
   return C_REST_OK;
@@ -138,6 +155,8 @@ c_rest_error_t c_rest_socket_set_nonblocking(c_rest_socket_t sock,
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   int s = (int)sock;
   int flags = fcntl(s, F_GETFL, 0);
+  int fcntl_rc;
+  c_rest_error_t seam_rc = C_REST_ERROR_GENERIC;
   if (flags < 0)
     return C_REST_ERROR_GENERIC;
 
@@ -147,7 +166,20 @@ c_rest_error_t c_rest_socket_set_nonblocking(c_rest_socket_t sock,
     flags &= ~O_NONBLOCK;
   }
 
-  fcntl(s, F_SETFL, flags);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  seam_rc = crf_seam_socket_check(301, C_REST_ERROR_GENERIC);
+  if (seam_rc != C_REST_OK) {
+    fcntl_rc = -1;
+    goto posix_fcntl_check;
+  }
+#endif
+  fcntl_rc = fcntl(s, F_SETFL, flags);
+  seam_rc = C_REST_ERROR_GENERIC;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+posix_fcntl_check:
+#endif
+  if (fcntl_rc < 0)
+    return seam_rc;
   return C_REST_OK;
 #else
   return C_REST_ERROR_GENERIC;
@@ -167,6 +199,87 @@ c_rest_error_t c_rest_socket_close(c_rest_socket_t sock) {
 #endif
 }
 
+#if defined(C_REST_NO_THREADS)
+c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
+                                    c_rest_thread_fn func, void *arg) {
+  (void)arg;
+  if (!out_thread || !func)
+    return C_REST_ERROR_GENERIC;
+  return C_REST_ERROR_NOT_SUPPORTED;
+}
+
+c_rest_error_t c_rest_thread_join(c_rest_thread_t thread) {
+  if (!thread || thread == (c_rest_thread_t)-1)
+    return C_REST_ERROR_GENERIC;
+  return C_REST_ERROR_NOT_SUPPORTED;
+}
+
+c_rest_error_t c_rest_mutex_create(c_rest_mutex_t *out_mutex) {
+  int *m;
+  if (!out_mutex)
+    return C_REST_ERROR_GENERIC;
+  if (C_REST_MALLOC(sizeof(int), (void **)&m) != 0)
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
+  *m = 0;
+  *out_mutex = (c_rest_mutex_t)m;
+  return C_REST_OK;
+}
+
+c_rest_error_t c_rest_mutex_lock(c_rest_mutex_t mutex) {
+  int *m = (int *)mutex;
+  if (!m)
+    return C_REST_ERROR_GENERIC;
+  *m = 1;
+  return C_REST_OK;
+}
+
+c_rest_error_t c_rest_mutex_unlock(c_rest_mutex_t mutex) {
+  int *m = (int *)mutex;
+  if (!m)
+    return C_REST_ERROR_GENERIC;
+  *m = 0;
+  return C_REST_OK;
+}
+
+c_rest_error_t c_rest_mutex_destroy(c_rest_mutex_t mutex) {
+  int *m = (int *)mutex;
+  if (!m)
+    return C_REST_ERROR_GENERIC;
+  C_REST_FREE((void *)m);
+  return C_REST_OK;
+}
+
+c_rest_error_t c_rest_cond_create(c_rest_cond_t *out_cond) {
+  int *c;
+  if (!out_cond)
+    return C_REST_ERROR_GENERIC;
+  if (C_REST_MALLOC(sizeof(int), (void **)&c) != 0)
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
+  *c = 0;
+  *out_cond = (c_rest_cond_t)c;
+  return C_REST_OK;
+}
+
+c_rest_error_t c_rest_cond_wait(c_rest_cond_t c, c_rest_mutex_t m) {
+  if (!c || !m)
+    return C_REST_ERROR_GENERIC;
+  return C_REST_OK;
+}
+
+c_rest_error_t c_rest_cond_signal(c_rest_cond_t c) {
+  if (!c)
+    return C_REST_ERROR_GENERIC;
+  return C_REST_OK;
+}
+
+c_rest_error_t c_rest_cond_destroy(c_rest_cond_t c) {
+  int *cond = (int *)c;
+  if (!cond)
+    return C_REST_ERROR_GENERIC;
+  C_REST_FREE((void *)cond);
+  return C_REST_OK;
+}
+#else
 struct thread_wrapper_args {
   c_rest_thread_fn func;
   void *arg;
@@ -175,13 +288,14 @@ struct thread_wrapper_args {
 static void *thread_wrapper(void *arg) {
   c_rest_error_t rc;
   struct thread_wrapper_args *args = (struct thread_wrapper_args *)arg;
-  rc = args->func(args->arg);
-  if (rc != C_REST_OK) {
-    C_REST_FREE((void *)(args));
-    return (void *)(ptrdiff_t)rc;
-  }
+  c_rest_thread_fn fn = args->func;
+  void *fn_arg = args->arg;
   C_REST_FREE((void *)(args));
-  return (void *)(ptrdiff_t)C_REST_OK;
+  rc = fn(fn_arg);
+  if (rc != C_REST_OK) {
+    return (void *)(unsigned long)rc;
+  }
+  return (void *)(unsigned long)C_REST_OK;
 }
 
 c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
@@ -195,11 +309,8 @@ c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
 
   if (C_REST_MALLOC(sizeof(struct thread_wrapper_args), (void **)&(args)) !=
       0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    args = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!args)
-    return C_REST_ERROR_GENERIC;
 
   args->func = func;
   args->arg = arg;
@@ -219,12 +330,29 @@ c_rest_error_t c_rest_thread_create(c_rest_thread_t *out_thread,
 c_rest_error_t c_rest_thread_join(c_rest_thread_t thread) {
 #if defined(__unix__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
   pthread_t t;
+  int join_rc;
+  c_rest_error_t seam_rc = C_REST_ERROR_GENERIC;
   if (!thread || thread == (c_rest_thread_t)-1) {
     return C_REST_ERROR_GENERIC;
   }
   t = (pthread_t)thread;
-  if (pthread_equal(t, pthread_self()) || pthread_join(t, NULL) != 0) {
+  if (pthread_equal(t, pthread_self())) {
     return C_REST_ERROR_GENERIC;
+  }
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  seam_rc = crf_seam_socket_check(302, C_REST_ERROR_GENERIC);
+  if (seam_rc != C_REST_OK) {
+    join_rc = -1;
+    goto posix_join_check;
+  }
+#endif
+  join_rc = pthread_join(t, NULL);
+  seam_rc = C_REST_ERROR_GENERIC;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+posix_join_check:
+#endif
+  if (join_rc != 0) {
+    return seam_rc;
   }
   return C_REST_OK;
 
@@ -241,11 +369,8 @@ c_rest_error_t c_rest_mutex_create(c_rest_mutex_t *out_mutex) {
     return C_REST_ERROR_GENERIC;
 
   if (C_REST_MALLOC(sizeof(pthread_mutex_t), (void **)&m) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    m = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!m)
-    return C_REST_ERROR_GENERIC;
 
   pthread_mutex_init(m, NULL);
 
@@ -304,11 +429,8 @@ c_rest_error_t c_rest_cond_create(c_rest_cond_t *out_cond) {
     return C_REST_ERROR_GENERIC;
 
   if (C_REST_MALLOC(sizeof(pthread_cond_t), (void **)&cond) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    cond = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!cond)
-    return C_REST_ERROR_GENERIC;
 
   pthread_cond_init(cond, NULL);
 
@@ -362,6 +484,7 @@ c_rest_error_t c_rest_cond_destroy(c_rest_cond_t c) {
   return C_REST_ERROR_GENERIC;
 #endif
 }
+#endif
 
 c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
                                      const char *executable,
@@ -373,20 +496,26 @@ c_rest_error_t c_rest_process_create(c_rest_process_t *out_proc,
   return C_REST_ERROR_NOT_SUPPORTED;
 #elif defined(__unix__) || defined(__APPLE__)
   pid_t pid;
+  c_rest_error_t seam_rc = C_REST_ERROR_GENERIC;
 
   if (!out_proc || !executable)
     return C_REST_ERROR_GENERIC;
 
+  fflush(NULL);
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_fork_fail)
+  seam_rc = crf_seam_fork_hook();
+  if (seam_rc != C_REST_OK) {
     pid = -1;
-  else
-    pid = fork();
-#else
+    goto posix_fork_check;
+  }
+#endif
   pid = fork();
+  seam_rc = C_REST_ERROR_GENERIC;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+posix_fork_check:
 #endif
   if (pid < 0)
-    return C_REST_ERROR_GENERIC;
+    return seam_rc;
 
   if (pid == 0) {
     /* Child */
@@ -487,27 +616,17 @@ c_rest_error_t c_rest_socket_recv(c_rest_socket_t sock, void *buf, size_t len,
 c_rest_error_t c_rest_socket_send(c_rest_socket_t sock, const void *buf,
                                   size_t len, size_t *out_written) {
   ssize_t ret;
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  int intercepted = 0;
+  c_rest_error_t seam_rc;
+#endif
   if (!buf || !out_written)
     return C_REST_ERROR_GENERIC;
   *out_written = 0;
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_socket_fail == 200) {
-    *out_written = len;
-    return C_REST_OK;
-  }
-  if (g_mock_socket_fail == 201) {
-    return C_REST_ERROR_GENERIC;
-  }
-  if (g_mock_socket_fail == 202) {
-    g_mock_socket_fail = 201;
-    *out_written = len;
-    return C_REST_OK;
-  }
-  if (g_mock_socket_fail == 203) {
-    g_mock_socket_fail = 202;
-    *out_written = len;
-    return C_REST_OK;
-  }
+  seam_rc = crf_seam_socket_send(len, out_written, &intercepted);
+  if (intercepted)
+    return seam_rc;
 #endif
 #ifdef MSG_NOSIGNAL
   ret = send((int)sock, buf, len, MSG_NOSIGNAL);

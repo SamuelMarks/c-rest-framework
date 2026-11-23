@@ -13,36 +13,17 @@
 /* clang-format on */
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_sse_append_fail = -1;
-static c_rest_error_t mock_append_cstr(c_rest_string *s, const char *c) {
-  if (g_mock_sse_append_fail == 0 || g_mock_sse_append_fail == -5)
-    return C_REST_ERROR_GENERIC;
-  if (g_mock_sse_append_fail > 0)
-    g_mock_sse_append_fail--;
-  return c_rest_string_append_cstr(s, c);
-}
-static c_rest_error_t mock_append(c_rest_string *s, const char *c, size_t l) {
-  if (g_mock_sse_append_fail == 0)
-    return C_REST_ERROR_GENERIC;
-  if (g_mock_sse_append_fail > 0)
-    g_mock_sse_append_fail--;
-  return c_rest_string_append(s, c, l);
-}
-static c_rest_error_t mock_string_destroy(c_rest_string *s) {
-  if (g_mock_sse_append_fail == -2 || g_mock_sse_append_fail == -5)
-    return C_REST_ERROR_GENERIC;
-  return c_rest_string_destroy(s);
-}
-#define c_rest_string_append_cstr mock_append_cstr
-#define c_rest_string_append mock_append
-#define c_rest_string_destroy mock_string_destroy
-
-#define INTERNAL_EVENT_DESTROY(ev)                                             \
-  (g_mock_sse_append_fail == -3 ? C_REST_ERROR_GENERIC                         \
-                                : c_rest_sse_event_destroy(ev))
-#define INTERNAL_EVENT_INIT(ev)                                                \
-  (g_mock_sse_append_fail == -4 ? C_REST_ERROR_GENERIC                         \
-                                : c_rest_sse_event_init(ev))
+#ifndef c_rest_string_append_cstr
+#define c_rest_string_append_cstr crf_seam_sse_append_cstr
+#endif
+#ifndef c_rest_string_append
+#define c_rest_string_append crf_seam_sse_append
+#endif
+#ifndef c_rest_string_destroy
+#define c_rest_string_destroy crf_seam_sse_string_destroy
+#endif
+#define INTERNAL_EVENT_DESTROY(ev) crf_seam_sse_event_destroy(ev)
+#define INTERNAL_EVENT_INIT(ev) crf_seam_sse_event_init(ev)
 #else
 #define INTERNAL_EVENT_DESTROY(ev) c_rest_sse_event_destroy(ev)
 #define INTERNAL_EVENT_INIT(ev) c_rest_sse_event_init(ev)
@@ -86,7 +67,8 @@ c_rest_error_t c_rest_sse_event_destroy(struct c_rest_sse_event *ev) {
   return C_REST_OK;
 }
 
-static c_rest_error_t c_rest_sse_strdup(const char *s, char **out_str) {
+static NO_DISCARD c_rest_error_t c_rest_sse_strdup(const char *s,
+                                                   char **out_str) {
   size_t len;
   char *copy;
   void *tmp;
@@ -300,8 +282,8 @@ c_rest_error_t c_rest_sse_context_destroy(struct c_rest_sse_context *ctx) {
   return rc;
 }
 
-static c_rest_error_t append_to_string(char **dest, const char *src,
-                                       size_t len) {
+static NO_DISCARD c_rest_error_t append_to_string(char **dest, const char *src,
+                                                  size_t len) {
   size_t old_len;
   char *new_str;
   void *tmp_new_str;

@@ -1,5 +1,7 @@
 /* clang-format off */
 #include "c_rest_error.h"
+#include "greatest.h"
+#include "greatest_clean.h"
 #include "c_rest_mem.h"
 #include "c_rest_modality.h"
 #include "c_rest_orm_crud.h"
@@ -117,170 +119,142 @@ static void *fail_malloc_at_n(size_t size) {
   return malloc(size);
 }
 
-/**
- * @brief Test entry point for the notes app.
- * @return Exit status code.
- */
-int main(void) {
+TEST test_notes_main_and_error_paths(void) {
+  struct c_rest_request req;
+  struct c_rest_response res;
+  int i;
+
+  ASSERT_EQ(0, app_notes_main());
+
+  sig_handler(0);
+
+  memset(&req, 0, sizeof(req));
+  memset(&res, 0, sizeof(res));
+  ASSERT_EQ(C_REST_OK, custom_404_handler(&req, &res, NULL));
+  ASSERT_EQ(404, res.status_code);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
+
+  ASSERT_NEQ(C_REST_OK, custom_404_handler(&req, NULL, NULL));
+
+  g_crf_malloc_hook = fail_malloc;
+  ASSERT_EQ(1, app_notes_main());
+  g_crf_malloc_hook = NULL;
+
+  g_notes_alloc_count = 0;
+  g_notes_fail_at = 3;
+  g_crf_malloc_hook = fail_malloc_at_n;
+  ASSERT_EQ(1, app_notes_main());
+  g_crf_malloc_hook = NULL;
+  g_notes_fail_at = 0;
+
+  g_mock_router_use_fail = 1;
+  ASSERT_EQ(1, app_notes_main());
+  g_mock_router_use_fail = 0;
+
+  g_mock_router_use_post_fail = 1;
+  ASSERT_EQ(1, app_notes_main());
+  g_mock_router_use_post_fail = 0;
+
+  g_mock_set_router_fail = 1;
+  ASSERT_EQ(1, app_notes_main());
+  g_mock_set_router_fail = 0;
+
+  for (i = 1; i <= 6; i++) {
+    g_mock_router_add_count = 0;
+    g_mock_router_add_fail_at = i;
+    ASSERT_EQ(1, app_notes_main());
+  }
+  g_mock_router_add_fail_at = 0;
+  g_mock_router_add_count = 0;
+
+  g_mock_router_destroy_fail = 1;
+  ASSERT_EQ(1, app_notes_main());
+  g_mock_router_destroy_fail = 0;
+
+  g_mock_ctx_destroy_fail = 1;
+  ASSERT_EQ(1, app_notes_main());
+  g_mock_ctx_destroy_fail = 0;
+
+  PASS();
+}
+
+TEST test_notes_crud_routes(void) {
   struct c_rest_context *ctx = NULL;
   c_rest_router *router = NULL;
   struct c_rest_request req;
   struct c_rest_response res;
-  c_rest_error_t ret;
-  int failed = 0;
-  const char *msgs[2];
+  c_rest_error_t run_rc;
+  char get_method[] = "GET";
+  char post_method[] = "POST";
+  char notes_path[] = "/api/v0/notes";
+  char post_body[] = "{\"title\":\"My Note\",\"content\":\"Hello world\"}";
 
-  printf("Running tests for Notes App...\n");
-
-  /* Test main.c app_notes_main normal path */
-  ret = (c_rest_error_t)app_notes_main();
-  failed += (ret != C_REST_OK);
-
-  /* Test sig_handler */
-  sig_handler(0);
-
-  /* Test custom_404_handler */
-  memset(&req, 0, sizeof(req));
-  memset(&res, 0, sizeof(res));
-  ret = custom_404_handler(&req, &res, NULL);
-  failed += (ret != C_REST_OK);
-  failed += (res.status_code != 404);
-  ret = c_rest_response_cleanup(&res);
-  failed += (ret != C_REST_OK);
-
-  /* Test custom_404_handler fail response_set_status (line 30-31) */
-  ret = custom_404_handler(&req, NULL, NULL);
-  failed += (ret == C_REST_OK);
-
-  /* Test app_notes_main fail c_rest_init */
-  g_crf_malloc_hook = fail_malloc;
-  ret = (c_rest_error_t)app_notes_main();
-  failed += (ret != (c_rest_error_t)1);
-  g_crf_malloc_hook = NULL;
-
-  /* Test app_notes_main fail c_rest_router_init */
-  g_notes_alloc_count = 0;
-  g_notes_fail_at = 3;
-  g_crf_malloc_hook = fail_malloc_at_n;
-  ret = (c_rest_error_t)app_notes_main();
-  failed += (ret != (c_rest_error_t)1);
-  g_crf_malloc_hook = NULL;
-  g_notes_fail_at = 0;
-
-  /* Test app_notes_main fail c_rest_router_use (lines 82-85) */
-  g_mock_router_use_fail = 1;
-  ret = (c_rest_error_t)app_notes_main();
-  failed += (ret != (c_rest_error_t)1);
-  g_mock_router_use_fail = 0;
-
-  /* Test app_notes_main fail c_rest_router_use_post (lines 89-92) */
-  g_mock_router_use_post_fail = 1;
-  ret = (c_rest_error_t)app_notes_main();
-  failed += (ret != (c_rest_error_t)1);
-  g_mock_router_use_post_fail = 0;
-
-  /* Test app_notes_main fail c_rest_set_router (lines 97-100) */
-  g_mock_set_router_fail = 1;
-  ret = (c_rest_error_t)app_notes_main();
-  failed += (ret != (c_rest_error_t)1);
-  g_mock_set_router_fail = 0;
-
-  /* Test app_notes_main fail c_rest_router_add 1-6 (lines 104-143) */
-  {
-    int i;
-    for (i = 1; i <= 6; i++) {
-      g_mock_router_add_count = 0;
-      g_mock_router_add_fail_at = i;
-      ret = (c_rest_error_t)app_notes_main();
-      failed += (ret != (c_rest_error_t)1);
-    }
-    g_mock_router_add_fail_at = 0;
-    g_mock_router_add_count = 0;
-  }
-
-  /* Test app_notes_main fail c_rest_router_destroy (lines 156-158) */
-  g_mock_router_destroy_fail = 1;
-  ret = (c_rest_error_t)app_notes_main();
-  failed += (ret != (c_rest_error_t)1);
-  g_mock_router_destroy_fail = 0;
-
-  /* Test app_notes_main fail c_rest_destroy (lines 161-162) */
-  g_mock_ctx_destroy_fail = 1;
-  ret = (c_rest_error_t)app_notes_main();
-  failed += (ret != (c_rest_error_t)1);
-  g_mock_ctx_destroy_fail = 0;
-
-  ret = c_rest_init(C_REST_MODALITY_SYNC, &ctx);
-  failed += (ret != C_REST_OK);
-
+  ASSERT_EQ(C_REST_OK, c_rest_init(C_REST_MODALITY_SYNC, &ctx));
+  ctx->listen_address = NULL;
+  ctx->listen_port = 0;
   ctx->db_config.connection_string = "sqlite://:memory:";
+  run_rc = c_rest_run(ctx);
+  ASSERT(run_rc == C_REST_OK || run_rc == C_REST_ERROR_GENERIC);
 
-  /* This is just to trigger the mock DB pool creation inside c_rest_run
-     if that is how c-orm mock works in test mode */
-  ret = c_rest_run(ctx);
+  ASSERT_EQ(C_REST_OK, c_rest_router_init(&router));
+  ASSERT_EQ(C_REST_OK,
+            c_rest_router_use(router, "/api/v0",
+                              c_rest_orm_transaction_start_middleware, ctx));
+  ASSERT_EQ(C_REST_OK,
+            c_rest_router_use_post(router, "/api/v0",
+                                   c_rest_orm_transaction_end_middleware, ctx));
+  ASSERT_EQ(C_REST_OK,
+            c_rest_router_add(router, "GET", "/api/v0/notes",
+                              c_rest_orm_crud_get_list, &note_model));
+  ASSERT_EQ(C_REST_OK, c_rest_router_add(router, "POST", "/api/v0/notes",
+                                         c_rest_orm_crud_create, &note_model));
 
-  ret = c_rest_router_init(&router);
-  failed += (ret != C_REST_OK);
-
-  ret = c_rest_router_use(router, "/api/v0",
-                          c_rest_orm_transaction_start_middleware, ctx);
-  failed += (ret != C_REST_OK);
-  ret = c_rest_router_use_post(router, "/api/v0",
-                               c_rest_orm_transaction_end_middleware, ctx);
-  failed += (ret != C_REST_OK);
-
-  ret = c_rest_router_add(router, "GET", "/api/v0/notes",
-                          c_rest_orm_crud_get_list, &note_model);
-  failed += (ret != C_REST_OK);
-  ret = c_rest_router_add(router, "POST", "/api/v0/notes",
-                          c_rest_orm_crud_create, &note_model);
-  failed += (ret != C_REST_OK);
-
-  /* Simulate GET /api/v0/notes */
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
-
-  req.method = "GET";
-  req.path = "/api/v0/notes";
+  req.method = get_method;
+  req.path = notes_path;
   res.status_code = 200;
 
-  ret = c_rest_router_dispatch(router, &req, &res);
-  failed += (ret != C_REST_OK);
-  failed += (res.status_code != 200);
+  ASSERT_EQ(C_REST_OK, c_rest_router_dispatch(router, &req, &res));
+  ASSERT_EQ(200, res.status_code);
+  ASSERT_EQ(C_REST_OK, c_rest_request_cleanup(&req));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
 
-  ret = c_rest_request_cleanup(&req);
-  failed += (ret != C_REST_OK);
-  ret = c_rest_response_cleanup(&res);
-  failed += (ret != C_REST_OK);
-
-  /* Simulate POST /api/v0/notes */
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
-
-  req.method = "POST";
-  req.path = "/api/v0/notes";
-  req.body = "{\"title\":\"My Note\",\"content\":\"Hello world\"}";
-  req.body_len = strlen(req.body);
+  req.method = post_method;
+  req.path = notes_path;
+  req.body = post_body;
+  req.body_len = strlen(post_body);
   res.status_code = 200;
 
-  ret = c_rest_router_dispatch(router, &req, &res);
-  failed += (ret != C_REST_OK);
-  failed += (res.status_code != 201);
+  ASSERT_EQ(C_REST_OK, c_rest_router_dispatch(router, &req, &res));
+  ASSERT_EQ(201, res.status_code);
 
-  /* Since req.body was statically allocated, avoid double free */
   req.body = NULL;
-  ret = c_rest_request_cleanup(&req);
-  failed += (ret != C_REST_OK);
-  ret = c_rest_response_cleanup(&res);
-  failed += (ret != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_request_cleanup(&req));
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
 
-  ret = c_rest_router_destroy(router);
-  failed += (ret != C_REST_OK);
-  ret = c_rest_destroy(ctx);
-  failed += (ret != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_router_destroy(router));
+  ASSERT_EQ(C_REST_OK, c_rest_destroy(ctx));
+  PASS();
+}
 
-  msgs[0] = "All notes app tests passed.\n";
-  msgs[1] = "Notes app tests failed.\n";
-  printf("%s", msgs[failed != 0]);
-  return failed;
+SUITE(notes_suite) {
+  RUN_TEST(test_notes_main_and_error_paths);
+  RUN_TEST(test_notes_crud_routes);
+}
+
+GREATEST_MAIN_DEFS();
+
+/**
+ * @brief Test entry point for the notes app.
+ * @param argc Argument count.
+ * @param argv Argument vector.
+ * @return Exit status code.
+ */
+int main(int argc, char **argv) {
+  GREATEST_MAIN_BEGIN();
+  RUN_SUITE(notes_suite);
+  GREATEST_MAIN_END();
 }

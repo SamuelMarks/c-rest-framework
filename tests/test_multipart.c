@@ -11,6 +11,8 @@
 
 #ifdef C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING
 
+static int g_fail_malloc_at = 0;
+
 static int g_cb_fail_at = 0;
 static int g_cb_call_count = 0;
 
@@ -75,7 +77,6 @@ static c_rest_error_t on_body_end(c_rest_multipart_parser *parser) {
 
 static void *fail_malloc_n(size_t size) {
   static int alloc_count = 0;
-  extern int g_fail_malloc_at;
   if (g_fail_malloc_at <= 0) {
     alloc_count = 0;
     return NULL;
@@ -99,95 +100,102 @@ struct dummy_parser_state {
   int state;
 };
 
-static void test_multipart_invalid_args(int *res_ptr) {
+TEST test_multipart_invalid_args(void) {
   size_t parsed = 0;
   c_rest_multipart_parser *parser = NULL;
   struct c_rest_multipart_callbacks callbacks;
   c_rest_error_t rc;
   int i;
-  extern int g_fail_malloc_at;
 
   memset(&callbacks, 0, sizeof(callbacks));
 
   /* Test NULL args */
   rc = c_rest_multipart_parser_init(NULL, "boundary", &callbacks, NULL);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
   rc = c_rest_multipart_parser_init(&parser, NULL, &callbacks, NULL);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
   rc = c_rest_multipart_parser_destroy(NULL);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
   rc = c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
-  *res_ptr += (rc != C_REST_OK);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_FALSE(rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   rc = c_rest_multipart_parser_execute(NULL, "data", 4, &parsed);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
   parser = (c_rest_multipart_parser *)1;
   rc = c_rest_multipart_parser_execute(parser, NULL, 4, &parsed);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
   /* Test NULL out_parsed */
   parser = (c_rest_multipart_parser *)1;
   rc = c_rest_multipart_parser_execute(parser, "data", 4, NULL);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
 
   /* Test invalid start */
   rc = c_rest_multipart_parser_execute(parser, "x", 1, &parsed);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
-  c_rest_multipart_parser_destroy(parser);
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
   printf("invalid start\n");
   fflush(stdout);
   rc = c_rest_multipart_parser_execute(parser, "-x", 2, &parsed);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
   rc = c_rest_multipart_parser_execute(parser, "--boundaryx", 11, &parsed);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
   /* test invalid header field start */
   printf("invalid header start\n");
   fflush(stdout);
   rc = c_rest_multipart_parser_execute(parser, "--boundary\rx", 12, &parsed);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
-  c_rest_multipart_parser_destroy(parser);
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
 
   rc = c_rest_multipart_parser_execute(parser, "--boundary\r\n:\r\n\r\n", 18,
                                        &parsed);
-  c_rest_multipart_parser_destroy(parser);
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
 
   /* test valid part begin but no callbacks */
   rc = c_rest_multipart_parser_execute(
       parser, "--boundary\r\nHead:\r\n\r\nData\r\n--boundary--\r\n", 41,
       &parsed);
-  *res_ptr += (rc != C_REST_OK);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_FALSE(rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
   rc = c_rest_multipart_parser_execute(parser, "-\r", 2, &parsed);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Test invalid boundary */
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
   printf("invalid boundary\n");
   fflush(stdout);
   rc = c_rest_multipart_parser_execute(parser, "--x", 3, &parsed);
-  *res_ptr += (rc != C_REST_ERROR_GENERIC);
+  ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   callbacks.on_part_begin = on_part_begin;
   callbacks.on_header_field = on_header_field;
@@ -198,164 +206,185 @@ static void test_multipart_invalid_args(int *res_ptr) {
   callbacks.on_body_end = on_body_end;
 
   /* Edge case: \r not followed by \n */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; "
       "name=\"f\"\r\n\r\na\rx--boundary--\r\n",
       67, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: \r\n not followed by - */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; "
       "name=\"f\"\r\n\r\na\r\nx--boundary--\r\n",
       68, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: \r\n- not followed by - */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; "
       "name=\"f\"\r\n\r\na\r\n-x--boundary--\r\n",
       69, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: \r\n-- partial boundary match */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; "
       "name=\"f\"\r\n\r\na\r\n--boundarX--boundary--\r\n",
       76, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: \r\n--boundary partial match */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; "
       "name=\"f\"\r\n\r\na\r\n--boundaryX--boundary--\r\n",
       77, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* The same edge cases but without callbacks */
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; "
       "name=\"f\"\r\n\r\na\rx--boundary--\r\n",
       67, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; "
       "name=\"f\"\r\n\r\na\r\nx--boundary--\r\n",
       68, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; "
       "name=\"f\"\r\n\r\na\r\n-x--boundary--\r\n",
       69, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; "
       "name=\"f\"\r\n\r\na\r\n--boundarX--boundary--\r\n",
       76, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: trailing part data without boundary */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\na", 56,
       &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: trailing part data without boundary without callbacks */
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\na", 56,
       &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: empty header field */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(
       parser, "--boundary\r\n: empty field\r\n\r\n\r\n--boundary--\r\n", 41,
       &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: empty header value */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(
       parser, "--boundary\r\nHeader:\r\n\r\n\r\n--boundary--\r\n", 36, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: zero length execute in part data */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(
       parser,
       "--boundary\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\na", 57,
       &parsed);
   rc = c_rest_multipart_parser_execute(parser, "", 0, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: intermediate boundary without callbacks */
-  c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL);
+  ASSERT_EQ(C_REST_OK,
+            c_rest_multipart_parser_init(&parser, "boundary", NULL, NULL));
   rc = c_rest_multipart_parser_execute(
       parser, "--boundary\r\n\r\n\r\n--boundary\r\n", 28, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: boundary match index == 2 mismatch */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(parser,
                                        "--boundary\r\nContent-Disposition: "
                                        "form-data; name=\"f\"\r\n\r\na\r\n--X",
                                        62, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: s_headers_almost_done without LF */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc =
       c_rest_multipart_parser_execute(parser, "--boundary\r\n\rX", 14, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: s_header_value_almost_done without LF */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(parser, "--boundary\r\nHeader: value\rX",
                                        27, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: s_part_data_almost_end without - */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(
       parser, "--boundary\r\n\r\n\r\n--boundary-X", 29, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: s_end without CR */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   rc = c_rest_multipart_parser_execute(
       parser, "--boundary\r\n\r\n\r\n--boundary--X", 30, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Edge case: invalid state */
-  c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
   ((struct dummy_parser_state *)parser)->state = 999;
   rc = c_rest_multipart_parser_execute(parser, "data", 4, &parsed);
-  c_rest_multipart_parser_destroy(parser);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
 
   /* Callback failure percolation tests */
   {
@@ -365,24 +394,26 @@ static void test_multipart_invalid_args(int *res_ptr) {
     for (i = 1; i <= 25; i++) {
       g_cb_fail_at = i;
       g_cb_call_count = 0;
-      c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
-      c_rest_multipart_parser_execute(parser, complex_body,
-                                      strlen(complex_body), &parsed);
-      c_rest_multipart_parser_destroy(parser);
+      ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                        &callbacks, NULL));
+      rc = c_rest_multipart_parser_execute(parser, complex_body,
+                                           strlen(complex_body), &parsed);
+      ASSERT(rc == C_REST_OK || rc == C_REST_ERROR_GENERIC);
+      ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
     }
     /* Trailing part data callback failure */
     g_cb_fail_at = 5;
     g_cb_call_count = 0;
-    c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
-    c_rest_multipart_parser_execute(parser, "--boundary\r\nH: v\r\n\r\ntrail",
-                                    25, &parsed);
-    c_rest_multipart_parser_destroy(parser);
+    ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                      &callbacks, NULL));
+    ASSERT_EQ(C_REST_ERROR_GENERIC,
+              c_rest_multipart_parser_execute(
+                  parser, "--boundary\r\nH: v\r\n\r\ntrail", 25, &parsed));
+    ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
     g_cb_fail_at = 0;
     g_cb_call_count = 0;
   }
 
-  printf("malloc loop\n");
-  fflush(stdout);
   for (i = 1; i <= 2; i++) {
     g_fail_malloc_at = -1;
     fail_malloc_n(0);
@@ -391,7 +422,7 @@ static void test_multipart_invalid_args(int *res_ptr) {
 
     rc = c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
     g_crf_malloc_hook = NULL;
-    *res_ptr += (rc != C_REST_ERROR_GENERIC);
+    ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
   }
   g_fail_malloc_at = 0;
 
@@ -401,27 +432,27 @@ static void test_multipart_invalid_args(int *res_ptr) {
 
     rc = c_rest_multipart_parser_init(&parser, "boundary", &callbacks,
                                       (void *)0x123);
-    *res_ptr += (rc != C_REST_OK);
+    ASSERT_FALSE(rc != C_REST_OK);
 
     rc = c_rest_multipart_parser_get_user_data(NULL, &ud);
-    *res_ptr += (rc != C_REST_ERROR_GENERIC);
+    ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
     rc = c_rest_multipart_parser_get_user_data(parser, NULL);
-    *res_ptr += (rc != C_REST_ERROR_GENERIC);
+    ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
     rc = c_rest_multipart_parser_get_user_data(parser, &ud);
-    *res_ptr += (rc != C_REST_OK);
-    *res_ptr += (ud != (void *)0x123);
+    ASSERT_FALSE(rc != C_REST_OK);
+    ASSERT_FALSE(ud != (void *)0x123);
 
     rc = c_rest_multipart_parser_clone(NULL, &clone);
-    *res_ptr += (rc != C_REST_ERROR_GENERIC);
+    ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
     rc = c_rest_multipart_parser_clone(parser, NULL);
-    *res_ptr += (rc != C_REST_ERROR_GENERIC);
+    ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
     rc = c_rest_multipart_parser_clone(parser, &clone);
-    *res_ptr += (rc != C_REST_OK);
-    c_rest_multipart_parser_destroy(clone);
+    ASSERT_FALSE(rc != C_REST_OK);
+    ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(clone));
 
     /* OOM in clone */
     g_fail_malloc_at = -1;
@@ -429,25 +460,24 @@ static void test_multipart_invalid_args(int *res_ptr) {
     g_crf_malloc_hook = fail_malloc_n;
     g_fail_malloc_at = 1;
     rc = c_rest_multipart_parser_clone(parser, &clone);
-    *res_ptr += (rc != C_REST_ERROR_GENERIC);
+    ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
 
     g_fail_malloc_at = -1;
     fail_malloc_n(0);
     g_crf_malloc_hook = fail_malloc_n;
     g_fail_malloc_at = 2;
     rc = c_rest_multipart_parser_clone(parser, &clone);
-    *res_ptr += (rc != C_REST_ERROR_GENERIC);
+    ASSERT_FALSE(rc != C_REST_ERROR_GENERIC);
     g_crf_malloc_hook = NULL;
 
-    c_rest_multipart_parser_destroy(parser);
+    ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
   }
+  PASS();
 }
 
-int test_multipart(void) {
+TEST test_multipart_valid_stream(void) {
   c_rest_multipart_parser *parser = NULL;
   struct c_rest_multipart_callbacks callbacks;
-
-  int res = 0;
   size_t parsed = 0;
   const char *data =
       "--boundary\r\nContent-Disposition: form-data; "
@@ -462,21 +492,23 @@ int test_multipart(void) {
   callbacks.on_part_end = on_part_end;
   callbacks.on_body_end = on_body_end;
 
-  test_multipart_invalid_args(&res);
-  printf("Running multipart parser tests...\n");
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_init(&parser, "boundary",
+                                                    &callbacks, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_execute(parser, data,
+                                                       strlen(data), &parsed));
+  ASSERT_EQ(strlen(data), parsed);
+  ASSERT_EQ(C_REST_OK, c_rest_multipart_parser_destroy(parser));
+  PASS();
+}
 
-  res += (c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL) !=
-          C_REST_OK);
-  res += (c_rest_multipart_parser_execute(parser, data, strlen(data),
-                                          &parsed) != C_REST_OK);
-  res += (parsed != strlen(data));
-
-  res += (c_rest_multipart_parser_destroy(parser) != C_REST_OK);
-  return res;
+SUITE(multipart_suite) {
+  RUN_TEST(test_multipart_invalid_args);
+  RUN_TEST(test_multipart_valid_stream);
 }
 
 #else
 
-int test_multipart(void) { return 0; }
+TEST test_multipart_disabled(void) { PASS(); }
+SUITE(multipart_suite) { RUN_TEST(test_multipart_disabled); }
 
 #endif /* C_REST_ENABLE_FULL_MULTIPART_FORM_STREAMING */

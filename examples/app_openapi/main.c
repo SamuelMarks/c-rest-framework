@@ -45,18 +45,21 @@ int main(void) {
     return 1;
   rc = c_rest_enable_openapi(router, "/openapi.json");
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_enable_swagger_ui(router, "/docs", "/openapi.json");
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
     return 1;
   }
 
   rc = c_rest_router_get_openapi_spec(router, &spec);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -66,19 +69,22 @@ int main(void) {
         "{\"type\": \"object\", \"properties\": {\"message\": {\"type\": "
         "\"string\"}}}");
     if (rc != C_REST_OK) {
-      c_rest_router_destroy(router);
+      if (c_rest_router_destroy(router) != C_REST_OK)
+        return 1;
       return 1;
     }
   }
 
   rc = c_rest_enable_openapi(router, "/api/v0/openapi.json");
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_enable_swagger_ui(router, "/api/v0/docs", "/api/v0/openapi.json");
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -103,7 +109,8 @@ int main(void) {
   rc = c_rest_router_add_openapi(router, "GET", "/api/hello",
                                  handle_hello_world, NULL, &op);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -115,15 +122,18 @@ int main(void) {
   if (rc == 0) {
     rc = c_rest_set_router(ctx, router);
     if (rc != C_REST_OK) {
-      c_rest_destroy(ctx);
-      c_rest_router_destroy(router);
+      if (c_rest_destroy(ctx) != C_REST_OK)
+        return 1;
+      if (c_rest_router_destroy(router) != C_REST_OK)
+        return 1;
       return 1;
     }
 
     /* Normally we would c_rest_run(ctx) here but it blocks */
     rc = c_rest_destroy(ctx);
     if (rc != C_REST_OK) {
-      c_rest_router_destroy(router);
+      if (c_rest_router_destroy(router) != C_REST_OK)
+        return 1;
       return 1;
     }
   }

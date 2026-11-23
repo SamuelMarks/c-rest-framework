@@ -20,7 +20,7 @@
 #define PASS() return GREATEST_TEST_RES_PASS
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-int g_fail_malloc_at = 0;
+static int g_fail_malloc_at = 0;
 static void *fail_malloc_n(size_t size) {
   static int alloc_count = 0;
   if (g_fail_malloc_at <= 0) {
@@ -120,5 +120,4 @@ TEST test_sse_error_branches(void) {
     greatest_test_post(TESTNAME());                                            \
   } while (0)
 
-SUITE_EXTERN(sse_mock_suite);
 SUITE(sse_mock_suite) { RUN_TEST(test_sse_error_branches); }

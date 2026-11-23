@@ -5,12 +5,11 @@
 #ifndef C_REST_RESPONSE_H
 #define C_REST_RESPONSE_H
 /* clang-format off */
-#include "c_rest_error.h"
-#include "c_rest_mem.h"
-
 #include <stddef.h>
 #include "c_rest_error.h"
+#include "c_rest_mem.h"
 #include "c_rest_export.h"
+#include "c_rest_no_discard.h"
 /* clang-format on */
 
 #ifdef __cplusplus
@@ -47,7 +46,7 @@ struct c_rest_response {
  * @param value Header value
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_set_header(struct c_rest_response *res, const char *key,
                            const char *value);
 
@@ -57,7 +56,7 @@ c_rest_response_set_header(struct c_rest_response *res, const char *key,
  * @param status_code Status code
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_set_status(struct c_rest_response *res, int status_code);
 
 /**
@@ -65,9 +64,10 @@ c_rest_response_set_status(struct c_rest_response *res, int status_code);
  * @param req Request
  * @param res Response
  * @param etag ETag value
- * @return 1 if matched (304), 0 otherwise
+ * @return C_REST_SHORT_CIRCUIT if matched (304 Not Modified), C_REST_OK if not
+ * matched, or error code on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_check_etag(struct c_rest_request *req,
                            struct c_rest_response *res, const char *etag);
 
@@ -77,7 +77,7 @@ c_rest_response_check_etag(struct c_rest_request *req,
  * @param policy Policy string
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_set_cache_control(struct c_rest_response *res,
                                   const char *policy);
 
@@ -86,7 +86,7 @@ c_rest_response_set_cache_control(struct c_rest_response *res,
  * @param res Response
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_send(struct c_rest_response *res);
 
 /**
@@ -95,7 +95,7 @@ c_rest_response_send(struct c_rest_response *res);
  * @param json_str JSON string
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_json(struct c_rest_response *res, const char *json_str);
 
 /**
@@ -104,7 +104,7 @@ c_rest_response_json(struct c_rest_response *res, const char *json_str);
  * @param json_obj JSON object (parson JSON_Value)
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_json_obj(struct c_rest_response *res, void *json_obj);
 
 /**
@@ -140,7 +140,7 @@ struct c_rest_json_pair {
  * @param count Number of pairs
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_json_dict(struct c_rest_response *res,
                           const struct c_rest_json_pair *pairs, size_t count);
 
@@ -150,7 +150,7 @@ c_rest_response_json_dict(struct c_rest_response *res,
  * @param html_str HTML string
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_html(struct c_rest_response *res, const char *html_str);
 
 #ifdef C_REST_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING
@@ -167,7 +167,7 @@ struct c_rest_template_context;
  *
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_template(struct c_rest_response *res,
                          const struct c_rest_template_context *ctx,
                          const char **keys, const char **values, size_t count);
@@ -180,7 +180,7 @@ c_rest_response_template(struct c_rest_response *res,
  * @param chunk_len Chunk length
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_write_chunk(struct c_rest_response *res, const char *chunk,
                             size_t chunk_len);
 
@@ -191,7 +191,7 @@ c_rest_response_write_chunk(struct c_rest_response *res, const char *chunk,
  * @param status_code Status code
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_redirect(struct c_rest_response *res, const char *url,
                          int status_code);
 
@@ -203,7 +203,7 @@ c_rest_response_redirect(struct c_rest_response *res, const char *url,
  * @param attributes Additional attributes (e.g. "HttpOnly; Secure")
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
                            const char *value, const char *attributes);
 
@@ -213,7 +213,7 @@ c_rest_response_set_cookie(struct c_rest_response *res, const char *key,
  * @param filepath File path
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_send_file(struct c_rest_response *res, const char *filepath);
 
 /**
@@ -221,17 +221,17 @@ c_rest_response_send_file(struct c_rest_response *res, const char *filepath);
  * @param res Response
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_cleanup(struct c_rest_response *res);
 
 /**
  * @brief Serialize a response to an allocated buffer.
  * @param res Response
- * @param out_buf Output buffer (must be CRF_FREE()d)
+ * @param out_buf Output buffer (must be C_REST_FREE()d)
  * @param out_len Output length
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
                           size_t *out_len);
 
@@ -242,7 +242,7 @@ c_rest_response_serialize(struct c_rest_response *res, char **out_buf,
  * @param error_description Optional description
  * @return 0 on success, 1 on failure
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_response_oauth2_error(struct c_rest_response *res, const char *error,
                              const char *error_description);
 

@@ -6,6 +6,7 @@
 #define C_REST_ERROR_H
 
 /* clang-format off */
+#include "c_rest_export.h"
 #include "c_rest_no_discard.h"
 /* clang-format on */
 
@@ -44,8 +45,34 @@ typedef enum c_rest_error {
   /** @brief TLS/SSL error. */
   C_REST_ERROR_TLS = 11,
   /** @brief Database error. */
-  C_REST_ERROR_DB = 12
+  C_REST_ERROR_DB = 12,
+  /** @brief Intentional middleware/handler short-circuit (response ready). */
+  C_REST_SHORT_CIRCUIT = 13
 } c_rest_error_t;
+
+/**
+ * @brief Translate a c-fs error code (cfs_errc) to c_rest_error_t.
+ * @param cfs_err The cfs_errc value cast to int.
+ * @return Corresponding c_rest_error_t code.
+ */
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_error_from_cfs(int cfs_err);
+
+/**
+ * @brief Translate a c-orm error code (c_orm_error_t) to c_rest_error_t.
+ * @param orm_err The c_orm_error_t value cast to int.
+ * @return Corresponding c_rest_error_t code.
+ */
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_error_from_orm(int orm_err);
+
+/**
+ * @brief Translate a c-abstract-http error code to c_rest_error_t.
+ * @param cah_err The c_abstract_http_error value cast to int.
+ * @return Corresponding c_rest_error_t code.
+ */
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_error_from_cah(int cah_err);
 
 #ifdef __cplusplus
 }

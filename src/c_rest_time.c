@@ -11,18 +11,17 @@ static const char *const wdays[] = {"Sun", "Mon", "Tue", "Wed",
 static const char *const months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-static void is_leap(int year, int *out_is_leap) {
-  *out_is_leap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
-}
+#define IS_LEAP_YEAR(y) (((y) % 4 == 0 && ((y) % 100 != 0 || (y) % 400 == 0)))
 
-static c_rest_error_t portable_timegm(struct tm *tm, time_t *out_time) {
+static NO_DISCARD c_rest_error_t portable_timegm(struct tm *tm,
+                                                 time_t *out_time) {
   static const int days_before_month[2][12] = {
       {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334},
       {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335}};
   int year = tm->tm_year + 1900;
   int month = tm->tm_mon;
-  int leap;
-  int days = 0;
+  int leap = 0;
+  time_t days = 0;
   int y;
 
   if (year < 1970) {
@@ -31,17 +30,15 @@ static c_rest_error_t portable_timegm(struct tm *tm, time_t *out_time) {
   }
 
   for (y = 1970; y < year; y++) {
-    int lp;
-    is_leap(y, &lp);
-    days += 365 + lp;
+    days += (time_t)(365 + IS_LEAP_YEAR(y));
   }
 
-  is_leap(year, &leap);
-  days += days_before_month[leap][month];
-  days += tm->tm_mday - 1;
+  leap = IS_LEAP_YEAR(year);
+  days += (time_t)days_before_month[leap][month];
+  days += (time_t)(tm->tm_mday - 1);
 
-  *out_time = (time_t)(days * 86400 + tm->tm_hour * 3600 + tm->tm_min * 60 +
-                       tm->tm_sec);
+  *out_time = days * (time_t)86400 + (time_t)tm->tm_hour * (time_t)3600 +
+              (time_t)tm->tm_min * (time_t)60 + (time_t)tm->tm_sec;
   return C_REST_OK;
 }
 
@@ -118,7 +115,8 @@ c_rest_error_t c_rest_http_date_parse(const char *date_str, time_t *out_t) {
     }
   }
 
-  if (mon == -1) {
+  if (mon == -1 || mday < 1 || mday > 31 || hour < 0 || hour > 23 || min < 0 ||
+      min > 59 || sec < 0 || sec > 60) {
     return C_REST_ERROR_GENERIC;
   }
 
@@ -130,8 +128,11 @@ c_rest_error_t c_rest_http_date_parse(const char *date_str, time_t *out_t) {
   tm_info.tm_sec = sec;
   tm_info.tm_isdst = 0; /* GMT */
 
-  if (portable_timegm(&tm_info, out_t) != 0) {
-    return C_REST_ERROR_GENERIC;
+  {
+    c_rest_error_t rc = portable_timegm(&tm_info, out_t);
+    if (rc != C_REST_OK) {
+      return rc;
+    }
   }
 
   return C_REST_OK;

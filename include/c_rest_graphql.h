@@ -1,17 +1,17 @@
 #ifndef C_REST_GRAPHQL_H
 #define C_REST_GRAPHQL_H
 /* clang-format off */
-#include "c_rest_error.h"
-
-#ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
-
 #include <stddef.h>
+#include "c_rest_error.h"
 #include "c_rest_export.h"
+#include "c_rest_no_discard.h"
 /* clang-format on */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#ifdef C_REST_FRAMEWORK_ENABLE_GRAPHQL
 
 /**
  * @file c_rest_graphql.h
@@ -92,7 +92,7 @@ struct c_rest_graphql_context {
  * @param out_doc Pointer to store the resulting Document AST node.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_graphql_parse(const char *query, size_t query_len,
                      struct c_rest_graphql_node **out_doc);
 
@@ -101,7 +101,7 @@ c_rest_graphql_parse(const char *query, size_t query_len,
  * @param doc The Document node to free.
  * @return 0 on success.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_graphql_node_free(struct c_rest_graphql_node *doc);
 
 /**
@@ -130,7 +130,7 @@ struct c_rest_graphql_schema {
  * @param schema Pointer to store the schema.
  * @return 0 on success.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_graphql_schema_init(struct c_rest_graphql_schema **schema);
 
 /**
@@ -138,7 +138,7 @@ c_rest_graphql_schema_init(struct c_rest_graphql_schema **schema);
  * @param schema The schema to free.
  * @return 0 on success.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_graphql_schema_free(struct c_rest_graphql_schema *schema);
 
 /**
@@ -149,9 +149,11 @@ c_rest_graphql_schema_free(struct c_rest_graphql_schema *schema);
  * @param user_data User data passed to the resolver.
  * @return 0 on success.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_graphql_schema_add_resolver(
-    struct c_rest_graphql_schema *schema, const char *field_name,
-    c_rest_graphql_resolver_fn resolver, void *user_data);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_graphql_schema_add_resolver(struct c_rest_graphql_schema *schema,
+                                   const char *field_name,
+                                   c_rest_graphql_resolver_fn resolver,
+                                   void *user_data);
 
 /**
  * @brief Resolve a parsed GraphQL AST using the given schema.
@@ -161,7 +163,7 @@ C_REST_EXPORT extern c_rest_error_t c_rest_graphql_schema_add_resolver(
  * @param out_len Length of the result string.
  * @return 0 on success.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_graphql_resolve(struct c_rest_graphql_node *doc,
                        struct c_rest_graphql_schema *schema, char **out_json,
                        size_t *out_len);

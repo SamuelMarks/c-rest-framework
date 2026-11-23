@@ -1,27 +1,6 @@
-cmake_minimum_required(VERSION 3.14)
-
-include(FetchContent)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../greatest/greatest.h")
-    message(STATUS "Using local greatest for tests")
-    FetchContent_Declare(
-      greatest
-      SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../greatest"
-    )
-else()
-    FetchContent_Declare(
-      greatest
-      GIT_REPOSITORY https://github.com/SamuelMarks/greatest.git
-      GIT_TAG master
-    )
-endif()
-FetchContent_MakeAvailable(greatest)
-
-
 set(TEST_SRCS
     test_main.c
-
     test_examples.c
-
     test_multiplatform.c
     test_parser.c
     test_router.c
@@ -39,7 +18,7 @@ if(C_REST_FRAMEWORK_ENABLE_SERVER_SIDE_TEMPLATE_ENGINE_HTML_RENDERING)
 endif()
 
 if(C_REST_FRAMEWORK_ENABLE_GRAPHQL)
-    list(APPEND TEST_SRCS test_graphql.c)
+    list(APPEND TEST_SRCS test_graphql.c test_graphql_ext.c)
 endif()
 
 if(C_REST_ENABLE_SERVER_SENT_EVENTS_SSE)
@@ -55,28 +34,94 @@ if(C_REST_ENABLE_JWT_JSON_WEB_TOKENS_AUTHENTICATION_MIDDLEWARE)
 endif()
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "DOS")
-    list(APPEND TEST_SRCS test_openapi.c test_platform.c test_modality.c test_middleware.c test_orm_integration.c test_oauth2.c test_crypto.c test_time.c test_multipart.c test_full_multipart_form_streaming.c test_rate_limiting_throttling_middleware.c test_endian.c test_hashmap.c test_list.c test_str_utils.c test_mem.c test_ts_queue.c test_log.c test_string.c test_pool.c)
+    list(APPEND TEST_SRCS
+        test_openapi.c
+        test_platform.c
+        test_modality.c
+        test_middleware.c
+        test_orm_integration.c
+        test_oauth2.c
+        test_crypto.c
+        test_time.c
+        test_multipart.c
+        test_full_multipart_form_streaming.c
+        test_rate_limiting_throttling_middleware.c
+        test_endian.c
+        test_hashmap.c
+        test_list.c
+        test_str_utils.c
+        test_mem.c
+        test_ts_queue.c
+        test_log.c
+        test_string.c
+        test_pool.c
+    )
     if(NOT EMSCRIPTEN)
-        list(APPEND TEST_SRCS test_client.c test_tls_integration.c test_websocket.c test_http23.c)
+        list(APPEND TEST_SRCS
+            test_client.c
+            test_tls_integration.c
+            test_websocket.c
+            test_http23.c
+        )
     endif()
 endif()
 
 add_executable(c-rest-framework-tests ${TEST_SRCS})
+target_include_directories(c-rest-framework-tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(c-rest-framework-tests PRIVATE c-rest-framework c_rest_greatest)
+c_rest_configure_target(c-rest-framework-tests)
+c_rest_copy_runtime_dlls(c-rest-framework-tests)
+
+if(CRF_COVERAGE_ENABLED)
+    target_compile_options(c-rest-framework-tests PRIVATE --coverage)
+endif()
+
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "MSVC" AND MSVC_VERSION LESS 1500)
+    target_compile_options(c-rest-framework-tests PRIVATE /Od /Ob0 /Zi)
+    target_link_options(c-rest-framework-tests PRIVATE /DEBUG /OPT:NOREF /OPT:NOICF)
+endif()
+
+if(EMSCRIPTEN)
+    target_link_options(c-rest-framework-tests PRIVATE
+        "-sALLOW_MEMORY_GROWTH=1"
+        "-sSTACK_SIZE=1048576"
+        "-sPTHREAD_POOL_SIZE=8"
+        "-sEXIT_RUNTIME=1"
+    )
+endif()
+
+add_test(NAME c-rest-framework-tests COMMAND c-rest-framework-tests)
+set_tests_properties(c-rest-framework-tests PROPERTIES TIMEOUT 300)
 
 function(add_mock_test TARGET_NAME SRC_FILE SUITE_NAME)
     set(RUNNER_SRC "${CMAKE_CURRENT_BINARY_DIR}/runner_${TARGET_NAME}.c")
-    if(NOT EXISTS "${RUNNER_SRC}")
-        file(WRITE "${RUNNER_SRC}"
-"/* clang-format off */\n#include \"greatest.h\"\n/* clang-format on */\nSUITE_EXTERN(${SUITE_NAME});\nGREATEST_MAIN_DEFS();\nint main(int argc, char **argv) {\n  GREATEST_MAIN_BEGIN();\n  RUN_SUITE(${SUITE_NAME});\n  GREATEST_MAIN_END();\n}\n")
-    endif()
+    file(CONFIGURE OUTPUT "${RUNNER_SRC}" CONTENT
+"/* clang-format off */
+#include <greatest.h>
+/* clang-format on */
+SUITE_EXTERN(${SUITE_NAME});
+GREATEST_MAIN_DEFS();
+int main(int argc, char **argv) {
+  GREATEST_MAIN_BEGIN();
+  RUN_SUITE(${SUITE_NAME});
+  GREATEST_MAIN_END();
+}
+" @ONLY)
     add_executable(${TARGET_NAME} ${SRC_FILE} "${RUNNER_SRC}")
-    target_include_directories(${TARGET_NAME} PRIVATE ../include ${CMAKE_CURRENT_SOURCE_DIR} ${greatest_SOURCE_DIR})
-    target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../)
-    target_link_libraries(${TARGET_NAME} PRIVATE c-rest-framework)
-    if(C_REST_GNU_FLAGS)
-        target_compile_options(${TARGET_NAME} PRIVATE ${C_REST_GNU_FLAGS})
-    elseif(C_REST_MSVC_FLAGS)
-        target_compile_options(${TARGET_NAME} PRIVATE ${C_REST_MSVC_FLAGS})
+    target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(${TARGET_NAME} PRIVATE c-rest-framework c_rest_greatest)
+    c_rest_configure_target(${TARGET_NAME})
+    c_rest_copy_runtime_dlls(${TARGET_NAME})
+    if(CRF_COVERAGE_ENABLED)
+        target_compile_options(${TARGET_NAME} PRIVATE --coverage)
+    endif()
+    if(EMSCRIPTEN)
+        target_link_options(${TARGET_NAME} PRIVATE
+            "-sALLOW_MEMORY_GROWTH=1"
+            "-sSTACK_SIZE=1048576"
+            "-sPTHREAD_POOL_SIZE=4"
+            "-sEXIT_RUNTIME=1"
+        )
     endif()
     add_test(NAME ${TARGET_NAME} COMMAND ${TARGET_NAME})
 endfunction()
@@ -101,67 +146,5 @@ add_mock_test(test-mem-mock test_mem_mock.c mem_mock_suite)
 
 if(NOT WIN32)
     add_mock_test(test-platform-win32-mock test_platform_win32_mock.c platform_win32_suite)
-    target_include_directories(test-platform-win32-mock BEFORE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/mock_win32)
+    target_include_directories(test-platform-win32-mock BEFORE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/mock_win32")
 endif()
-
-
-target_include_directories(c-rest-framework-tests PRIVATE ../include ${CMAKE_CURRENT_SOURCE_DIR} ${greatest_SOURCE_DIR})
-target_include_directories(c-rest-framework-tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../)
-target_link_libraries(c-rest-framework-tests PRIVATE c-rest-framework)
-
-if(EMSCRIPTEN)
-    target_link_options(c-rest-framework-tests PRIVATE "-sALLOW_MEMORY_GROWTH=1" "-sSTACK_SIZE=1048576")
-endif()
-
-if(C_REST_GNU_FLAGS)
-    target_compile_options(c-rest-framework-tests PRIVATE ${C_REST_GNU_FLAGS})
-elseif(C_REST_MSVC_FLAGS)
-    target_compile_options(c-rest-framework-tests PRIVATE ${C_REST_MSVC_FLAGS})
-endif()
-
-if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "MSVC" AND MSVC_VERSION LESS 1500)
-    target_compile_options(c-rest-framework-tests PRIVATE /Od /Ob0 /Zi)
-    target_link_options(c-rest-framework-tests PRIVATE /DEBUG /OPT:NOREF /OPT:NOICF)
-endif()
-
-add_test(NAME c-rest-framework-tests COMMAND c-rest-framework-tests)
-set_tests_properties(c-rest-framework-tests PROPERTIES TIMEOUT 300)
-
-if(WIN32 AND BUILD_SHARED_LIBS)
-    if(TARGET cfs)
-        add_custom_command(TARGET c-rest-framework-tests POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:cfs>" "$<TARGET_FILE_DIR:c-rest-framework-tests>"
-        )
-    endif()
-    if(TARGET c89stringutils)
-        add_custom_command(TARGET c-rest-framework-tests POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c89stringutils>" "$<TARGET_FILE_DIR:c-rest-framework-tests>"
-        )
-    endif()
-    if(TARGET c-abstract-http)
-        add_custom_command(TARGET c-rest-framework-tests POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c-abstract-http>" "$<TARGET_FILE_DIR:c-rest-framework-tests>"
-        )
-    endif()
-    if(TARGET c_orm)
-        add_custom_command(TARGET c-rest-framework-tests POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c_orm>" "$<TARGET_FILE_DIR:c-rest-framework-tests>"
-        )
-    endif()
-    if(TARGET c-rest-framework)
-        add_custom_command(TARGET c-rest-framework-tests POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c-rest-framework>" "$<TARGET_FILE_DIR:c-rest-framework-tests>"
-        )
-    endif()
-    if(TARGET c_cdd)
-        add_custom_command(TARGET c-rest-framework-tests POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c_cdd>" "$<TARGET_FILE_DIR:c-rest-framework-tests>"
-        )
-    endif()
-    if(TARGET c_str_span)
-        add_custom_command(TARGET c-rest-framework-tests POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:c_str_span>" "$<TARGET_FILE_DIR:c-rest-framework-tests>"
-        )
-    endif()
-endif()
-add_definitions(-DC_REST_TESTING_ENDIAN_HOOK)

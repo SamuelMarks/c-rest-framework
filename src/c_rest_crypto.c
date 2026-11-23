@@ -74,8 +74,8 @@ typedef uint32_t c_rest_uint32_t;
 /* Fallback to custom SHA1 if no crypto backend is available */
 #define SHA1_ROTL(bits, word) (((word) << (bits)) | ((word) >> (32 - (bits))))
 
-static c_rest_error_t sha1_transform(c_rest_uint32_t state[5],
-                                     const unsigned char buffer[64]) {
+static NO_DISCARD c_rest_error_t
+sha1_transform(c_rest_uint32_t state[5], const unsigned char buffer[64]) {
   c_rest_uint32_t a, b, c, d, e;
   typedef union {
     unsigned char c[64];
@@ -84,13 +84,10 @@ static c_rest_error_t sha1_transform(c_rest_uint32_t state[5],
   CHAR64LONG16 block[1];
   c_rest_uint32_t w[80];
   int i;
-
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_crypto_fail >= 20 && g_mock_crypto_fail <= 22) {
-    if (g_mock_crypto_fail == 20)
-      return C_REST_ERROR_GENERIC;
-    g_mock_crypto_fail--;
-  }
+  c_rest_error_t seam_rc = crf_seam_crypto_sha1_transform_step();
+  if (seam_rc != C_REST_OK)
+    return seam_rc;
 #endif
 
 #if defined(_MSC_VER)
@@ -156,8 +153,9 @@ c_rest_error_t c_rest_sha1(const unsigned char *data, size_t len,
   c_rest_error_t rc;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_crypto_fail == 8)
-    return C_REST_ERROR_GENERIC;
+  rc = crf_seam_crypto_sha1_hook();
+  if (rc != C_REST_OK)
+    return rc;
 #endif
 
   state[0] = 0x67452301;
@@ -243,17 +241,14 @@ static const c_rest_uint32_t sha256_k[64] = {
     0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
-static c_rest_error_t sha256_transform(c_rest_uint32_t state[8],
-                                       const unsigned char buffer[64]) {
+static NO_DISCARD c_rest_error_t
+sha256_transform(c_rest_uint32_t state[8], const unsigned char buffer[64]) {
   c_rest_uint32_t a, b, c, d, e, f, g, h, t1, t2, m[64];
   int i, j;
-
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_crypto_fail >= 30 && g_mock_crypto_fail <= 32) {
-    if (g_mock_crypto_fail == 30)
-      return C_REST_ERROR_GENERIC;
-    g_mock_crypto_fail--;
-  }
+  c_rest_error_t seam_rc = crf_seam_crypto_sha256_transform_step();
+  if (seam_rc != C_REST_OK)
+    return seam_rc;
 #endif
 
   for (i = 0, j = 0; i < 16; ++i, j += 4) {
@@ -309,11 +304,9 @@ c_rest_error_t c_rest_sha256(const unsigned char *data, size_t len,
   c_rest_error_t rc;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_crypto_fail == 10)
-    return C_REST_ERROR_GENERIC;
-  if (g_mock_crypto_fail == 11) {
-    g_mock_crypto_fail = 10;
-  }
+  rc = crf_seam_crypto_sha256_hook();
+  if (rc != C_REST_OK)
+    return rc;
 #endif
 
   state[0] = 0x6a09e667;
@@ -536,44 +529,20 @@ c_rest_error_t c_rest_rand_bytes(unsigned char *buf, size_t len) {
 #endif
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-C_REST_EXPORT int g_mock_crypto_fail = 0;
-static c_rest_error_t c_rest_mock_crypto_check(int base) {
-  if (g_mock_crypto_fail > base && g_mock_crypto_fail < base + 100) {
-    if (--g_mock_crypto_fail == base) {
-      return C_REST_ERROR_GENERIC;
-    }
-  }
-  return C_REST_OK;
-}
-
 #ifndef c_rest_sha256
-#define c_rest_sha256(a, b, c)                                                 \
-  (c_rest_mock_crypto_check(100) != C_REST_OK ? C_REST_ERROR_GENERIC           \
-                                              : c_rest_sha256(a, b, c))
+#define c_rest_sha256 crf_seam_crypto_sha256_call
 #endif
 #ifndef c_rest_base64url_encode
-#define c_rest_base64url_encode(a, b, c, d)                                    \
-  (c_rest_mock_crypto_check(200) != C_REST_OK                                  \
-       ? C_REST_ERROR_GENERIC                                                  \
-       : c_rest_base64url_encode(a, b, c, d))
+#define c_rest_base64url_encode crf_seam_crypto_b64url_enc
 #endif
 #ifndef c_rest_base64_encode
-#define c_rest_base64_encode(a, b, c, d)                                       \
-  (c_rest_mock_crypto_check(300) != C_REST_OK                                  \
-       ? C_REST_ERROR_GENERIC                                                  \
-       : c_rest_base64_encode(a, b, c, d))
+#define c_rest_base64_encode crf_seam_crypto_b64_enc
 #endif
 #ifndef c_rest_base64_decode
-#define c_rest_base64_decode(a, b, c, d)                                       \
-  (c_rest_mock_crypto_check(400) != C_REST_OK                                  \
-       ? C_REST_ERROR_GENERIC                                                  \
-       : c_rest_base64_decode(a, b, c, d))
+#define c_rest_base64_decode crf_seam_crypto_b64_dec
 #endif
 #ifndef c_rest_base64url_decode
-#define c_rest_base64url_decode(a, b, c, d)                                    \
-  (c_rest_mock_crypto_check(500) != C_REST_OK                                  \
-       ? C_REST_ERROR_GENERIC                                                  \
-       : c_rest_base64url_decode(a, b, c, d))
+#define c_rest_base64url_decode crf_seam_crypto_b64url_dec
 #endif
 #endif
 
@@ -705,10 +674,8 @@ c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
   }
 
   if (C_REST_MALLOC(64 + data_len, &inner_buf) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!inner_buf)
-    return C_REST_ERROR_GENERIC;
 
 #if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(inner_buf, 64, k_ipad, 64);
@@ -729,10 +696,8 @@ c_rest_error_t c_rest_hmac_sha256(const unsigned char *key, size_t key_len,
   C_REST_FREE((void *)(inner_buf));
 
   if (C_REST_MALLOC(64 + 32, &outer_buf) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!outer_buf)
-    return C_REST_ERROR_GENERIC;
 
 #if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(outer_buf, 64, k_opad, 64);
@@ -781,10 +746,8 @@ c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
     block_idx_bytes[3] = (unsigned char)(block_index & 0xFF);
 
     if (C_REST_MALLOC(salt_len + 4, &salt_plus_idx) != 0) {
-      LOG_DEBUG("C_REST_MALLOC failed");
+      return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
     }
-    if (!salt_plus_idx)
-      return C_REST_ERROR_GENERIC;
 #if defined(_MSC_VER)
     /* CDD_SAFE_CRT */ memcpy_s(salt_plus_idx, salt_len, salt, salt_len);
 #else
@@ -835,8 +798,9 @@ c_rest_pbkdf2_hmac_sha256(const unsigned char *password, size_t password_len,
 #endif
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-#define c_rest_rand_bytes(b, l)                                                \
-  (g_mock_crypto_fail == 4 ? C_REST_ERROR_GENERIC : c_rest_rand_bytes(b, l))
+#ifndef c_rest_rand_bytes
+#define c_rest_rand_bytes crf_seam_crypto_rand_bytes
+#endif
 #endif
 c_rest_error_t c_rest_random_string_generate(size_t entropy_bytes,
                                              char **out_str) {
@@ -913,10 +877,8 @@ c_rest_error_t c_rest_jwt_sign_hs256(const char *json_payload,
   if (rc != C_REST_OK)
     return rc;
   if (C_REST_MALLOC(header_len + 1, &encoded_header) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!encoded_header)
-    return C_REST_ERROR_GENERIC;
   rc = c_rest_base64url_encode((const unsigned char *)header, strlen(header),
                                encoded_header, &header_len);
   if (rc != C_REST_OK) {
@@ -931,11 +893,8 @@ c_rest_error_t c_rest_jwt_sign_hs256(const char *json_payload,
     return rc;
   }
   if (C_REST_MALLOC(payload_len + 1, &encoded_payload) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-  }
-  if (!encoded_payload) {
     C_REST_FREE((void *)(encoded_header));
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
   rc = c_rest_base64url_encode((const unsigned char *)json_payload,
                                strlen(json_payload), encoded_payload,
@@ -948,12 +907,9 @@ c_rest_error_t c_rest_jwt_sign_hs256(const char *json_payload,
 
   to_sign_alloc = strlen(encoded_header) + 1 + strlen(encoded_payload) + 1;
   if (C_REST_MALLOC(to_sign_alloc, &to_sign) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-  }
-  if (!to_sign) {
     C_REST_FREE((void *)(encoded_header));
     C_REST_FREE((void *)(encoded_payload));
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
 
 #if defined(_MSC_VER)
@@ -978,31 +934,34 @@ c_rest_error_t c_rest_jwt_sign_hs256(const char *json_payload,
   }
 
   rc = c_rest_base64url_encode(sig, 32, NULL, &sig_len);
-  if (rc != C_REST_OK)
-    return rc;
-  if (C_REST_MALLOC(sig_len + 1, &encoded_sig) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-  }
-  if (!encoded_sig) {
+  if (rc != C_REST_OK) {
     C_REST_FREE((void *)(encoded_header));
     C_REST_FREE((void *)(encoded_payload));
     C_REST_FREE((void *)(to_sign));
-    return C_REST_ERROR_GENERIC;
+    return rc;
+  }
+  if (C_REST_MALLOC(sig_len + 1, &encoded_sig) != 0) {
+    C_REST_FREE((void *)(encoded_header));
+    C_REST_FREE((void *)(encoded_payload));
+    C_REST_FREE((void *)(to_sign));
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
   rc = c_rest_base64url_encode(sig, 32, encoded_sig, &sig_len);
-  if (rc != C_REST_OK)
-    return rc;
-
-  token_alloc = strlen(to_sign) + 1 + strlen(encoded_sig) + 1;
-  if (C_REST_MALLOC(token_alloc, &token) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-  }
-  if (!token) {
+  if (rc != C_REST_OK) {
     C_REST_FREE((void *)(encoded_header));
     C_REST_FREE((void *)(encoded_payload));
     C_REST_FREE((void *)(to_sign));
     C_REST_FREE((void *)(encoded_sig));
-    return C_REST_ERROR_GENERIC;
+    return rc;
+  }
+
+  token_alloc = strlen(to_sign) + 1 + strlen(encoded_sig) + 1;
+  if (C_REST_MALLOC(token_alloc, &token) != 0) {
+    C_REST_FREE((void *)(encoded_header));
+    C_REST_FREE((void *)(encoded_payload));
+    C_REST_FREE((void *)(to_sign));
+    C_REST_FREE((void *)(encoded_sig));
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
 
 #if defined(_MSC_VER)
@@ -1052,10 +1011,8 @@ c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
 
   to_sign_len = (size_t)(dot2 - token);
   if (C_REST_MALLOC(to_sign_len + 1, &to_sign) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!to_sign)
-    return C_REST_ERROR_GENERIC;
 #if defined(_MSC_VER)
   /* CDD_SAFE_CRT */ memcpy_s(to_sign, to_sign_len, token, to_sign_len);
 #else
@@ -1078,10 +1035,8 @@ c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
   if (rc != C_REST_OK)
     return rc;
   if (C_REST_MALLOC(encoded_expected_sig_len + 1, &encoded_expected_sig) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!encoded_expected_sig)
-    return C_REST_ERROR_GENERIC;
   rc = c_rest_base64url_encode(expected_sig, 32, encoded_expected_sig,
                                &encoded_expected_sig_len);
   if (rc != C_REST_OK) {
@@ -1102,10 +1057,8 @@ c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
     return rc;
 
   if (C_REST_MALLOC(decoded_payload_len + 1, &decoded_payload) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!decoded_payload)
-    return C_REST_ERROR_GENERIC;
 
   rc = c_rest_base64url_decode(dot1 + 1, payload_b64_len, decoded_payload,
                                &decoded_payload_len);
@@ -1124,15 +1077,9 @@ c_rest_error_t c_rest_jwt_verify_hs256(const char *token,
 #define C_REST_PBKDF2_HASH_LEN 32
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
-#undef c_rest_pbkdf2_hmac_sha256
-#define c_rest_pbkdf2_hmac_sha256(a, b, c, d, e, f, g)                         \
-  (g_mock_crypto_fail == 2 ? C_REST_ERROR_GENERIC                              \
-                           : c_rest_pbkdf2_hmac_sha256(a, b, c, d, e, f, g))
+#ifndef c_rest_pbkdf2_hmac_sha256
+#define c_rest_pbkdf2_hmac_sha256 crf_seam_crypto_pbkdf2
 #endif
-#ifdef C_REST_TESTING_MALLOC_HOOK
-#undef c_rest_rand_bytes
-#define c_rest_rand_bytes(b, l)                                                \
-  (g_mock_crypto_fail == 3 ? C_REST_ERROR_GENERIC : c_rest_rand_bytes(b, l))
 #endif
 c_rest_error_t c_rest_hash_password(const char *password,
                                     enum c_rest_password_hash_alg alg,
@@ -1216,15 +1163,6 @@ cleanup:
   return res;
 }
 
-#ifdef C_REST_TESTING_MALLOC_HOOK
-#undef c_rest_pbkdf2_hmac_sha256
-#undef c_rest_pbkdf2_hmac_sha256
-#define c_rest_pbkdf2_hmac_sha256(a, b, c, d, e, f, g)                         \
-  ((g_mock_crypto_fail == 5 || g_mock_crypto_fail == 6 ||                      \
-    g_mock_crypto_fail == 7)                                                   \
-       ? C_REST_ERROR_GENERIC                                                  \
-       : c_rest_pbkdf2_hmac_sha256(a, b, c, d, e, f, g))
-#endif
 c_rest_error_t c_rest_verify_password(const char *password,
                                       const char *hash_str) {
   c_rest_error_t rc;
@@ -1267,10 +1205,7 @@ c_rest_error_t c_rest_verify_password(const char *password,
   if (rc != C_REST_OK)
     return rc;
   if (C_REST_MALLOC(salt_len, &salt) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-  }
-  if (!salt) {
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
   rc = c_rest_base64_decode(salt_b64, strlen(salt_b64), salt, &salt_len);
   if (rc != C_REST_OK) {

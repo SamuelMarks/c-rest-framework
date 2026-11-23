@@ -28,10 +28,10 @@ c_rest_error_t c_rest_pool_allocate(c_rest_pool *pool, void **out_ptr) {
     return C_REST_OK;
   }
   if (C_REST_MALLOC(pool->object_size, out_ptr) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
     *out_ptr = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  return *out_ptr ? 0 : 1;
+  return C_REST_OK;
 }
 
 c_rest_error_t c_rest_pool_free(c_rest_pool *pool, void *ptr) {

@@ -137,15 +137,26 @@ TEST test_write_chunk_tls_unchunked(void) {
 TEST test_response_send_tls_success(void) {
   struct c_rest_response res;
   struct c_rest_connection_context ctx;
+  char body_buf[] = "body";
   memset(&res, 0, sizeof(res));
   memset(&ctx, 0, sizeof(ctx));
   res.context = &ctx;
   ctx.tls_conn = (struct c_rest_tls_connection *)1;
-  res.body = "body";
+  res.body = body_buf;
   res.body_len = 4;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   g_mock_tls_fail = 3; /* Success for both header and body writes */
+  ASSERT_EQ(C_REST_OK, c_rest_response_send(&res));
+
+  res.headers_sent = 0;
+  res.body_len = 0;
+  g_mock_tls_fail = 3;
+  ASSERT_EQ(C_REST_OK, c_rest_response_send(&res));
+
+  res.headers_sent = 0;
+  res.body = NULL;
+  g_mock_tls_fail = 3;
   ASSERT_EQ(C_REST_OK, c_rest_response_send(&res));
   g_mock_tls_fail = 0;
 #endif
@@ -155,11 +166,12 @@ TEST test_response_send_tls_success(void) {
 TEST test_response_send_tls_fail(void) {
   struct c_rest_response res;
   struct c_rest_connection_context ctx;
+  char body_buf[] = "body";
   memset(&res, 0, sizeof(res));
   memset(&ctx, 0, sizeof(ctx));
   res.context = &ctx;
   ctx.tls_conn = (struct c_rest_tls_connection *)1;
-  res.body = "body";
+  res.body = body_buf;
   res.body_len = 4;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
@@ -179,11 +191,12 @@ TEST test_response_send_tls_fail(void) {
 TEST test_response_send_socket_fail_body(void) {
   struct c_rest_response res;
   struct c_rest_connection_context ctx;
+  char body_buf[] = "body";
   memset(&res, 0, sizeof(res));
   memset(&ctx, 0, sizeof(ctx));
   res.context = &ctx;
   ctx.sock = 123;
-  res.body = "body";
+  res.body = body_buf;
   res.body_len = 4;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
@@ -198,11 +211,12 @@ TEST test_response_send_socket_fail_body(void) {
 TEST test_response_send_socket_success_body(void) {
   struct c_rest_response res;
   struct c_rest_connection_context ctx;
+  char body_buf[] = "body";
   memset(&res, 0, sizeof(res));
   memset(&ctx, 0, sizeof(ctx));
   res.context = &ctx;
   ctx.sock = 123;
-  res.body = "body";
+  res.body = body_buf;
   res.body_len = 4;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
@@ -216,11 +230,12 @@ TEST test_response_send_socket_success_body(void) {
 TEST test_response_send_socket_body_len_zero(void) {
   struct c_rest_response res;
   struct c_rest_connection_context ctx;
+  char body_buf[] = "body";
   memset(&res, 0, sizeof(res));
   memset(&ctx, 0, sizeof(ctx));
   res.context = &ctx;
   ctx.sock = 123;
-  res.body = "body";
+  res.body = body_buf;
   res.body_len = 0;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
@@ -275,11 +290,13 @@ TEST test_response_etag_status_fail(void) {
   struct c_rest_request req;
   struct c_rest_response res;
   struct c_rest_header hdr;
+  char key_buf[] = "If-None-Match";
+  char val_buf[] = "etag123";
   memset(&req, 0, sizeof(req));
   memset(&res, 0, sizeof(res));
   memset(&hdr, 0, sizeof(hdr));
-  hdr.key = "If-None-Match";
-  hdr.value = "etag123";
+  hdr.key = key_buf;
+  hdr.value = val_buf;
   req.headers = &hdr;
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
@@ -288,7 +305,7 @@ TEST test_response_etag_status_fail(void) {
             c_rest_response_check_etag(&req, &res, "etag123"));
   g_mock_res_status_fail = 0;
 #endif
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   PASS();
 }
 
@@ -301,7 +318,7 @@ TEST test_response_redirect_status_fail(void) {
   ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_response_redirect(&res, "/dest", 302));
   g_mock_res_status_fail = 0;
 #endif
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   PASS();
 }
 
@@ -315,7 +332,7 @@ TEST test_response_oauth2_error_status_fail(void) {
             c_rest_response_oauth2_error(&res, "invalid_request", "desc"));
   g_mock_res_status_fail = 0;
 #endif
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   PASS();
 }
 
@@ -329,7 +346,26 @@ TEST test_response_serialize_status_text_fail(void) {
   PASS();
 }
 
-SUITE_EXTERN(response_mock_suite);
+TEST test_response_send_header_overflow(void) {
+  struct c_rest_response res;
+  struct c_rest_connection_context ctx;
+  struct c_rest_header hdr;
+  char key_buf[] = "X-Large";
+  char val_buf[4100];
+  memset(&res, 0, sizeof(res));
+  memset(&ctx, 0, sizeof(ctx));
+  memset(&hdr, 0, sizeof(hdr));
+  memset(val_buf, 'A', sizeof(val_buf) - 1);
+  val_buf[sizeof(val_buf) - 1] = '\0';
+  res.context = &ctx;
+  ctx.sock = 123;
+  hdr.key = key_buf;
+  hdr.value = val_buf;
+  res.headers = &hdr;
+  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_response_send(&res));
+  PASS();
+}
+
 SUITE(response_mock_suite) {
   SET_SETUP(reset_mocks, NULL);
   RUN_TEST(test_write_chunk_socket_fail_payload);
@@ -349,4 +385,5 @@ SUITE(response_mock_suite) {
   RUN_TEST(test_response_redirect_status_fail);
   RUN_TEST(test_response_oauth2_error_status_fail);
   RUN_TEST(test_response_serialize_status_text_fail);
+  RUN_TEST(test_response_send_header_overflow);
 }

@@ -1,2 +1,4 @@
 add_executable(app_node_style main.c)
-target_link_libraries(app_node_style c-rest-framework)
+target_link_libraries(app_node_style PRIVATE c-rest-framework)
+c_rest_configure_target(app_node_style)
+c_rest_copy_runtime_dlls(app_node_style)

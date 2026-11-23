@@ -16,18 +16,17 @@
 
 c_rest_error_t c_rest_string_init(c_rest_string *str, size_t initial_capacity) {
   void *tmp_data;
+  c_rest_error_t rc;
   if (!str)
     return C_REST_ERROR_GENERIC;
   if (initial_capacity == 0)
     initial_capacity = 16;
-  if (C_REST_MALLOC(initial_capacity, &tmp_data)) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+  rc = C_REST_MALLOC(initial_capacity, &tmp_data);
+  if (rc != C_REST_OK) {
     str->data = NULL;
-  } else {
-    str->data = (char *)tmp_data;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-  if (!str->data)
-    return C_REST_ERROR_GENERIC;
+  str->data = (char *)tmp_data;
   str->data[0] = '\0';
   str->length = 0;
   str->capacity = initial_capacity;
@@ -40,6 +39,7 @@ c_rest_error_t c_rest_string_append(c_rest_string *str, const char *data,
   size_t new_cap;
   char *new_data;
   void *tmp_new_data = NULL;
+  c_rest_error_t rc;
 
   if (!str || !data || len == 0)
     return C_REST_ERROR_GENERIC;
@@ -68,14 +68,11 @@ c_rest_error_t c_rest_string_append(c_rest_string *str, const char *data,
     new_cap *= 2;
   }
 
-  if (C_REST_REALLOC(str->data, new_cap, &tmp_new_data)) {
-    LOG_DEBUG("C_REST_REALLOC failed");
-    new_data = NULL;
-  } else {
-    new_data = (char *)tmp_new_data;
+  rc = C_REST_REALLOC(str->data, new_cap, &tmp_new_data);
+  if (rc != C_REST_OK) {
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_REALLOC failed");
   }
-  if (!new_data)
-    return C_REST_ERROR_GENERIC;
+  new_data = (char *)tmp_new_data;
   str->data = new_data;
   str->capacity = new_cap;
 

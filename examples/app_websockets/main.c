@@ -63,7 +63,8 @@ int main(void) {
   res = c_rest_router_init(&router);
   if (res != 0) {
     printf("Failed to init router\n");
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -72,8 +73,10 @@ int main(void) {
                                     my_ws_on_close, NULL);
   if (res != 0) {
     printf("Failed to add WebSocket route\n");
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -90,7 +93,8 @@ int main(void) {
   /* 5. Cleanup */
   res = c_rest_router_destroy(router);
   if (res != C_REST_OK) {
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   res = c_rest_destroy(ctx);

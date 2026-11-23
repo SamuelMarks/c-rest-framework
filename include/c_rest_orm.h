@@ -21,7 +21,7 @@ struct c_orm_query;
 /** @brief Database configuration */
 struct c_rest_db_config {
   /** @brief Connection string */
-  char *connection_string;
+  const char *connection_string;
   /** @brief Maximum connections */
   int max_connections;
   /** @brief Minimum connections */
@@ -36,7 +36,7 @@ struct c_rest_db_config {
  * @param pool Pointer to hold the initialized pool.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_orm_init(struct c_rest_db_config *config, struct c_orm_pool **pool);
 
 /**
@@ -44,7 +44,8 @@ c_rest_orm_init(struct c_rest_db_config *config, struct c_orm_pool **pool);
  * @param pool The pool to cleanup.
  * @return 0 on success, non-zero on error.
  */
-C_REST_EXPORT extern c_rest_error_t c_rest_orm_cleanup(struct c_orm_pool *pool);
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
+c_rest_orm_cleanup(struct c_orm_pool *pool);
 
 #ifdef __cplusplus
 }

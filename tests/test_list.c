@@ -1,14 +1,20 @@
 /* clang-format off */
 #include "c_rest_list.h"
 #include "test_protos.h"
-#include <stdio.h>
 #include <string.h>
 /* clang-format on */
 
 static int list_free_count = 0;
-static void dummy_free_list(void *ptr) {
+static c_rest_error_t dummy_free_list(void *ptr) {
   (void)ptr;
   list_free_count++;
+  return C_REST_OK;
+}
+
+static c_rest_error_t fail_free_list(void *ptr) {
+  (void)ptr;
+  list_free_count++;
+  return C_REST_ERROR_IO;
 }
 
 static void *fail_malloc(size_t s) {
@@ -16,90 +22,62 @@ static void *fail_malloc(size_t s) {
   return NULL;
 }
 
-int test_list(void) {
+TEST test_list_operations(void) {
   c_rest_list list;
-  c_rest_error_t rc;
   void *val = NULL;
-  int failed = 0;
-  const char *msgs[2];
+  char item1[] = "item1";
+  char item2[] = "item2";
+  char item3[] = "item3";
 
-  /* Null checks */
-  rc = c_rest_list_init(NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_NEQ(C_REST_OK, c_rest_list_init(NULL));
+  ASSERT_NEQ(C_REST_OK, c_rest_list_push_back(NULL, item1));
+  ASSERT_NEQ(C_REST_OK, c_rest_list_pop_front(NULL, &val));
+  ASSERT_NEQ(C_REST_OK, c_rest_list_pop_front(&list, NULL));
+  ASSERT_NEQ(C_REST_OK, c_rest_list_destroy(NULL, NULL));
 
-  rc = c_rest_list_push_back(NULL, "item");
-  failed += (rc == C_REST_OK);
-
-  rc = c_rest_list_pop_front(NULL, &val);
-  failed += (rc == C_REST_OK);
-
-  rc = c_rest_list_pop_front(&list, NULL);
-  failed += (rc == C_REST_OK);
-
-  rc = c_rest_list_destroy(NULL, NULL);
-  failed += (rc == C_REST_OK);
-
+  ASSERT_EQ(C_REST_OK, c_rest_list_init(&list));
   g_crf_malloc_hook = fail_malloc;
-  rc = c_rest_list_push_back(&list, "item");
-  failed += (rc == C_REST_OK);
+  ASSERT_NEQ(C_REST_OK, c_rest_list_push_back(&list, item1));
   g_crf_malloc_hook = NULL;
 
-  /* Normal flow */
-  rc = c_rest_list_init(&list);
-  failed += (rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_list_push_back(&list, item1));
+  ASSERT_EQ(C_REST_OK, c_rest_list_push_back(&list, item2));
 
-  rc = c_rest_list_push_back(&list, "item1");
-  failed += (rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_list_pop_front(&list, &val));
+  ASSERT_STR_EQ("item1", (const char *)val);
 
-  rc = c_rest_list_push_back(&list, "item2");
-  failed += (rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_list_pop_front(&list, &val));
+  ASSERT_STR_EQ("item2", (const char *)val);
 
-  rc = c_rest_list_pop_front(&list, &val);
-  failed += (rc != C_REST_OK);
-  failed += (strcmp((const char *)val, "item1") != 0);
+  ASSERT_NEQ(C_REST_OK, c_rest_list_pop_front(&list, &val));
+  ASSERT_EQ(NULL, val);
 
-  rc = c_rest_list_pop_front(&list, &val);
-  failed += (rc != C_REST_OK);
-  failed += (strcmp((const char *)val, "item2") != 0);
+  ASSERT_EQ(C_REST_OK, c_rest_list_destroy(&list, NULL));
 
-  rc = c_rest_list_pop_front(&list, &val);
-  failed += (rc == C_REST_OK);
-  failed += (val != NULL); /* Should fail, list is empty */
+  ASSERT_EQ(C_REST_OK, c_rest_list_init(&list));
+  ASSERT_EQ(C_REST_OK, c_rest_list_push_back(&list, item3));
+  ASSERT_EQ(C_REST_OK, c_rest_list_destroy(&list, NULL));
 
-  rc = c_rest_list_destroy(&list, NULL);
-  failed += (rc != C_REST_OK);
-
-  /* Destroy non-empty list with NULL free func */
-  rc = c_rest_list_init(&list);
-  failed += (rc != C_REST_OK);
-  rc = c_rest_list_push_back(&list, "item3");
-  failed += (rc != C_REST_OK);
-  rc = c_rest_list_destroy(&list, NULL);
-  failed += (rc != C_REST_OK);
-
-  /* Test destruction with free function */
   list_free_count = 0;
-  rc = c_rest_list_init(&list);
-  failed += (rc != C_REST_OK);
-  rc = c_rest_list_push_back(&list, "item1");
-  failed += (rc != C_REST_OK);
-  rc = c_rest_list_destroy(&list, dummy_free_list);
-  failed += (rc != C_REST_OK);
-  failed += (list_free_count != 1);
+  ASSERT_EQ(C_REST_OK, c_rest_list_init(&list));
+  ASSERT_EQ(C_REST_OK, c_rest_list_push_back(&list, item1));
+  ASSERT_EQ(C_REST_OK, c_rest_list_destroy(&list, dummy_free_list));
+  ASSERT_EQ(1, list_free_count);
 
-  /* Destruction with free_data and null data */
   list_free_count = 0;
-  rc = c_rest_list_init(&list);
-  failed += (rc != C_REST_OK);
-  rc = c_rest_list_push_back(&list, NULL);
-  failed += (rc != C_REST_OK);
-  rc = c_rest_list_destroy(&list, dummy_free_list);
-  failed += (rc != C_REST_OK);
-  failed += (list_free_count != 0);
+  ASSERT_EQ(C_REST_OK, c_rest_list_init(&list));
+  ASSERT_EQ(C_REST_OK, c_rest_list_push_back(&list, NULL));
+  ASSERT_EQ(C_REST_OK, c_rest_list_destroy(&list, dummy_free_list));
+  ASSERT_EQ(0, list_free_count);
 
-  msgs[0] = "test_list passed\n";
-  msgs[1] = "test_list failed\n";
-  printf("%s", msgs[failed != 0]);
+  list_free_count = 0;
+  ASSERT_EQ(C_REST_OK, c_rest_list_init(&list));
+  ASSERT_EQ(C_REST_OK, c_rest_list_push_back(&list, item1));
+  ASSERT_EQ(C_REST_OK, c_rest_list_push_back(&list, item2));
+  ASSERT_EQ(C_REST_ERROR_IO, c_rest_list_destroy(&list, fail_free_list));
+  ASSERT_EQ(2, list_free_count);
 
-  return failed;
+  PASS();
 }
+
+SUITE(list_suite) { RUN_TEST(test_list_operations); }

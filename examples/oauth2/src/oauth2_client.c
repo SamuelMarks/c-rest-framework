@@ -29,9 +29,18 @@ c_rest_error_t oauth2_client_init(const char *token_url, const char *client_id,
     return 1;
   }
 
-  g_token_url = (char *)CRF_MALLOC(strlen(token_url) + 1);
-  g_client_id = (char *)CRF_MALLOC(strlen(client_id) + 1);
-  g_client_secret = (char *)CRF_MALLOC(strlen(client_secret) + 1);
+  g_token_url = NULL;
+  g_client_id = NULL;
+  g_client_secret = NULL;
+  if (C_REST_MALLOC(strlen(token_url) + 1, &g_token_url) != C_REST_OK) {
+    g_token_url = NULL;
+  }
+  if (C_REST_MALLOC(strlen(client_id) + 1, &g_client_id) != C_REST_OK) {
+    g_client_id = NULL;
+  }
+  if (C_REST_MALLOC(strlen(client_secret) + 1, &g_client_secret) != C_REST_OK) {
+    g_client_secret = NULL;
+  }
 
   if (!g_token_url || !g_client_id || !g_client_secret) {
     rc = oauth2_client_cleanup();
@@ -111,7 +120,7 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
   err = c_rest_client_post_form_sync(g_client_ctx, g_token_url, headers, 1,
                                      fields, 5, &res);
   if (err != C_REST_OK) {
-    CRF_FREE(auth_header);
+    C_REST_FREE(auth_header);
     if (res) {
       free_rc = c_rest_client_response_free(res);
       if (free_rc != C_REST_OK)
@@ -119,7 +128,7 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
     }
     return err;
   }
-  CRF_FREE(auth_header);
+  C_REST_FREE(auth_header);
   if (res == NULL) {
     return 1;
   }
@@ -159,8 +168,8 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
     return 1;
   }
 
-  *out_access_token = (char *)CRF_MALLOC(strlen(access_token) + 1);
-  if (*out_access_token == NULL) {
+  *out_access_token = NULL;
+  if (C_REST_MALLOC(strlen(access_token) + 1, out_access_token) != C_REST_OK) {
     json_value_free(json_val);
     free_rc = c_rest_client_response_free(res);
     if (free_rc != C_REST_OK)
@@ -186,15 +195,15 @@ c_rest_error_t oauth2_client_password_grant(const char *username,
 
 c_rest_error_t oauth2_client_cleanup(void) {
   if (g_token_url) {
-    CRF_FREE(g_token_url);
+    C_REST_FREE(g_token_url);
     g_token_url = NULL;
   }
   if (g_client_id) {
-    CRF_FREE(g_client_id);
+    C_REST_FREE(g_client_id);
     g_client_id = NULL;
   }
   if (g_client_secret) {
-    CRF_FREE(g_client_secret);
+    C_REST_FREE(g_client_secret);
     g_client_secret = NULL;
   }
   if (g_client_ctx) {

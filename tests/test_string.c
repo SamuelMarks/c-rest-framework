@@ -1,7 +1,6 @@
 /* clang-format off */
 #include "c_rest_string.h"
 #include "test_protos.h"
-#include <stdio.h>
 #include <string.h>
 /* clang-format on */
 
@@ -16,123 +15,77 @@ static void *failing_realloc_hook(void *ptr, size_t size) {
   return NULL;
 }
 
-int test_string(void) {
+TEST test_string_operations_and_oom(void) {
   c_rest_string str;
   c_rest_string empty_str;
-  c_rest_error_t rc;
-  int failed = 0;
   char large_buf[100];
   int i;
-  const char *msgs[2];
 
-  /* Test NULL pointer in init */
-  rc = c_rest_string_init(NULL, 16);
-  failed += (rc == C_REST_OK);
+  ASSERT_NEQ(C_REST_OK, c_rest_string_init(NULL, 16));
 
-  /* Test malloc failure during init by using hook */
   g_crf_malloc_hook = failing_malloc_hook;
-  rc = c_rest_string_init(&str, 16);
+  ASSERT_NEQ(C_REST_OK, c_rest_string_init(&str, 16));
   g_crf_malloc_hook = NULL;
-  failed += (rc == C_REST_OK);
 
-  /* Test initial capacity 0 */
-  rc = c_rest_string_init(&str, 0);
-  failed += (rc != C_REST_OK);
-  failed += (str.capacity != 16);
-  rc = c_rest_string_destroy(&str);
-  failed += (rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_string_init(&str, 0));
+  ASSERT_EQ((size_t)16, str.capacity);
+  ASSERT_EQ(C_REST_OK, c_rest_string_destroy(&str));
 
-  /* Normal init */
-  rc = c_rest_string_init(&str, 16);
-  failed += (rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_string_init(&str, 16));
 
-  /* Test realloc failure during append by using hook */
   g_crf_realloc_hook = failing_realloc_hook;
-  /* append 20 chars to trigger realloc from 16 */
-  rc = c_rest_string_append(&str, "01234567890123456789", 20);
+  ASSERT_NEQ(C_REST_OK, c_rest_string_append(&str, "01234567890123456789", 20));
   g_crf_realloc_hook = NULL;
-  failed += (rc == C_REST_OK);
 
-  /* Test realloc failure during append by appending an impossible length */
-  /* This relies on (size_t)-1 - str.length - 1 passing the overflow check,
-   * but the resulting allocation of (size_t)-1 bytes will fail. */
   g_crf_realloc_hook = failing_realloc_hook;
-  rc = c_rest_string_append(&str, "a", ((size_t)-1) - str.length - 1);
+  ASSERT_NEQ(C_REST_OK,
+             c_rest_string_append(&str, "a", ((size_t)-1) - str.length - 1));
   g_crf_realloc_hook = NULL;
-  failed += (rc == C_REST_OK);
 
-  /* Test integer overflow check in append */
-  rc = c_rest_string_append(&str, "a", ((size_t)-1));
-  failed += (rc == C_REST_OK);
+  ASSERT_NEQ(C_REST_OK, c_rest_string_append(&str, "a", ((size_t)-1)));
+  ASSERT_NEQ(C_REST_OK, c_rest_string_append(NULL, "data", 4));
+  ASSERT_NEQ(C_REST_OK, c_rest_string_append(&str, NULL, 4));
+  ASSERT_NEQ(C_REST_OK, c_rest_string_append(&str, "data", 0));
 
-  /* Test NULL pointer in append */
-  rc = c_rest_string_append(NULL, "data", 4);
-  failed += (rc == C_REST_OK);
-  rc = c_rest_string_append(&str, NULL, 4);
-  failed += (rc == C_REST_OK);
-  rc = c_rest_string_append(&str, "data", 0);
-  failed += (rc == C_REST_OK);
+  ASSERT_NEQ(C_REST_OK, c_rest_string_append_cstr(NULL, "hello"));
+  ASSERT_NEQ(C_REST_OK, c_rest_string_append_cstr(&str, NULL));
 
-  /* Test NULL pointer in append_cstr */
-  rc = c_rest_string_append_cstr(NULL, "hello");
-  failed += (rc == C_REST_OK);
-  rc = c_rest_string_append_cstr(&str, NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_string_append_cstr(&str, "hello"));
+  ASSERT_EQ(C_REST_OK, c_rest_string_append(&str, " world", 6));
+  ASSERT_STR_EQ("hello world", str.data);
 
-  rc = c_rest_string_append_cstr(&str, "hello");
-  failed += (rc != C_REST_OK);
-
-  rc = c_rest_string_append(&str, " world", 6);
-  failed += (rc != C_REST_OK);
-  failed += (strcmp(str.data, "hello world") != 0);
-
-  /* Force reallocation: string capacity is 16, current length is 11 */
   for (i = 0; i < 99; i++) {
     large_buf[i] = 'a';
   }
   large_buf[99] = '\0';
 
-  /* This will trigger the first realloc and the while loop for new_cap */
-  rc = c_rest_string_append_cstr(&str, large_buf);
-  failed += (rc != C_REST_OK);
-  failed += (str.capacity < str.length + 1);
+  ASSERT_EQ(C_REST_OK, c_rest_string_append_cstr(&str, large_buf));
+  ASSERT(str.capacity >= str.length + 1);
 
-  /* Test destroy */
-  rc = c_rest_string_destroy(NULL);
-  failed += (rc == C_REST_OK);
+  ASSERT_NEQ(C_REST_OK, c_rest_string_destroy(NULL));
 
   empty_str.data = NULL;
   empty_str.length = 0;
   empty_str.capacity = 0;
-  rc = c_rest_string_destroy(&empty_str);
-  failed += (rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_string_destroy(&empty_str));
 
-  rc = c_rest_string_destroy(&str);
-  failed += (rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_string_destroy(&str));
 
-  /* Test zero capacity doubling fallback when capacity = 0 */
   str.data = NULL;
   str.capacity = 0;
   str.length = 0;
-  rc = c_rest_string_append_cstr(&str, "test");
-  failed += (rc != C_REST_OK);
-  failed += (str.capacity != 16);
-  rc = c_rest_string_destroy(&str);
-  failed += (rc != C_REST_OK);
+  ASSERT_EQ(C_REST_OK, c_rest_string_append_cstr(&str, "test"));
+  ASSERT_EQ((size_t)16, str.capacity);
+  ASSERT_EQ(C_REST_OK, c_rest_string_destroy(&str));
 
-  /* Test capacity overflow */
   str.data = NULL;
   str.capacity = ((size_t)-1) / 2 + 1;
   str.length = str.capacity - 1;
   g_crf_realloc_hook = failing_realloc_hook;
-  printf("Before c_rest_string_append_cstr\n");
-  rc = c_rest_string_append_cstr(&str, "test");
-  printf("After c_rest_string_append_cstr\n");
+  ASSERT_EQ(C_REST_ERROR_GENERIC, c_rest_string_append_cstr(&str, "test"));
   g_crf_realloc_hook = NULL;
-  failed += (rc != C_REST_ERROR_GENERIC);
 
-  msgs[0] = "test_string passed\n";
-  msgs[1] = "test_string failed\n";
-  printf("%s", msgs[failed != 0]);
-  return failed;
+  PASS();
 }
+
+SUITE(string_suite) { RUN_TEST(test_string_operations_and_oom); }

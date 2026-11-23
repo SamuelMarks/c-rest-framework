@@ -1,2 +1,4 @@
 add_executable(app_multi_process main.c)
-target_link_libraries(app_multi_process c-rest-framework)
+target_link_libraries(app_multi_process PRIVATE c-rest-framework)
+c_rest_configure_target(app_multi_process)
+c_rest_copy_runtime_dlls(app_multi_process)

@@ -1,8 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
-project(app_hot_reload C)
-
 add_executable(app_hot_reload main.c)
 target_link_libraries(app_hot_reload PRIVATE c-rest-framework)
-if(WIN32)
-  target_link_libraries(app_hot_reload PRIVATE ws2_32)
-endif()
+c_rest_configure_target(app_hot_reload)
+c_rest_copy_runtime_dlls(app_hot_reload)

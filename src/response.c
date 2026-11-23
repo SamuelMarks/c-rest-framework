@@ -30,6 +30,7 @@ c_rest_error_t c_rest_response_set_header(struct c_rest_response *res,
   struct c_rest_header *new_h;
   size_t val_len;
   int cmp;
+  int log_rc = 0;
 
   if (!res || !key || !value) {
     return C_REST_ERROR_GENERIC;
@@ -52,11 +53,7 @@ c_rest_error_t c_rest_response_set_header(struct c_rest_response *res,
         val_len = strlen(value) + 1;
 
         if (C_REST_MALLOC(val_len, &new_val) != 0) {
-          LOG_DEBUG("C_REST_MALLOC failed");
-          new_val = NULL;
-        }
-        if (!new_val) {
-          return C_REST_ERROR_GENERIC;
+          return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
         }
         SAFE_STRCPY(new_val, val_len, value);
         C_REST_FREE((void *)(h->value));
@@ -68,25 +65,21 @@ c_rest_error_t c_rest_response_set_header(struct c_rest_response *res,
 
   /* Add new header */
   if (C_REST_MALLOC(sizeof(struct c_rest_header), &new_h) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    new_h = NULL;
-  }
-  if (!new_h) {
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
   if (C_REST_MALLOC(strlen(key) + 1, &new_h->key) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+    log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
     new_h->key = NULL;
   }
   if (C_REST_MALLOC(strlen(value) + 1, &new_h->value) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
+    log_rc |= C_REST_LOG_MSG("C_REST_MALLOC failed");
     new_h->value = NULL;
   }
   if (!new_h->key || !new_h->value) {
     C_REST_FREE((void *)(new_h->key));
     C_REST_FREE((void *)(new_h->value));
     C_REST_FREE((void *)(new_h));
-    return C_REST_ERROR_GENERIC;
+    return (c_rest_error_t)((int)C_REST_ERROR_GENERIC | log_rc);
   }
 
   SAFE_STRCPY(new_h->key, strlen(key) + 1, key);
@@ -101,12 +94,16 @@ c_rest_error_t c_rest_response_set_header(struct c_rest_response *res,
 
 c_rest_error_t c_rest_response_set_status(struct c_rest_response *res,
                                           int status_code) {
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  c_rest_error_t seam_rc;
+#endif
   if (!res) {
     return C_REST_ERROR_GENERIC;
   }
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_res_status_fail) {
-    return C_REST_ERROR_GENERIC;
+  seam_rc = crf_seam_res_status_hook();
+  if (seam_rc != C_REST_OK) {
+    return seam_rc;
   }
 #endif
   res->status_code = status_code;
@@ -128,16 +125,19 @@ c_rest_error_t c_rest_response_check_etag(struct c_rest_request *req,
     return rc;
 
   rc = c_rest_request_get_header(req, "If-None-Match", &if_none_match);
-  if (rc == C_REST_OK) {
-    if (strcmp(if_none_match, etag) == 0) {
-      c_rest_error_t s_rc = c_rest_response_set_status(res, 304);
-      if (s_rc != C_REST_OK)
-        return s_rc;
-      return C_REST_ERROR_GENERIC; /* Match found */
-    }
+  if (rc != C_REST_OK) {
+    goto etag_no_match;
+  }
+  if (strcmp(if_none_match, etag) == 0) {
+    c_rest_error_t s_rc = c_rest_response_set_status(res, 304);
+    if (s_rc != C_REST_OK)
+      return s_rc;
+    return C_REST_SHORT_CIRCUIT; /* Match found */
   }
 
-  return C_REST_OK;
+etag_no_match:
+  rc = C_REST_OK;
+  return rc;
 }
 
 c_rest_error_t c_rest_response_set_cache_control(struct c_rest_response *res,
@@ -196,21 +196,17 @@ c_rest_error_t c_rest_response_send(struct c_rest_response *res) {
 #endif
 
   for (h = res->headers; h != NULL; h = h->next) {
+    size_t line_len = strlen(h->key) + 2 + strlen(h->value) + 2;
+    if (offset + line_len + 3 > sizeof(header_buf)) {
+      return C_REST_ERROR_GENERIC;
+    }
 #if defined(_MSC_VER)
     offset +=
         (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
                           "%s: %s\r\n", h->key, h->value);
 #else
-
-#ifdef _MSC_VER
-    /* CDD_SAFE_CRT */ offset +=
-        (size_t)sprintf_s(header_buf + offset, sizeof(header_buf) - offset,
-                          "%s: %s\r\n", h->key, h->value);
-#else
-    /* CDD_SAFE_CRT */ offset +=
+    offset +=
         (size_t)sprintf(header_buf + offset, "%s: %s\r\n", h->key, h->value);
-#endif
-
 #endif
   }
 
@@ -296,11 +292,8 @@ c_rest_error_t c_rest_response_json(struct c_rest_response *res,
     C_REST_FREE((void *)(res->body));
   }
   if (C_REST_MALLOC(len + 1, &res->body) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
     res->body = NULL;
-  }
-  if (!res->body) {
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
   SAFE_STRCPY(res->body, len + 1, json_str);
   res->body_len = len;
@@ -411,11 +404,8 @@ c_rest_error_t c_rest_response_html(struct c_rest_response *res,
     C_REST_FREE((void *)(res->body));
   }
   if (C_REST_MALLOC(len + 1, &res->body) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
     res->body = NULL;
-  }
-  if (!res->body) {
-    return C_REST_ERROR_OOM;
+    return C_REST_LOG_ERR(C_REST_ERROR_OOM, "C_REST_MALLOC failed");
   }
   SAFE_STRCPY(res->body, len + 1, html_str);
   res->body_len = len;
@@ -584,11 +574,7 @@ c_rest_error_t c_rest_response_set_cookie(struct c_rest_response *res,
   }
 
   if (C_REST_MALLOC(len, &cookie_str) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    cookie_str = NULL;
-  }
-  if (!cookie_str) {
-    return C_REST_ERROR_GENERIC;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
 
 #if defined(_MSC_VER)
@@ -639,10 +625,10 @@ c_rest_error_t c_rest_response_send_file(struct c_rest_response *res,
 c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res) {
   struct c_rest_header *h;
   struct c_rest_header *next_h;
-
 #ifdef C_REST_TESTING_MALLOC_HOOK
-  if (g_mock_res_cleanup_fail)
-    return C_REST_ERROR_GENERIC;
+  c_rest_error_t seam_rc = crf_seam_res_cleanup_hook();
+  if (seam_rc != C_REST_OK)
+    return seam_rc;
 #endif
 
   if (!res) {
@@ -666,7 +652,8 @@ c_rest_error_t c_rest_response_cleanup(struct c_rest_response *res) {
   return C_REST_OK;
 }
 
-static c_rest_error_t get_status_text(int status_code, const char **out_text) {
+static NO_DISCARD c_rest_error_t get_status_text(int status_code,
+                                                 const char **out_text) {
 #ifdef C_REST_TESTING_MALLOC_HOOK
   if (status_code == 9999) {
     return C_REST_ERROR_GENERIC;
@@ -767,12 +754,8 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
   est_len += res->body_len;
 
   if (C_REST_MALLOC(est_len, &buf) != 0) {
-    LOG_DEBUG("C_REST_MALLOC failed");
-    buf = NULL;
+    return C_REST_LOG_ERR(C_REST_ERROR_GENERIC, "C_REST_MALLOC failed");
   }
-
-  if (!buf)
-    return C_REST_ERROR_GENERIC;
 
   rc = get_status_text(res->status_code ? res->status_code : 200, &status_text);
   if (rc != C_REST_OK)
@@ -793,15 +776,7 @@ c_rest_error_t c_rest_response_serialize(struct c_rest_response *res,
     offset += (size_t)sprintf_s(buf + offset, est_len - offset, "%s: %s\r\n",
                                 h->key, h->value);
 #else
-
-#ifdef _MSC_VER
-    /* CDD_SAFE_CRT */ offset += (size_t)sprintf_s(
-        buf + offset, est_len - offset, "%s: %s\r\n", h->key, h->value);
-#else
-    /* CDD_SAFE_CRT */ offset +=
-        (size_t)sprintf(buf + offset, "%s: %s\r\n", h->key, h->value);
-#endif
-
+    offset += (size_t)sprintf(buf + offset, "%s: %s\r\n", h->key, h->value);
 #endif
   }
 

@@ -28,6 +28,19 @@
 #include <signal.h>
 /* clang-format on */
 
+static char g_mut_ring[256][512];
+static size_t g_mut_ring_idx = 0;
+static char *mut_s(const char *s) {
+  char *dst = g_mut_ring[g_mut_ring_idx & 255];
+  size_t len = strlen(s);
+  g_mut_ring_idx++;
+  if (len >= sizeof(g_mut_ring[0]))
+    len = sizeof(g_mut_ring[0]) - 1;
+  memcpy(dst, s, len);
+  dst[len] = '\0';
+  return dst;
+}
+
 struct c_rest_route_node;
 struct c_rest_middleware_chain;
 struct c_rest_router {
@@ -290,13 +303,11 @@ static c_rest_error_t mock_main_c_rest_destroy(struct c_rest_context *c) {
 #undef c_rest_run
 #undef exit
 
-SUITE(oauth2_suite);
-
 TEST test_client_init_and_cleanup(void) {
   c_orm_db_t *db = NULL;
   c_rest_client_context *ctx = NULL;
 
-  c_orm_sqlite_connect(":memory:", &db);
+  ASSERT_EQ(0, c_orm_sqlite_connect(":memory:", &db));
 
   /* NULL arguments */
   ASSERT_EQ(1, oauth2_client_init(NULL, "cid", "sec", db));
@@ -373,7 +384,7 @@ TEST test_client_init_and_cleanup(void) {
     g_target_size = 0;
   }
 
-  db->vtable->disconnect(db);
+  ASSERT_EQ(0, db->vtable->disconnect(db));
   PASS();
 }
 
@@ -506,7 +517,7 @@ TEST test_client_password_grant(void) {
       C_REST_ERROR_GENERIC,
       oauth2_client_password_grant("user", "pass", &access_token, &expires_in));
   g_mock_client_fail = 0;
-  CRF_FREE(access_token);
+  C_REST_FREE(access_token);
   access_token = NULL;
 
   /* Test success path */
@@ -517,7 +528,7 @@ TEST test_client_password_grant(void) {
   ASSERT_NEQ(NULL, access_token);
   ASSERT_STR_EQ("valid_tok_123", access_token);
   ASSERT_EQ(3600, expires_in);
-  CRF_FREE(access_token);
+  C_REST_FREE(access_token);
   access_token = NULL;
 
   g_mock_client_fail = 11;
@@ -529,7 +540,7 @@ TEST test_client_password_grant(void) {
   {
     struct HttpResponse *mres = NULL;
     g_mock_client_body = NULL;
-    mock_oauth2_http_send(NULL, NULL, &mres);
+    ASSERT_EQ(0, mock_oauth2_http_send(NULL, NULL, &mres));
     free(mres);
     g_mock_client_body =
         "{\"access_token\":\"valid_tok_123\",\"expires_in\":3600}";
@@ -544,7 +555,7 @@ TEST test_server_init(void) {
   c_rest_router *router_with_openapi = NULL;
   struct c_rest_openapi_spec *saved_spec = NULL;
 
-  c_orm_sqlite_connect(":memory:", &db);
+  ASSERT_EQ(0, c_orm_sqlite_connect(":memory:", &db));
   ASSERT_EQ(C_REST_OK, c_rest_router_init(&router));
   ASSERT_EQ(C_REST_OK, c_rest_router_init(&router_with_openapi));
   ASSERT_EQ(C_REST_OK,
@@ -565,7 +576,7 @@ TEST test_server_init(void) {
 
   ASSERT_EQ(C_REST_OK, c_rest_router_destroy(router));
   ASSERT_EQ(C_REST_OK, c_rest_router_destroy(router_with_openapi));
-  db->vtable->disconnect(db);
+  ASSERT_EQ(0, db->vtable->disconnect(db));
   PASS();
 }
 
@@ -610,8 +621,8 @@ TEST test_server_handlers_complete(void) {
   struct c_rest_header hdr;
   struct c_rest_header auth_hdr;
 
-  c_orm_sqlite_connect(":memory:", &db);
-  c_orm_oauth2_create_tables(db);
+  ASSERT_EQ(0, c_orm_sqlite_connect(":memory:", &db));
+  ASSERT_EQ(0, c_orm_oauth2_create_tables(db));
 
   memset(&mock_fail_db, 0, sizeof(mock_fail_db));
   memset(&fail_vtable, 0, sizeof(fail_vtable));
@@ -621,11 +632,11 @@ TEST test_server_handlers_complete(void) {
   mock_fail_db = *db;
   mock_fail_db.vtable = &fail_vtable;
 
-  clear_test_req(NULL);
-  mock_db_prepare_fail(NULL, NULL, NULL);
+  ASSERT_EQ(C_REST_OK, clear_test_req(NULL));
+  ASSERT_EQ(1, mock_db_prepare_fail(NULL, NULL, NULL));
   g_mock_user_verify_fail = 1;
-  mock_db_prepare_fail(db, NULL, NULL);
-  mock_db_prepare_fail(db, "SELECT * FROM clients", NULL);
+  ASSERT_NEQ(0, mock_db_prepare_fail(db, NULL, NULL));
+  ASSERT_NEQ(0, mock_db_prepare_fail(db, "SELECT * FROM clients", NULL));
   g_mock_user_verify_fail = 0;
 
   memset(&req, 0, sizeof(req));
@@ -637,55 +648,55 @@ TEST test_server_handlers_complete(void) {
   ASSERT_EQ(1, oauth2_register_client_handler(&req, &res, NULL));
 
   /* URL-encoded parse failure */
-  clear_test_req(&req);
-  req.body = "client_id=myid";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("client_id=myid");
   req.body_len = strlen(req.body);
   g_crf_malloc_hook = fail_malloc;
   ASSERT_EQ(0, oauth2_register_client_handler(&req, &res, db));
   g_crf_malloc_hook = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Missing client_secret only */
-  clear_test_req(&req);
-  req.body = "client_id=myid";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("client_id=myid");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_register_client_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Missing client_id only */
-  clear_test_req(&req);
-  req.body = "client_secret=mysecret";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("client_secret=mysecret");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_register_client_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Prepare failure */
-  clear_test_req(&req);
-  req.body = "client_id=myid&client_secret=mysecret";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("client_id=myid&client_secret=mysecret");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_register_client_handler(&req, &res, &mock_fail_db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Successful client registration */
-  clear_test_req(&req);
-  req.body = "client_id=myid&client_secret=mysecret";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("client_id=myid&client_secret=mysecret");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_register_client_handler(&req, &res, db));
   ASSERT_EQ(201, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Duplicate client registration -> step fails */
-  clear_test_req(&req);
-  req.body = "client_id=myid&client_secret=mysecret";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("client_id=myid&client_secret=mysecret");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_register_client_handler(&req, &res, db));
   ASSERT_EQ(400, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* ------------------- Register User Handler ------------------- */
@@ -694,55 +705,55 @@ TEST test_server_handlers_complete(void) {
   ASSERT_EQ(1, oauth2_register_user_handler(&req, &res, NULL));
 
   /* URL-encoded parse failure */
-  clear_test_req(&req);
-  req.body = "username=myuser";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser");
   req.body_len = strlen(req.body);
   g_crf_malloc_hook = fail_malloc;
   ASSERT_EQ(0, oauth2_register_user_handler(&req, &res, db));
   g_crf_malloc_hook = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Missing password only */
-  clear_test_req(&req);
-  req.body = "username=myuser";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_register_user_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Missing username only */
-  clear_test_req(&req);
-  req.body = "password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_register_user_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Prepare failure */
-  clear_test_req(&req);
-  req.body = "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_register_user_handler(&req, &res, &mock_fail_db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Successful user registration */
-  clear_test_req(&req);
-  req.body = "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_register_user_handler(&req, &res, db));
   ASSERT_EQ(201, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Duplicate user registration -> step fails */
-  clear_test_req(&req);
-  req.body = "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_register_user_handler(&req, &res, db));
   ASSERT_EQ(400, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* ------------------- Token Handler ------------------- */
@@ -751,162 +762,163 @@ TEST test_server_handlers_complete(void) {
   ASSERT_EQ(1, oauth2_token_handler(&req, &res, NULL));
 
   /* URL-encoded parse failure */
-  clear_test_req(&req);
-  req.body = "grant_type=password";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password");
   req.body_len = strlen(req.body);
   g_crf_malloc_hook = fail_malloc;
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
   g_crf_malloc_hook = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Missing grant_type */
-  clear_test_req(&req);
-  req.body = "client_id=myid";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("client_id=myid");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Unsupported grant_type */
-  clear_test_req(&req);
-  req.body = "grant_type=client_credentials";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=client_credentials");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Missing client credentials (no body params, no auth header) */
-  clear_test_req(&req);
-  req.body = "grant_type=password&username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password&username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Missing client_secret in body */
-  clear_test_req(&req);
-  req.body = "grant_type=password&client_id=myid";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password&client_id=myid");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Missing client_id in body */
-  clear_test_req(&req);
-  req.body = "grant_type=password&client_secret=mysecret";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password&client_secret=mysecret");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Invalid client credentials in body */
-  clear_test_req(&req);
-  req.body = "grant_type=password&client_id=bad&client_secret=bad&username="
-             "myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body =
+      mut_s("grant_type=password&client_id=bad&client_secret=bad&username="
+            "myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* c_orm_oauth2_verify_client fails with error (err != 0) */
-  clear_test_req(&req);
-  req.body = "grant_type=password&client_id=myid&client_secret=mysecret&"
-             "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password&client_id=myid&client_secret=mysecret&"
+                   "username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, &mock_fail_db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Invalid client credentials via Basic Auth header */
-  clear_test_req(&req);
-  auth_hdr.key = "Authorization";
-  auth_hdr.value = "Basic YmFkOmJhZA=="; /* bad:bad */
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  auth_hdr.key = mut_s("Authorization");
+  auth_hdr.value = mut_s("Basic YmFkOmJhZA=="); /* bad:bad */
   auth_hdr.next = NULL;
   req.headers = &auth_hdr;
-  req.body = "grant_type=password&username=myuser&password=mypassword";
+  req.body = mut_s("grant_type=password&username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
   req.headers = NULL;
 
   /* Valid client credentials, missing username in body */
-  clear_test_req(&req);
-  req.body = "grant_type=password&client_id=myid&client_secret=mysecret&"
-             "password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password&client_id=myid&client_secret=mysecret&"
+                   "password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Valid client credentials, missing password in body */
-  clear_test_req(&req);
-  req.body = "grant_type=password&client_id=myid&client_secret=mysecret&"
-             "username=myuser";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password&client_id=myid&client_secret=mysecret&"
+                   "username=myuser");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Valid client credentials via Basic auth, missing username */
-  clear_test_req(&req);
-  auth_hdr.value = "Basic bXlpZDpteXNlY3JldA=="; /* myid:mysecret */
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  auth_hdr.value = mut_s("Basic bXlpZDpteXNlY3JldA=="); /* myid:mysecret */
   req.headers = &auth_hdr;
-  req.body = "grant_type=password";
+  req.body = mut_s("grant_type=password");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
   req.headers = NULL;
 
   /* Valid client credentials, invalid user credentials */
-  clear_test_req(&req);
-  req.body = "grant_type=password&client_id=myid&client_secret=mysecret&"
-             "username=baduser&password=badpass";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password&client_id=myid&client_secret=mysecret&"
+                   "username=baduser&password=badpass");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Valid client credentials via Basic auth, invalid user */
-  clear_test_req(&req);
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
   req.headers = &auth_hdr;
-  req.body = "grant_type=password&username=baduser&password=badpass";
+  req.body = mut_s("grant_type=password&username=baduser&password=badpass");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
   req.headers = NULL;
 
   /* c_orm_user_verify_credentials fails with error (err != 0) */
-  clear_test_req(&req);
-  req.body = "grant_type=password&client_id=myid&client_secret=mysecret&"
-             "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password&client_id=myid&client_secret=mysecret&"
+                   "username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   g_mock_user_verify_fail = 1;
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, &mock_fail_db));
   g_mock_user_verify_fail = 0;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* c_orm_user_verify_credentials fails with error (err != 0) via Basic Auth */
-  clear_test_req(&req);
-  auth_hdr.value = "Basic bXlpZDpteXNlY3JldA=="; /* myid:mysecret */
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  auth_hdr.value = mut_s("Basic bXlpZDpteXNlY3JldA=="); /* myid:mysecret */
   req.headers = &auth_hdr;
-  req.body = "grant_type=password&username=myuser&password=mypassword";
+  req.body = mut_s("grant_type=password&username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   g_mock_user_verify_fail = 1;
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, &mock_fail_db));
   g_mock_user_verify_fail = 0;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
   req.headers = NULL;
 
   /* Valid client and user, OOM on token_str */
-  clear_test_req(&req);
-  req.body = "grant_type=password&client_id=myid&client_secret=mysecret&"
-             "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password&client_id=myid&client_secret=mysecret&"
+                   "username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(C_REST_OK, c_rest_request_parse_urlencoded(&req));
   g_target_size = 64;
@@ -916,14 +928,14 @@ TEST test_server_handlers_complete(void) {
   ASSERT_EQ(1, oauth2_token_handler(&req, &res, db));
   g_crf_malloc_hook = NULL;
   g_target_size = 0;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Valid client and user via Basic auth, OOM on token_str */
-  clear_test_req(&req);
-  auth_hdr.value = "Basic bXlpZDpteXNlY3JldA=="; /* myid:mysecret */
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  auth_hdr.value = mut_s("Basic bXlpZDpteXNlY3JldA=="); /* myid:mysecret */
   req.headers = &auth_hdr;
-  req.body = "grant_type=password&username=myuser&password=mypassword";
+  req.body = mut_s("grant_type=password&username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(C_REST_OK, c_rest_request_parse_urlencoded(&req));
   g_target_size = 64;
@@ -933,14 +945,14 @@ TEST test_server_handlers_complete(void) {
   ASSERT_EQ(1, oauth2_token_handler(&req, &res, db));
   g_crf_malloc_hook = NULL;
   g_target_size = 0;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
   req.headers = NULL;
 
   /* Valid client and user, OOM on refresh_str */
-  clear_test_req(&req);
-  req.body = "grant_type=password&client_id=myid&client_secret=mysecret&"
-             "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password&client_id=myid&client_secret=mysecret&"
+                   "username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(C_REST_OK, c_rest_request_parse_urlencoded(&req));
   g_target_size = 64;
@@ -950,14 +962,14 @@ TEST test_server_handlers_complete(void) {
   ASSERT_EQ(1, oauth2_token_handler(&req, &res, db));
   g_crf_malloc_hook = NULL;
   g_target_size = 0;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Valid client and user via Basic auth, OOM on refresh_str */
-  clear_test_req(&req);
-  auth_hdr.value = "Basic bXlpZDpteXNlY3JldA=="; /* myid:mysecret */
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  auth_hdr.value = mut_s("Basic bXlpZDpteXNlY3JldA=="); /* myid:mysecret */
   req.headers = &auth_hdr;
-  req.body = "grant_type=password&username=myuser&password=mypassword";
+  req.body = mut_s("grant_type=password&username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(C_REST_OK, c_rest_request_parse_urlencoded(&req));
   g_target_size = 64;
@@ -967,29 +979,29 @@ TEST test_server_handlers_complete(void) {
   ASSERT_EQ(1, oauth2_token_handler(&req, &res, db));
   g_crf_malloc_hook = NULL;
   g_target_size = 0;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
   req.headers = NULL;
 
   /* Valid client and user, SUCCESS via body params */
-  clear_test_req(&req);
-  req.body = "grant_type=password&client_id=myid&client_secret=mysecret&"
-             "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("grant_type=password&client_id=myid&client_secret=mysecret&"
+                   "username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
   ASSERT_EQ(200, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Valid client via Basic Auth, SUCCESS */
-  clear_test_req(&req);
-  auth_hdr.value = "Basic bXlpZDpteXNlY3JldA=="; /* myid:mysecret */
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  auth_hdr.value = mut_s("Basic bXlpZDpteXNlY3JldA=="); /* myid:mysecret */
   req.headers = &auth_hdr;
-  req.body = "grant_type=password&username=myuser&password=mypassword";
+  req.body = mut_s("grant_type=password&username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_token_handler(&req, &res, db));
   ASSERT_EQ(200, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
   req.headers = NULL;
 
@@ -999,50 +1011,50 @@ TEST test_server_handlers_complete(void) {
   ASSERT_EQ(1, oauth2_login_handler(&req, &res, NULL));
 
   /* URL-encoded parse failure */
-  clear_test_req(&req);
-  req.body = "username=myuser";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser");
   req.body_len = strlen(req.body);
   g_crf_malloc_hook = fail_malloc;
   ASSERT_EQ(0, oauth2_login_handler(&req, &res, db));
   g_crf_malloc_hook = NULL;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Missing password only */
-  clear_test_req(&req);
-  req.body = "username=myuser";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_login_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Missing username only */
-  clear_test_req(&req);
-  req.body = "password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_login_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Invalid credentials */
-  clear_test_req(&req);
-  req.body = "username=myuser&password=wrongpass";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser&password=wrongpass");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_login_handler(&req, &res, db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* c_orm_user_verify_credentials fails with error (err != 0) */
-  clear_test_req(&req);
-  req.body = "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_login_handler(&req, &res, &mock_fail_db));
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* OOM on token_str */
-  clear_test_req(&req);
-  req.body = "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(C_REST_OK, c_rest_request_parse_urlencoded(&req));
   g_target_size = 64;
@@ -1052,12 +1064,12 @@ TEST test_server_handlers_complete(void) {
   ASSERT_EQ(1, oauth2_login_handler(&req, &res, db));
   g_crf_malloc_hook = NULL;
   g_target_size = 0;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* OOM on refresh_str */
-  clear_test_req(&req);
-  req.body = "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(C_REST_OK, c_rest_request_parse_urlencoded(&req));
   g_target_size = 64;
@@ -1067,16 +1079,16 @@ TEST test_server_handlers_complete(void) {
   ASSERT_EQ(1, oauth2_login_handler(&req, &res, db));
   g_crf_malloc_hook = NULL;
   g_target_size = 0;
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Success login */
-  clear_test_req(&req);
-  req.body = "username=myuser&password=mypassword";
+  ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+  req.body = mut_s("username=myuser&password=mypassword");
   req.body_len = strlen(req.body);
   ASSERT_EQ(0, oauth2_login_handler(&req, &res, db));
   ASSERT_EQ(200, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* ------------------- Secret Handler ------------------- */
@@ -1084,45 +1096,45 @@ TEST test_server_handlers_complete(void) {
   req.headers = NULL;
   ASSERT_EQ(0, oauth2_secret_handler(&req, &res, db));
   ASSERT_EQ(401, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Invalid bearer token */
-  hdr.key = "Authorization";
-  hdr.value = "Bearer nonexistent_token";
+  hdr.key = mut_s("Authorization");
+  hdr.value = mut_s("Bearer nonexistent_token");
   hdr.next = NULL;
   req.headers = &hdr;
   ASSERT_EQ(0, oauth2_secret_handler(&req, &res, db));
   ASSERT_EQ(401, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Valid bearer token (from previous login/token handler) */
-  hdr.value = "Bearer access_token_demo_123";
+  hdr.value = mut_s("Bearer access_token_demo_123");
   ASSERT_EQ(0, oauth2_secret_handler(&req, &res, db));
   ASSERT_EQ(200, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Test secret handler with token containing user_id and scopes */
   {
     c_orm_oauth2_token_t custom_tok;
     memset(&custom_tok, 0, sizeof(custom_tok));
-    custom_tok.access_token = "tok_with_user_and_scopes";
-    custom_tok.refresh_token = "ref_custom";
-    custom_tok.token_type = "bearer";
+    custom_tok.access_token = mut_s("tok_with_user_and_scopes");
+    custom_tok.refresh_token = mut_s("ref_custom");
+    custom_tok.token_type = mut_s("bearer");
     custom_tok.expires_in = 3600;
     custom_tok.created_at = (int64_t)time(NULL);
-    custom_tok.user_id = "myuser";
-    custom_tok.scopes = "read write";
-    c_orm_oauth2_save_token(db, &custom_tok);
+    custom_tok.user_id = mut_s("myuser");
+    custom_tok.scopes = mut_s("read write");
+    ASSERT_EQ(0, c_orm_oauth2_save_token(db, &custom_tok));
 
-    clear_test_req(&req);
-    hdr.value = "Bearer tok_with_user_and_scopes";
+    ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+    hdr.value = mut_s("Bearer tok_with_user_and_scopes");
     req.headers = &hdr;
     ASSERT_EQ(0, oauth2_secret_handler(&req, &res, db));
     ASSERT_EQ(200, res.status_code);
-    c_rest_response_cleanup(&res);
+    ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
     memset(&res, 0, sizeof(res));
   }
 
@@ -1131,17 +1143,17 @@ TEST test_server_handlers_complete(void) {
   {
     c_orm_oauth2_token_t min_tok;
     memset(&min_tok, 0, sizeof(min_tok));
-    min_tok.access_token = "min_token_abc";
+    min_tok.access_token = mut_s("min_token_abc");
     min_tok.expires_in = 3600;
     min_tok.created_at = (int64_t)time(NULL);
-    c_orm_oauth2_save_token(db, &min_tok);
+    ASSERT_EQ(0, c_orm_oauth2_save_token(db, &min_tok));
 
-    clear_test_req(&req);
-    hdr.value = "Bearer min_token_abc";
+    ASSERT_EQ(C_REST_OK, clear_test_req(&req));
+    hdr.value = mut_s("Bearer min_token_abc");
     req.headers = &hdr;
     ASSERT_EQ(0, oauth2_secret_handler(&req, &res, db));
     ASSERT_EQ(200, res.status_code);
-    c_rest_response_cleanup(&res);
+    ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
     memset(&res, 0, sizeof(res));
   }
 
@@ -1150,100 +1162,144 @@ TEST test_server_handlers_complete(void) {
   req.headers = NULL;
   ASSERT_EQ(0, oauth2_logout_handler(&req, &res, db));
   ASSERT_EQ(401, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Valid logout */
-  hdr.value = "Bearer access_token_demo_123";
+  hdr.value = mut_s("Bearer access_token_demo_123");
   req.headers = &hdr;
   ASSERT_EQ(0, oauth2_logout_handler(&req, &res, db));
   ASSERT_EQ(200, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
   /* Secret handler now fails after logout revocation */
   ASSERT_EQ(0, oauth2_secret_handler(&req, &res, db));
   ASSERT_EQ(401, res.status_code);
-  c_rest_response_cleanup(&res);
+  ASSERT_EQ(C_REST_OK, c_rest_response_cleanup(&res));
   memset(&res, 0, sizeof(res));
 
-  db->vtable->disconnect(db);
+  ASSERT_EQ(0, db->vtable->disconnect(db));
   PASS();
 }
 
 TEST test_main_cli_complete(void) {
-  const char *cert_path = "../../../tests/certs/server.crt";
-  const char *key_path = "../../../tests/certs/server.key";
+  char cert_path[] = "../../../tests/certs/server.crt";
+  char key_path[] = "../../../tests/certs/server.key";
+  char a_cli[] = "oauth2_cli";
+  char a_help1[] = "--help";
+  char a_help2[] = "-h";
+  char a_help3[] = "-?";
+  char a_help4[] = "/?";
+  char a_db_url[] = "--db-url";
+  char a_listen_addr[] = "--listen-addr";
+  char a_listen_port[] = "--listen-port";
+  char a_tls_cert[] = "--tls-cert";
+  char a_tls_key[] = "--tls-key";
+  char a_mem[] = ":memory:";
+  char a_localhost[] = "127.0.0.1";
+  char a_port[] = "8080";
+  char a_bad_crt[] = "nonexistent.crt";
+  char a_bad_key[] = "nonexistent.key";
+  char a_bad_db[] = "/bad_dir/bad_file.db";
 
-  char *args_help1[] = {"oauth2_cli", "--help"};
-  char *args_help2[] = {"oauth2_cli", "-h"};
-  char *args_help3[] = {"oauth2_cli", "-?"};
-  char *args_help4[] = {"oauth2_cli", "/?"};
+  char *args_help1[2];
+  char *args_help2[2];
+  char *args_help3[2];
+  char *args_help4[2];
 
-  char *args_t1[] = {"oauth2_cli", "--db-url"};
-  char *args_t2[] = {"oauth2_cli", "--listen-addr"};
-  char *args_t3[] = {"oauth2_cli", "--listen-port"};
-  char *args_t4[] = {"oauth2_cli", "--tls-cert"};
-  char *args_t5[] = {"oauth2_cli", "--tls-key"};
+  char *args_t1[2];
+  char *args_t2[2];
+  char *args_t3[2];
+  char *args_t4[2];
+  char *args_t5[2];
 
   char *args_full[11];
   char *args_tls_only[5];
   char *args_bad_db_tls[7];
   char *args_cert_only[3];
   char *args_key_only[3];
+  char *args_bad_tls[5];
+  char *args_bad_db[3];
+  char *args_base[1];
 
-  char *args_bad_tls[] = {"oauth2_cli", "--tls-cert", "nonexistent.crt",
-                          "--tls-key", "nonexistent.key"};
+  args_help1[0] = a_cli;
+  args_help1[1] = a_help1;
+  args_help2[0] = a_cli;
+  args_help2[1] = a_help2;
+  args_help3[0] = a_cli;
+  args_help3[1] = a_help3;
+  args_help4[0] = a_cli;
+  args_help4[1] = a_help4;
 
-  char *args_bad_db[] = {"oauth2_cli", "--db-url", "/bad_dir/bad_file.db"};
+  args_t1[0] = a_cli;
+  args_t1[1] = a_db_url;
+  args_t2[0] = a_cli;
+  args_t2[1] = a_listen_addr;
+  args_t3[0] = a_cli;
+  args_t3[1] = a_listen_port;
+  args_t4[0] = a_cli;
+  args_t4[1] = a_tls_cert;
+  args_t5[0] = a_cli;
+  args_t5[1] = a_tls_key;
 
-  char *args_base[] = {"oauth2_cli"};
+  args_bad_tls[0] = a_cli;
+  args_bad_tls[1] = a_tls_cert;
+  args_bad_tls[2] = a_bad_crt;
+  args_bad_tls[3] = a_tls_key;
+  args_bad_tls[4] = a_bad_key;
 
-  args_full[0] = "oauth2_cli";
-  args_full[1] = "--db-url";
-  args_full[2] = ":memory:";
-  args_full[3] = "--listen-addr";
-  args_full[4] = "127.0.0.1";
-  args_full[5] = "--listen-port";
-  args_full[6] = "8080";
-  args_full[7] = "--tls-cert";
-  args_full[8] = (char *)cert_path;
-  args_full[9] = "--tls-key";
-  args_full[10] = (char *)key_path;
+  args_bad_db[0] = a_cli;
+  args_bad_db[1] = a_db_url;
+  args_bad_db[2] = a_bad_db;
 
-  args_tls_only[0] = "oauth2_cli";
-  args_tls_only[1] = "--tls-cert";
-  args_tls_only[2] = (char *)cert_path;
-  args_tls_only[3] = "--tls-key";
-  args_tls_only[4] = (char *)key_path;
+  args_base[0] = a_cli;
 
-  args_bad_db_tls[0] = "oauth2_cli";
-  args_bad_db_tls[1] = "--db-url";
-  args_bad_db_tls[2] = "/bad_dir/bad_file.db";
-  args_bad_db_tls[3] = "--tls-cert";
-  args_bad_db_tls[4] = (char *)cert_path;
-  args_bad_db_tls[5] = "--tls-key";
-  args_bad_db_tls[6] = (char *)key_path;
+  args_full[0] = a_cli;
+  args_full[1] = a_db_url;
+  args_full[2] = a_mem;
+  args_full[3] = a_listen_addr;
+  args_full[4] = a_localhost;
+  args_full[5] = a_listen_port;
+  args_full[6] = a_port;
+  args_full[7] = a_tls_cert;
+  args_full[8] = cert_path;
+  args_full[9] = a_tls_key;
+  args_full[10] = key_path;
 
-  args_cert_only[0] = "oauth2_cli";
-  args_cert_only[1] = "--tls-cert";
-  args_cert_only[2] = (char *)cert_path;
+  args_tls_only[0] = a_cli;
+  args_tls_only[1] = a_tls_cert;
+  args_tls_only[2] = cert_path;
+  args_tls_only[3] = a_tls_key;
+  args_tls_only[4] = key_path;
 
-  args_key_only[0] = "oauth2_cli";
-  args_key_only[1] = "--tls-key";
-  args_key_only[2] = (char *)key_path;
+  args_bad_db_tls[0] = a_cli;
+  args_bad_db_tls[1] = a_db_url;
+  args_bad_db_tls[2] = a_bad_db;
+  args_bad_db_tls[3] = a_tls_cert;
+  args_bad_db_tls[4] = cert_path;
+  args_bad_db_tls[5] = a_tls_key;
+  args_bad_db_tls[6] = key_path;
+
+  args_cert_only[0] = a_cli;
+  args_cert_only[1] = a_tls_cert;
+  args_cert_only[2] = cert_path;
+
+  args_key_only[0] = a_cli;
+  args_key_only[1] = a_tls_key;
+  args_key_only[2] = key_path;
 
   /* Signals */
   sig_handler(SIGINT);
   sig_handler(SIGTERM);
-  handle_sigint(SIGINT);
+  ASSERT_EQ(C_REST_OK, handle_sigint(SIGINT));
 
   /* Test handle_sigint when g_ctx is non-NULL */
   {
     struct c_rest_context *sig_ctx = NULL;
-    c_rest_init(C_REST_MODALITY_SINGLE_THREAD, &sig_ctx);
+    ASSERT_EQ(C_REST_OK, c_rest_init(C_REST_MODALITY_SINGLE_THREAD, &sig_ctx));
     g_ctx = sig_ctx;
-    handle_sigint(SIGINT);
+    ASSERT_EQ(C_REST_OK, handle_sigint(SIGINT));
     ASSERT_EQ(C_REST_OK, c_rest_destroy(sig_ctx));
     g_ctx = NULL;
   }
@@ -1454,7 +1510,6 @@ TEST test_main_cli_complete(void) {
   PASS();
 }
 
-SUITE_EXTERN(oauth2_suite);
 SUITE(oauth2_suite) {
   RUN_TEST(test_client_init_and_cleanup);
   RUN_TEST(test_client_password_grant);

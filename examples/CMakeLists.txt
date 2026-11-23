@@ -1,17 +1,3 @@
-
-if(CMAKE_C_FLAGS MATCHES "--coverage")
-    set(CRF_DEMO_HAD_COVERAGE TRUE)
-    string(REPLACE "--coverage" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-    string(REPLACE "-fprofile-arcs" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-    string(REPLACE "-ftest-coverage" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-endif()
-
-if(C_REST_GNU_FLAGS)
-    add_compile_options(${C_REST_GNU_FLAGS})
-elseif(C_REST_MSVC_FLAGS)
-    add_compile_options(${C_REST_MSVC_FLAGS})
-endif()
-
 add_subdirectory(app_node_style)
 add_subdirectory(app_threaded)
 if(NOT EMSCRIPTEN AND NOT CMAKE_SYSTEM_NAME STREQUAL "DOS")
@@ -27,14 +13,12 @@ add_subdirectory(app_openapi)
 add_subdirectory(app_websockets)
 add_subdirectory(app_server_sent_events_sse)
 add_subdirectory(app_graphql_api)
-
 add_subdirectory(app_http23)
 add_subdirectory(app_jwt_json_w)
-
 add_subdirectory(app_full_multi)
 
 if(C_REST_ENABLE_HOT_RELOADING_AUTO_RESTART AND NOT EMSCRIPTEN)
-  add_subdirectory(app_hot_reload)
+    add_subdirectory(app_hot_reload)
 endif()
 
 if(CMAKE_CROSSCOMPILING_EMULATOR MATCHES "wine")

@@ -54,12 +54,13 @@ static c_rest_error_t my_sse_handler(struct c_rest_request *req,
      because c_rest_router_add_sse injects it automatically! */
 
   for (i = 0; i < 5; i++) {
+    char event_buf[] = "ping";
     char data_buf[128];
 
     ev_rc = c_rest_sse_event_init(&ev);
     if (ev_rc != C_REST_OK)
       return ev_rc;
-    ev.event = "ping";
+    ev.event = event_buf;
 
 #if defined(_MSC_VER)
     sprintf_s(data_buf, sizeof(data_buf),
@@ -74,19 +75,22 @@ static c_rest_error_t my_sse_handler(struct c_rest_request *req,
     ev_rc = c_rest_sse_send_event(res, &ev);
     if (ev_rc != C_REST_OK) {
       printf("Failed to send event, client probably disconnected.\n");
-      break;
+      return ev_rc;
     }
 
     ev_rc = c_rest_sse_send_keepalive(res);
     if (ev_rc != C_REST_OK) {
-      break;
+      return ev_rc;
     }
 
-    sleep_ms(g_sse_delay_ms);
+    ev_rc = sleep_ms(g_sse_delay_ms);
+    if (ev_rc != C_REST_OK) {
+      return ev_rc;
+    }
   }
 
   printf("SSE stream closed by server.\n");
-  return 0;
+  return C_REST_OK;
 }
 
 static void sig_handler(int sig) {
@@ -115,7 +119,8 @@ int main(void) {
   res = c_rest_router_init(&router);
   if (res != 0) {
     printf("Failed to init router\n");
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -123,8 +128,10 @@ int main(void) {
   res = c_rest_router_add_sse(router, "/events", my_sse_handler, NULL);
   if (res != 0) {
     printf("Failed to add SSE route\n");
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -141,7 +148,8 @@ int main(void) {
   /* 5. Cleanup */
   rc = c_rest_router_destroy(router);
   if (rc != C_REST_OK) {
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_destroy(ctx);

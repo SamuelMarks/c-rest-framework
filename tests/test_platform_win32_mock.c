@@ -52,6 +52,7 @@ static int g_wait_fail = 0;
 static int g_search_path_fail = 0;
 static int g_create_proc_fail = 0;
 static int g_exit_code_fail = 0;
+static int g_beginthread_fail = 0;
 static volatile int g_mock_win32_dummy = 0;
 
 int WSAStartup(WORD wVersionRequired, WSADATA *lpWSAData) {
@@ -142,10 +143,13 @@ int CloseHandle(HANDLE hObject) {
   return 1;
 }
 
-uintptr_t _beginthreadex(void *security, unsigned stack_size,
-                         unsigned(__stdcall *start_address)(void *),
-                         void *arglist, unsigned initflag, unsigned *thrdaddr) {
+crf_mock_uintptr_t _beginthreadex(void *security, unsigned stack_size,
+                                  unsigned(__stdcall *start_address)(void *),
+                                  void *arglist, unsigned initflag,
+                                  unsigned *thrdaddr) {
   g_mock_win32_dummy += (int)(size_t)security + (int)stack_size + (int)initflag;
+  if (g_beginthread_fail)
+    return 0;
   *thrdaddr = 1234;
   start_address(arglist);
   return 300;
@@ -158,8 +162,13 @@ DWORD SearchPathA(const char *lpPath, const char *lpFileName,
                         (int)nBufferLength + (int)(size_t)lpFilePart;
   if (g_search_path_fail)
     return 0;
+#if defined(_MSC_VER)
+  strcpy_s(lpBuffer, (size_t)nBufferLength, "/mock/bin/");
+  strcat_s(lpBuffer, (size_t)nBufferLength, lpFileName);
+#else
   strcpy(lpBuffer, "/mock/bin/");
   strcat(lpBuffer, lpFileName);
+#endif
   return (DWORD)strlen(lpBuffer);
 }
 
@@ -195,6 +204,7 @@ DWORD GetTickCount(void) { return 1234567UL; }
 
 DWORD GetLastError(void) { return 42UL; }
 
+#undef C_REST_NO_THREADS
 #include "../src/platform_win32.c"
 
 static c_rest_error_t mock_thread_worker(void *arg) {
@@ -245,6 +255,11 @@ TEST test_win32_socket_ops(void) {
   rc = win32_c_rest_socket_create(NULL);
   ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
 
+  g_socket_fail = 1;
+  rc = win32_c_rest_socket_create(&s);
+  ASSERT_EQ(C_REST_ERROR_NETWORK, rc);
+  g_socket_fail = 0;
+
   rc = win32_c_rest_socket_create(&s);
   ASSERT_EQ(C_REST_OK, rc);
 
@@ -261,7 +276,9 @@ TEST test_win32_socket_ops(void) {
   rc = win32_c_rest_socket_bind(s, NULL, 8080);
   ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
 
-  rc = win32_c_rest_socket_bind(s, "invalid", 8080);
+  rc = win32_c_rest_socket_bind(s, "invalid_ip", 8080);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  rc = win32_c_rest_socket_bind(s, "256.0.0.1", 8080);
   ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
 
   rc = win32_c_rest_socket_bind(s, "127.0.0.1", 8080);
@@ -354,6 +371,11 @@ TEST test_win32_socket_ops(void) {
   PASS();
 }
 
+static c_rest_error_t mock_thread_worker_fail(void *arg) {
+  (void)arg;
+  return C_REST_ERROR_GENERIC;
+}
+
 TEST test_win32_threading_and_mutex(void) {
   c_rest_error_t rc;
   c_rest_thread_t th = 0;
@@ -370,9 +392,17 @@ TEST test_win32_threading_and_mutex(void) {
   ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
   g_crf_malloc_hook = NULL;
 
+  g_beginthread_fail = 1;
+  rc = win32_c_rest_thread_create(&th, mock_thread_worker, &worker_arg);
+  ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
+  g_beginthread_fail = 0;
+
   rc = win32_c_rest_thread_create(&th, mock_thread_worker, &worker_arg);
   ASSERT_EQ(C_REST_OK, rc);
   ASSERT_EQ(77, worker_arg);
+
+  rc = win32_c_rest_thread_create(&th, mock_thread_worker_fail, &worker_arg);
+  ASSERT_EQ(C_REST_OK, rc);
 
   rc = win32_c_rest_thread_join(0);
   ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
@@ -478,7 +508,14 @@ TEST test_win32_process_and_misc(void) {
   unsigned long ms = 0;
   char rnd[16];
   int last_err = 0;
-  char *const argv[] = {"app.exe", "--test", "arg2", NULL};
+  char a_app[] = "app.exe";
+  char a_test[] = "--test";
+  char a_arg2[] = "arg2";
+  char *argv[4];
+  argv[0] = a_app;
+  argv[1] = a_test;
+  argv[2] = a_arg2;
+  argv[3] = NULL;
 
   rc = win32_c_rest_process_create(NULL, "app.exe", argv);
   ASSERT_EQ(C_REST_ERROR_GENERIC, rc);
@@ -507,7 +544,13 @@ TEST test_win32_process_and_misc(void) {
 
   /* Multi-argument argv */
   {
-    char *const argv_multi[] = {"app.exe", "a1", "a2", NULL};
+    char a_m1[] = "a1";
+    char a_m2[] = "a2";
+    char *argv_multi[4];
+    argv_multi[0] = a_app;
+    argv_multi[1] = a_m1;
+    argv_multi[2] = a_m2;
+    argv_multi[3] = NULL;
     rc = win32_c_rest_process_create(&proc, "app.exe", argv_multi);
     ASSERT_EQ(C_REST_OK, rc);
   }
@@ -518,7 +561,7 @@ TEST test_win32_process_and_misc(void) {
     char *argv_long[3];
     memset(long_arg, 'x', sizeof(long_arg) - 1);
     long_arg[sizeof(long_arg) - 1] = '\0';
-    argv_long[0] = "app.exe";
+    argv_long[0] = a_app;
     argv_long[1] = long_arg;
     argv_long[2] = NULL;
     rc = win32_c_rest_process_create(&proc, "app.exe", argv_long);
@@ -572,7 +615,6 @@ TEST test_win32_process_and_misc(void) {
   PASS();
 }
 
-SUITE_EXTERN(platform_win32_suite);
 SUITE(platform_win32_suite) {
   RUN_TEST(test_win32_lifecycle);
   RUN_TEST(test_win32_socket_ops);

@@ -29,12 +29,11 @@ static void sleep_ms(int ms) {
 #endif
 }
 
-#define CHECK_EQ(expected, actual) failed += ((expected) != (actual))
+#define CHECK_EQ(expected, actual) ASSERT_EQ(expected, actual)
 
-static int test_rate_limiter_init_destroy(void) {
+TEST test_rate_limiter_init_destroy(void) {
   c_rest_rate_limiter limiter;
   c_rest_error_t ret;
-  int failed = 0;
 
   ret = c_rest_rate_limiter_init(&limiter, 10, 1, 100);
   CHECK_EQ(0, ret);
@@ -46,14 +45,13 @@ static int test_rate_limiter_init_destroy(void) {
   CHECK_EQ(0, ret);
   CHECK_EQ(0, limiter.initialized);
 
-  return failed;
+  PASS();
 }
 
-static int test_rate_limiter_allow_deny(void) {
+TEST test_rate_limiter_allow_deny(void) {
   c_rest_rate_limiter limiter;
   c_rest_error_t ret;
   size_t remaining;
-  int failed = 0;
 
   /* Capacity 2, fill rate 1 per second */
   ret = c_rest_rate_limiter_init(&limiter, 2, 1, 100);
@@ -109,14 +107,13 @@ static int test_rate_limiter_allow_deny(void) {
   ret = c_rest_rate_limiter_destroy(&limiter);
   CHECK_EQ(0, ret);
 
-  return failed;
+  PASS();
 }
 
-static int test_rate_limiter_edge_cases(void) {
+TEST test_rate_limiter_edge_cases(void) {
   c_rest_rate_limiter limiter;
   c_rest_error_t ret;
   size_t remaining;
-  int failed = 0;
 
   /* Null pointer checks */
   ret = c_rest_rate_limiter_init(NULL, 10, 1, 100);
@@ -156,7 +153,30 @@ static int test_rate_limiter_edge_cases(void) {
   ret = c_rest_rate_limiter_init(&limiter, 10, 1, 0);
   CHECK_EQ(C_REST_ERROR_GENERIC, ret);
 
-  return failed;
+  /* Enforce max_entities bound against unbounded IP-spoofing growth */
+  ret = c_rest_rate_limiter_init(&limiter, 10, 1, 2);
+  CHECK_EQ(C_REST_OK, ret);
+  ret = c_rest_rate_limiter_check(&limiter, "10.0.0.1", 1, &remaining);
+  CHECK_EQ(C_REST_OK, ret);
+  ret = c_rest_rate_limiter_check(&limiter, "10.0.0.2", 1, &remaining);
+  CHECK_EQ(C_REST_OK, ret);
+  /* 3rd distinct IP rejected when buckets.size == max_entities */
+  ret = c_rest_rate_limiter_check(&limiter, "10.0.0.3", 1, &remaining);
+  CHECK_EQ(C_REST_ERROR_GENERIC, ret);
+  CHECK_EQ(0, remaining);
+#ifdef C_REST_TESTING_MALLOC_HOOK
+  g_mock_rate_limit_fail = 6;
+  ret = c_rest_rate_limiter_check(&limiter, "10.0.0.4", 1, &remaining);
+  CHECK_EQ(C_REST_ERROR_GENERIC, ret);
+  g_mock_rate_limit_fail = 0;
+#endif
+  /* Existing entity still allowed */
+  ret = c_rest_rate_limiter_check(&limiter, "10.0.0.1", 1, &remaining);
+  CHECK_EQ(C_REST_OK, ret);
+  ret = c_rest_rate_limiter_destroy(&limiter);
+  CHECK_EQ(C_REST_OK, ret);
+
+  PASS();
 }
 
 static void *fail_malloc_n(size_t size);
@@ -175,7 +195,7 @@ static void *fail_malloc_n(size_t size) {
   return res;
 }
 
-static int test_rate_limiter_malloc(void) {
+TEST test_rate_limiter_malloc(void) {
   c_rest_rate_limiter limiter;
   c_rest_error_t ret;
   int i;
@@ -186,112 +206,121 @@ static int test_rate_limiter_malloc(void) {
     g_malloc_fail_after = i;
     ret = c_rest_rate_limiter_init(&limiter, 10, 1, 100);
     if (ret == C_REST_OK) {
-      c_rest_rate_limiter_destroy(&limiter);
+      ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_destroy(&limiter));
     }
   }
 
-  c_rest_rate_limiter_init(&limiter, 10, 1, 100);
+  g_malloc_fail_after = -1;
+  ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&limiter, 10, 1, 100));
   for (i = 0; i < 5; i++) {
     g_malloc_fail_after = i;
     ret = c_rest_rate_limiter_check(&limiter, "127.0.0.1", 1, &remaining);
+    ASSERT(ret == C_REST_OK || ret != C_REST_OK);
   }
-  c_rest_rate_limiter_destroy(&limiter);
+  ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_destroy(&limiter));
 
   g_crf_malloc_hook = NULL;
   g_malloc_fail_after = -1;
-  return 0;
-}
-
-int test_rate_limiting_throttling_middleware(void) {
-  int failed = 0;
-
-  failed += test_rate_limiter_init_destroy();
-  failed += test_rate_limiter_allow_deny();
-  failed += test_rate_limiter_edge_cases();
-  failed += test_rate_limiter_malloc();
 
 #ifdef C_REST_TESTING_MALLOC_HOOK
   {
     c_rest_rate_limiter rl;
-    size_t remaining;
 
     /* 1, 2: init fail */
     g_mock_rate_limit_fail = 1;
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_NEQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_mock_rate_limit_fail = 2;
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_NEQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_mock_rate_limit_fail = 0;
 
     /* 3: check lock fail */
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_mock_rate_limit_fail = 3;
-    c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining);
+    ASSERT_NEQ(C_REST_OK,
+               c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining));
     g_mock_rate_limit_fail = 0;
-    c_rest_rate_limiter_destroy(&rl);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_destroy(&rl));
 
     /* 4: check put fail */
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_mock_rate_limit_fail = 4;
-    c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining);
+    ASSERT_NEQ(C_REST_OK,
+               c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining));
     g_mock_rate_limit_fail = 0;
-    c_rest_rate_limiter_destroy(&rl);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_destroy(&rl));
 
     /* 12: check put fail and unlock fail */
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_mock_rate_limit_fail = 12;
-    c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining);
+    ASSERT_NEQ(C_REST_OK,
+               c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining));
     g_mock_rate_limit_fail = 0;
-    c_rest_rate_limiter_destroy(&rl);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_destroy(&rl));
 
     /* 5: check unlock fail after malloc */
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_crf_malloc_hook = fail_malloc_n;
     g_malloc_fail_after = 0;
     g_mock_rate_limit_fail = 5;
-    c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining);
+    ASSERT_NEQ(C_REST_OK,
+               c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining));
     g_crf_malloc_hook = NULL;
     g_mock_rate_limit_fail = 0;
-    c_rest_rate_limiter_destroy(&rl);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_destroy(&rl));
 
     /* 6: check unlock fail normal */
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_mock_rate_limit_fail = 6;
-    c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining);
+    ASSERT_NEQ(C_REST_OK,
+               c_rest_rate_limiter_check(&rl, "127.0.0.1", 1, &remaining));
     g_mock_rate_limit_fail = 0;
-    c_rest_rate_limiter_destroy(&rl);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_destroy(&rl));
 
     /* 7: destroy lock fail */
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_mock_rate_limit_fail = 7;
-    c_rest_rate_limiter_destroy(&rl);
+    ASSERT_NEQ(C_REST_OK, c_rest_rate_limiter_destroy(&rl));
     g_mock_rate_limit_fail = 0;
-    c_rest_rate_limiter_destroy(&rl);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_destroy(&rl));
 
     /* 8: destroy unlock fail after map destroy */
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_mock_rate_limit_fail = 8;
-    c_rest_rate_limiter_destroy(&rl);
+    ASSERT_NEQ(C_REST_OK, c_rest_rate_limiter_destroy(&rl));
     g_mock_rate_limit_fail = 0;
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_destroy(rl.mutex));
 
     /* 9: destroy hashmap destroy fail */
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_mock_rate_limit_fail = 9;
-    c_rest_rate_limiter_destroy(&rl);
+    ASSERT_NEQ(C_REST_OK, c_rest_rate_limiter_destroy(&rl));
     g_mock_rate_limit_fail = 0;
+    ASSERT_EQ(C_REST_OK, c_rest_hashmap_destroy(&rl.buckets, NULL));
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_destroy(rl.mutex));
 
     /* 10: destroy hashmap destroy fail & unlock fail */
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_mock_rate_limit_fail = 10;
-    c_rest_rate_limiter_destroy(&rl);
+    ASSERT_NEQ(C_REST_OK, c_rest_rate_limiter_destroy(&rl));
     g_mock_rate_limit_fail = 0;
+    ASSERT_EQ(C_REST_OK, c_rest_hashmap_destroy(&rl.buckets, NULL));
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_destroy(rl.mutex));
 
     /* 11: destroy mutex destroy fail */
-    c_rest_rate_limiter_init(&rl, 10, 1, 10);
+    ASSERT_EQ(C_REST_OK, c_rest_rate_limiter_init(&rl, 10, 1, 10));
     g_mock_rate_limit_fail = 11;
-    c_rest_rate_limiter_destroy(&rl);
+    ASSERT_NEQ(C_REST_OK, c_rest_rate_limiter_destroy(&rl));
     g_mock_rate_limit_fail = 0;
+    ASSERT_EQ(C_REST_OK, c_rest_mutex_destroy(rl.mutex));
   }
 #endif
 
-  return failed > 0 ? 1 : 0;
+  PASS();
+}
+
+SUITE(rate_limit_suite) {
+  RUN_TEST(test_rate_limiter_init_destroy);
+  RUN_TEST(test_rate_limiter_allow_deny);
+  RUN_TEST(test_rate_limiter_edge_cases);
+  RUN_TEST(test_rate_limiter_malloc);
 }

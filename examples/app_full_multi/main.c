@@ -75,24 +75,27 @@ static c_rest_error_t upload_handler(struct c_rest_request *req,
    */
   parse_res =
       c_rest_multipart_parser_init(&parser, "boundary", &callbacks, NULL);
-  if (parse_res == C_REST_OK) {
-    if (req->body && req->body_len > 0) {
-      parse_res = c_rest_multipart_parser_execute(parser, req->body,
-                                                  req->body_len, &parsed);
-      if (parse_res != C_REST_OK) {
-        printf("[Multipart] Failed to parse multipart data.\n");
+  if (parse_res != C_REST_OK) {
+    return parse_res;
+  }
+  if (req->body && req->body_len > 0) {
+    c_rest_error_t exec_res = c_rest_multipart_parser_execute(
+        parser, req->body, req->body_len, &parsed);
+    if (exec_res != C_REST_OK) {
+      printf("[Multipart] Failed to parse multipart data.\n");
+      destroy_res = c_rest_multipart_parser_destroy(parser);
+      if (destroy_res != C_REST_OK) {
+        return destroy_res;
       }
-    }
-    destroy_res = c_rest_multipart_parser_destroy(parser);
-    if (destroy_res != C_REST_OK) {
-      return destroy_res;
+      return exec_res;
     }
   }
+  destroy_res = c_rest_multipart_parser_destroy(parser);
+  if (destroy_res != C_REST_OK) {
+    return destroy_res;
+  }
 
-  res->status_code = 200;
-  res->body = "{\"status\": \"ok\"}";
-  res->body_len = 15;
-  return C_REST_OK;
+  return c_rest_response_json(res, "{\"status\": \"ok\"}");
 }
 
 static void sig_handler(int sig) {
@@ -115,19 +118,24 @@ int main(void) {
 
   rc = c_rest_router_init(&router);
   if (rc != C_REST_OK) {
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_router_add(router, "POST", "/upload", upload_handler, NULL);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_set_router(ctx, router);
   if (rc != C_REST_OK) {
-    c_rest_router_destroy(router);
-    c_rest_destroy(ctx);
+    if (c_rest_router_destroy(router) != C_REST_OK)
+      return 1;
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
 
@@ -136,7 +144,8 @@ int main(void) {
 
   rc = c_rest_router_destroy(router);
   if (rc != C_REST_OK) {
-    c_rest_destroy(ctx);
+    if (c_rest_destroy(ctx) != C_REST_OK)
+      return 1;
     return 1;
   }
   rc = c_rest_destroy(ctx);

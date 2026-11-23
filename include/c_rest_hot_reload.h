@@ -7,10 +7,11 @@
 /* clang-format off */
 #include <stddef.h>
 #include "c_rest_error.h"
+#include "c_rest_export.h"
+#include "c_rest_no_discard.h"
 #include "c_rest_modality.h"
 #ifdef C_REST_FRAMEWORK_MULTIPLATFORM_INTEGRATION
 #include "c_multiplatform.h"
-#include "c_rest_export.h"
 #endif
 /* clang-format on */
 
@@ -46,7 +47,7 @@ typedef c_rest_error_t (*c_rest_hot_reload_callback_t)(void *user_data);
  * \param logger Optional logger to use for debug tracing.
  * \return 0 on success, or a c_rest_error_t value on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
                        struct c_rest_logger *logger);
 
@@ -58,7 +59,7 @@ c_rest_hot_reload_init(c_rest_hot_reload_ctx_t **out_ctx,
  *
  * \return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *ctx,
                                         cm_env_t env);
 #endif
@@ -69,7 +70,7 @@ c_rest_hot_reload_set_multiplatform_env(c_rest_hot_reload_ctx_t *ctx,
  * \param path The file or directory path to watch.
  * \return 0 on success, or a c_rest_error_t value on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx, const char *path);
 
 /**
@@ -79,7 +80,7 @@ c_rest_hot_reload_add_watch(c_rest_hot_reload_ctx_t *ctx, const char *path);
  * \param user_data User data to pass to the callback.
  * \return 0 on success, or a c_rest_error_t value on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_hot_reload_start(c_rest_hot_reload_ctx_t *ctx,
                         c_rest_hot_reload_callback_t on_reload,
                         void *user_data);
@@ -91,7 +92,7 @@ c_rest_hot_reload_start(c_rest_hot_reload_ctx_t *ctx,
  * \param user_data User data to pass to the callback.
  * \return 0 on success, or a c_rest_error_t value on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_hot_reload_poll(c_rest_hot_reload_ctx_t *ctx,
                        c_rest_hot_reload_callback_t on_reload, void *user_data);
 
@@ -100,7 +101,7 @@ c_rest_hot_reload_poll(c_rest_hot_reload_ctx_t *ctx,
  * \param ctx The context to destroy.
  * \return 0 on success, or a c_rest_error_t value on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_hot_reload_destroy(c_rest_hot_reload_ctx_t *ctx);
 
 struct c_rest_router;
@@ -111,7 +112,7 @@ struct c_rest_router;
  * \param path The path to mount the endpoint (e.g., "/_hot_reload").
  * \return 0 on success, non-zero on failure.
  */
-C_REST_EXPORT extern c_rest_error_t
+NO_DISCARD C_REST_EXPORT extern c_rest_error_t
 c_rest_hot_reload_register_routes(struct c_rest_router *router,
                                   const char *path);
 
